@@ -50,9 +50,10 @@ private:
     // Classifier: dispatches to the right extractor/parser
     ParseResult classify_and_dispatch();
 
-    // Tier 1 stubs (return PARTIAL with stmt_type set)
+    // Tier 1 parsers
     ParseResult parse_select();
     ParseResult parse_set();
+    ParseResult parse_insert(bool is_replace = false);
 
     // Tier 2 extractors
     ParseResult extract_insert(const Token& first);

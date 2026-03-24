@@ -54,6 +54,20 @@ private:
             case NodeType::NODE_LOCKING_CLAUSE:  emit_locking(node); break;
             case NodeType::NODE_INTO_CLAUSE:     emit_into(node); break;
 
+            // ---- INSERT statement ----
+            case NodeType::NODE_INSERT_STMT:     emit_insert_stmt(node); break;
+            case NodeType::NODE_INSERT_COLUMNS:  emit_insert_columns(node); break;
+            case NodeType::NODE_VALUES_CLAUSE:   emit_values_clause(node); break;
+            case NodeType::NODE_VALUES_ROW:      emit_values_row(node); break;
+            case NodeType::NODE_INSERT_SET_CLAUSE: emit_insert_set_clause(node); break;
+            case NodeType::NODE_ON_DUPLICATE_KEY: emit_on_duplicate_key(node); break;
+            case NodeType::NODE_ON_CONFLICT:     emit_on_conflict(node); break;
+            case NodeType::NODE_CONFLICT_TARGET: emit_conflict_target(node); break;
+            case NodeType::NODE_CONFLICT_ACTION: emit_conflict_action(node); break;
+            case NodeType::NODE_RETURNING_CLAUSE: emit_returning(node); break;
+            case NodeType::NODE_STMT_OPTIONS:    emit_stmt_options(node); break;
+            case NodeType::NODE_UPDATE_SET_ITEM: emit_update_set_item(node); break;
+
             // ---- Table references ----
             case NodeType::NODE_TABLE_REF:       emit_table_ref(node); break;
             case NodeType::NODE_ALIAS:           emit_alias(node); break;
@@ -377,6 +391,197 @@ private:
             if (!first) sb_.append_char(' ');
             first = false;
             emit_node(child);
+        }
+    }
+
+    // ---- INSERT ----
+
+    void emit_insert_stmt(const AstNode* node) {
+        // Check FLAG_REPLACE
+        if (node->flags & 0x01) {
+            sb_.append("REPLACE");
+        } else {
+            sb_.append("INSERT");
+        }
+
+        for (const AstNode* child = node->first_child; child; child = child->next_sibling) {
+            switch (child->type) {
+                case NodeType::NODE_STMT_OPTIONS:
+                    sb_.append_char(' ');
+                    emit_node(child);
+                    break;
+                case NodeType::NODE_TABLE_REF:
+                    sb_.append(" INTO ");
+                    emit_node(child);
+                    break;
+                case NodeType::NODE_INSERT_COLUMNS:
+                    sb_.append_char(' ');
+                    emit_node(child);
+                    break;
+                case NodeType::NODE_VALUES_CLAUSE:
+                    sb_.append_char(' ');
+                    emit_node(child);
+                    break;
+                case NodeType::NODE_SELECT_STMT:
+                    sb_.append_char(' ');
+                    emit_node(child);
+                    break;
+                case NodeType::NODE_INSERT_SET_CLAUSE:
+                    sb_.append_char(' ');
+                    emit_node(child);
+                    break;
+                case NodeType::NODE_ON_DUPLICATE_KEY:
+                    sb_.append_char(' ');
+                    emit_node(child);
+                    break;
+                case NodeType::NODE_ON_CONFLICT:
+                    sb_.append_char(' ');
+                    emit_node(child);
+                    break;
+                case NodeType::NODE_RETURNING_CLAUSE:
+                    sb_.append_char(' ');
+                    emit_node(child);
+                    break;
+                default:
+                    sb_.append_char(' ');
+                    emit_node(child);
+                    break;
+            }
+        }
+    }
+
+    void emit_stmt_options(const AstNode* node) {
+        bool first = true;
+        for (const AstNode* child = node->first_child; child; child = child->next_sibling) {
+            if (!first) sb_.append_char(' ');
+            first = false;
+            emit_node(child);
+        }
+    }
+
+    void emit_insert_columns(const AstNode* node) {
+        sb_.append_char('(');
+        bool first = true;
+        for (const AstNode* child = node->first_child; child; child = child->next_sibling) {
+            if (!first) sb_.append(", ");
+            first = false;
+            emit_node(child);
+        }
+        sb_.append_char(')');
+    }
+
+    void emit_values_clause(const AstNode* node) {
+        // Check for DEFAULT VALUES (value stored in node)
+        if (node->value_len > 0) {
+            emit_value(node);  // "DEFAULT VALUES"
+            return;
+        }
+        sb_.append("VALUES ");
+        bool first = true;
+        for (const AstNode* child = node->first_child; child; child = child->next_sibling) {
+            if (!first) sb_.append(", ");
+            first = false;
+            emit_node(child);
+        }
+    }
+
+    void emit_values_row(const AstNode* node) {
+        sb_.append_char('(');
+        bool first = true;
+        for (const AstNode* child = node->first_child; child; child = child->next_sibling) {
+            if (!first) sb_.append(", ");
+            first = false;
+            emit_node(child);
+        }
+        sb_.append_char(')');
+    }
+
+    void emit_insert_set_clause(const AstNode* node) {
+        sb_.append("SET ");
+        bool first = true;
+        for (const AstNode* child = node->first_child; child; child = child->next_sibling) {
+            if (!first) sb_.append(", ");
+            first = false;
+            emit_node(child);
+        }
+    }
+
+    void emit_update_set_item(const AstNode* node) {
+        const AstNode* col = node->first_child;
+        const AstNode* val = col ? col->next_sibling : nullptr;
+        if (col) emit_node(col);
+        sb_.append(" = ");
+        if (val) emit_node(val);
+    }
+
+    void emit_on_duplicate_key(const AstNode* node) {
+        sb_.append("ON DUPLICATE KEY UPDATE ");
+        bool first = true;
+        for (const AstNode* child = node->first_child; child; child = child->next_sibling) {
+            if (!first) sb_.append(", ");
+            first = false;
+            emit_node(child);
+        }
+    }
+
+    void emit_on_conflict(const AstNode* node) {
+        sb_.append("ON CONFLICT");
+        for (const AstNode* child = node->first_child; child; child = child->next_sibling) {
+            sb_.append_char(' ');
+            emit_node(child);
+        }
+    }
+
+    void emit_conflict_target(const AstNode* node) {
+        if (node->value_len > 0) {
+            // ON CONSTRAINT name
+            emit_value(node);  // "ON CONSTRAINT"
+            sb_.append_char(' ');
+            if (node->first_child) emit_node(node->first_child);
+        } else {
+            // (col1, col2, ...)
+            sb_.append_char('(');
+            bool first = true;
+            for (const AstNode* child = node->first_child; child; child = child->next_sibling) {
+                if (!first) sb_.append(", ");
+                first = false;
+                emit_node(child);
+            }
+            sb_.append_char(')');
+        }
+    }
+
+    void emit_conflict_action(const AstNode* node) {
+        sb_.append("DO ");
+        StringRef action_type{node->value_ptr, node->value_len};
+        if (action_type.equals_ci("NOTHING", 7)) {
+            sb_.append("NOTHING");
+        } else if (action_type.equals_ci("UPDATE", 6)) {
+            sb_.append("UPDATE SET ");
+            bool first = true;
+            for (const AstNode* child = node->first_child; child; child = child->next_sibling) {
+                if (child->type == NodeType::NODE_WHERE_CLAUSE) {
+                    emit_node(child);
+                } else {
+                    if (!first) sb_.append(", ");
+                    first = false;
+                    emit_node(child);
+                }
+            }
+        }
+    }
+
+    void emit_returning(const AstNode* node) {
+        sb_.append("RETURNING ");
+        bool first = true;
+        for (const AstNode* child = node->first_child; child; child = child->next_sibling) {
+            if (child->type == NodeType::NODE_ALIAS) {
+                emit_node(child);
+            } else {
+                if (!first) sb_.append(", ");
+                first = false;
+                emit_node(child);
+            }
         }
     }
 
