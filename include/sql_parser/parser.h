@@ -1,0 +1,75 @@
+#ifndef SQL_PARSER_PARSER_H
+#define SQL_PARSER_PARSER_H
+
+#include "sql_parser/common.h"
+#include "sql_parser/arena.h"
+#include "sql_parser/tokenizer.h"
+#include "sql_parser/ast.h"
+#include "sql_parser/parse_result.h"
+
+namespace sql_parser {
+
+struct ParserConfig {
+    size_t arena_block_size = 65536;    // 64KB
+    size_t arena_max_size = 1048576;    // 1MB
+};
+
+template <Dialect D>
+class Parser {
+public:
+    explicit Parser(const ParserConfig& config = {});
+    ~Parser() = default;
+
+    // Non-copyable, non-movable
+    Parser(const Parser&) = delete;
+    Parser& operator=(const Parser&) = delete;
+
+    // Parse a SQL string. Returns ParseResult with classification + metadata.
+    // For Tier 1 statements (SELECT, SET), returns PARTIAL until deep parsers
+    // are implemented (future plan).
+    ParseResult parse(const char* sql, size_t len);
+
+    // Reset the arena. Call after each query is fully processed.
+    void reset();
+
+private:
+    Arena arena_;
+    Tokenizer<D> tokenizer_;
+
+    // Classifier: dispatches to the right extractor/parser
+    ParseResult classify_and_dispatch();
+
+    // Tier 1 stubs (return PARTIAL with stmt_type set)
+    ParseResult parse_select();
+    ParseResult parse_set();
+
+    // Tier 2 extractors
+    ParseResult extract_insert(const Token& first);
+    ParseResult extract_update(const Token& first);
+    ParseResult extract_delete(const Token& first);
+    ParseResult extract_replace(const Token& first);
+    ParseResult extract_transaction(const Token& first);
+    ParseResult extract_use(const Token& first);
+    ParseResult extract_show(const Token& first);
+    ParseResult extract_prepare(const Token& first);
+    ParseResult extract_execute(const Token& first);
+    ParseResult extract_deallocate(const Token& first);
+    ParseResult extract_ddl(const Token& first);
+    ParseResult extract_acl(const Token& first);
+    ParseResult extract_lock(const Token& first);
+    ParseResult extract_load(const Token& first);
+    ParseResult extract_reset(const Token& first);
+    ParseResult extract_unknown(const Token& first);
+
+    // Helpers
+    // Read optional schema.table or just table. Returns table token.
+    // If qualified (schema.table), sets schema_out.
+    Token read_table_name(StringRef& schema_out);
+
+    // Scan forward to semicolon or EOF, set result.remaining
+    void scan_to_end(ParseResult& result);
+};
+
+} // namespace sql_parser
+
+#endif // SQL_PARSER_PARSER_H
