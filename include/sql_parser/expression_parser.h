@@ -142,6 +142,16 @@ private:
                 node->add_child(operand);
                 return node;
             }
+            case TokenType::TK_EXISTS: {
+                tok_.skip();
+                // EXISTS (subquery)
+                AstNode* node = make_node(arena_, NodeType::NODE_SUBQUERY);
+                if (tok_.peek().type == TokenType::TK_LPAREN) {
+                    tok_.skip();
+                    skip_to_matching_paren();
+                }
+                return node;
+            }
             case TokenType::TK_CASE: {
                 tok_.skip();
                 return parse_case();
