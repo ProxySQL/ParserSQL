@@ -5,13 +5,16 @@
 #include "sql_parser/ast.h"
 #include "sql_parser/arena.h"
 #include "sql_parser/string_builder.h"
+#include "sql_parser/parse_result.h"
+#include <cstdio>
 
 namespace sql_parser {
 
 template <Dialect D>
 class Emitter {
 public:
-    explicit Emitter(Arena& arena) : sb_(arena) {}
+    explicit Emitter(Arena& arena, const ParamBindings* bindings = nullptr)
+        : sb_(arena), bindings_(bindings), placeholder_index_(0) {}
 
     void emit(const AstNode* node) {
         if (!node) return;
@@ -22,6 +25,8 @@ public:
 
 private:
     StringBuilder sb_;
+    const ParamBindings* bindings_;
+    uint16_t placeholder_index_;
 
     void emit_node(const AstNode* node) {
         switch (node->type) {
@@ -66,12 +71,15 @@ private:
             case NodeType::NODE_SUBQUERY:        emit_value(node); break;
 
             // ---- Leaf nodes (emit value directly) ----
+            case NodeType::NODE_PLACEHOLDER:
+                emit_placeholder(node); break;
+
+            // ---- Leaf nodes (emit value directly) ----
             case NodeType::NODE_LITERAL_INT:
             case NodeType::NODE_LITERAL_FLOAT:
             case NodeType::NODE_LITERAL_NULL:
             case NodeType::NODE_COLUMN_REF:
             case NodeType::NODE_ASTERISK:
-            case NodeType::NODE_PLACEHOLDER:
             case NodeType::NODE_IDENTIFIER:
                 emit_value(node); break;
 
@@ -91,6 +99,43 @@ private:
         sb_.append_char('\'');
         sb_.append(node->value_ptr, node->value_len);
         sb_.append_char('\'');
+    }
+
+    void emit_placeholder(const AstNode* node) {
+        if (bindings_ && placeholder_index_ < bindings_->count) {
+            const BoundValue& bv = bindings_->values[placeholder_index_];
+            ++placeholder_index_;
+            switch (bv.type) {
+                case BoundValue::INT:
+                    { char buf[32]; int n = snprintf(buf, sizeof(buf), "%lld", (long long)bv.int_val);
+                      sb_.append(buf, n); }
+                    break;
+                case BoundValue::FLOAT:
+                    { char buf[64]; int n = snprintf(buf, sizeof(buf), "%g", (double)bv.float32_val);
+                      sb_.append(buf, n); }
+                    break;
+                case BoundValue::DOUBLE:
+                    { char buf[64]; int n = snprintf(buf, sizeof(buf), "%g", bv.float64_val);
+                      sb_.append(buf, n); }
+                    break;
+                case BoundValue::STRING:
+                case BoundValue::DATETIME:
+                case BoundValue::DECIMAL:
+                    sb_.append_char('\'');
+                    sb_.append(bv.str_val);
+                    sb_.append_char('\'');
+                    break;
+                case BoundValue::BLOB:
+                    sb_.append(bv.str_val);
+                    break;
+                case BoundValue::NULL_VAL:
+                    sb_.append("NULL", 4);
+                    break;
+            }
+        } else {
+            // No binding available -- emit placeholder as-is
+            emit_value(node);
+        }
     }
 
     // ---- SET ----

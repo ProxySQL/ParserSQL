@@ -7,7 +7,8 @@ namespace sql_parser {
 
 template <Dialect D>
 Parser<D>::Parser(const ParserConfig& config)
-    : arena_(config.arena_block_size, config.arena_max_size) {}
+    : arena_(config.arena_block_size, config.arena_max_size),
+      stmt_cache_(config.stmt_cache_capacity) {}
 
 template <Dialect D>
 void Parser<D>::reset() {
@@ -400,6 +401,38 @@ ParseResult Parser<D>::extract_unknown(const Token& /* first */) {
     r.stmt_type = StmtType::UNKNOWN;
     scan_to_end(r);
     return r;
+}
+
+// ---- Prepared statement support ----
+
+template <Dialect D>
+ParseResult Parser<D>::parse_and_cache(const char* sql, size_t len, uint32_t stmt_id) {
+    ParseResult r = parse(sql, len);
+    if (r.ast) {
+        stmt_cache_.store(stmt_id, r.stmt_type, r.ast);
+    }
+    return r;
+}
+
+template <Dialect D>
+ParseResult Parser<D>::execute(uint32_t stmt_id, const ParamBindings& params) {
+    ParseResult r;
+    const CachedStmt* cached = stmt_cache_.lookup(stmt_id);
+    if (!cached) {
+        r.status = ParseResult::ERROR;
+        r.stmt_type = StmtType::UNKNOWN;
+        return r;
+    }
+    r.status = ParseResult::OK;
+    r.stmt_type = cached->stmt_type;
+    r.ast = cached->ast;
+    r.bindings = params;
+    return r;
+}
+
+template <Dialect D>
+void Parser<D>::prepare_cache_evict(uint32_t stmt_id) {
+    stmt_cache_.evict(stmt_id);
 }
 
 // ---- Explicit template instantiations ----

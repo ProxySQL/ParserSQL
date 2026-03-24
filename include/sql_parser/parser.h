@@ -6,12 +6,14 @@
 #include "sql_parser/tokenizer.h"
 #include "sql_parser/ast.h"
 #include "sql_parser/parse_result.h"
+#include "sql_parser/stmt_cache.h"
 
 namespace sql_parser {
 
 struct ParserConfig {
     size_t arena_block_size = 65536;    // 64KB
     size_t arena_max_size = 1048576;    // 1MB
+    size_t stmt_cache_capacity = 128;
 };
 
 template <Dialect D>
@@ -35,9 +37,15 @@ public:
     // Access the arena (for emitter use)
     Arena& arena() { return arena_; }
 
+    // Prepared statement support
+    ParseResult parse_and_cache(const char* sql, size_t len, uint32_t stmt_id);
+    ParseResult execute(uint32_t stmt_id, const ParamBindings& params);
+    void prepare_cache_evict(uint32_t stmt_id);
+
 private:
     Arena arena_;
     Tokenizer<D> tokenizer_;
+    StmtCache stmt_cache_;
 
     // Classifier: dispatches to the right extractor/parser
     ParseResult classify_and_dispatch();
