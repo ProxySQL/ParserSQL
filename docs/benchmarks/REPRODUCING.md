@@ -72,6 +72,8 @@ ls -la third_party/libpg_query/libpg_query.a
 
 **What libpg_query is:** This is PostgreSQL's actual parser (Bison-generated), extracted from the PostgreSQL source code by pganalyze. It compiles PostgreSQL's parser, lexer, memory management, and node types into a standalone library. The `pg_query_parse()` function takes a SQL string and returns a JSON-serialized parse tree. The `pg_query_raw_parse()` function (internal API) returns the raw AST without JSON serialization.
 
+**Optimization flags:** libpg_query builds with `-O3 -g` by default (see its Makefile: `CFLAGS_OPT_LEVEL = -O3`). The `-g` flag adds debug symbols but does not affect runtime performance. Both ParserSQL and libpg_query are compiled at `-O3` — this is a fair comparison.
+
 ---
 
 ## Step 4: Build the comparison benchmark
@@ -153,27 +155,7 @@ xdg-open bench/sqlparser_rs_bench/target/criterion/report/index.html  # Linux
 
 ---
 
-## Step 7: Optional — ReadySet (nom-sql) benchmark
-
-ReadySet uses `nom-sql`, a nom-based SQL parser. However, ReadySet is transitioning to sqlparser-rs as their primary parser (default: `both-prefer-sqlparser`). Benchmarking nom-sql separately has limited value since it's being phased out.
-
-If you still want to run it:
-
-```bash
-# Clone ReadySet (full repo required for workspace dependencies, ~1.3GB)
-git clone --depth 1 https://github.com/readysettech/readyset.git /tmp/readyset_full
-
-# Build and run ReadySet's own comparison benchmark (nom-sql vs sqlparser-rs)
-cd /tmp/readyset_full
-cargo bench -p readyset-sql-parsing --bench parse_comparison 2>&1 | grep -E "time:"
-cd -
-```
-
-**Note:** ReadySet's benchmark already includes sqlparser-rs comparisons internally, so this mostly confirms our sqlparser-rs numbers.
-
----
-
-## Step 8: Run the automated comparison script
+## Step 7: Run the automated comparison script
 
 The `scripts/run_comparison.sh` script runs all comparisons in sequence:
 
@@ -185,7 +167,7 @@ This produces console output with all three parser comparisons side by side.
 
 ---
 
-## Step 9: Generate the full benchmark report
+## Step 8: Generate the full benchmark report
 
 ```bash
 ./scripts/run_benchmarks.sh docs/benchmarks/latest.md
