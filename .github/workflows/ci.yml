@@ -57,16 +57,34 @@ jobs:
       - name: Build
         run: make -f Makefile.new all && make -f Makefile.new build-corpus-test
 
-      - name: Download corpora and test
+      - name: Test against SQLGlot
         run: |
-          mkdir -p /tmp/sql_corpora
+          git clone --depth 1 -q https://github.com/tobymao/sqlglot.git /tmp/sqlglot
+          cat /tmp/sqlglot/tests/fixtures/identity.sql /tmp/sqlglot/tests/fixtures/tpch.sql \
+              /tmp/sqlglot/tests/fixtures/tpcds.sql 2>/dev/null | \
+              grep -v '^$' | grep -v '^--' | ./corpus_test mysql
 
-          # SQLGlot (easiest, fastest)
-          git clone --depth 1 -q https://github.com/tobymao/sqlglot.git /tmp/sql_corpora/sqlglot
-          cat /tmp/sql_corpora/sqlglot/tests/fixtures/identity.sql | ./corpus_test mysql
+      - name: Test against CockroachDB
+        run: |
+          git clone --depth 1 --sparse -q https://github.com/cockroachdb/cockroach.git /tmp/cockroach
+          cd /tmp/cockroach && git sparse-checkout set pkg/sql/parser/testdata 2>/dev/null && cd -
+          grep -rh "^[A-Z]" /tmp/cockroach/pkg/sql/parser/testdata/ 2>/dev/null | \
+              grep -v "^--" | grep -v "^#" | head -5000 | ./corpus_test pgsql
 
-          # TPC-H
-          git clone --depth 1 -q https://github.com/tvondra/pg_tpch.git /tmp/sql_corpora/pg_tpch
-          for f in /tmp/sql_corpora/pg_tpch/queries/*.sql; do
-            cat "$f" | sed 's/--.*$//' | tr '\n' ' ' | sed 's/;/;\n/g' | grep -v '^\s*$'
-          done | ./corpus_test pgsql
+      - name: Test against Vitess
+        run: |
+          git clone --depth 1 --sparse -q https://github.com/vitessio/vitess.git /tmp/vitess
+          cd /tmp/vitess && git sparse-checkout set go/vt/sqlparser 2>/dev/null && cd -
+          grep -ohP '"((?:select|SELECT|insert|INSERT|update|UPDATE|delete|DELETE|set|SET|create|CREATE|alter|ALTER|drop|DROP|explain|EXPLAIN)[^"]*)"' \
+              /tmp/vitess/go/vt/sqlparser/parse_test.go 2>/dev/null | \
+              sed 's/^"//' | sed 's/"$//' | head -2000 | ./corpus_test mysql
+
+      - name: Test against sqlparser-rs
+        run: |
+          git clone --depth 1 -q https://github.com/apache/datafusion-sqlparser-rs.git /tmp/sqlparser-rs
+          grep -ohP '"((?:SELECT|INSERT|UPDATE|DELETE|SET|CREATE|ALTER|DROP|EXPLAIN|WITH)[^"]*)"' \
+              /tmp/sqlparser-rs/tests/sqlparser_mysql.rs 2>/dev/null | \
+              sed 's/^"//' | sed 's/"$//' | sed 's/\\"/"/g' | ./corpus_test mysql
+          grep -ohP '"((?:SELECT|INSERT|UPDATE|DELETE|SET|CREATE|ALTER|DROP|EXPLAIN|WITH)[^"]*)"' \
+              /tmp/sqlparser-rs/tests/sqlparser_postgres.rs 2>/dev/null | \
+              sed 's/^"//' | sed 's/"$//' | sed 's/\\"/"/g' | ./corpus_test pgsql

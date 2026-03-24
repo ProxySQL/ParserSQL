@@ -1,11 +1,11 @@
 # SQL Parser Performance Report
 
-**Date:** 2026-03-24 17:38 UTC
+**Date:** 2026-03-24 17:45 UTC
 **Host:** ci-big6-202511.vm
 **CPU:** AMD Ryzen 9 5950X 16-Core Processor
 **OS:** Linux 6.17.0-14-generic
 **Compiler:** g++ (Ubuntu 13.3.0-6ubuntu2~24.04.1) 13.3.0
-**Git:** main @ b63b194
+**Git:** main @ 5b3ee4f
 **Unit tests:** 430 passing
 
 ---
@@ -14,24 +14,24 @@
 
 | Operation | Latency | Target | Status |
 |---|---|---|---|
-| BM_Classify_Insert | 207 ns | <500ns | MET |
+| BM_Classify_Insert | 210 ns | <500ns | MET |
 | BM_Classify_Update | 240 ns | <500ns | MET |
-| BM_Classify_Delete | 185 ns | <500ns | MET |
-| BM_Classify_Begin | 36.0 ns | <100ns | MET |
-| BM_Set_Simple | 128 ns | <300ns | MET |
-| BM_Set_Names | 127 ns | <300ns | MET |
+| BM_Classify_Delete | 184 ns | <500ns | MET |
+| BM_Classify_Begin | 37.5 ns | <100ns | MET |
+| BM_Set_Simple | 130 ns | <300ns | MET |
+| BM_Set_Names | 130 ns | <300ns | MET |
 | BM_Set_MultiVar | 254 ns | <300ns | MET |
-| BM_Set_FunctionRHS | 219 ns | <300ns | MET |
-| BM_Select_Simple | 229 ns | <500ns | MET |
-| BM_Select_MultiColumn | 467 ns | <500ns | MET |
-| BM_Select_Join | 599 ns | <2us | MET |
-| BM_Select_Complex | 1405 ns | <2us | MET |
-| BM_Select_MultiJoin | 1446 ns | <2us | MET |
-| BM_Emit_SetSimple | 139 ns | <500ns | MET |
-| BM_Emit_SelectSimple | 258 ns | <500ns | MET |
-| BM_ArenaReset | 3.76 ns | <10ns | MET |
-| BM_PgSQL_Select_Simple | 221 ns | — | — |
-| BM_PgSQL_Set_Simple | 95.8 ns | — | — |
+| BM_Set_FunctionRHS | 213 ns | <300ns | MET |
+| BM_Select_Simple | 223 ns | <500ns | MET |
+| BM_Select_MultiColumn | 470 ns | <500ns | MET |
+| BM_Select_Join | 596 ns | <2us | MET |
+| BM_Select_Complex | 1406 ns | <2us | MET |
+| BM_Select_MultiJoin | 1492 ns | <2us | MET |
+| BM_Emit_SetSimple | 147 ns | <500ns | MET |
+| BM_Emit_SelectSimple | 284 ns | <500ns | MET |
+| BM_ArenaReset | 3.63 ns | <10ns | MET |
+| BM_PgSQL_Select_Simple | 230 ns | — | — |
+| BM_PgSQL_Set_Simple | 97.4 ns | — | — |
 
 ---
 
@@ -39,13 +39,18 @@
 
 | Corpus | Dialect | Queries | OK | PARTIAL | ERROR |
 |---|---|---|---|---|---|
-| PostgreSQL regression | pgsql | 55562 | 55342 (99.6202%) | 204 | 7 |
-| SQLGlot | mysql | 954 | 941 (98.6373%) | 13 | 0 |
-| CockroachDB | pgsql | 5000 | 4998 (99.96%) | 2 | 0 |
+| PostgreSQL regression | pgsql | 55553 | 55342 (99.6202%) | 204 | 7 |
+| MySQL MTR | mysql | 2270 | 2268 (99.9119%) | 2 | 0 |
+| CockroachDB | pgsql | 17429 | 16570 (95.0714%) | 859 | 0 |
+| SQLGlot | mysql | 1450 | 1424 (98.2069%) | 13 | 13 |
 
-| Vitess | mysql | 2000 | 1996 (99.8%) | 4 | 0 |
-| TiDB | mysql | 3000 | 2991 (99.7%) | 9 | 0 |
 
+| sqlparser-rs MySQL | mysql | 424 | 424 (100%) | 0 | 0 |
+| sqlparser-rs PostgreSQL | pgsql | 471 | 468 (99.3631%) | 3 | 0 |
+| sqlparser-rs Common | mysql | 1536 | 1528 (99.4792%) | 8 | 0 |
+| Vitess | mysql | 2291 | 2286 (99.7818%) | 5 | 0 |
+| TiDB | mysql | 5043 | 5031 (99.762%) | 12 | 0 |
+| **TOTAL** | | **86467** | **85341** | **1106** | **20** |
 
 ---
 
