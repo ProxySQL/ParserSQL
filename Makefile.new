@@ -31,7 +31,18 @@ TEST_SRCS = $(TEST_DIR)/test_main.cpp \
 TEST_OBJS = $(TEST_SRCS:.cpp=.o)
 TEST_TARGET = $(PROJECT_ROOT)/run_tests
 
-.PHONY: all lib test clean
+# Google Benchmark
+GBENCH_DIR = $(PROJECT_ROOT)/third_party/benchmark
+GBENCH_SRCS = $(filter-out $(GBENCH_DIR)/src/benchmark_main.cc, $(wildcard $(GBENCH_DIR)/src/*.cc))
+GBENCH_OBJS = $(GBENCH_SRCS:.cc=.o)
+GBENCH_CPPFLAGS = -I$(GBENCH_DIR)/include -I$(GBENCH_DIR)/src -DHAVE_STD_REGEX -DHAVE_STEADY_CLOCK
+
+BENCH_DIR = $(PROJECT_ROOT)/bench
+BENCH_SRCS = $(BENCH_DIR)/bench_main.cpp $(BENCH_DIR)/bench_parser.cpp
+BENCH_OBJS = $(BENCH_SRCS:.cpp=.o)
+BENCH_TARGET = $(PROJECT_ROOT)/run_bench
+
+.PHONY: all lib test bench clean
 
 all: lib test
 
@@ -58,6 +69,20 @@ test: $(TEST_TARGET)
 $(TEST_TARGET): $(TEST_OBJS) $(GTEST_OBJ) $(LIB_TARGET)
 	$(CXX) $(CXXFLAGS) -o $@ $(TEST_OBJS) $(GTEST_OBJ) -L$(PROJECT_ROOT) -lsqlparser -lpthread
 
+# Benchmark objects
+$(GBENCH_DIR)/src/%.o: $(GBENCH_DIR)/src/%.cc
+	$(CXX) $(CXXFLAGS) $(GBENCH_CPPFLAGS) -c $< -o $@
+
+$(BENCH_DIR)/%.o: $(BENCH_DIR)/%.cpp
+	$(CXX) $(CXXFLAGS) $(CPPFLAGS) $(GBENCH_CPPFLAGS) -c $< -o $@
+
+bench: $(BENCH_TARGET)
+	./$(BENCH_TARGET) --benchmark_format=console
+
+$(BENCH_TARGET): $(BENCH_OBJS) $(GBENCH_OBJS) $(LIB_TARGET)
+	$(CXX) $(CXXFLAGS) -o $@ $(BENCH_OBJS) $(GBENCH_OBJS) -L$(PROJECT_ROOT) -lsqlparser -lpthread
+
 clean:
 	rm -f $(LIB_OBJS) $(LIB_TARGET) $(TEST_OBJS) $(GTEST_OBJ) $(TEST_TARGET)
+	rm -f $(BENCH_OBJS) $(GBENCH_OBJS) $(BENCH_TARGET)
 	@echo "Cleaned."

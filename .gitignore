@@ -45,3 +45,4 @@ src/*_parser/*_parser.report
 # New parser build artifacts
 libsqlparser.a
 run_tests
+run_bench
