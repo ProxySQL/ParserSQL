@@ -2,6 +2,7 @@
 #include "sql_parser/expression_parser.h"
 #include "sql_parser/set_parser.h"
 #include "sql_parser/select_parser.h"
+#include "sql_parser/compound_query_parser.h"
 #include "sql_parser/insert_parser.h"
 #include "sql_parser/update_parser.h"
 #include "sql_parser/delete_parser.h"
@@ -38,6 +39,14 @@ ParseResult Parser<D>::classify_and_dispatch() {
 
     switch (first.type) {
         case TokenType::TK_SELECT:   return parse_select();
+        case TokenType::TK_LPAREN: {
+            // Parenthesized SELECT / compound query: (SELECT ...) UNION ...
+            Token next = tokenizer_.peek();
+            if (next.type == TokenType::TK_SELECT || next.type == TokenType::TK_LPAREN) {
+                return parse_select_from_lparen();
+            }
+            return extract_unknown(first);
+        }
         case TokenType::TK_SET:      return parse_set();
         case TokenType::TK_INSERT:   return parse_insert(false);
         case TokenType::TK_UPDATE:   return parse_update();
@@ -74,14 +83,191 @@ ParseResult Parser<D>::parse_select() {
     ParseResult r;
     r.stmt_type = StmtType::SELECT;
 
-    SelectParser<D> select_parser(tokenizer_, arena_);
-    AstNode* ast = select_parser.parse();
+    CompoundQueryParser<D> compound_parser(tokenizer_, arena_);
+    AstNode* ast = compound_parser.parse();
 
     if (ast) {
         r.status = ParseResult::OK;
         r.ast = ast;
     } else {
         r.status = ParseResult::PARTIAL;
+    }
+
+    scan_to_end(r);
+    return r;
+}
+
+template <Dialect D>
+ParseResult Parser<D>::parse_select_from_lparen() {
+    // Called when classifier consumed '(' and peeked SELECT or '('
+    // We need to parse the inner compound query, then check for set operators
+    // after the closing ')'.
+    //
+    // Strategy: parse inner as a fresh compound expression, expect ')',
+    // then check if a set operator follows (making this a compound query).
+
+    ParseResult r;
+    r.stmt_type = StmtType::SELECT;
+
+    // We're inside '(' already consumed.
+    // Parse inner: could be SELECT or another '('
+    AstNode* inner = nullptr;
+    if (tokenizer_.peek().type == TokenType::TK_SELECT) {
+        tokenizer_.skip(); // consume SELECT
+        SelectParser<D> sp(tokenizer_, arena_);
+        inner = sp.parse();
+
+        // Check for set operators inside the parens
+        Token t = tokenizer_.peek();
+        while (t.type == TokenType::TK_UNION ||
+               t.type == TokenType::TK_INTERSECT ||
+               t.type == TokenType::TK_EXCEPT) {
+            tokenizer_.skip();
+            StringRef op_text = t.text;
+            uint16_t flags = 0;
+            if (tokenizer_.peek().type == TokenType::TK_ALL) {
+                tokenizer_.skip();
+                flags = FLAG_SET_OP_ALL;
+            }
+            // Next SELECT
+            if (tokenizer_.peek().type == TokenType::TK_SELECT) {
+                tokenizer_.skip();
+            }
+            SelectParser<D> sp2(tokenizer_, arena_);
+            AstNode* right = sp2.parse();
+
+            AstNode* setop = make_node(arena_, NodeType::NODE_SET_OPERATION, op_text);
+            if (setop) {
+                setop->flags = flags;
+                setop->add_child(inner);
+                if (right) setop->add_child(right);
+                inner = setop;
+            }
+            t = tokenizer_.peek();
+        }
+    } else {
+        // Nested parenthesized -- recursively handle
+        // This is an edge case; for now parse as compound
+        CompoundQueryParser<D> cp(tokenizer_, arena_);
+        inner = cp.parse();
+    }
+
+    // Expect closing ')'
+    if (tokenizer_.peek().type == TokenType::TK_RPAREN) {
+        tokenizer_.skip();
+    }
+
+    // Now check if a set operator follows after the ')'
+    Token t = tokenizer_.peek();
+    if (t.type == TokenType::TK_UNION ||
+        t.type == TokenType::TK_INTERSECT ||
+        t.type == TokenType::TK_EXCEPT) {
+        // This is a compound query starting with a parenthesized operand.
+        // Use CompoundQueryParser to continue, but we already have the left operand.
+        // We'll build the compound manually.
+        AstNode* left = inner;
+        while (true) {
+            t = tokenizer_.peek();
+            if (t.type != TokenType::TK_UNION &&
+                t.type != TokenType::TK_INTERSECT &&
+                t.type != TokenType::TK_EXCEPT) break;
+
+            tokenizer_.skip();
+            StringRef op_text = t.text;
+            uint16_t flags = 0;
+            if (tokenizer_.peek().type == TokenType::TK_ALL) {
+                tokenizer_.skip();
+                flags = FLAG_SET_OP_ALL;
+            }
+
+            AstNode* right = nullptr;
+            if (tokenizer_.peek().type == TokenType::TK_LPAREN) {
+                // Parenthesized right operand
+                tokenizer_.skip();
+                if (tokenizer_.peek().type == TokenType::TK_SELECT) {
+                    tokenizer_.skip();
+                }
+                SelectParser<D> sp3(tokenizer_, arena_);
+                right = sp3.parse();
+                if (tokenizer_.peek().type == TokenType::TK_RPAREN) {
+                    tokenizer_.skip();
+                }
+            } else if (tokenizer_.peek().type == TokenType::TK_SELECT) {
+                tokenizer_.skip();
+                SelectParser<D> sp3(tokenizer_, arena_);
+                right = sp3.parse();
+            }
+
+            AstNode* setop = make_node(arena_, NodeType::NODE_SET_OPERATION, op_text);
+            if (setop) {
+                setop->flags = flags;
+                setop->add_child(left);
+                if (right) setop->add_child(right);
+                left = setop;
+            }
+        }
+
+        // Wrap in COMPOUND_QUERY
+        AstNode* compound = make_node(arena_, NodeType::NODE_COMPOUND_QUERY);
+        if (compound) {
+            compound->add_child(left);
+
+            // Trailing ORDER BY
+            if (tokenizer_.peek().type == TokenType::TK_ORDER) {
+                tokenizer_.skip();
+                if (tokenizer_.peek().type == TokenType::TK_BY) tokenizer_.skip();
+                ExpressionParser<D> ep(tokenizer_, arena_);
+                AstNode* order_by = make_node(arena_, NodeType::NODE_ORDER_BY_CLAUSE);
+                if (order_by) {
+                    while (true) {
+                        AstNode* expr = ep.parse();
+                        if (!expr) break;
+                        AstNode* item = make_node(arena_, NodeType::NODE_ORDER_BY_ITEM);
+                        item->add_child(expr);
+                        Token dir = tokenizer_.peek();
+                        if (dir.type == TokenType::TK_ASC || dir.type == TokenType::TK_DESC) {
+                            tokenizer_.skip();
+                            item->add_child(make_node(arena_, NodeType::NODE_IDENTIFIER, dir.text));
+                        }
+                        order_by->add_child(item);
+                        if (tokenizer_.peek().type == TokenType::TK_COMMA) {
+                            tokenizer_.skip();
+                        } else {
+                            break;
+                        }
+                    }
+                    compound->add_child(order_by);
+                }
+            }
+
+            // Trailing LIMIT
+            if (tokenizer_.peek().type == TokenType::TK_LIMIT) {
+                tokenizer_.skip();
+                ExpressionParser<D> ep(tokenizer_, arena_);
+                AstNode* limit = make_node(arena_, NodeType::NODE_LIMIT_CLAUSE);
+                if (limit) {
+                    AstNode* val = ep.parse();
+                    if (val) limit->add_child(val);
+                    if (tokenizer_.peek().type == TokenType::TK_OFFSET) {
+                        tokenizer_.skip();
+                        AstNode* off = ep.parse();
+                        if (off) limit->add_child(off);
+                    }
+                    compound->add_child(limit);
+                }
+            }
+
+            r.status = ParseResult::OK;
+            r.ast = compound;
+        }
+    } else {
+        // Just a parenthesized SELECT, no compound
+        if (inner) {
+            r.status = ParseResult::OK;
+            r.ast = inner;
+        } else {
+            r.status = ParseResult::PARTIAL;
+        }
     }
 
     scan_to_end(r);

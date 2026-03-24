@@ -11,9 +11,6 @@
 
 namespace sql_parser {
 
-// Flag on NODE_SET_OPERATION to indicate ALL
-static constexpr uint16_t FLAG_SET_OP_ALL = 0x01;
-
 template <Dialect D>
 class CompoundQueryParser {
 public:

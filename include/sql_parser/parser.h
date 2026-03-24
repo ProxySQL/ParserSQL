@@ -52,6 +52,7 @@ private:
 
     // Tier 1 parsers
     ParseResult parse_select();
+    ParseResult parse_select_from_lparen();
     ParseResult parse_set();
     ParseResult parse_insert(bool is_replace = false);
     ParseResult parse_update();

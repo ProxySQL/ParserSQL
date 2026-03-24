@@ -68,6 +68,10 @@ private:
             case NodeType::NODE_STMT_OPTIONS:    emit_stmt_options(node); break;
             case NodeType::NODE_UPDATE_SET_ITEM: emit_update_set_item(node); break;
 
+            // ---- Compound query ----
+            case NodeType::NODE_COMPOUND_QUERY:  emit_compound_query(node); break;
+            case NodeType::NODE_SET_OPERATION:   emit_set_operation(node); break;
+
             // ---- DELETE statement ----
             case NodeType::NODE_DELETE_STMT:          emit_delete_stmt(node); break;
             case NodeType::NODE_DELETE_USING_CLAUSE:  emit_delete_using(node); break;
@@ -801,6 +805,36 @@ private:
                 emit_node(child);
             }
         }
+    }
+
+    // ---- Compound query ----
+
+    void emit_compound_query(const AstNode* node) {
+        for (const AstNode* child = node->first_child; child; child = child->next_sibling) {
+            if (child->type == NodeType::NODE_SET_OPERATION) {
+                emit_set_operation(child);
+            } else {
+                // Trailing ORDER BY or LIMIT
+                emit_node(child);
+            }
+        }
+    }
+
+    void emit_set_operation(const AstNode* node) {
+        const AstNode* left = node->first_child;
+        const AstNode* right = left ? left->next_sibling : nullptr;
+
+        if (left) emit_node(left);
+
+        // Emit the operator: " UNION ", " UNION ALL ", " INTERSECT ", etc.
+        sb_.append_char(' ');
+        emit_value(node);  // operator keyword text (UNION, INTERSECT, EXCEPT)
+        if (node->flags & FLAG_SET_OP_ALL) {
+            sb_.append(" ALL");
+        }
+        sb_.append_char(' ');
+
+        if (right) emit_node(right);
     }
 
     // ---- Expressions ----

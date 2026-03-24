@@ -56,6 +56,9 @@ inline int ci_cmp(const char* a, uint32_t alen, const char* b, uint8_t blen) {
     return 0;
 }
 
+// -- Flags for NODE_SET_OPERATION --
+static constexpr uint16_t FLAG_SET_OP_ALL = 0x01;
+
 // -- Statement type (always set, even for PARTIAL/ERROR) --
 
 enum class StmtType : uint8_t {
