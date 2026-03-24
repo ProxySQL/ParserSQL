@@ -22,7 +22,9 @@ GTEST_CPPFLAGS = -I$(GTEST_DIR)/include -I$(GTEST_DIR)
 TEST_SRCS = $(TEST_DIR)/test_main.cpp \
             $(TEST_DIR)/test_arena.cpp \
             $(TEST_DIR)/test_tokenizer.cpp \
-            $(TEST_DIR)/test_classifier.cpp
+            $(TEST_DIR)/test_classifier.cpp \
+            $(TEST_DIR)/test_expression.cpp \
+            $(TEST_DIR)/test_set.cpp
 TEST_OBJS = $(TEST_SRCS:.cpp=.o)
 TEST_TARGET = $(PROJECT_ROOT)/run_tests
 
