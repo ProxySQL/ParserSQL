@@ -32,6 +32,9 @@ public:
     // Reset the arena. Call after each query is fully processed.
     void reset();
 
+    // Access the arena (for emitter use)
+    Arena& arena() { return arena_; }
+
 private:
     Arena arena_;
     Tokenizer<D> tokenizer_;
