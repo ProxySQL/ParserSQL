@@ -18,6 +18,33 @@ Extends the SQL parser with full Tier 1 deep parsing for INSERT, UPDATE, and DEL
 - All new parsers follow the established pattern: `XxxParser<D>` header-only template, uses `ExpressionParser<D>`, integrated via `parser.cpp`.
 - Emitter extended for all new node types + digest mode.
 
+### Prerequisite Refactoring: Shared Table Reference Parsing
+
+The existing `SelectParser<D>` has `parse_from_clause()`, `parse_table_reference()`, `parse_join()`, and `parse_optional_alias()` as private methods. These are needed by `InsertParser` (for INSERT ... SELECT), `UpdateParser` (for MySQL multi-table UPDATE), and `DeleteParser` (for MySQL multi-table DELETE and PostgreSQL USING).
+
+**Solution:** Extract these methods into a shared `TableRefParser<D>` utility class that takes a `Tokenizer<D>&` and `Arena&`. All parsers (SelectParser, InsertParser, UpdateParser, DeleteParser) instantiate it internally. SelectParser's private methods are replaced with calls to TableRefParser.
+
+```
+include/sql_parser/
+    table_ref_parser.h    — shared FROM/JOIN/table reference parsing
+```
+
+This refactoring is a prerequisite for Plans 7-9 and should be done as the first task of Plan 7.
+
+### Classifier Updates
+
+The classifier switch in `Parser<D>::classify_and_dispatch()` must be updated:
+
+- `TK_INSERT` → `parse_insert()` (was `extract_insert()`)
+- `TK_UPDATE` → `parse_update()` (was `extract_update()`)
+- `TK_DELETE` → `parse_delete()` (was `extract_delete()`)
+- `TK_REPLACE` → `parse_insert()` with a REPLACE flag (was `extract_replace()`)
+- `TK_SELECT` → compound query aware `parse_select()` (existing, updated)
+
+### is_alias_start() Update
+
+The `is_alias_start()` blocklist in SelectParser must be updated to include new clause-starting keywords: `TK_RETURNING`, `TK_INTERSECT`, `TK_EXCEPT`, `TK_CONFLICT`, `TK_DO`, `TK_NOTHING`, `TK_DUPLICATE`.
+
 ---
 
 ## New NodeType Additions
@@ -140,18 +167,21 @@ UPDATE [ONLY] table_name [[AS] alias]
 ```
 NODE_UPDATE_STMT
   ├── NODE_STMT_OPTIONS (LOW_PRIORITY, IGNORE)
-  ├── NODE_FROM_CLAUSE (table references, may include JOINs for MySQL)
+  ├── NODE_TABLE_REF (target table — for both dialects, the primary table being updated)
+  ├── NODE_FROM_CLAUSE (MySQL: additional JOINed table refs; PostgreSQL: FROM join source)
+  │     (distinguished by position: always comes after SET clause for PostgreSQL,
+  │      comes as part of the initial table refs for MySQL)
+  │     (MySQL multi-table: flags field has FLAG_UPDATE_TARGET_TABLES = 0x01)
   ├── NODE_UPDATE_SET_CLAUSE
   │     ├── NODE_UPDATE_SET_ITEM (col = expr)
   │     └── NODE_UPDATE_SET_ITEM (col = expr)
   ├── NODE_WHERE_CLAUSE
   ├── NODE_ORDER_BY_CLAUSE (MySQL only)
   ├── NODE_LIMIT_CLAUSE (MySQL only)
-  ├── NODE_FROM_CLAUSE (PostgreSQL FROM — second FROM node, distinct from table ref)
   └── NODE_RETURNING_CLAUSE (PostgreSQL)
 ```
 
-For MySQL multi-table UPDATE, the table references (with JOINs) reuse the existing `parse_from_clause()` / `parse_join()` logic from SelectParser. For PostgreSQL, the single table is parsed first, then an optional FROM clause provides joined tables.
+For MySQL multi-table UPDATE, the table references (with JOINs) reuse the shared `TableRefParser` methods. For MySQL, the JOINed tables appear as children of the first `NODE_FROM_CLAUSE` (before SET). For PostgreSQL, the single target table is a `NODE_TABLE_REF`, and the optional `FROM` clause (after SET, before WHERE) is a separate `NODE_FROM_CLAUSE` child. The emitter checks the statement type to determine emission order.
 
 ---
 
@@ -251,7 +281,21 @@ NODE_COMPOUND_QUERY
 
 ### Integration
 
-The `parse_select()` method in `Parser<D>` is updated: after parsing the first SELECT, it checks for UNION/INTERSECT/EXCEPT. If found, it wraps the result in a compound query. This is transparent to the caller — `parse()` still returns a `ParseResult`.
+A new `CompoundQueryParser<D>` class sits above `SelectParser<D>`. The `parse_select()` method in `Parser<D>` is updated to call `CompoundQueryParser` instead of `SelectParser` directly.
+
+`CompoundQueryParser` works as follows:
+1. Parse the first operand: if `(`, consume it, parse inner compound recursively, expect `)`. Otherwise, call `SelectParser::parse()` for a single SELECT.
+2. Check for set operator (UNION/INTERSECT/EXCEPT). If none, return the single SELECT as-is.
+3. If found, enter a Pratt-like precedence loop: parse the operator, parse the next operand, build `NODE_SET_OPERATION` nodes respecting INTERSECT > UNION/EXCEPT precedence.
+4. After the compound, parse optional trailing ORDER BY / LIMIT (applies to whole result).
+5. Wrap in `NODE_COMPOUND_QUERY` and return.
+
+This layering means `SelectParser` is unchanged — it still parses a single SELECT statement. The compound logic is entirely in `CompoundQueryParser`, which is a separate header-only template.
+
+```
+include/sql_parser/
+    compound_query_parser.h   — UNION/INTERSECT/EXCEPT with precedence
+```
 
 ---
 
@@ -328,7 +372,15 @@ Emitter(Arena& arena, EmitMode mode = EmitMode::NORMAL,
         const ParamBindings* bindings = nullptr);
 ```
 
-In digest mode, `emit_literal_*` methods write `?` instead of the actual value, keywords are uppercased, and IN lists are collapsed.
+In digest mode, the following methods change behavior:
+- `emit_value()` / `emit_string_literal()` — for literal nodes (`NODE_LITERAL_INT`, `NODE_LITERAL_FLOAT`, `NODE_LITERAL_STRING`), emit `?` instead of actual value
+- `emit_in_list()` — emit `IN (?)` regardless of how many values, collapsing the list
+- `emit_values_row()` — emit `(?, ?, ...)` matching column count but with `?` for all values
+- `emit_placeholder()` — emit `?` (same as normal mode, already a placeholder)
+- All keyword text emitted in uppercase (e.g., `SELECT`, `FROM`, `WHERE`)
+- `emit_alias()` — skip aliases in digest mode (aliases don't affect query semantics for routing)
+
+Methods that do NOT change in digest mode: structural emission (FROM, JOIN, WHERE, GROUP BY, ORDER BY, LIMIT, etc.) remains identical since the query structure matters for digest grouping.
 
 ---
 
@@ -348,7 +400,8 @@ TK_ONLY,        // already exists in enum, verify in keyword tables
 TK_EXCEPT,
 TK_INTERSECT,
 TK_CONSTRAINT,
-TK_DEFAULT_VALUES,  // or handle as TK_DEFAULT + TK_VALUES
+// Note: DEFAULT VALUES uses existing TK_DEFAULT + TK_VALUES (two-token approach, no compound token needed)
+// Note: TK_UNION and TK_OF already exist from Plan 3
 ```
 
 ---
@@ -357,13 +410,13 @@ TK_DEFAULT_VALUES,  // or handle as TK_DEFAULT + TK_VALUES
 
 This spec should be implemented across 5 plans:
 
-1. **Plan 7: INSERT deep parser** — INSERT/REPLACE with all syntax, emitter, tests. Closes #5.
+1. **Plan 7: Shared table ref parser + INSERT deep parser** — Extract TableRefParser from SelectParser, then INSERT/REPLACE with all syntax, emitter, tests. Closes #5.
 2. **Plan 8: UPDATE deep parser** — full UPDATE syntax, emitter, tests. Closes #6.
 3. **Plan 9: DELETE deep parser** — full DELETE syntax, emitter, tests. Closes #7.
-4. **Plan 10: Compound queries** — UNION/INTERSECT/EXCEPT with nesting, emitter, tests. Closes #8.
+4. **Plan 10: Compound queries** — CompoundQueryParser with UNION/INTERSECT/EXCEPT nesting, emitter, tests. Closes #8.
 5. **Plan 11: Query digest** — Digest module with both AST and token-level modes, tests. Closes #9.
 
-Plans 7-9 are independent of each other (can be done in any order). Plan 10 depends on SELECT parser (already done). Plan 11 depends on the emitter (already done) and benefits from Plans 7-9 being complete (more node types to digest), but can work with Tier 2 token-level fallback for unstubbed types.
+**Dependencies:** Plan 7 must come first (extracts shared TableRefParser). Plans 8-9 depend on Plan 7's TableRefParser but are independent of each other. Plan 10 is independent of 7-9. Plan 11 benefits from all prior plans being complete but works with Tier 2 token-level fallback.
 
 ---
 
