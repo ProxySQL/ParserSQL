@@ -4,6 +4,7 @@
 #include "sql_parser/select_parser.h"
 #include "sql_parser/insert_parser.h"
 #include "sql_parser/update_parser.h"
+#include "sql_parser/delete_parser.h"
 
 namespace sql_parser {
 
@@ -40,7 +41,7 @@ ParseResult Parser<D>::classify_and_dispatch() {
         case TokenType::TK_SET:      return parse_set();
         case TokenType::TK_INSERT:   return parse_insert(false);
         case TokenType::TK_UPDATE:   return parse_update();
-        case TokenType::TK_DELETE:   return extract_delete(first);
+        case TokenType::TK_DELETE:   return parse_delete();
         case TokenType::TK_REPLACE:  return parse_insert(true);
         case TokenType::TK_BEGIN:
         case TokenType::TK_START:
@@ -149,6 +150,41 @@ ParseResult Parser<D>::parse_update() {
 
     UpdateParser<D> update_parser(tokenizer_, arena_);
     AstNode* ast = update_parser.parse();
+
+    if (ast) {
+        r.status = ParseResult::OK;
+        r.ast = ast;
+
+        // Extract table_name/schema_name from AST for backward compatibility
+        for (const AstNode* child = ast->first_child; child; child = child->next_sibling) {
+            if (child->type == NodeType::NODE_TABLE_REF) {
+                const AstNode* name_node = child->first_child;
+                if (name_node && name_node->type == NodeType::NODE_QUALIFIED_NAME) {
+                    const AstNode* schema = name_node->first_child;
+                    const AstNode* table = schema ? schema->next_sibling : nullptr;
+                    if (schema) r.schema_name = schema->value();
+                    if (table) r.table_name = table->value();
+                } else if (name_node && name_node->type == NodeType::NODE_IDENTIFIER) {
+                    r.table_name = name_node->value();
+                }
+                break;
+            }
+        }
+    } else {
+        r.status = ParseResult::PARTIAL;
+    }
+
+    scan_to_end(r);
+    return r;
+}
+
+template <Dialect D>
+ParseResult Parser<D>::parse_delete() {
+    ParseResult r;
+    r.stmt_type = StmtType::DELETE_STMT;
+
+    DeleteParser<D> delete_parser(tokenizer_, arena_);
+    AstNode* ast = delete_parser.parse();
 
     if (ast) {
         r.status = ParseResult::OK;

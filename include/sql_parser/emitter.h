@@ -68,6 +68,10 @@ private:
             case NodeType::NODE_STMT_OPTIONS:    emit_stmt_options(node); break;
             case NodeType::NODE_UPDATE_SET_ITEM: emit_update_set_item(node); break;
 
+            // ---- DELETE statement ----
+            case NodeType::NODE_DELETE_STMT:          emit_delete_stmt(node); break;
+            case NodeType::NODE_DELETE_USING_CLAUSE:  emit_delete_using(node); break;
+
             // ---- UPDATE statement ----
             case NodeType::NODE_UPDATE_STMT:     emit_update_stmt(node); break;
             case NodeType::NODE_UPDATE_SET_CLAUSE: emit_update_set_clause(node); break;
@@ -671,6 +675,131 @@ private:
             if (!first) sb_.append(", ");
             first = false;
             emit_node(child);
+        }
+    }
+
+    // ---- DELETE ----
+
+    void emit_delete_stmt(const AstNode* node) {
+        sb_.append("DELETE");
+
+        // Flags determine the form
+        bool is_multi = (node->flags & 0x01) != 0;
+        bool is_form2 = (node->flags & 0x02) != 0;
+
+        if (is_multi && !is_form2) {
+            // Form 1: DELETE [opts] t1, t2 FROM table_refs [WHERE]
+            for (const AstNode* child = node->first_child; child; child = child->next_sibling) {
+                switch (child->type) {
+                    case NodeType::NODE_STMT_OPTIONS:
+                        sb_.append_char(' ');
+                        emit_node(child);
+                        break;
+                    case NodeType::NODE_TABLE_REF: {
+                        // Check if previous sibling is also TABLE_REF (needs comma)
+                        bool prev_is_table = false;
+                        for (const AstNode* p = node->first_child; p != child; p = p->next_sibling) {
+                            if (p->type == NodeType::NODE_TABLE_REF) prev_is_table = true;
+                            else prev_is_table = false;
+                        }
+                        if (prev_is_table) sb_.append(", ");
+                        else sb_.append_char(' ');
+                        emit_node(child);
+                        break;
+                    }
+                    case NodeType::NODE_FROM_CLAUSE:
+                        emit_node(child);
+                        break;
+                    case NodeType::NODE_WHERE_CLAUSE:
+                        emit_node(child);
+                        break;
+                    default:
+                        sb_.append_char(' ');
+                        emit_node(child);
+                        break;
+                }
+            }
+        } else if (is_multi && is_form2) {
+            // Form 2: DELETE [opts] FROM t1, t2 USING table_refs [WHERE]
+            bool first_table = true;
+            for (const AstNode* child = node->first_child; child; child = child->next_sibling) {
+                switch (child->type) {
+                    case NodeType::NODE_STMT_OPTIONS:
+                        sb_.append_char(' ');
+                        emit_node(child);
+                        break;
+                    case NodeType::NODE_TABLE_REF:
+                        if (first_table) {
+                            sb_.append(" FROM ");
+                            first_table = false;
+                        } else {
+                            sb_.append(", ");
+                        }
+                        emit_node(child);
+                        break;
+                    case NodeType::NODE_DELETE_USING_CLAUSE:
+                        sb_.append_char(' ');
+                        emit_node(child);
+                        break;
+                    case NodeType::NODE_WHERE_CLAUSE:
+                        emit_node(child);
+                        break;
+                    default:
+                        sb_.append_char(' ');
+                        emit_node(child);
+                        break;
+                }
+            }
+        } else {
+            // Single-table or PostgreSQL
+            for (const AstNode* child = node->first_child; child; child = child->next_sibling) {
+                switch (child->type) {
+                    case NodeType::NODE_STMT_OPTIONS:
+                        sb_.append_char(' ');
+                        emit_node(child);
+                        break;
+                    case NodeType::NODE_TABLE_REF:
+                        sb_.append(" FROM ");
+                        emit_node(child);
+                        break;
+                    case NodeType::NODE_DELETE_USING_CLAUSE:
+                        sb_.append_char(' ');
+                        emit_node(child);
+                        break;
+                    case NodeType::NODE_WHERE_CLAUSE:
+                        emit_node(child);
+                        break;
+                    case NodeType::NODE_ORDER_BY_CLAUSE:
+                        emit_node(child);
+                        break;
+                    case NodeType::NODE_LIMIT_CLAUSE:
+                        emit_node(child);
+                        break;
+                    case NodeType::NODE_RETURNING_CLAUSE:
+                        sb_.append_char(' ');
+                        emit_node(child);
+                        break;
+                    default:
+                        sb_.append_char(' ');
+                        emit_node(child);
+                        break;
+                }
+            }
+        }
+    }
+
+    void emit_delete_using(const AstNode* node) {
+        sb_.append("USING ");
+        bool first = true;
+        for (const AstNode* child = node->first_child; child; child = child->next_sibling) {
+            if (child->type == NodeType::NODE_JOIN_CLAUSE) {
+                sb_.append_char(' ');
+                emit_node(child);
+            } else {
+                if (!first) sb_.append(", ");
+                first = false;
+                emit_node(child);
+            }
         }
     }
 
