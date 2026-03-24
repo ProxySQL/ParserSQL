@@ -57,6 +57,10 @@ private:
     ParseResult parse_insert(bool is_replace = false);
     ParseResult parse_update();
     ParseResult parse_delete();
+    ParseResult parse_explain(bool is_describe = false);
+    ParseResult parse_call();
+    ParseResult parse_do();
+    ParseResult parse_load_data();
 
     // Tier 2 extractors
     ParseResult extract_insert(const Token& first);
@@ -72,7 +76,7 @@ private:
     ParseResult extract_ddl(const Token& first);
     ParseResult extract_acl(const Token& first);
     ParseResult extract_lock(const Token& first);
-    ParseResult extract_load(const Token& first);
+    // extract_load removed -- replaced by parse_load_data()
     ParseResult extract_reset(const Token& first);
     ParseResult extract_unknown(const Token& first);
 

@@ -70,7 +70,12 @@ ParseResult Parser<D>::classify_and_dispatch() {
         case TokenType::TK_REVOKE:   return extract_acl(first);
         case TokenType::TK_LOCK:
         case TokenType::TK_UNLOCK:   return extract_lock(first);
-        case TokenType::TK_LOAD:     return extract_load(first);
+        case TokenType::TK_EXPLAIN:  return parse_explain(false);
+        case TokenType::TK_DESCRIBE:
+        case TokenType::TK_DESC:     return parse_explain(true);
+        case TokenType::TK_CALL:     return parse_call();
+        case TokenType::TK_DO:       return parse_do();
+        case TokenType::TK_LOAD:     return parse_load_data();
         case TokenType::TK_RESET:    return extract_reset(first);
         default:                     return extract_unknown(first);
     }
@@ -399,6 +404,469 @@ ParseResult Parser<D>::parse_delete() {
     return r;
 }
 
+// ---- EXPLAIN / DESCRIBE ----
+
+template <Dialect D>
+ParseResult Parser<D>::parse_explain(bool is_describe) {
+    ParseResult r;
+    r.stmt_type = is_describe ? StmtType::DESCRIBE : StmtType::EXPLAIN;
+
+    AstNode* root = make_node(arena_, NodeType::NODE_EXPLAIN_STMT);
+    if (!root) { r.status = ParseResult::ERROR; scan_to_end(r); return r; }
+
+    if (is_describe) {
+        // DESCRIBE table_name [column_name]
+        // DESC table_name [column_name]
+        Token name = tokenizer_.next_token();
+        if (name.type == TokenType::TK_EOF || name.type == TokenType::TK_SEMICOLON) {
+            r.status = ParseResult::PARTIAL;
+            r.ast = root;
+            return r;
+        }
+
+        // Table name (possibly qualified)
+        AstNode* table_ref = make_node(arena_, NodeType::NODE_TABLE_REF);
+        if (tokenizer_.peek().type == TokenType::TK_DOT) {
+            tokenizer_.skip();
+            Token table_tok = tokenizer_.next_token();
+            AstNode* qname = make_node(arena_, NodeType::NODE_QUALIFIED_NAME);
+            qname->add_child(make_node(arena_, NodeType::NODE_IDENTIFIER, name.text));
+            qname->add_child(make_node(arena_, NodeType::NODE_IDENTIFIER, table_tok.text));
+            table_ref->add_child(qname);
+            r.schema_name = name.text;
+            r.table_name = table_tok.text;
+        } else {
+            table_ref->add_child(make_node(arena_, NodeType::NODE_IDENTIFIER, name.text));
+            r.table_name = name.text;
+        }
+        root->add_child(table_ref);
+
+        // Optional column name
+        Token next = tokenizer_.peek();
+        if (next.type != TokenType::TK_EOF && next.type != TokenType::TK_SEMICOLON) {
+            Token col = tokenizer_.next_token();
+            root->add_child(make_node(arena_, NodeType::NODE_IDENTIFIER, col.text));
+        }
+
+        r.status = ParseResult::OK;
+        r.ast = root;
+        scan_to_end(r);
+        return r;
+    }
+
+    // EXPLAIN [ANALYZE] [VERBOSE] [FORMAT = ...] inner_stmt  (MySQL)
+    // EXPLAIN [ANALYZE] [VERBOSE] [(options)] inner_stmt     (PostgreSQL)
+
+    AstNode* options = make_node(arena_, NodeType::NODE_EXPLAIN_OPTIONS);
+    bool has_options = false;
+
+    // Parse options before the inner statement
+    while (true) {
+        Token t = tokenizer_.peek();
+
+        if (t.type == TokenType::TK_ANALYZE) {
+            tokenizer_.skip();
+            options->add_child(make_node(arena_, NodeType::NODE_IDENTIFIER, t.text));
+            has_options = true;
+            continue;
+        }
+
+        if (t.type == TokenType::TK_VERBOSE) {
+            tokenizer_.skip();
+            options->add_child(make_node(arena_, NodeType::NODE_IDENTIFIER, t.text));
+            has_options = true;
+            continue;
+        }
+
+        if (t.type == TokenType::TK_FORMAT) {
+            tokenizer_.skip();
+            // Expect = value
+            if (tokenizer_.peek().type == TokenType::TK_EQUAL) {
+                tokenizer_.skip();
+            }
+            Token fmt = tokenizer_.next_token();
+            AstNode* format_node = make_node(arena_, NodeType::NODE_EXPLAIN_FORMAT, fmt.text);
+            options->add_child(format_node);
+            has_options = true;
+            continue;
+        }
+
+        // PostgreSQL parenthesized options: EXPLAIN (ANALYZE, VERBOSE, FORMAT JSON) stmt
+        if constexpr (D == Dialect::PostgreSQL) {
+            if (t.type == TokenType::TK_LPAREN) {
+                tokenizer_.skip();
+                while (tokenizer_.peek().type != TokenType::TK_RPAREN &&
+                       tokenizer_.peek().type != TokenType::TK_EOF) {
+                    Token opt = tokenizer_.next_token();
+                    if (opt.type == TokenType::TK_COMMA) continue;
+
+                    if (opt.type == TokenType::TK_FORMAT) {
+                        // FORMAT followed by value
+                        Token fmt = tokenizer_.next_token();
+                        AstNode* format_node = make_node(arena_, NodeType::NODE_EXPLAIN_FORMAT, fmt.text);
+                        options->add_child(format_node);
+                    } else {
+                        // Boolean options: ANALYZE, VERBOSE, COSTS, SETTINGS, BUFFERS, WAL, TIMING, SUMMARY
+                        options->add_child(make_node(arena_, NodeType::NODE_IDENTIFIER, opt.text));
+                    }
+                    has_options = true;
+                }
+                if (tokenizer_.peek().type == TokenType::TK_RPAREN) {
+                    tokenizer_.skip();
+                }
+                continue;
+            }
+        }
+
+        break;  // No more options
+    }
+
+    if (has_options) {
+        root->add_child(options);
+    }
+
+    // Check if the next token is an explainable statement or just a table name
+    Token next = tokenizer_.peek();
+    bool is_inner_stmt = (next.type == TokenType::TK_SELECT ||
+                          next.type == TokenType::TK_INSERT ||
+                          next.type == TokenType::TK_UPDATE ||
+                          next.type == TokenType::TK_DELETE ||
+                          next.type == TokenType::TK_REPLACE);
+
+    if (is_inner_stmt) {
+        // Parse inner statement recursively
+        ParseResult inner = classify_and_dispatch();
+        if (inner.ast) {
+            root->add_child(inner.ast);
+        }
+        r.status = ParseResult::OK;
+        r.ast = root;
+        // remaining is already handled by inner parse
+        r.remaining = inner.remaining;
+        return r;
+    }
+
+    // MySQL shorthand: EXPLAIN table_name (equivalent to SHOW COLUMNS)
+    if (next.type == TokenType::TK_IDENTIFIER || next.type == TokenType::TK_TABLE) {
+        Token name = tokenizer_.next_token();
+        AstNode* table_ref = make_node(arena_, NodeType::NODE_TABLE_REF);
+        if (tokenizer_.peek().type == TokenType::TK_DOT) {
+            tokenizer_.skip();
+            Token table_tok = tokenizer_.next_token();
+            AstNode* qname = make_node(arena_, NodeType::NODE_QUALIFIED_NAME);
+            qname->add_child(make_node(arena_, NodeType::NODE_IDENTIFIER, name.text));
+            qname->add_child(make_node(arena_, NodeType::NODE_IDENTIFIER, table_tok.text));
+            table_ref->add_child(qname);
+            r.schema_name = name.text;
+            r.table_name = table_tok.text;
+        } else {
+            table_ref->add_child(make_node(arena_, NodeType::NODE_IDENTIFIER, name.text));
+            r.table_name = name.text;
+        }
+        root->add_child(table_ref);
+        r.status = ParseResult::OK;
+        r.ast = root;
+        scan_to_end(r);
+        return r;
+    }
+
+    // Fallback: mark as partial
+    r.status = ParseResult::PARTIAL;
+    r.ast = root;
+    scan_to_end(r);
+    return r;
+}
+
+// ---- CALL ----
+
+template <Dialect D>
+ParseResult Parser<D>::parse_call() {
+    ParseResult r;
+    r.stmt_type = StmtType::CALL;
+
+    AstNode* root = make_node(arena_, NodeType::NODE_CALL_STMT);
+    if (!root) { r.status = ParseResult::ERROR; scan_to_end(r); return r; }
+
+    // Parse procedure name (possibly qualified: schema.procedure)
+    Token name = tokenizer_.next_token();
+    if (name.type == TokenType::TK_EOF) {
+        r.status = ParseResult::PARTIAL;
+        r.ast = root;
+        return r;
+    }
+
+    if (tokenizer_.peek().type == TokenType::TK_DOT) {
+        tokenizer_.skip();
+        Token proc_name = tokenizer_.next_token();
+        AstNode* qname = make_node(arena_, NodeType::NODE_QUALIFIED_NAME);
+        qname->add_child(make_node(arena_, NodeType::NODE_IDENTIFIER, name.text));
+        qname->add_child(make_node(arena_, NodeType::NODE_IDENTIFIER, proc_name.text));
+        root->add_child(qname);
+    } else {
+        root->add_child(make_node(arena_, NodeType::NODE_IDENTIFIER, name.text));
+    }
+
+    // Parse argument list: (arg1, arg2, ...)
+    if (tokenizer_.peek().type == TokenType::TK_LPAREN) {
+        tokenizer_.skip();
+        ExpressionParser<D> expr_parser(tokenizer_, arena_);
+        if (tokenizer_.peek().type != TokenType::TK_RPAREN) {
+            while (true) {
+                AstNode* arg = expr_parser.parse();
+                if (arg) root->add_child(arg);
+                if (tokenizer_.peek().type == TokenType::TK_COMMA) {
+                    tokenizer_.skip();
+                } else {
+                    break;
+                }
+            }
+        }
+        if (tokenizer_.peek().type == TokenType::TK_RPAREN) {
+            tokenizer_.skip();
+        }
+    }
+
+    r.status = ParseResult::OK;
+    r.ast = root;
+    scan_to_end(r);
+    return r;
+}
+
+// ---- DO ----
+
+template <Dialect D>
+ParseResult Parser<D>::parse_do() {
+    ParseResult r;
+    r.stmt_type = StmtType::DO_STMT;
+
+    AstNode* root = make_node(arena_, NodeType::NODE_DO_STMT);
+    if (!root) { r.status = ParseResult::ERROR; scan_to_end(r); return r; }
+
+    // Parse expression list: expr [, expr, ...]
+    ExpressionParser<D> expr_parser(tokenizer_, arena_);
+    while (true) {
+        AstNode* expr = expr_parser.parse();
+        if (!expr) break;
+        root->add_child(expr);
+        if (tokenizer_.peek().type == TokenType::TK_COMMA) {
+            tokenizer_.skip();
+        } else {
+            break;
+        }
+    }
+
+    r.status = ParseResult::OK;
+    r.ast = root;
+    scan_to_end(r);
+    return r;
+}
+
+// ---- LOAD DATA ----
+
+template <Dialect D>
+ParseResult Parser<D>::parse_load_data() {
+    ParseResult r;
+    r.stmt_type = StmtType::LOAD_DATA;
+
+    AstNode* root = make_node(arena_, NodeType::NODE_LOAD_DATA_STMT);
+    if (!root) { r.status = ParseResult::ERROR; scan_to_end(r); return r; }
+
+    // Expect DATA keyword
+    if (tokenizer_.peek().type == TokenType::TK_DATA) {
+        tokenizer_.skip();
+    } else {
+        // Not LOAD DATA -- fall back to partial
+        r.status = ParseResult::PARTIAL;
+        r.ast = root;
+        scan_to_end(r);
+        return r;
+    }
+
+    AstNode* options = make_node(arena_, NodeType::NODE_LOAD_DATA_OPTIONS);
+    bool has_options = false;
+
+    // Optional: LOW_PRIORITY | CONCURRENT
+    Token t = tokenizer_.peek();
+    if (t.type == TokenType::TK_LOW_PRIORITY || t.type == TokenType::TK_CONCURRENT) {
+        tokenizer_.skip();
+        options->add_child(make_node(arena_, NodeType::NODE_IDENTIFIER, t.text));
+        has_options = true;
+    }
+
+    // Optional: LOCAL
+    if (tokenizer_.peek().type == TokenType::TK_LOCAL) {
+        Token local_tok = tokenizer_.next_token();
+        options->add_child(make_node(arena_, NodeType::NODE_IDENTIFIER, local_tok.text));
+        has_options = true;
+    }
+
+    // Expect INFILE 'filename'
+    if (tokenizer_.peek().type == TokenType::TK_INFILE) {
+        tokenizer_.skip();
+    }
+
+    Token filename = tokenizer_.next_token();  // string literal
+    root->add_child(make_node(arena_, NodeType::NODE_LITERAL_STRING, filename.text));
+
+    // Optional: REPLACE | IGNORE
+    t = tokenizer_.peek();
+    if (t.type == TokenType::TK_REPLACE || t.type == TokenType::TK_IGNORE) {
+        tokenizer_.skip();
+        options->add_child(make_node(arena_, NodeType::NODE_IDENTIFIER, t.text));
+        has_options = true;
+    }
+
+    // Expect INTO TABLE table_name
+    if (tokenizer_.peek().type == TokenType::TK_INTO) {
+        tokenizer_.skip();
+    }
+    if (tokenizer_.peek().type == TokenType::TK_TABLE) {
+        tokenizer_.skip();
+    }
+
+    // Parse table name
+    Token table_name = tokenizer_.next_token();
+    AstNode* table_ref = make_node(arena_, NodeType::NODE_TABLE_REF);
+    if (tokenizer_.peek().type == TokenType::TK_DOT) {
+        tokenizer_.skip();
+        Token actual_table = tokenizer_.next_token();
+        AstNode* qname = make_node(arena_, NodeType::NODE_QUALIFIED_NAME);
+        qname->add_child(make_node(arena_, NodeType::NODE_IDENTIFIER, table_name.text));
+        qname->add_child(make_node(arena_, NodeType::NODE_IDENTIFIER, actual_table.text));
+        table_ref->add_child(qname);
+        r.schema_name = table_name.text;
+        r.table_name = actual_table.text;
+    } else {
+        table_ref->add_child(make_node(arena_, NodeType::NODE_IDENTIFIER, table_name.text));
+        r.table_name = table_name.text;
+    }
+    root->add_child(table_ref);
+
+    // Optional CHARACTER SET
+    if (tokenizer_.peek().type == TokenType::TK_CHARACTER) {
+        tokenizer_.skip();
+        if (tokenizer_.peek().type == TokenType::TK_SET) {
+            tokenizer_.skip();
+        }
+        Token charset = tokenizer_.next_token();
+        options->add_child(make_node(arena_, NodeType::NODE_IDENTIFIER, charset.text));
+        has_options = true;
+    }
+
+    // Optional FIELDS/COLUMNS clause
+    t = tokenizer_.peek();
+    if (t.type == TokenType::TK_FIELDS || t.type == TokenType::TK_COLUMNS) {
+        tokenizer_.skip();
+
+        // TERMINATED BY 'string'
+        if (tokenizer_.peek().type == TokenType::TK_TERMINATED) {
+            tokenizer_.skip();
+            if (tokenizer_.peek().type == TokenType::TK_BY) tokenizer_.skip();
+            Token delim = tokenizer_.next_token();
+            // Store as "TERMINATED:<delim>" in an identifier node
+            AstNode* term = make_node(arena_, NodeType::NODE_IDENTIFIER);
+            // Build a combined reference: "FIELDS TERMINATED BY" + value
+            // We'll store the delimiter value as a string literal child
+            term->set_value(StringRef{"TERMINATED", 10});
+            term->add_child(make_node(arena_, NodeType::NODE_LITERAL_STRING, delim.text));
+            options->add_child(term);
+            has_options = true;
+        }
+
+        // [OPTIONALLY] ENCLOSED BY 'char'
+        if (tokenizer_.peek().type == TokenType::TK_OPTIONALLY) {
+            tokenizer_.skip();
+        }
+        if (tokenizer_.peek().type == TokenType::TK_ENCLOSED) {
+            tokenizer_.skip();
+            if (tokenizer_.peek().type == TokenType::TK_BY) tokenizer_.skip();
+            Token encl = tokenizer_.next_token();
+            AstNode* enc = make_node(arena_, NodeType::NODE_IDENTIFIER);
+            enc->set_value(StringRef{"ENCLOSED", 8});
+            enc->add_child(make_node(arena_, NodeType::NODE_LITERAL_STRING, encl.text));
+            options->add_child(enc);
+            has_options = true;
+        }
+
+        // ESCAPED BY 'char'
+        if (tokenizer_.peek().type == TokenType::TK_ESCAPED) {
+            tokenizer_.skip();
+            if (tokenizer_.peek().type == TokenType::TK_BY) tokenizer_.skip();
+            Token esc = tokenizer_.next_token();
+            AstNode* esc_node = make_node(arena_, NodeType::NODE_IDENTIFIER);
+            esc_node->set_value(StringRef{"ESCAPED", 7});
+            esc_node->add_child(make_node(arena_, NodeType::NODE_LITERAL_STRING, esc.text));
+            options->add_child(esc_node);
+            has_options = true;
+        }
+    }
+
+    // Optional LINES clause
+    if (tokenizer_.peek().type == TokenType::TK_LINES) {
+        tokenizer_.skip();
+
+        // STARTING BY 'string'
+        if (tokenizer_.peek().type == TokenType::TK_STARTING) {
+            tokenizer_.skip();
+            if (tokenizer_.peek().type == TokenType::TK_BY) tokenizer_.skip();
+            Token start_str = tokenizer_.next_token();
+            AstNode* start_node = make_node(arena_, NodeType::NODE_IDENTIFIER);
+            start_node->set_value(StringRef{"STARTING", 8});
+            start_node->add_child(make_node(arena_, NodeType::NODE_LITERAL_STRING, start_str.text));
+            options->add_child(start_node);
+            has_options = true;
+        }
+
+        // TERMINATED BY 'string'
+        if (tokenizer_.peek().type == TokenType::TK_TERMINATED) {
+            tokenizer_.skip();
+            if (tokenizer_.peek().type == TokenType::TK_BY) tokenizer_.skip();
+            Token term_str = tokenizer_.next_token();
+            AstNode* term_node = make_node(arena_, NodeType::NODE_IDENTIFIER);
+            term_node->set_value(StringRef{"LINES_TERMINATED", 16});
+            term_node->add_child(make_node(arena_, NodeType::NODE_LITERAL_STRING, term_str.text));
+            options->add_child(term_node);
+            has_options = true;
+        }
+    }
+
+    // Optional IGNORE number LINES/ROWS
+    if (tokenizer_.peek().type == TokenType::TK_IGNORE) {
+        tokenizer_.skip();
+        Token num = tokenizer_.next_token();
+        options->add_child(make_node(arena_, NodeType::NODE_LITERAL_INT, num.text));
+        // consume LINES or ROWS
+        t = tokenizer_.peek();
+        if (t.type == TokenType::TK_LINES || t.type == TokenType::TK_ROWS) {
+            tokenizer_.skip();
+        }
+        has_options = true;
+    }
+
+    // Optional column list: (col1, col2, ...)
+    if (tokenizer_.peek().type == TokenType::TK_LPAREN) {
+        tokenizer_.skip();
+        while (tokenizer_.peek().type != TokenType::TK_RPAREN &&
+               tokenizer_.peek().type != TokenType::TK_EOF) {
+            Token col = tokenizer_.next_token();
+            if (col.type == TokenType::TK_COMMA) continue;
+            root->add_child(make_node(arena_, NodeType::NODE_COLUMN_REF, col.text));
+        }
+        if (tokenizer_.peek().type == TokenType::TK_RPAREN) {
+            tokenizer_.skip();
+        }
+    }
+
+    if (has_options) {
+        root->add_child(options);
+    }
+
+    r.status = ParseResult::OK;
+    r.ast = root;
+    scan_to_end(r);
+    return r;
+}
+
 // ---- Helpers ----
 
 template <Dialect D>
@@ -667,15 +1135,6 @@ ParseResult Parser<D>::extract_lock(const Token& first) {
     ParseResult r;
     r.status = ParseResult::OK;
     r.stmt_type = (first.type == TokenType::TK_LOCK) ? StmtType::LOCK : StmtType::UNLOCK;
-    scan_to_end(r);
-    return r;
-}
-
-template <Dialect D>
-ParseResult Parser<D>::extract_load(const Token& /* first */) {
-    ParseResult r;
-    r.status = ParseResult::OK;
-    r.stmt_type = StmtType::LOAD_DATA;
     scan_to_end(r);
     return r;
 }
