@@ -80,6 +80,21 @@ private:
             case NodeType::NODE_DELETE_STMT:          emit_delete_stmt(node); break;
             case NodeType::NODE_DELETE_USING_CLAUSE:  emit_delete_using(node); break;
 
+            // ---- EXPLAIN / DESCRIBE ----
+            case NodeType::NODE_EXPLAIN_STMT:         emit_explain_stmt(node); break;
+            case NodeType::NODE_EXPLAIN_OPTIONS:      emit_explain_options(node); break;
+            case NodeType::NODE_EXPLAIN_FORMAT:       emit_explain_format(node); break;
+
+            // ---- CALL ----
+            case NodeType::NODE_CALL_STMT:            emit_call_stmt(node); break;
+
+            // ---- DO ----
+            case NodeType::NODE_DO_STMT:              emit_do_stmt(node); break;
+
+            // ---- LOAD DATA ----
+            case NodeType::NODE_LOAD_DATA_STMT:       emit_load_data_stmt(node); break;
+            case NodeType::NODE_LOAD_DATA_OPTIONS:    /* emitted inline */ break;
+
             // ---- UPDATE statement ----
             case NodeType::NODE_UPDATE_STMT:     emit_update_stmt(node); break;
             case NodeType::NODE_UPDATE_SET_CLAUSE: emit_update_set_clause(node); break;
@@ -818,6 +833,180 @@ private:
                 emit_node(child);
             }
         }
+    }
+
+    // ---- EXPLAIN / DESCRIBE ----
+
+    void emit_explain_stmt(const AstNode* node) {
+        // Check if there's an inner statement or options (EXPLAIN) vs bare table ref (DESCRIBE)
+        bool has_inner_stmt = false;
+        bool has_options = false;
+        for (const AstNode* c = node->first_child; c; c = c->next_sibling) {
+            if (c->type == NodeType::NODE_SELECT_STMT ||
+                c->type == NodeType::NODE_INSERT_STMT ||
+                c->type == NodeType::NODE_UPDATE_STMT ||
+                c->type == NodeType::NODE_DELETE_STMT ||
+                c->type == NodeType::NODE_COMPOUND_QUERY) {
+                has_inner_stmt = true;
+            }
+            if (c->type == NodeType::NODE_EXPLAIN_OPTIONS) {
+                has_options = true;
+            }
+        }
+
+        if (!has_inner_stmt && !has_options) {
+            sb_.append("DESCRIBE");
+        } else {
+            sb_.append("EXPLAIN");
+        }
+
+        for (const AstNode* child = node->first_child; child; child = child->next_sibling) {
+            sb_.append_char(' ');
+            emit_node(child);
+        }
+    }
+
+    void emit_explain_options(const AstNode* node) {
+        bool first = true;
+        for (const AstNode* child = node->first_child; child; child = child->next_sibling) {
+            if (!first) sb_.append_char(' ');
+            first = false;
+            emit_node(child);
+        }
+    }
+
+    void emit_explain_format(const AstNode* node) {
+        sb_.append("FORMAT = ");
+        emit_value(node);
+    }
+
+    // ---- CALL ----
+
+    void emit_call_stmt(const AstNode* node) {
+        sb_.append("CALL ");
+        const AstNode* name = node->first_child;
+        if (!name) return;
+
+        emit_node(name);
+        sb_.append_char('(');
+
+        bool first = true;
+        for (const AstNode* arg = name->next_sibling; arg; arg = arg->next_sibling) {
+            if (!first) sb_.append(", ");
+            first = false;
+            emit_node(arg);
+        }
+        sb_.append_char(')');
+    }
+
+    // ---- DO ----
+
+    void emit_do_stmt(const AstNode* node) {
+        sb_.append("DO ");
+        bool first = true;
+        for (const AstNode* child = node->first_child; child; child = child->next_sibling) {
+            if (!first) sb_.append(", ");
+            first = false;
+            emit_node(child);
+        }
+    }
+
+    // ---- LOAD DATA ----
+
+    void emit_load_data_stmt(const AstNode* node) {
+        sb_.append("LOAD DATA");
+
+        // First pass: emit options that come before INFILE (LOW_PRIORITY/CONCURRENT, LOCAL)
+        for (const AstNode* child = node->first_child; child; child = child->next_sibling) {
+            if (child->type == NodeType::NODE_LOAD_DATA_OPTIONS) {
+                for (const AstNode* opt = child->first_child; opt; opt = opt->next_sibling) {
+                    if (opt->type == NodeType::NODE_IDENTIFIER) {
+                        StringRef val = opt->value();
+                        if (val.equals_ci("LOW_PRIORITY", 12)) {
+                            sb_.append(" LOW_PRIORITY");
+                        } else if (val.equals_ci("CONCURRENT", 10)) {
+                            sb_.append(" CONCURRENT");
+                        } else if (val.equals_ci("LOCAL", 5)) {
+                            sb_.append(" LOCAL");
+                        }
+                    }
+                }
+            }
+        }
+
+        // INFILE 'filename'
+        for (const AstNode* child = node->first_child; child; child = child->next_sibling) {
+            if (child->type == NodeType::NODE_LITERAL_STRING) {
+                sb_.append(" INFILE ");
+                emit_string_literal(child);
+                break;
+            }
+        }
+
+        // REPLACE/IGNORE between filename and INTO TABLE
+        for (const AstNode* child = node->first_child; child; child = child->next_sibling) {
+            if (child->type == NodeType::NODE_LOAD_DATA_OPTIONS) {
+                for (const AstNode* opt = child->first_child; opt; opt = opt->next_sibling) {
+                    if (opt->type == NodeType::NODE_IDENTIFIER) {
+                        StringRef val = opt->value();
+                        if (val.equals_ci("REPLACE", 7)) {
+                            sb_.append(" REPLACE");
+                        } else if (val.equals_ci("IGNORE", 6)) {
+                            sb_.append(" IGNORE");
+                        }
+                    }
+                }
+            }
+        }
+
+        // INTO TABLE table_name
+        for (const AstNode* child = node->first_child; child; child = child->next_sibling) {
+            if (child->type == NodeType::NODE_TABLE_REF) {
+                sb_.append(" INTO TABLE ");
+                emit_node(child);
+                break;
+            }
+        }
+
+        // FIELDS options
+        for (const AstNode* child = node->first_child; child; child = child->next_sibling) {
+            if (child->type == NodeType::NODE_LOAD_DATA_OPTIONS) {
+                bool fields_started = false;
+                for (const AstNode* opt = child->first_child; opt; opt = opt->next_sibling) {
+                    if (opt->type == NodeType::NODE_IDENTIFIER) {
+                        StringRef val = opt->value();
+                        if (val.equals_ci("TERMINATED", 10)) {
+                            if (!fields_started) { sb_.append(" FIELDS"); fields_started = true; }
+                            sb_.append(" TERMINATED BY ");
+                            if (opt->first_child) emit_string_literal(opt->first_child);
+                        } else if (val.equals_ci("ENCLOSED", 8)) {
+                            if (!fields_started) { sb_.append(" FIELDS"); fields_started = true; }
+                            sb_.append(" ENCLOSED BY ");
+                            if (opt->first_child) emit_string_literal(opt->first_child);
+                        } else if (val.equals_ci("ESCAPED", 7)) {
+                            if (!fields_started) { sb_.append(" FIELDS"); fields_started = true; }
+                            sb_.append(" ESCAPED BY ");
+                            if (opt->first_child) emit_string_literal(opt->first_child);
+                        }
+                    }
+                }
+            }
+        }
+
+        // Column list
+        bool has_cols = false;
+        for (const AstNode* child = node->first_child; child; child = child->next_sibling) {
+            if (child->type == NodeType::NODE_COLUMN_REF) {
+                if (!has_cols) {
+                    sb_.append(" (");
+                    has_cols = true;
+                } else {
+                    sb_.append(", ");
+                }
+                emit_node(child);
+            }
+        }
+        if (has_cols) sb_.append_char(')');
     }
 
     // ---- Compound query ----
