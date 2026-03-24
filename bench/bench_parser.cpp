@@ -2,6 +2,11 @@
 #include "sql_parser/parser.h"
 #include "sql_parser/emitter.h"
 
+#include <chrono>
+#include <vector>
+#include <algorithm>
+#include <cmath>
+
 using namespace sql_parser;
 
 // ========== Tier 2: Classification ==========
@@ -237,3 +242,216 @@ static void BM_PgSQL_Set_Simple(benchmark::State& state) {
     }
 }
 BENCHMARK(BM_PgSQL_Set_Simple);
+
+// ========== Multi-threaded benchmarks ==========
+// Parser is per-thread — each thread creates its own instance
+
+static void BM_MT_Set_Simple(benchmark::State& state) {
+    Parser<Dialect::MySQL> parser;  // one per thread
+    const char* sql = "SET @@session.wait_timeout = 600";
+    size_t len = strlen(sql);
+    for (auto _ : state) {
+        auto r = parser.parse(sql, len);
+        benchmark::DoNotOptimize(r.ast);
+    }
+}
+BENCHMARK(BM_MT_Set_Simple)->Threads(1)->Threads(2)->Threads(4)->Threads(8);
+
+static void BM_MT_Select_Simple(benchmark::State& state) {
+    Parser<Dialect::MySQL> parser;
+    const char* sql = "SELECT col FROM t WHERE id = 1";
+    size_t len = strlen(sql);
+    for (auto _ : state) {
+        auto r = parser.parse(sql, len);
+        benchmark::DoNotOptimize(r.ast);
+    }
+}
+BENCHMARK(BM_MT_Select_Simple)->Threads(1)->Threads(2)->Threads(4)->Threads(8);
+
+static void BM_MT_Select_Complex(benchmark::State& state) {
+    Parser<Dialect::MySQL> parser;
+    const char* sql =
+        "SELECT u.id, u.name, COUNT(o.id) AS order_count "
+        "FROM users u "
+        "LEFT JOIN orders o ON u.id = o.user_id "
+        "WHERE u.status = 'active' AND u.created_at > '2024-01-01' "
+        "GROUP BY u.id, u.name "
+        "HAVING COUNT(o.id) > 5 "
+        "ORDER BY order_count DESC "
+        "LIMIT 50 OFFSET 10";
+    size_t len = strlen(sql);
+    for (auto _ : state) {
+        auto r = parser.parse(sql, len);
+        benchmark::DoNotOptimize(r.ast);
+    }
+}
+BENCHMARK(BM_MT_Select_Complex)->Threads(1)->Threads(2)->Threads(4)->Threads(8);
+
+static void BM_MT_Classify_Begin(benchmark::State& state) {
+    Parser<Dialect::MySQL> parser;
+    const char* sql = "BEGIN";
+    size_t len = strlen(sql);
+    for (auto _ : state) {
+        auto r = parser.parse(sql, len);
+        benchmark::DoNotOptimize(r.stmt_type);
+    }
+}
+BENCHMARK(BM_MT_Classify_Begin)->Threads(1)->Threads(2)->Threads(4)->Threads(8);
+
+// ========== Percentile latency benchmarks ==========
+// Custom benchmarks that collect per-iteration timing for percentile analysis.
+// Collects individual latencies inside the benchmark loop, then computes
+// percentiles after the loop completes. Only the parse call is timed;
+// timestamp collection overhead is excluded via PauseTiming/ResumeTiming.
+
+static void BM_Percentile_Set_Simple(benchmark::State& state) {
+    Parser<Dialect::MySQL> parser;
+    const char* sql = "SET @@session.wait_timeout = 600";
+    size_t len = strlen(sql);
+
+    std::vector<double> latencies;
+    latencies.reserve(1 << 20);
+    for (auto _ : state) {
+        state.PauseTiming();
+        auto start = std::chrono::high_resolution_clock::now();
+        state.ResumeTiming();
+
+        auto r = parser.parse(sql, len);
+        benchmark::DoNotOptimize(r.ast);
+
+        state.PauseTiming();
+        auto end = std::chrono::high_resolution_clock::now();
+        latencies.push_back(std::chrono::duration<double, std::nano>(end - start).count());
+        state.ResumeTiming();
+    }
+
+    if (!latencies.empty()) {
+        std::sort(latencies.begin(), latencies.end());
+        size_t N = latencies.size();
+        double sum = 0;
+        for (double l : latencies) sum += l;
+        state.counters["avg_ns"] = sum / N;
+        state.counters["p50_ns"] = latencies[N * 50 / 100];
+        state.counters["p95_ns"] = latencies[N * 95 / 100];
+        state.counters["p99_ns"] = latencies[N * 99 / 100];
+        state.counters["min_ns"] = latencies[0];
+        state.counters["max_ns"] = latencies[N - 1];
+    }
+}
+BENCHMARK(BM_Percentile_Set_Simple);
+
+static void BM_Percentile_Select_Simple(benchmark::State& state) {
+    Parser<Dialect::MySQL> parser;
+    const char* sql = "SELECT col FROM t WHERE id = 1";
+    size_t len = strlen(sql);
+
+    std::vector<double> latencies;
+    latencies.reserve(1 << 20);
+    for (auto _ : state) {
+        state.PauseTiming();
+        auto start = std::chrono::high_resolution_clock::now();
+        state.ResumeTiming();
+
+        auto r = parser.parse(sql, len);
+        benchmark::DoNotOptimize(r.ast);
+
+        state.PauseTiming();
+        auto end = std::chrono::high_resolution_clock::now();
+        latencies.push_back(std::chrono::duration<double, std::nano>(end - start).count());
+        state.ResumeTiming();
+    }
+
+    if (!latencies.empty()) {
+        std::sort(latencies.begin(), latencies.end());
+        size_t N = latencies.size();
+        double sum = 0;
+        for (double l : latencies) sum += l;
+        state.counters["avg_ns"] = sum / N;
+        state.counters["p50_ns"] = latencies[N * 50 / 100];
+        state.counters["p95_ns"] = latencies[N * 95 / 100];
+        state.counters["p99_ns"] = latencies[N * 99 / 100];
+        state.counters["min_ns"] = latencies[0];
+        state.counters["max_ns"] = latencies[N - 1];
+    }
+}
+BENCHMARK(BM_Percentile_Select_Simple);
+
+static void BM_Percentile_Select_Complex(benchmark::State& state) {
+    Parser<Dialect::MySQL> parser;
+    const char* sql =
+        "SELECT u.id, u.name, COUNT(o.id) AS order_count "
+        "FROM users u "
+        "LEFT JOIN orders o ON u.id = o.user_id "
+        "WHERE u.status = 'active' "
+        "GROUP BY u.id, u.name "
+        "HAVING COUNT(o.id) > 5 "
+        "ORDER BY order_count DESC "
+        "LIMIT 50";
+    size_t len = strlen(sql);
+
+    std::vector<double> latencies;
+    latencies.reserve(1 << 20);
+    for (auto _ : state) {
+        state.PauseTiming();
+        auto start = std::chrono::high_resolution_clock::now();
+        state.ResumeTiming();
+
+        auto r = parser.parse(sql, len);
+        benchmark::DoNotOptimize(r.ast);
+
+        state.PauseTiming();
+        auto end = std::chrono::high_resolution_clock::now();
+        latencies.push_back(std::chrono::duration<double, std::nano>(end - start).count());
+        state.ResumeTiming();
+    }
+
+    if (!latencies.empty()) {
+        std::sort(latencies.begin(), latencies.end());
+        size_t N = latencies.size();
+        double sum = 0;
+        for (double l : latencies) sum += l;
+        state.counters["avg_ns"] = sum / N;
+        state.counters["p50_ns"] = latencies[N * 50 / 100];
+        state.counters["p95_ns"] = latencies[N * 95 / 100];
+        state.counters["p99_ns"] = latencies[N * 99 / 100];
+        state.counters["min_ns"] = latencies[0];
+        state.counters["max_ns"] = latencies[N - 1];
+    }
+}
+BENCHMARK(BM_Percentile_Select_Complex);
+
+static void BM_Percentile_Classify_Begin(benchmark::State& state) {
+    Parser<Dialect::MySQL> parser;
+    const char* sql = "BEGIN";
+    size_t len = strlen(sql);
+
+    std::vector<double> latencies;
+    latencies.reserve(1 << 20);
+    for (auto _ : state) {
+        state.PauseTiming();
+        auto start = std::chrono::high_resolution_clock::now();
+        state.ResumeTiming();
+
+        auto r = parser.parse(sql, len);
+        benchmark::DoNotOptimize(r.stmt_type);
+
+        state.PauseTiming();
+        auto end = std::chrono::high_resolution_clock::now();
+        latencies.push_back(std::chrono::duration<double, std::nano>(end - start).count());
+        state.ResumeTiming();
+    }
+
+    if (!latencies.empty()) {
+        std::sort(latencies.begin(), latencies.end());
+        size_t N = latencies.size();
+        double sum = 0;
+        for (double l : latencies) sum += l;
+        state.counters["avg_ns"] = sum / N;
+        state.counters["p50_ns"] = latencies[N * 50 / 100];
+        state.counters["p95_ns"] = latencies[N * 95 / 100];
+        state.counters["p99_ns"] = latencies[N * 99 / 100];
+        state.counters["min_ns"] = latencies[0];
+        state.counters["max_ns"] = latencies[N - 1];
+    }
+}
+BENCHMARK(BM_Percentile_Classify_Begin);
