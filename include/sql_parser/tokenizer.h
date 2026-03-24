@@ -176,7 +176,15 @@ private:
     Token scan_single_quoted_string() {
         ++cursor_;  // skip opening quote
         const char* content_start = cursor_;
-        while (cursor_ < end_ && *cursor_ != '\'') {
+        while (cursor_ < end_) {
+            if (*cursor_ == '\'') {
+                // Check for doubled single-quote escape ('')
+                if (cursor_ + 1 < end_ && *(cursor_ + 1) == '\'') {
+                    cursor_ += 2;  // skip both quotes
+                    continue;
+                }
+                break;  // end of string
+            }
             if (*cursor_ == '\\') {
                 ++cursor_;  // skip escaped char
                 if (cursor_ < end_) ++cursor_;

@@ -127,7 +127,7 @@ void Parser<D>::scan_to_end(ParseResult& result) {
 // ---- Tier 2 Extractors ----
 
 template <Dialect D>
-ParseResult Parser<D>::extract_insert(const Token& first) {
+ParseResult Parser<D>::extract_insert(const Token& /* first */) {
     ParseResult r;
     r.status = ParseResult::OK;
     r.stmt_type = StmtType::INSERT;
@@ -146,7 +146,7 @@ ParseResult Parser<D>::extract_insert(const Token& first) {
 }
 
 template <Dialect D>
-ParseResult Parser<D>::extract_update(const Token& first) {
+ParseResult Parser<D>::extract_update(const Token& /* first */) {
     ParseResult r;
     r.status = ParseResult::OK;
     r.stmt_type = StmtType::UPDATE;
@@ -165,7 +165,7 @@ ParseResult Parser<D>::extract_update(const Token& first) {
 }
 
 template <Dialect D>
-ParseResult Parser<D>::extract_delete(const Token& first) {
+ParseResult Parser<D>::extract_delete(const Token& /* first */) {
     ParseResult r;
     r.status = ParseResult::OK;
     r.stmt_type = StmtType::DELETE_STMT;
@@ -191,7 +191,7 @@ ParseResult Parser<D>::extract_delete(const Token& first) {
 }
 
 template <Dialect D>
-ParseResult Parser<D>::extract_replace(const Token& first) {
+ParseResult Parser<D>::extract_replace(const Token& /* first */) {
     ParseResult r;
     r.status = ParseResult::OK;
     r.stmt_type = StmtType::REPLACE;
@@ -240,7 +240,7 @@ ParseResult Parser<D>::extract_transaction(const Token& first) {
 }
 
 template <Dialect D>
-ParseResult Parser<D>::extract_use(const Token& first) {
+ParseResult Parser<D>::extract_use(const Token& /* first */) {
     ParseResult r;
     r.status = ParseResult::OK;
     r.stmt_type = StmtType::USE;
@@ -252,7 +252,7 @@ ParseResult Parser<D>::extract_use(const Token& first) {
 }
 
 template <Dialect D>
-ParseResult Parser<D>::extract_show(const Token& first) {
+ParseResult Parser<D>::extract_show(const Token& /* first */) {
     ParseResult r;
     r.status = ParseResult::OK;
     r.stmt_type = StmtType::SHOW;
@@ -261,7 +261,7 @@ ParseResult Parser<D>::extract_show(const Token& first) {
 }
 
 template <Dialect D>
-ParseResult Parser<D>::extract_prepare(const Token& first) {
+ParseResult Parser<D>::extract_prepare(const Token& /* first */) {
     ParseResult r;
     r.status = ParseResult::OK;
     r.stmt_type = StmtType::PREPARE;
@@ -270,7 +270,7 @@ ParseResult Parser<D>::extract_prepare(const Token& first) {
 }
 
 template <Dialect D>
-ParseResult Parser<D>::extract_execute(const Token& first) {
+ParseResult Parser<D>::extract_execute(const Token& /* first */) {
     ParseResult r;
     r.status = ParseResult::OK;
     r.stmt_type = StmtType::EXECUTE;
@@ -279,7 +279,7 @@ ParseResult Parser<D>::extract_execute(const Token& first) {
 }
 
 template <Dialect D>
-ParseResult Parser<D>::extract_deallocate(const Token& first) {
+ParseResult Parser<D>::extract_deallocate(const Token& /* first */) {
     ParseResult r;
     r.status = ParseResult::OK;
     r.stmt_type = StmtType::DEALLOCATE;
@@ -353,7 +353,7 @@ ParseResult Parser<D>::extract_lock(const Token& first) {
 }
 
 template <Dialect D>
-ParseResult Parser<D>::extract_load(const Token& first) {
+ParseResult Parser<D>::extract_load(const Token& /* first */) {
     ParseResult r;
     r.status = ParseResult::OK;
     r.stmt_type = StmtType::LOAD_DATA;
@@ -362,7 +362,7 @@ ParseResult Parser<D>::extract_load(const Token& first) {
 }
 
 template <Dialect D>
-ParseResult Parser<D>::extract_reset(const Token& first) {
+ParseResult Parser<D>::extract_reset(const Token& /* first */) {
     ParseResult r;
     r.status = ParseResult::OK;
     r.stmt_type = StmtType::RESET;
@@ -371,7 +371,7 @@ ParseResult Parser<D>::extract_reset(const Token& first) {
 }
 
 template <Dialect D>
-ParseResult Parser<D>::extract_unknown(const Token& first) {
+ParseResult Parser<D>::extract_unknown(const Token& /* first */) {
     ParseResult r;
     r.status = ParseResult::OK;
     r.stmt_type = StmtType::UNKNOWN;

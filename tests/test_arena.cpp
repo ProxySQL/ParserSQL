@@ -19,7 +19,7 @@ TEST(ArenaTest, AllocateAndReset) {
 
 TEST(ArenaTest, AllocateAligned) {
     Arena arena(4096);
-    void* p1 = arena.allocate(1);
+    (void)arena.allocate(1);  // advance cursor by 1 byte
     void* p2 = arena.allocate(8);
     EXPECT_EQ(reinterpret_cast<uintptr_t>(p2) % 8, 0u);
 }
