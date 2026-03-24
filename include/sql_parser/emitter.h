@@ -68,6 +68,10 @@ private:
             case NodeType::NODE_STMT_OPTIONS:    emit_stmt_options(node); break;
             case NodeType::NODE_UPDATE_SET_ITEM: emit_update_set_item(node); break;
 
+            // ---- UPDATE statement ----
+            case NodeType::NODE_UPDATE_STMT:     emit_update_stmt(node); break;
+            case NodeType::NODE_UPDATE_SET_CLAUSE: emit_update_set_clause(node); break;
+
             // ---- Table references ----
             case NodeType::NODE_TABLE_REF:       emit_table_ref(node); break;
             case NodeType::NODE_ALIAS:           emit_alias(node); break;
@@ -582,6 +586,91 @@ private:
                 first = false;
                 emit_node(child);
             }
+        }
+    }
+
+    // ---- UPDATE ----
+
+    void emit_update_stmt(const AstNode* node) {
+        sb_.append("UPDATE");
+
+        for (const AstNode* child = node->first_child; child; child = child->next_sibling) {
+            switch (child->type) {
+                case NodeType::NODE_STMT_OPTIONS:
+                    sb_.append_char(' ');
+                    emit_node(child);
+                    break;
+                case NodeType::NODE_TABLE_REF:
+                    sb_.append_char(' ');
+                    emit_node(child);
+                    break;
+                case NodeType::NODE_FROM_CLAUSE:
+                    {
+                        // Check if FROM_CLAUSE is before SET_CLAUSE (MySQL multi-table)
+                        // or after (PostgreSQL FROM)
+                        bool is_before_set = false;
+                        for (const AstNode* s = child->next_sibling; s; s = s->next_sibling) {
+                            if (s->type == NodeType::NODE_UPDATE_SET_CLAUSE) {
+                                is_before_set = true;
+                                break;
+                            }
+                        }
+                        if (is_before_set) {
+                            // MySQL multi-table: emit table refs without FROM keyword
+                            sb_.append_char(' ');
+                            bool first = true;
+                            for (const AstNode* c = child->first_child; c; c = c->next_sibling) {
+                                if (c->type == NodeType::NODE_JOIN_CLAUSE) {
+                                    sb_.append_char(' ');
+                                    emit_node(c);
+                                } else {
+                                    if (!first) sb_.append(", ");
+                                    first = false;
+                                    emit_node(c);
+                                }
+                            }
+                        } else {
+                            // PostgreSQL FROM clause (emit_from_clause adds " FROM " prefix)
+                            emit_node(child);
+                        }
+                    }
+                    break;
+                case NodeType::NODE_UPDATE_SET_CLAUSE:
+                    sb_.append(" SET ");
+                    emit_update_set_clause_inner(child);
+                    break;
+                case NodeType::NODE_WHERE_CLAUSE:
+                    emit_node(child);
+                    break;
+                case NodeType::NODE_ORDER_BY_CLAUSE:
+                    emit_node(child);
+                    break;
+                case NodeType::NODE_LIMIT_CLAUSE:
+                    emit_node(child);
+                    break;
+                case NodeType::NODE_RETURNING_CLAUSE:
+                    sb_.append_char(' ');
+                    emit_node(child);
+                    break;
+                default:
+                    sb_.append_char(' ');
+                    emit_node(child);
+                    break;
+            }
+        }
+    }
+
+    void emit_update_set_clause(const AstNode* node) {
+        sb_.append("SET ");
+        emit_update_set_clause_inner(node);
+    }
+
+    void emit_update_set_clause_inner(const AstNode* node) {
+        bool first = true;
+        for (const AstNode* child = node->first_child; child; child = child->next_sibling) {
+            if (!first) sb_.append(", ");
+            first = false;
+            emit_node(child);
         }
     }
 

@@ -54,6 +54,7 @@ private:
     ParseResult parse_select();
     ParseResult parse_set();
     ParseResult parse_insert(bool is_replace = false);
+    ParseResult parse_update();
 
     // Tier 2 extractors
     ParseResult extract_insert(const Token& first);
