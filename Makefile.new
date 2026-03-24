@@ -48,7 +48,13 @@ BENCH_SRCS = $(BENCH_DIR)/bench_main.cpp $(BENCH_DIR)/bench_parser.cpp
 BENCH_OBJS = $(BENCH_SRCS:.cpp=.o)
 BENCH_TARGET = $(PROJECT_ROOT)/run_bench
 
-.PHONY: all lib test bench clean
+# Corpus test
+CORPUS_TEST_SRC = $(TEST_DIR)/corpus_test.cpp
+CORPUS_TEST_TARGET = $(PROJECT_ROOT)/corpus_test
+
+.PHONY: all lib test bench build-corpus-test clean
+
+build-corpus-test: $(CORPUS_TEST_TARGET)
 
 all: lib test
 
@@ -88,7 +94,10 @@ bench: $(BENCH_TARGET)
 $(BENCH_TARGET): $(BENCH_OBJS) $(GBENCH_OBJS) $(LIB_TARGET)
 	$(CXX) $(CXXFLAGS) -o $@ $(BENCH_OBJS) $(GBENCH_OBJS) -L$(PROJECT_ROOT) -lsqlparser -lpthread
 
+$(CORPUS_TEST_TARGET): $(CORPUS_TEST_SRC) $(LIB_TARGET)
+	$(CXX) $(CXXFLAGS) $(CPPFLAGS) -o $@ $< -L$(PROJECT_ROOT) -lsqlparser
+
 clean:
 	rm -f $(LIB_OBJS) $(LIB_TARGET) $(TEST_OBJS) $(GTEST_OBJ) $(TEST_TARGET)
-	rm -f $(BENCH_OBJS) $(GBENCH_OBJS) $(BENCH_TARGET)
+	rm -f $(BENCH_OBJS) $(GBENCH_OBJS) $(BENCH_TARGET) $(CORPUS_TEST_TARGET)
 	@echo "Cleaned."

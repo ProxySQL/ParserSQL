@@ -28,3 +28,45 @@ jobs:
 
       - name: Build and test
         run: make -f Makefile.new clean && make -f Makefile.new all
+
+  benchmark:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build release and run benchmarks
+        run: |
+          sed 's/-g -O2/-O3/' Makefile.new > /tmp/Makefile.release
+          make -f /tmp/Makefile.release clean
+          make -f /tmp/Makefile.release lib
+          make -f /tmp/Makefile.release test
+          make -f /tmp/Makefile.release bench 2>&1 | tail -20
+          ./run_bench --benchmark_format=json > benchmark_results.json 2>/dev/null
+
+      - name: Upload benchmark results
+        uses: actions/upload-artifact@v4
+        with:
+          name: benchmark-results
+          path: benchmark_results.json
+
+  corpus-test:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build
+        run: make -f Makefile.new all && make -f Makefile.new build-corpus-test
+
+      - name: Download corpora and test
+        run: |
+          mkdir -p /tmp/sql_corpora
+
+          # SQLGlot (easiest, fastest)
+          git clone --depth 1 -q https://github.com/tobymao/sqlglot.git /tmp/sql_corpora/sqlglot
+          cat /tmp/sql_corpora/sqlglot/tests/fixtures/identity.sql | ./corpus_test mysql
+
+          # TPC-H
+          git clone --depth 1 -q https://github.com/tvondra/pg_tpch.git /tmp/sql_corpora/pg_tpch
+          for f in /tmp/sql_corpora/pg_tpch/queries/*.sql; do
+            cat "$f" | sed 's/--.*$//' | tr '\n' ' ' | sed 's/;/;\n/g' | grep -v '^\s*$'
+          done | ./corpus_test pgsql
