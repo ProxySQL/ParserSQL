@@ -340,6 +340,8 @@ private:
         switch (c) {
             case '(': return make_token(TokenType::TK_LPAREN, s, 1);
             case ')': return make_token(TokenType::TK_RPAREN, s, 1);
+            case '[': return make_token(TokenType::TK_LBRACKET, s, 1);
+            case ']': return make_token(TokenType::TK_RBRACKET, s, 1);
             case ',': return make_token(TokenType::TK_COMMA, s, 1);
             case ';': return make_token(TokenType::TK_SEMICOLON, s, 1);
             case '.': return make_token(TokenType::TK_DOT, s, 1);

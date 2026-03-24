@@ -150,6 +150,10 @@ enum class NodeType : uint16_t {
     NODE_BETWEEN,
     NODE_IN_LIST,
     NODE_CASE_WHEN,
+    NODE_TUPLE,              // (expr, expr, ...) row constructor
+    NODE_ARRAY_CONSTRUCTOR,  // ARRAY[val, val, ...]
+    NODE_ARRAY_SUBSCRIPT,    // expr[index]
+    NODE_FIELD_ACCESS,       // (expr).field postfix access
 
     // INSERT nodes
     NODE_INSERT_STMT,

@@ -152,6 +152,29 @@ private:
                 }
                 return node;
             }
+            case TokenType::TK_ARRAY: {
+                tok_.skip();
+                return parse_array_constructor();
+            }
+            case TokenType::TK_ROW: {
+                // ROW(expr, expr, ...) — explicit row constructor
+                tok_.skip();
+                if (tok_.peek().type == TokenType::TK_LPAREN) {
+                    tok_.skip();
+                    AstNode* tuple = make_node(arena_, NodeType::NODE_TUPLE, t.text);
+                    if (tok_.peek().type != TokenType::TK_RPAREN) {
+                        while (true) {
+                            AstNode* elem = parse();
+                            if (elem) tuple->add_child(elem);
+                            if (tok_.peek().type == TokenType::TK_COMMA) tok_.skip();
+                            else break;
+                        }
+                    }
+                    if (tok_.peek().type == TokenType::TK_RPAREN) tok_.skip();
+                    return parse_postfix(tuple);
+                }
+                return make_node(arena_, NodeType::NODE_IDENTIFIER, t.text);
+            }
             case TokenType::TK_CASE: {
                 tok_.skip();
                 return parse_case();
@@ -160,16 +183,34 @@ private:
                 tok_.skip();
                 // Could be subquery: (SELECT ...)
                 if (tok_.peek().type == TokenType::TK_SELECT) {
-                    // Subquery — for now, skip to matching paren
                     AstNode* node = make_node(arena_, NodeType::NODE_SUBQUERY);
                     skip_to_matching_paren();
-                    return node;
+                    return parse_postfix(node);
+                }
+                // Empty tuple: ()
+                if (tok_.peek().type == TokenType::TK_RPAREN) {
+                    tok_.skip();
+                    AstNode* tuple = make_node(arena_, NodeType::NODE_TUPLE);
+                    return parse_postfix(tuple);
                 }
                 AstNode* expr = parse();
+                if (tok_.peek().type == TokenType::TK_COMMA) {
+                    // Tuple: (expr, expr, ...)
+                    AstNode* tuple = make_node(arena_, NodeType::NODE_TUPLE);
+                    if (expr) tuple->add_child(expr);
+                    while (tok_.peek().type == TokenType::TK_COMMA) {
+                        tok_.skip();
+                        AstNode* elem = parse();
+                        if (elem) tuple->add_child(elem);
+                    }
+                    if (tok_.peek().type == TokenType::TK_RPAREN) tok_.skip();
+                    return parse_postfix(tuple);
+                }
                 if (tok_.peek().type == TokenType::TK_RPAREN) {
                     tok_.skip();
                 }
-                return expr;
+                // Check for postfix: (expr).field or (expr)[index]
+                return parse_postfix(expr);
             }
             case TokenType::TK_IDENTIFIER: {
                 tok_.skip();
@@ -394,6 +435,52 @@ private:
         return node;
     }
 
+    // ARRAY[val, val, ...] constructor
+    AstNode* parse_array_constructor() {
+        AstNode* arr = make_node(arena_, NodeType::NODE_ARRAY_CONSTRUCTOR);
+        if (tok_.peek().type == TokenType::TK_LBRACKET) {
+            tok_.skip();
+            if (tok_.peek().type != TokenType::TK_RBRACKET) {
+                while (true) {
+                    AstNode* elem = parse();
+                    if (elem) arr->add_child(elem);
+                    if (tok_.peek().type == TokenType::TK_COMMA) tok_.skip();
+                    else break;
+                }
+            }
+            if (tok_.peek().type == TokenType::TK_RBRACKET) tok_.skip();
+        }
+        return parse_postfix(arr);
+    }
+
+    // Handle postfix operators: .field, [index]
+    AstNode* parse_postfix(AstNode* expr) {
+        while (true) {
+            Token t = tok_.peek();
+            if (t.type == TokenType::TK_DOT) {
+                // Field access: (expr).field or (expr).*
+                tok_.skip();
+                Token field = tok_.next_token();
+                AstNode* access = make_node(arena_, NodeType::NODE_FIELD_ACCESS);
+                access->add_child(expr);
+                access->add_child(make_node(arena_, NodeType::NODE_IDENTIFIER, field.text));
+                expr = access;
+            } else if (t.type == TokenType::TK_LBRACKET) {
+                // Array subscript: expr[index]
+                tok_.skip();
+                AstNode* index = parse();
+                if (tok_.peek().type == TokenType::TK_RBRACKET) tok_.skip();
+                AstNode* subscript = make_node(arena_, NodeType::NODE_ARRAY_SUBSCRIPT);
+                subscript->add_child(expr);
+                if (index) subscript->add_child(index);
+                expr = subscript;
+            } else {
+                break;
+            }
+        }
+        return expr;
+    }
+
     // Skip tokens until matching closing paren (handles nesting)
     void skip_to_matching_paren() {
         int depth = 1;
@@ -473,6 +560,8 @@ private:
             case TokenType::TK_COLUMNS:
             case TokenType::TK_FIELDS:
             case TokenType::TK_ROWS:
+            case TokenType::TK_ARRAY:
+            case TokenType::TK_ROW:
                 return true;
             default:
                 return false;

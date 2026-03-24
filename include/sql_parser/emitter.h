@@ -113,6 +113,10 @@ private:
             case NodeType::NODE_BETWEEN:         emit_between(node); break;
             case NodeType::NODE_IN_LIST:         emit_in_list(node); break;
             case NodeType::NODE_CASE_WHEN:       emit_case_when(node); break;
+            case NodeType::NODE_TUPLE:           emit_tuple(node); break;
+            case NodeType::NODE_ARRAY_CONSTRUCTOR: emit_array_constructor(node); break;
+            case NodeType::NODE_ARRAY_SUBSCRIPT: emit_array_subscript(node); break;
+            case NodeType::NODE_FIELD_ACCESS:    emit_field_access(node); break;
             case NodeType::NODE_SUBQUERY:        emit_value(node); break;
 
             // ---- Leaf nodes (emit value directly) ----
@@ -1115,6 +1119,50 @@ private:
             sb_.append_char(' ');
         }
         sb_.append("END");
+    }
+
+    void emit_tuple(const AstNode* node) {
+        // ROW keyword prefix if present
+        if (node->value_len > 0) {
+            emit_value(node);
+        }
+        sb_.append_char('(');
+        bool first = true;
+        for (const AstNode* child = node->first_child; child; child = child->next_sibling) {
+            if (!first) sb_.append(", ");
+            first = false;
+            emit_node(child);
+        }
+        sb_.append_char(')');
+    }
+
+    void emit_array_constructor(const AstNode* node) {
+        sb_.append("ARRAY[");
+        bool first = true;
+        for (const AstNode* child = node->first_child; child; child = child->next_sibling) {
+            if (!first) sb_.append(", ");
+            first = false;
+            emit_node(child);
+        }
+        sb_.append_char(']');
+    }
+
+    void emit_array_subscript(const AstNode* node) {
+        const AstNode* expr = node->first_child;
+        const AstNode* index = expr ? expr->next_sibling : nullptr;
+        if (expr) emit_node(expr);
+        sb_.append_char('[');
+        if (index) emit_node(index);
+        sb_.append_char(']');
+    }
+
+    void emit_field_access(const AstNode* node) {
+        const AstNode* expr = node->first_child;
+        const AstNode* field = expr ? expr->next_sibling : nullptr;
+        sb_.append_char('(');
+        if (expr) emit_node(expr);
+        sb_.append(").");
+        if (field) emit_node(field);
     }
 };
 

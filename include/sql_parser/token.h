@@ -15,6 +15,8 @@ enum class TokenType : uint16_t {
     TK_STRING,
     TK_LPAREN,
     TK_RPAREN,
+    TK_LBRACKET,      // [
+    TK_RBRACKET,      // ]
     TK_COMMA,
     TK_SEMICOLON,
     TK_DOT,
@@ -105,6 +107,8 @@ enum class TokenType : uint16_t {
     TK_COLUMNS,
     TK_FIELDS,
     TK_ROWS,
+    TK_ARRAY,
+    TK_ROW,
 };
 
 struct Token {
