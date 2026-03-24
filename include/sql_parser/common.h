@@ -156,6 +156,10 @@ enum class NodeType : uint16_t {
     NODE_CONFLICT_ACTION,      // DO UPDATE SET ... or DO NOTHING
     NODE_RETURNING_CLAUSE,     // PostgreSQL RETURNING expr_list
 
+    // UPDATE nodes
+    NODE_UPDATE_STMT,
+    NODE_UPDATE_SET_CLAUSE,    // SET col=expr, col=expr in UPDATE context
+
     // Shared
     NODE_STMT_OPTIONS,         // LOW_PRIORITY, IGNORE, QUICK, DELAYED, etc.
     NODE_UPDATE_SET_ITEM,      // single col=expr pair (shared by INSERT SET and UPDATE SET)
