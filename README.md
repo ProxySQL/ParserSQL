@@ -8,21 +8,21 @@ All operations run in sub-microsecond latency on modern hardware:
 
 | Operation | Latency | Notes |
 |---|---|---|
-| Classify statement (BEGIN) | **36 ns** | Tier 2: type + metadata only |
-| Parse SET statement | **130 ns** | Full AST |
-| Parse simple SELECT | **223 ns** | Full AST |
-| Parse complex SELECT (JOINs, GROUP BY, HAVING) | **1.4 µs** | Full AST |
-| Parse INSERT | **244 ns** | Full AST |
-| Query reconstruction (round-trip) | **132-263 ns** | Parse → emit |
-| Arena reset | **3.6 ns** | O(1) pointer rewind |
+| Classify statement (BEGIN) | **29 ns** | Tier 2: type + metadata only |
+| Parse SET statement | **111 ns** | Full AST |
+| Parse simple SELECT | **186 ns** | Full AST |
+| Parse complex SELECT (JOINs, GROUP BY, HAVING) | **1.1 µs** | Full AST |
+| Parse INSERT | **212 ns** | Full AST |
+| Query reconstruction (round-trip) | **116-226 ns** | Parse → emit |
+| Arena reset | **3.5 ns** | O(1) pointer rewind |
 
 Compared to other parsers on the same queries:
 
 | Parser | Simple SELECT | Complex SELECT | Notes |
 |---|---|---|---|
-| **ParserSQL** | **223 ns** | **1,189 ns** | This project |
-| libpg_query (raw parse) | 684 ns (3.1x slower) | 3,304 ns (2.8x) | PostgreSQL's own parser |
-| sqlparser-rs (Rust) | 4,687 ns (21x slower) | 23,411 ns (19x) | Apache DataFusion |
+| **ParserSQL** | **175 ns** | **975 ns** | This project |
+| libpg_query (raw parse) | 718 ns (4.1x slower) | 3,479 ns (3.6x) | PostgreSQL's own parser |
+| sqlparser-rs (Rust) | 4,687 ns (27x slower) | 23,411 ns (24x) | Apache DataFusion |
 
 See [docs/benchmarks/](docs/benchmarks/) for full results and [REPRODUCING.md](docs/benchmarks/REPRODUCING.md) for reproduction instructions.
 

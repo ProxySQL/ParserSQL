@@ -22,23 +22,23 @@
 
 | Query | ParserSQL | pg_query raw | pg_query +JSON | sqlparser-rs |
 |---|---|---|---|---|
-| `SELECT col FROM t WHERE id = 1` | **223 ns** | 684 ns | 1,872 ns | 4,687 ns |
-| `SELECT ... JOIN ... WHERE` | **579 ns** | 1,646 ns | 4,509 ns | 10,684 ns |
-| `SELECT ... GROUP BY ... HAVING ... ORDER BY ... LIMIT` | **1,189 ns** | 3,304 ns | 8,675 ns | 23,411 ns |
-| `INSERT INTO t (cols) VALUES (...)` | **244 ns** | 781 ns | 1,831 ns | 3,784 ns |
-| `UPDATE t SET ... WHERE` | **236 ns** | 1,907 ns | — | 4,102 ns |
-| `DELETE FROM t WHERE` | **181 ns** | 1,373 ns | — | 3,049 ns |
-| `BEGIN` | **36 ns** | 230 ns | 421 ns | 412 ns |
+| `SELECT col FROM t WHERE id = 1` | **175 ns** | 718 ns | 2,018 ns | 4,687 ns |
+| `SELECT ... JOIN ... WHERE` | **440 ns** | 1,745 ns | 4,804 ns | 10,684 ns |
+| `SELECT ... GROUP BY ... HAVING ... ORDER BY ... LIMIT` | **975 ns** | 3,479 ns | 9,082 ns | 23,411 ns |
+| `INSERT INTO t (cols) VALUES (...)` | **212 ns** | 849 ns | 1,933 ns | 3,784 ns |
+| `UPDATE t SET ... WHERE` | **214 ns** | — | 2,075 ns | 4,102 ns |
+| `DELETE FROM t WHERE` | **149 ns** | — | 1,512 ns | 3,049 ns |
+| `BEGIN` | **29 ns** | 259 ns | 441 ns | 412 ns |
 
 ### Speedup ratios
 
 | Query | vs pg_query (raw parse) | vs pg_query (+JSON) | vs sqlparser-rs |
 |---|---|---|---|
-| SELECT simple | **3.1x** | 8.4x | **21x** |
-| SELECT JOIN | **2.8x** | 7.8x | **18x** |
-| SELECT complex | **2.8x** | 7.3x | **19x** |
-| INSERT | **3.2x** | 7.5x | **16x** |
-| BEGIN | **6.4x** | 11.7x | **11x** |
+| SELECT simple | **4.1x** | 11.5x | **27x** |
+| SELECT JOIN | **4.0x** | 10.9x | **24x** |
+| SELECT complex | **3.6x** | 9.3x | **24x** |
+| INSERT | **4.0x** | 9.1x | **18x** |
+| BEGIN | **8.9x** | 15.2x | **14x** |
 
 ---
 
@@ -46,7 +46,7 @@
 
 ### vs libpg_query (fair comparison: raw parse only)
 
-**ParserSQL is ~3x faster** than PostgreSQL's own parser when comparing parse-only (no JSON serialization). This is a genuine speedup from:
+**ParserSQL is ~4x faster** than PostgreSQL's own parser when comparing parse-only (no JSON serialization). This is a genuine speedup from:
 
 1. **Arena allocation** — our parser allocates AST nodes from a bump allocator (3.5ns reset). PostgreSQL uses its MemoryContext system which is more general but has higher per-allocation overhead.
 2. **Zero-copy strings** — our `StringRef` points into the original input. PostgreSQL copies identifier strings into palloc'd memory.
@@ -56,16 +56,16 @@ Note: libpg_query's raw parse still includes PostgreSQL memory context setup/tea
 
 ### vs libpg_query (full: parse + JSON serialize)
 
-The **7-8x** ratio includes JSON serialization overhead in libpg_query. This is how `pg_query_parse()` is typically used, but it's not a fair parse-only comparison.
+The **9-15x** ratio includes JSON serialization overhead in libpg_query. This is how `pg_query_parse()` is typically used, but it's not a fair parse-only comparison.
 
 ### vs sqlparser-rs
 
-**ParserSQL is 11-21x faster**. This is the fairest comparison — both are standalone syntax parsers. The speed gap comes from:
+**ParserSQL is 14-27x faster**. This is the fairest comparison — both are standalone syntax parsers. The speed gap comes from:
 
 1. **Arena vs heap** — sqlparser-rs uses `Box<Expr>`, `Vec<SelectItem>`, etc. Each allocation goes through Rust's allocator.
 2. **Zero-copy vs owned strings** — sqlparser-rs creates `String` values. We use `StringRef` pointing into input.
 3. **32-byte nodes vs enum variants** — Rust's richly-typed AST enums carry more data per node.
-4. **Binary search keyword lookup** — fast path for the tokenizer.
+4. **Hash table keyword lookup** — O(1) FNV-1a hash vs tokenizer construction in sqlparser-rs.
 
 ---
 

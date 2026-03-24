@@ -1,11 +1,11 @@
 # SQL Parser Performance Report
 
-**Date:** 2026-03-24 17:56 UTC
+**Date:** 2026-03-24 21:48 UTC
 **Host:** ci-big6-202511.vm
 **CPU:** AMD Ryzen 9 5950X 16-Core Processor
 **OS:** Linux 6.17.0-14-generic
 **Compiler:** g++ (Ubuntu 13.3.0-6ubuntu2~24.04.1) 13.3.0
-**Git:** main @ f97f966
+**Git:** main @ 7f53668
 **Unit tests:** 430 passing
 
 ---
@@ -14,44 +14,44 @@
 
 | Operation | Latency | Target | Status |
 |---|---|---|---|
-| BM_Classify_Insert | 209 ns | <500ns | MET |
-| BM_Classify_Update | 240 ns | <500ns | MET |
-| BM_Classify_Delete | 184 ns | <500ns | MET |
-| BM_Classify_Begin | 35.9 ns | <100ns | MET |
-| BM_Set_Simple | 129 ns | <300ns | MET |
-| BM_Set_Names | 131 ns | <300ns | MET |
-| BM_Set_MultiVar | 257 ns | <300ns | MET |
-| BM_Set_FunctionRHS | 215 ns | <300ns | MET |
-| BM_Select_Simple | 217 ns | <500ns | MET |
-| BM_Select_MultiColumn | 462 ns | <500ns | MET |
-| BM_Select_Join | 591 ns | <2us | MET |
-| BM_Select_Complex | 1403 ns | <2us | MET |
-| BM_Select_MultiJoin | 1452 ns | <2us | MET |
-| BM_Emit_SetSimple | 131 ns | <500ns | MET |
-| BM_Emit_SelectSimple | 263 ns | <500ns | MET |
-| BM_ArenaReset | 3.55 ns | <10ns | MET |
-| BM_PgSQL_Select_Simple | 220 ns | — | — |
-| BM_PgSQL_Set_Simple | 96.9 ns | — | — |
-| BM_MT_Set_Simple/threads:1 | 124 ns | — | — |
-| BM_MT_Set_Simple/threads:2 | 129 ns | — | — |
-| BM_MT_Set_Simple/threads:4 | 134 ns | — | — |
-| BM_MT_Set_Simple/threads:8 | 138 ns | — | — |
-| BM_MT_Select_Simple/threads:1 | 215 ns | — | — |
-| BM_MT_Select_Simple/threads:2 | 225 ns | — | — |
-| BM_MT_Select_Simple/threads:4 | 231 ns | — | — |
-| BM_MT_Select_Simple/threads:8 | 246 ns | — | — |
-| BM_MT_Select_Complex/threads:1 | 1401 ns | — | — |
-| BM_MT_Select_Complex/threads:2 | 1403 ns | — | — |
-| BM_MT_Select_Complex/threads:4 | 1459 ns | — | — |
-| BM_MT_Select_Complex/threads:8 | 1509 ns | — | — |
-| BM_MT_Classify_Begin/threads:1 | 35.8 ns | — | — |
-| BM_MT_Classify_Begin/threads:2 | 36.7 ns | — | — |
-| BM_MT_Classify_Begin/threads:4 | 37.5 ns | — | — |
-| BM_MT_Classify_Begin/threads:8 | 38.2 ns | — | — |
-| BM_Percentile_Set_Simple | 909 ns | — | — |
-| BM_Percentile_Select_Simple | 1008 ns | — | — |
-| BM_Percentile_Select_Complex | 2076 ns | — | — |
-| BM_Percentile_Classify_Begin | 813 ns | — | — |
+| BM_Classify_Insert | 192 ns | <500ns | MET |
+| BM_Classify_Update | 195 ns | <500ns | MET |
+| BM_Classify_Delete | 147 ns | <500ns | MET |
+| BM_Classify_Begin | 29.0 ns | <100ns | MET |
+| BM_Set_Simple | 114 ns | <300ns | MET |
+| BM_Set_Names | 109 ns | <300ns | MET |
+| BM_Set_MultiVar | 240 ns | <300ns | MET |
+| BM_Set_FunctionRHS | 174 ns | <300ns | MET |
+| BM_Select_Simple | 186 ns | <500ns | MET |
+| BM_Select_MultiColumn | 355 ns | <500ns | MET |
+| BM_Select_Join | 426 ns | <2us | MET |
+| BM_Select_Complex | 1063 ns | <2us | MET |
+| BM_Select_MultiJoin | 1046 ns | <2us | MET |
+| BM_Emit_SetSimple | 116 ns | <500ns | MET |
+| BM_Emit_SelectSimple | 242 ns | <500ns | MET |
+| BM_ArenaReset | 3.80 ns | <10ns | MET |
+| BM_PgSQL_Select_Simple | 177 ns | — | — |
+| BM_PgSQL_Set_Simple | 88.9 ns | — | — |
+| BM_MT_Set_Simple/threads:1 | 113 ns | — | — |
+| BM_MT_Set_Simple/threads:2 | 113 ns | — | — |
+| BM_MT_Set_Simple/threads:4 | 115 ns | — | — |
+| BM_MT_Set_Simple/threads:8 | 121 ns | — | — |
+| BM_MT_Select_Simple/threads:1 | 174 ns | — | — |
+| BM_MT_Select_Simple/threads:2 | 223 ns | — | — |
+| BM_MT_Select_Simple/threads:4 | 198 ns | — | — |
+| BM_MT_Select_Simple/threads:8 | 204 ns | — | — |
+| BM_MT_Select_Complex/threads:1 | 1042 ns | — | — |
+| BM_MT_Select_Complex/threads:2 | 1049 ns | — | — |
+| BM_MT_Select_Complex/threads:4 | 1093 ns | — | — |
+| BM_MT_Select_Complex/threads:8 | 1192 ns | — | — |
+| BM_MT_Classify_Begin/threads:1 | 29.5 ns | — | — |
+| BM_MT_Classify_Begin/threads:2 | 29.3 ns | — | — |
+| BM_MT_Classify_Begin/threads:4 | 29.7 ns | — | — |
+| BM_MT_Classify_Begin/threads:8 | 32.0 ns | — | — |
+| BM_Percentile_Set_Simple | 915 ns | — | — |
+| BM_Percentile_Select_Simple | 965 ns | — | — |
+| BM_Percentile_Select_Complex | 1722 ns | — | — |
+| BM_Percentile_Classify_Begin | 807 ns | — | — |
 
 ---
 
@@ -59,10 +59,10 @@
 
 | Operation | 1 thread | 2 threads | 4 threads | 8 threads |
 |---|---|---|---|---|
-| BM_MT_Set_Simple | 124ns | 129ns | 134ns | 138ns |
-| BM_MT_Select_Simple | 215ns | 225ns | 231ns | 246ns |
-| BM_MT_Select_Complex | 1401ns | 1403ns | 1459ns | 1509ns |
-| BM_MT_Classify_Begin | 35.8ns | 36.7ns | 37.5ns | 38.2ns |
+| BM_MT_Set_Simple | 113ns | 113ns | 115ns | 121ns |
+| BM_MT_Select_Simple | 174ns | 223ns | 198ns | 204ns |
+| BM_MT_Select_Complex | 1042ns | 1049ns | 1093ns | 1192ns |
+| BM_MT_Classify_Begin | 29.5ns | 29.3ns | 29.7ns | 32.0ns |
 
 ---
 
@@ -70,10 +70,10 @@
 
 | Operation | avg | p50 | p95 | p99 | min | max |
 |---|---|---|---|---|---|---|
-| BM_Percentile_Set_Simple | 936.994ns | 932ns | 942ns | 952ns | 911ns | 39.593kns |
-| BM_Percentile_Select_Simple | 1.04875kns | 1.042kns | 1.052kns | 1.071kns | 1.021kns | 221.729kns |
-| BM_Percentile_Select_Complex | 2.14065kns | 2.124kns | 2.164kns | 2.184kns | 2.074kns | 25.176kns |
-| BM_Percentile_Classify_Begin | 833.356ns | 831ns | 842ns | 862ns | 811ns | 203.486kns |
+| BM_Percentile_Set_Simple | 948.284ns | 922ns | 1.052kns | 1.553kns | 871ns | 39.142kns |
+| BM_Percentile_Select_Simple | 1.00773kns | 992ns | 1.041kns | 1.362kns | 941ns | 62.395kns |
+| BM_Percentile_Select_Complex | 1.79424kns | 1.763kns | 1.803kns | 2.665kns | 1.723kns | 54.14kns |
+| BM_Percentile_Classify_Begin | 831.536ns | 821ns | 892ns | 1.082kns | 781ns | 60.311kns |
 
 ---
 
