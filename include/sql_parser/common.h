@@ -164,6 +164,10 @@ enum class NodeType : uint16_t {
     NODE_DELETE_STMT,
     NODE_DELETE_USING_CLAUSE,  // PostgreSQL USING or MySQL USING form
 
+    // Compound query nodes
+    NODE_COMPOUND_QUERY,       // root for UNION/INTERSECT/EXCEPT
+    NODE_SET_OPERATION,        // operator (UNION, INTERSECT, EXCEPT) with ALL flag
+
     // Shared
     NODE_STMT_OPTIONS,         // LOW_PRIORITY, IGNORE, QUICK, DELAYED, etc.
     NODE_UPDATE_SET_ITEM,      // single col=expr pair (shared by INSERT SET and UPDATE SET)

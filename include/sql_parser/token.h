@@ -75,6 +75,10 @@ enum class TokenType : uint16_t {
     TK_NOTHING,
     TK_RETURNING,
     TK_CONSTRAINT,
+
+    // Compound query operators
+    TK_INTERSECT,
+    TK_EXCEPT,
 };
 
 struct Token {

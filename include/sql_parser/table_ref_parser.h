@@ -206,6 +206,8 @@ public:
             case TokenType::TK_ON:
             case TokenType::TK_USING:
             case TokenType::TK_UNION:
+            case TokenType::TK_INTERSECT:
+            case TokenType::TK_EXCEPT:
             case TokenType::TK_SEMICOLON:
             case TokenType::TK_RPAREN:
             case TokenType::TK_LPAREN:
