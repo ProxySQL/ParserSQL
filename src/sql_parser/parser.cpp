@@ -1,4 +1,6 @@
 #include "sql_parser/parser.h"
+#include "sql_parser/expression_parser.h"
+#include "sql_parser/set_parser.h"
 
 namespace sql_parser {
 
@@ -74,8 +76,18 @@ ParseResult Parser<D>::parse_select() {
 template <Dialect D>
 ParseResult Parser<D>::parse_set() {
     ParseResult r;
-    r.status = ParseResult::PARTIAL;
     r.stmt_type = StmtType::SET;
+
+    SetParser<D> set_parser(tokenizer_, arena_);
+    AstNode* ast = set_parser.parse();
+
+    if (ast) {
+        r.status = ParseResult::OK;
+        r.ast = ast;
+    } else {
+        r.status = ParseResult::PARTIAL;
+    }
+
     scan_to_end(r);
     return r;
 }
