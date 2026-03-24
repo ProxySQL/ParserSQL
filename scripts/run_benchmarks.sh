@@ -161,18 +161,27 @@ run_corpus() {
     fi
 }
 
+# Run each corpus, skip empty results (avoids blank lines in table)
 CORPUS_RESULTS=""
-CORPUS_RESULTS+=$(run_corpus "PostgreSQL regression"  "pgsql" "/tmp/corpus_pg_regress.sql")$'\n'
-CORPUS_RESULTS+=$(run_corpus "MySQL MTR"              "mysql" "/tmp/corpus_mysql_mtr.sql")$'\n'
-CORPUS_RESULTS+=$(run_corpus "CockroachDB"            "pgsql" "/tmp/corpus_cockroach.sql")$'\n'
-CORPUS_RESULTS+=$(run_corpus "SQLGlot"                "mysql" "/tmp/corpus_sqlglot.sql")$'\n'
-CORPUS_RESULTS+=$(run_corpus "TPC-H"                  "pgsql" "/tmp/corpus_tpch_pgsql.sql")$'\n'
-CORPUS_RESULTS+=$(run_corpus "TPC-H"                  "mysql" "/tmp/corpus_tpch_mysql.sql")$'\n'
-CORPUS_RESULTS+=$(run_corpus "sqlparser-rs MySQL"      "mysql" "/tmp/corpus_sqlparserrs_mysql.sql")$'\n'
-CORPUS_RESULTS+=$(run_corpus "sqlparser-rs PostgreSQL"  "pgsql" "/tmp/corpus_sqlparserrs_pgsql.sql")$'\n'
-CORPUS_RESULTS+=$(run_corpus "sqlparser-rs Common"      "mysql" "/tmp/corpus_sqlparserrs_common.sql")$'\n'
-CORPUS_RESULTS+=$(run_corpus "Vitess"                  "mysql" "/tmp/corpus_vitess.sql")$'\n'
-CORPUS_RESULTS+=$(run_corpus "TiDB"                    "mysql" "/tmp/corpus_tidb.sql")$'\n'
+add_result() {
+    local r
+    r=$(run_corpus "$@")
+    if [ -n "$r" ]; then
+        CORPUS_RESULTS+="$r"$'\n'
+    fi
+}
+
+add_result "PostgreSQL regression"    "pgsql" "/tmp/corpus_pg_regress.sql"
+add_result "MySQL MTR"                "mysql" "/tmp/corpus_mysql_mtr.sql"
+add_result "CockroachDB"              "pgsql" "/tmp/corpus_cockroach.sql"
+add_result "SQLGlot"                  "mysql" "/tmp/corpus_sqlglot.sql"
+add_result "TPC-H (PostgreSQL)"       "pgsql" "/tmp/corpus_tpch_pgsql.sql"
+add_result "TPC-H (MySQL)"            "mysql" "/tmp/corpus_tpch_mysql.sql"
+add_result "sqlparser-rs MySQL"       "mysql" "/tmp/corpus_sqlparserrs_mysql.sql"
+add_result "sqlparser-rs PostgreSQL"  "pgsql" "/tmp/corpus_sqlparserrs_pgsql.sql"
+add_result "sqlparser-rs Common"      "mysql" "/tmp/corpus_sqlparserrs_common.sql"
+add_result "Vitess"                   "mysql" "/tmp/corpus_vitess.sql"
+add_result "TiDB"                     "mysql" "/tmp/corpus_tidb.sql"
 
 # Compute totals
 TOTAL_QUERIES=0
@@ -257,6 +266,47 @@ $(while IFS= read -r line; do
 
     echo "| $name | ${time} ${unit} | ${target:-—} | $status |"
 done < /tmp/bench_results.txt)
+
+---
+
+## Multi-Threaded Scaling (per-thread latency)
+
+| Operation | 1 thread | 2 threads | 4 threads | 8 threads |
+|---|---|---|---|---|
+$(grep "^BM_MT_" /tmp/bench_results.txt | while IFS= read -r line; do
+    name=$(echo "$line" | awk '{print $1}')
+    time=$(echo "$line" | awk '{print $2}')
+    unit=$(echo "$line" | awk '{print $3}')
+    echo "$name ${time}${unit}"
+done | sed 's|/threads:| |' | awk '
+{
+    key=$1; threads=$2; val=$3
+    data[key][threads]=val
+    if (!(key in seen)) { order[++n]=key; seen[key]=1 }
+}
+END {
+    for (i=1; i<=n; i++) {
+        k=order[i]
+        printf "| %s | %s | %s | %s | %s |\n", k, data[k][1], data[k][2], data[k][4], data[k][8]
+    }
+}')
+
+---
+
+## Percentile Latency
+
+| Operation | avg | p50 | p95 | p99 | min | max |
+|---|---|---|---|---|---|---|
+$(grep "^BM_Percentile_" /tmp/bench_results.txt | while IFS= read -r line; do
+    name=$(echo "$line" | awk '{print $1}')
+    avg=$(echo "$line" | grep -oP 'avg_ns=[\d.k]+' | sed 's/avg_ns=//')
+    p50=$(echo "$line" | grep -oP 'p50_ns=[\d.k]+' | sed 's/p50_ns=//')
+    p95=$(echo "$line" | grep -oP 'p95_ns=[\d.k]+' | sed 's/p95_ns=//')
+    p99=$(echo "$line" | grep -oP 'p99_ns=[\d.k]+' | sed 's/p99_ns=//')
+    min=$(echo "$line" | grep -oP 'min_ns=[\d.k]+' | sed 's/min_ns=//')
+    max=$(echo "$line" | grep -oP 'max_ns=[\d.k]+' | sed 's/max_ns=//')
+    echo "| $name | ${avg}ns | ${p50}ns | ${p95}ns | ${p99}ns | ${min}ns | ${max}ns |"
+done)
 
 ---
 
