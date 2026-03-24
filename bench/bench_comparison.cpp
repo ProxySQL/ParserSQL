@@ -5,6 +5,7 @@
 // libpg_query
 extern "C" {
 #include "pg_query.h"
+#include "pg_query_internal.h"  // for pg_query_raw_parse (parse-only, no JSON)
 }
 
 using namespace sql_parser;
@@ -182,3 +183,62 @@ static void BM_PgQuery_Begin(benchmark::State& state) {
     }
 }
 BENCHMARK(BM_PgQuery_Begin);
+
+// ========== libpg_query RAW PARSE (no JSON serialization) ==========
+// This is the fairest comparison — parse only, no serialization.
+// Still includes PostgreSQL memory context setup/teardown per call.
+
+static void BM_PgQueryRaw_Select_Simple(benchmark::State& state) {
+    const char* sql = comparison_queries[0].sql;
+    for (auto _ : state) {
+        MemoryContext ctx = pg_query_enter_memory_context();
+        PgQueryInternalParsetreeAndError result = pg_query_raw_parse(sql, 0);
+        benchmark::DoNotOptimize(result.tree);
+        pg_query_exit_memory_context(ctx);
+    }
+}
+BENCHMARK(BM_PgQueryRaw_Select_Simple);
+
+static void BM_PgQueryRaw_Select_Join(benchmark::State& state) {
+    const char* sql = comparison_queries[1].sql;
+    for (auto _ : state) {
+        MemoryContext ctx = pg_query_enter_memory_context();
+        PgQueryInternalParsetreeAndError result = pg_query_raw_parse(sql, 0);
+        benchmark::DoNotOptimize(result.tree);
+        pg_query_exit_memory_context(ctx);
+    }
+}
+BENCHMARK(BM_PgQueryRaw_Select_Join);
+
+static void BM_PgQueryRaw_Select_Complex(benchmark::State& state) {
+    const char* sql = comparison_queries[2].sql;
+    for (auto _ : state) {
+        MemoryContext ctx = pg_query_enter_memory_context();
+        PgQueryInternalParsetreeAndError result = pg_query_raw_parse(sql, 0);
+        benchmark::DoNotOptimize(result.tree);
+        pg_query_exit_memory_context(ctx);
+    }
+}
+BENCHMARK(BM_PgQueryRaw_Select_Complex);
+
+static void BM_PgQueryRaw_Insert(benchmark::State& state) {
+    const char* sql = comparison_queries[3].sql;
+    for (auto _ : state) {
+        MemoryContext ctx = pg_query_enter_memory_context();
+        PgQueryInternalParsetreeAndError result = pg_query_raw_parse(sql, 0);
+        benchmark::DoNotOptimize(result.tree);
+        pg_query_exit_memory_context(ctx);
+    }
+}
+BENCHMARK(BM_PgQueryRaw_Insert);
+
+static void BM_PgQueryRaw_Begin(benchmark::State& state) {
+    const char* sql = comparison_queries[8].sql;
+    for (auto _ : state) {
+        MemoryContext ctx = pg_query_enter_memory_context();
+        PgQueryInternalParsetreeAndError result = pg_query_raw_parse(sql, 0);
+        benchmark::DoNotOptimize(result.tree);
+        pg_query_exit_memory_context(ctx);
+    }
+}
+BENCHMARK(BM_PgQueryRaw_Begin);

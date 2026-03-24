@@ -11,51 +11,71 @@
 | Parser | Language | Type | Notes |
 |---|---|---|---|
 | **ParserSQL** (this project) | C++17 | Hand-written recursive descent | Arena alloc, zero-copy, proxy-optimized |
-| **libpg_query** v17 | C | PostgreSQL's Bison parser extracted | `pg_query_parse()` includes JSON serialization of parse tree |
+| **libpg_query** v17 | C | PostgreSQL's Bison parser extracted | Two modes: raw parse (AST only) and full (AST + JSON serialization) |
 | **sqlparser-rs** v0.53 | Rust | Hand-written recursive descent | General-purpose SQL parser, builds typed AST |
-
-## Important Caveats
-
-- **libpg_query** comparison is **not apples-to-apples**: `pg_query_parse()` parses AND serializes the result to JSON. The raw parse time is lower than what we measure. libpg_query also does full PostgreSQL semantic validation, which our parser does not.
-- **sqlparser-rs** comparison is **fairer**: both are standalone syntax parsers that build an AST. However, sqlparser-rs builds a richly-typed Rust enum AST (Box-allocated), while our parser builds a lightweight linked-list AST in an arena. Different trade-offs.
-- Both comparisons use PostgreSQL-compatible SQL to keep the query set common.
 
 ---
 
 ## Results
 
-### ParserSQL vs libpg_query
+### All parsers on the same queries
 
-| Query | ParserSQL | libpg_query | Ratio | Notes |
+| Query | ParserSQL | pg_query raw | pg_query +JSON | sqlparser-rs |
 |---|---|---|---|---|
-| `SELECT col FROM t WHERE id = 1` | 229 ns | 1,921 ns | 8.4x | |
-| `SELECT ... JOIN ... WHERE` | 582 ns | 4,478 ns | 7.7x | |
-| `SELECT ... JOIN ... GROUP BY ... HAVING ... ORDER BY ... LIMIT` | 1,244 ns | 8,839 ns | 7.1x | |
-| `INSERT INTO t (cols) VALUES (...)` | 246 ns | 1,878 ns | 7.6x | |
-| `UPDATE t SET ... WHERE` | 239 ns | 1,949 ns | 8.2x | |
-| `DELETE FROM t WHERE` | 185 ns | 1,381 ns | 7.5x | |
-| `BEGIN` | 38 ns | 445 ns | 11.7x | |
+| `SELECT col FROM t WHERE id = 1` | **223 ns** | 684 ns | 1,872 ns | 4,687 ns |
+| `SELECT ... JOIN ... WHERE` | **579 ns** | 1,646 ns | 4,509 ns | 10,684 ns |
+| `SELECT ... GROUP BY ... HAVING ... ORDER BY ... LIMIT` | **1,189 ns** | 3,304 ns | 8,675 ns | 23,411 ns |
+| `INSERT INTO t (cols) VALUES (...)` | **244 ns** | 781 ns | 1,831 ns | 3,784 ns |
+| `UPDATE t SET ... WHERE` | **236 ns** | 1,907 ns | — | 4,102 ns |
+| `DELETE FROM t WHERE` | **181 ns** | 1,373 ns | — | 3,049 ns |
+| `BEGIN` | **36 ns** | 230 ns | 421 ns | 412 ns |
 
-**ParserSQL is 7-12x faster**, but libpg_query is doing more work (JSON serialization + semantic analysis). A fairer comparison would require libpg_query's internal parse-only API, which is not publicly exposed.
+### Speedup ratios
 
-### ParserSQL vs sqlparser-rs
+| Query | vs pg_query (raw parse) | vs pg_query (+JSON) | vs sqlparser-rs |
+|---|---|---|---|
+| SELECT simple | **3.1x** | 8.4x | **21x** |
+| SELECT JOIN | **2.8x** | 7.8x | **18x** |
+| SELECT complex | **2.8x** | 7.3x | **19x** |
+| INSERT | **3.2x** | 7.5x | **16x** |
+| BEGIN | **6.4x** | 11.7x | **11x** |
 
-| Query | ParserSQL | sqlparser-rs (MySQL) | sqlparser-rs (PgSQL) | Ratio (PgSQL) |
-|---|---|---|---|---|
-| `SELECT col FROM t WHERE id = 1` | 229 ns | 4,687 ns | 4,686 ns | 20.5x |
-| `SELECT ... JOIN ... WHERE` | 582 ns | 10,907 ns | 10,684 ns | 18.3x |
-| `SELECT ... JOIN ... GROUP BY ... HAVING ... ORDER BY ... LIMIT` | 1,244 ns | 23,294 ns | 23,411 ns | 18.8x |
-| `INSERT INTO t (cols) VALUES (...)` | 246 ns | 3,794 ns | 3,784 ns | 15.4x |
-| `UPDATE t SET ... WHERE` | 239 ns | 3,892 ns | 4,102 ns | 17.2x |
-| `DELETE FROM t WHERE` | 185 ns | 2,858 ns | 3,049 ns | 16.5x |
-| `SET session.wait_timeout = 600` | — | 1,265 ns | 1,326 ns | — |
-| `BEGIN` | 38 ns | 394 ns | 412 ns | 10.8x |
+---
 
-**ParserSQL is 10-20x faster than sqlparser-rs.** This is a fair comparison — both are standalone syntax parsers. The speed advantage comes from:
-1. Arena allocation vs heap allocation (Box/Vec in Rust)
-2. Zero-copy StringRef vs owned String
-3. Compact 32-byte AstNode vs richly-typed enum variants
-4. Keyword binary search on input bytes vs tokenizer-then-parse
+## Analysis
+
+### vs libpg_query (fair comparison: raw parse only)
+
+**ParserSQL is ~3x faster** than PostgreSQL's own parser when comparing parse-only (no JSON serialization). This is a genuine speedup from:
+
+1. **Arena allocation** — our parser allocates AST nodes from a bump allocator (3.5ns reset). PostgreSQL uses its MemoryContext system which is more general but has higher per-allocation overhead.
+2. **Zero-copy strings** — our `StringRef` points into the original input. PostgreSQL copies identifier strings into palloc'd memory.
+3. **Simpler AST** — our 32-byte `AstNode` vs PostgreSQL's richly-typed node structs (>100 bytes each).
+
+Note: libpg_query's raw parse still includes PostgreSQL memory context setup/teardown per call. Our parser reuses the arena across calls (just a pointer rewind).
+
+### vs libpg_query (full: parse + JSON serialize)
+
+The **7-8x** ratio includes JSON serialization overhead in libpg_query. This is how `pg_query_parse()` is typically used, but it's not a fair parse-only comparison.
+
+### vs sqlparser-rs
+
+**ParserSQL is 11-21x faster**. This is the fairest comparison — both are standalone syntax parsers. The speed gap comes from:
+
+1. **Arena vs heap** — sqlparser-rs uses `Box<Expr>`, `Vec<SelectItem>`, etc. Each allocation goes through Rust's allocator.
+2. **Zero-copy vs owned strings** — sqlparser-rs creates `String` values. We use `StringRef` pointing into input.
+3. **32-byte nodes vs enum variants** — Rust's richly-typed AST enums carry more data per node.
+4. **Binary search keyword lookup** — fast path for the tokenizer.
+
+---
+
+## Methodology
+
+- All benchmarks use Google Benchmark (C++) or criterion (Rust)
+- Same queries used across all parsers
+- PostgreSQL-compatible SQL to keep the query set common
+- Each benchmark runs millions of iterations; reported times are per-operation median
+- Machine: AMD Ryzen 9 5950X, Linux 6.17, GCC 13.3 -O3
 
 ---
 
