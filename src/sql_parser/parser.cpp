@@ -531,7 +531,17 @@ ParseResult Parser<D>::parse_explain(bool is_describe) {
                           next.type == TokenType::TK_INSERT ||
                           next.type == TokenType::TK_UPDATE ||
                           next.type == TokenType::TK_DELETE ||
-                          next.type == TokenType::TK_REPLACE);
+                          next.type == TokenType::TK_REPLACE ||
+                          next.type == TokenType::TK_CREATE ||
+                          next.type == TokenType::TK_ALTER ||
+                          next.type == TokenType::TK_DROP ||
+                          next.type == TokenType::TK_TRUNCATE ||
+                          next.type == TokenType::TK_SHOW ||
+                          next.type == TokenType::TK_SET ||
+                          next.type == TokenType::TK_EXECUTE ||
+                          next.type == TokenType::TK_CALL ||
+                          next.type == TokenType::TK_DO ||
+                          next.type == TokenType::TK_LPAREN);
 
     if (is_inner_stmt) {
         // Parse inner statement recursively
