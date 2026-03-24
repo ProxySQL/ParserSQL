@@ -19,6 +19,10 @@ A high-performance, hand-written recursive descent SQL parser for ProxySQL. Supp
 - Must compile on AlmaLinux 8 (GCC 8.5) through Fedora 43 and macOS (Apple Silicon).
 - Static library or header-only (whichever yields better performance after benchmarking). Linked into ProxySQL at build time.
 
+### Migration from Existing POC
+
+This project replaces the existing Flex/Bison-based POC parser wholesale. The old parser (Flex lexer, Bison LALR grammar, `std::string`-based AST with `std::vector<AstNode*>` children, per-node heap allocation) is not carried forward. The existing `src/mysql_parser/`, `src/pgsql_parser/`, and `include/` directories will be removed once the new parser is functional. Existing examples in `examples/` serve as a test corpus for validating that the new parser handles the same queries correctly, then they too will be replaced.
+
 ---
 
 ## Architecture
@@ -56,16 +60,20 @@ Input SQL bytes
 
 ### Arena Allocator
 
-Each parser instance owns a thread-local arena — a pre-allocated memory block (64KB default, growable). All AST nodes, materialized strings, and temporary data are allocated from the arena. After a query is fully processed, the arena resets (pointer rewind, O(1)). No per-node new/delete.
+Each parser instance owns a thread-local arena — a pre-allocated memory block (64KB default). All AST nodes, materialized strings, and temporary data are allocated from the arena. After a query is fully processed, the arena resets (pointer rewind, O(1)). No per-node new/delete.
+
+**Growth strategy:** The arena uses block chaining — never `realloc` (which would invalidate all pointers). When the current block is exhausted, a new block is allocated and linked. `reset()` retains the first (primary) block and frees any overflow blocks. This means `reset()` is O(1) in the common case (single block) and O(n_overflow_blocks) in the rare case. A configurable maximum arena size (default: 1MB) prevents unbounded growth; exceeding it returns `ParseResult::ERROR`.
 
 ```
-┌─────────────────────────────────────────┐
-│              Arena (64KB)               │
-│  [AstNode][AstNode][string][AstNode]... │
-│                                    ^    │
-│                              cursor     │
-│  reset() → cursor = start               │
-└─────────────────────────────────────────┘
+┌──────────────────────┐    ┌──────────────────────┐
+│   Block 1 (64KB)     │───►│  Block 2 (overflow)  │───► ...
+│  [AstNode][string].. │    │  [AstNode][string].. │
+│                  ^   │    │                  ^   │
+│            cursor    │    │            cursor    │
+│                      │    │                      │
+│  reset() → cursor=0, │    │  (freed on reset)    │
+│  free overflow blocks│    │                      │
+└──────────────────────┘    └──────────────────────┘
 ```
 
 ### StringRef (Zero-Copy)
@@ -77,7 +85,10 @@ struct StringRef {
 
     // Comparison, hashing helpers
 };
+static_assert(std::is_trivially_copyable_v<StringRef>);
 ```
+
+`StringRef` must remain a trivial type (no constructors, destructors, or virtual functions) to be safely used in unions and to enable memcpy-based operations.
 
 Points into the original input buffer. No copies or allocations for identifiers, keywords, or literals. The input SQL string must outlive the parse result (natural in ProxySQL — the query buffer is session-owned).
 
@@ -89,13 +100,16 @@ Flat, compact struct. No virtual functions, no `std::vector`. Children use an in
 
 ```cpp
 struct AstNode {
-    NodeType type;          // enum, 2 bytes
-    uint16_t flags;         // dialect bits, tier, modifiers
-    StringRef value;        // pointer + length into input
-    AstNode* first_child;   // first child (intrusive list)
-    AstNode* next_sibling;  // next sibling
+    AstNode* first_child;   // 8 bytes — first child (intrusive list)
+    AstNode* next_sibling;  // 8 bytes — next sibling
+    const char* value_ptr;  // 8 bytes — pointer into input (inlined StringRef)
+    uint32_t value_len;     // 4 bytes — length
+    NodeType type;          // 2 bytes — enum
+    uint16_t flags;         // 2 bytes — dialect bits, tier, modifiers
 };
-// ~32 bytes per node on 64-bit, fits in half a cache line
+// 32 bytes per node on 64-bit — exactly half a cache line.
+// Fields ordered to avoid padding: pointers first, then 4-byte, then 2-byte.
+static_assert(sizeof(AstNode) == 32);
 ```
 
 ### ParseResult
@@ -107,6 +121,7 @@ struct ParseResult {
     StmtType stmt_type;        // always set, even on error (best-effort)
     AstNode* ast;              // non-null for Tier 1 OK
     ErrorInfo error;           // populated on ERROR/PARTIAL
+    StringRef remaining;       // unparsed input after semicolon (for multi-statement)
 
     // Tier 2 extracted metadata
     StringRef table_name;
@@ -120,7 +135,12 @@ struct ErrorInfo {
 };
 ```
 
-`PARTIAL` means the classifier succeeded (statement type known) but the deep parser hit a syntax error. ProxySQL can still route on statement type — let the backend report the error to the client.
+`PARTIAL` semantics by tier:
+- **Tier 1:** classifier succeeded (statement type known) but the deep parser hit a syntax error. The AST may be partially populated. ProxySQL can still route on statement type — let the backend report the error.
+- **Tier 2:** classifier succeeded but the extractor could not find expected metadata (e.g., `INSERT INTO` with no table name following). `stmt_type` is set but metadata fields may be empty.
+- `ERROR` means the first token could not be classified at all (e.g., binary garbage or empty input).
+
+**Lifetime note:** `ErrorInfo::message` points to arena-allocated memory. It becomes invalid after `parser.reset()`. Consumers must copy the message if they need it beyond the parse lifecycle.
 
 ---
 
@@ -179,7 +199,7 @@ struct KeywordEntry {
 
 ### Lookahead
 
-One-token lookahead via `peek()`. Cached internally. Sufficient for recursive descent and classification.
+The tokenizer provides single-token lookahead via `peek()`, cached internally. Statement parsers that need multi-token disambiguation (e.g., `SET TRANSACTION` vs `SET var = ...`, or `INSERT INTO ... SELECT` vs `INSERT INTO ... VALUES`) handle this by consuming tokens and using the parser's own state to disambiguate — no backtracking needed. For example, the SET parser consumes the second token; if it's `TRANSACTION`, it enters `parse_set_transaction()`, otherwise it treats the consumed token as the start of a variable target. This is standard recursive descent practice and does not require a multi-token lookahead buffer in the tokenizer itself.
 
 ---
 
@@ -256,7 +276,8 @@ parse_select()
 - `::` type cast
 - `LIMIT ALL` vs `LIMIT` with expression
 - Dollar-quoted strings
-- `RETURNING` clause
+
+Note: PostgreSQL's `RETURNING` clause applies to INSERT/UPDATE/DELETE, not SELECT. It will be handled when those statements are promoted to Tier 1. Until then, Tier 2 extractors for those statements will detect `RETURNING` and include it in metadata but not build an AST for the returned expressions.
 
 ### SET Parser
 
@@ -286,7 +307,8 @@ Each `NodeType` has a corresponding emit function. The emitter is dialect-templa
 
 - `StringRef` values are emitted directly from the original input (no copy unless the node was modified).
 - Modified nodes emit their new values.
-- Theoretically supports cross-dialect emission (parse MySQL → emit PostgreSQL) for future query translation.
+
+Cross-dialect emission (parse MySQL → emit PostgreSQL) is **out of scope** for the initial design. Many constructs have no direct equivalent across dialects (`SQL_CALC_FOUND_ROWS`, backtick quoting, `LIMIT` syntax differences). The emitter always emits in the same dialect it parsed.
 
 ---
 
@@ -306,20 +328,25 @@ COM_STMT_PREPARE          COM_STMT_EXECUTE (repeated)       COM_STMT_CLOSE
 
 SQL template parsed normally. Placeholder tokens (`?` in MySQL, `$1`/`$2` in PostgreSQL) become `NODE_PLACEHOLDER` AST nodes with a parameter index in `flags`.
 
-The AST is copied from the arena to a longer-lived **statement cache** (per-parser-instance, keyed by statement ID). This is the one place where memory leaves the arena.
+The AST is copied from the arena to a longer-lived **statement cache** (per-parser-instance, keyed by statement ID) via `parse_and_cache()`, which atomically parses and stores the result before the arena can be reset. This is the one place where memory leaves the arena.
+
+**Threading note:** The statement cache is per-parser-instance (i.e., per-thread). In ProxySQL, prepared statement state is per-session. If sessions can migrate between threads, the session must carry its own prepared statement metadata (statement IDs, SQL templates). The parser on the destination thread can re-parse and cache the template on first execute if the cached AST is not found. This avoids any cross-thread sharing of parser state.
 
 ### Execute Phase
 
 ```cpp
 struct BoundValue {
-    enum Type { INT, FLOAT, DOUBLE, STRING, BLOB, NULL_VAL };
+    enum Type { INT, FLOAT, DOUBLE, STRING, BLOB, NULL_VAL, DATETIME, DECIMAL };
     Type type;
     union {
         int64_t int_val;
-        double float_val;
+        float float32_val;    // MySQL FLOAT (4 bytes) — distinct from DOUBLE
+        double float64_val;   // MySQL DOUBLE (8 bytes)
         StringRef str_val;    // points into COM_STMT_EXECUTE packet buffer
+                              // also used for DATETIME/DECIMAL (wire-format string)
     };
 };
+static_assert(std::is_trivially_copyable_v<BoundValue>);
 
 struct ParamBindings {
     BoundValue* values;
@@ -349,6 +376,14 @@ The parser never throws exceptions. Errors are reported through `ParseResult::st
 
 **Lenient by design:** ProxySQL doesn't need to reject queries — the backend does. The parser extracts as much useful information as possible and degrades gracefully.
 
+### Multi-Statement Queries
+
+ProxySQL regularly receives semicolon-separated multi-statement queries (e.g., `SET autocommit=0; BEGIN`). The parser handles this by parsing the **first statement** and returning its `ParseResult` along with a `remaining` field (`StringRef` pointing to the unparsed tail after the semicolon). The caller is responsible for calling `parse()` again on the remainder if needed. This avoids allocating a list of results and lets the caller decide whether to parse subsequent statements.
+
+### Maximum Query Length
+
+The parser respects the caller's buffer size (the `len` parameter). It does not impose its own maximum query length — that is ProxySQL's responsibility (via `mysql-max_allowed_packet` or equivalent). The arena's maximum size (default 1MB) provides an implicit bound on the complexity of parseable queries; exceeding it returns `ERROR`.
+
 ---
 
 ## Public API
@@ -360,9 +395,9 @@ public:
     Parser(const ParserConfig& config = {});  // arena size, cache capacity
 
     ParseResult parse(const char* sql, size_t len);
+    ParseResult parse_and_cache(const char* sql, size_t len, uint32_t stmt_id);
     ParseResult execute(uint32_t stmt_id, const ParamBindings& params);
 
-    void prepare_cache_store(uint32_t stmt_id);
     void prepare_cache_evict(uint32_t stmt_id);
 
     void reset();  // resets arena; call after each query is fully processed
@@ -397,7 +432,7 @@ include/sql_parser/
     keywords_pgsql.h      // PostgreSQL keyword table
 
 src/sql_parser/
-    tokenizer.cpp         // explicit template instantiations
+    tokenizer.cpp         // explicit template instantiations (or header-only with LTO for max inlining)
     classifier.cpp        // switch dispatch
     select_parser.cpp     // Tier 1: SELECT
     set_parser.cpp        // Tier 1: SET
@@ -431,7 +466,7 @@ bench/
 | Tier 1 SELECT parse (complex) | <2us | Multi-join, subqueries, GROUP BY, ORDER BY |
 | Tier 1 SET parse | <300ns | `SET @@session.var = value` |
 | Query reconstruction | <500ns | Simple SELECT round-trip |
-| Arena reset | <10ns | Pointer rewind |
+| Arena reset | <10ns | Pointer rewind (single-block case; overflow blocks add O(n) free calls) |
 
 ---
 
