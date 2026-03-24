@@ -114,7 +114,7 @@ ParseResult Parser<D>::parse_select_from_lparen() {
     AstNode* inner = nullptr;
     if (tokenizer_.peek().type == TokenType::TK_SELECT) {
         tokenizer_.skip(); // consume SELECT
-        SelectParser<D> sp(tokenizer_, arena_);
+        SelectParser<D> sp(tokenizer_, arena_, true);
         inner = sp.parse();
 
         // Check for set operators inside the parens
@@ -133,7 +133,7 @@ ParseResult Parser<D>::parse_select_from_lparen() {
             if (tokenizer_.peek().type == TokenType::TK_SELECT) {
                 tokenizer_.skip();
             }
-            SelectParser<D> sp2(tokenizer_, arena_);
+            SelectParser<D> sp2(tokenizer_, arena_, true);
             AstNode* right = sp2.parse();
 
             AstNode* setop = make_node(arena_, NodeType::NODE_SET_OPERATION, op_text);
@@ -187,14 +187,14 @@ ParseResult Parser<D>::parse_select_from_lparen() {
                 if (tokenizer_.peek().type == TokenType::TK_SELECT) {
                     tokenizer_.skip();
                 }
-                SelectParser<D> sp3(tokenizer_, arena_);
+                SelectParser<D> sp3(tokenizer_, arena_, true);
                 right = sp3.parse();
                 if (tokenizer_.peek().type == TokenType::TK_RPAREN) {
                     tokenizer_.skip();
                 }
             } else if (tokenizer_.peek().type == TokenType::TK_SELECT) {
                 tokenizer_.skip();
-                SelectParser<D> sp3(tokenizer_, arena_);
+                SelectParser<D> sp3(tokenizer_, arena_, true);
                 right = sp3.parse();
             }
 

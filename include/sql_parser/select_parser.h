@@ -14,11 +14,14 @@ namespace sql_parser {
 template <Dialect D>
 class SelectParser {
 public:
-    SelectParser(Tokenizer<D>& tokenizer, Arena& arena)
+    SelectParser(Tokenizer<D>& tokenizer, Arena& arena, bool compound_mode = false)
         : tok_(tokenizer), arena_(arena), expr_parser_(tokenizer, arena),
-          table_ref_parser_(tokenizer, arena, expr_parser_) {}
+          table_ref_parser_(tokenizer, arena, expr_parser_),
+          compound_mode_(compound_mode) {}
 
     // Parse a SELECT statement (SELECT keyword already consumed by classifier).
+    // In compound_mode, stops before ORDER BY / LIMIT so they can be claimed
+    // by the compound query parser.
     AstNode* parse() {
         AstNode* root = make_node(arena_, NodeType::NODE_SELECT_STMT);
         if (!root) return nullptr;
@@ -62,32 +65,36 @@ public:
             if (having) root->add_child(having);
         }
 
-        // ORDER BY clause
-        if (tok_.peek().type == TokenType::TK_ORDER) {
-            tok_.skip();
-            if (tok_.peek().type == TokenType::TK_BY) tok_.skip();
-            AstNode* order_by = parse_order_by();
-            if (order_by) root->add_child(order_by);
-        }
+        // In compound_mode, stop before ORDER BY / LIMIT so the compound
+        // query parser can claim them as applying to the compound result.
+        if (!compound_mode_) {
+            // ORDER BY clause
+            if (tok_.peek().type == TokenType::TK_ORDER) {
+                tok_.skip();
+                if (tok_.peek().type == TokenType::TK_BY) tok_.skip();
+                AstNode* order_by = parse_order_by();
+                if (order_by) root->add_child(order_by);
+            }
 
-        // LIMIT clause
-        if (tok_.peek().type == TokenType::TK_LIMIT) {
-            tok_.skip();
-            AstNode* limit = parse_limit();
-            if (limit) root->add_child(limit);
-        }
+            // LIMIT clause
+            if (tok_.peek().type == TokenType::TK_LIMIT) {
+                tok_.skip();
+                AstNode* limit = parse_limit();
+                if (limit) root->add_child(limit);
+            }
 
-        // FOR UPDATE / FOR SHARE (locking)
-        if (tok_.peek().type == TokenType::TK_FOR) {
-            AstNode* lock = parse_locking();
-            if (lock) root->add_child(lock);
-        }
+            // FOR UPDATE / FOR SHARE (locking)
+            if (tok_.peek().type == TokenType::TK_FOR) {
+                AstNode* lock = parse_locking();
+                if (lock) root->add_child(lock);
+            }
 
-        // INTO (MySQL: can appear here too -- INTO OUTFILE/DUMPFILE/var)
-        if constexpr (D == Dialect::MySQL) {
-            if (tok_.peek().type == TokenType::TK_INTO) {
-                AstNode* into = parse_into();
-                if (into) root->add_child(into);
+            // INTO (MySQL: can appear here too -- INTO OUTFILE/DUMPFILE/var)
+            if constexpr (D == Dialect::MySQL) {
+                if (tok_.peek().type == TokenType::TK_INTO) {
+                    AstNode* into = parse_into();
+                    if (into) root->add_child(into);
+                }
             }
         }
 
@@ -99,6 +106,7 @@ private:
     Arena& arena_;
     ExpressionParser<D> expr_parser_;
     TableRefParser<D> table_ref_parser_;
+    bool compound_mode_;
 
     // ---- SELECT options ----
 

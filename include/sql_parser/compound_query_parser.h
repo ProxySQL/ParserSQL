@@ -47,7 +47,32 @@ public:
             return compound;
         }
 
-        // No set operator found -- return the bare SELECT as-is
+        // No set operator found -- return the bare SELECT as-is.
+        // Since we used compound_mode, ORDER BY/LIMIT/FOR weren't consumed.
+        // Parse them now and attach to the SELECT node.
+        if (result->type == NodeType::NODE_SELECT_STMT) {
+            if (tok_.peek().type == TokenType::TK_ORDER) {
+                tok_.skip();
+                if (tok_.peek().type == TokenType::TK_BY) tok_.skip();
+                AstNode* order_by = parse_order_by();
+                if (order_by) result->add_child(order_by);
+            }
+            if (tok_.peek().type == TokenType::TK_LIMIT) {
+                tok_.skip();
+                AstNode* limit = parse_limit();
+                if (limit) result->add_child(limit);
+            }
+            // FOR UPDATE / FOR SHARE
+            if (tok_.peek().type == TokenType::TK_FOR) {
+                tok_.skip();
+                AstNode* lock = make_node(arena_, NodeType::NODE_LOCKING_CLAUSE);
+                if (lock) {
+                    Token strength = tok_.next_token();
+                    lock->add_child(make_node(arena_, NodeType::NODE_IDENTIFIER, strength.text));
+                    result->add_child(lock);
+                }
+            }
+        }
         return result;
     }
 
@@ -129,15 +154,26 @@ private:
                 if (tok_.peek().type == TokenType::TK_SELECT) {
                     tok_.skip(); // consume SELECT
                     // Create a SelectParser that will parse from after SELECT
-                    SelectParser<D> sp(tok_, arena_);
+                    SelectParser<D> sp(tok_, arena_, true);
                     AstNode* select = sp.parse();
 
                     // Check if a set operator follows inside the parens
                     if (is_set_operator(tok_.peek().type)) {
                         // There's a compound inside the parens
-                        // We need to continue parsing with select as the left operand
                         inner = continue_compound_from(select, 0);
                     } else {
+                        // Single SELECT inside parens -- parse ORDER BY/LIMIT
+                        if (tok_.peek().type == TokenType::TK_ORDER) {
+                            tok_.skip();
+                            if (tok_.peek().type == TokenType::TK_BY) tok_.skip();
+                            AstNode* ob = parse_order_by();
+                            if (ob) select->add_child(ob);
+                        }
+                        if (tok_.peek().type == TokenType::TK_LIMIT) {
+                            tok_.skip();
+                            AstNode* lim = parse_limit();
+                            if (lim) select->add_child(lim);
+                        }
                         inner = select;
                     }
                 } else {
@@ -155,9 +191,13 @@ private:
         }
 
         // Not parenthesized -- must be a plain SELECT
-        // Note: SELECT keyword was already consumed by the classifier
-        // The tokenizer is positioned right after SELECT
-        SelectParser<D> sp(tok_, arena_);
+        // Consume SELECT keyword if present (already consumed by classifier
+        // for the first call, but present for subsequent SELECTs in compound)
+        if (tok_.peek().type == TokenType::TK_SELECT) {
+            tok_.skip();
+        }
+        // Use compound_mode=true so ORDER BY/LIMIT aren't consumed
+        SelectParser<D> sp(tok_, arena_, true);
         return sp.parse();
     }
 
@@ -183,7 +223,7 @@ private:
             AstNode* right = nullptr;
             if (tok_.peek().type == TokenType::TK_SELECT) {
                 tok_.skip();
-                SelectParser<D> sp(tok_, arena_);
+                SelectParser<D> sp(tok_, arena_, true);
                 AstNode* rsel = sp.parse();
                 // Check for more operators at higher precedence
                 right = continue_compound_from(rsel, prec);
