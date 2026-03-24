@@ -46,3 +46,5 @@ src/*_parser/*_parser.report
 libsqlparser.a
 run_tests
 run_bench
+run_bench_compare
+bench/sqlparser_rs_bench/target/

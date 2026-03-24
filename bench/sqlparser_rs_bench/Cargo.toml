@@ -1,0 +1,12 @@
+[package]
+name = "sqlparser-bench"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+sqlparser = "0.52"
+criterion = { version = "0.5.1", default-features = false, features = ["cargo_bench_support"] }
+
+[[bench]]
+name = "parse_bench"
+harness = false

@@ -52,7 +52,7 @@ BENCH_TARGET = $(PROJECT_ROOT)/run_bench
 CORPUS_TEST_SRC = $(TEST_DIR)/corpus_test.cpp
 CORPUS_TEST_TARGET = $(PROJECT_ROOT)/corpus_test
 
-.PHONY: all lib test bench build-corpus-test clean
+.PHONY: all lib test bench bench-compare build-corpus-test clean
 
 build-corpus-test: $(CORPUS_TEST_TARGET)
 
@@ -97,7 +97,26 @@ $(BENCH_TARGET): $(BENCH_OBJS) $(GBENCH_OBJS) $(LIB_TARGET)
 $(CORPUS_TEST_TARGET): $(CORPUS_TEST_SRC) $(LIB_TARGET)
 	$(CXX) $(CXXFLAGS) $(CPPFLAGS) -o $@ $< -L$(PROJECT_ROOT) -lsqlparser
 
+# libpg_query comparison benchmark
+LIBPGQUERY_DIR = $(PROJECT_ROOT)/third_party/libpg_query
+LIBPGQUERY_LIB = $(LIBPGQUERY_DIR)/libpg_query.a
+LIBPGQUERY_CPPFLAGS = -I$(LIBPGQUERY_DIR)
+
+BENCH_COMPARE_SRC = $(BENCH_DIR)/bench_comparison.cpp
+BENCH_COMPARE_OBJ = $(BENCH_COMPARE_SRC:.cpp=.o)
+BENCH_COMPARE_TARGET = $(PROJECT_ROOT)/run_bench_compare
+
+$(BENCH_DIR)/bench_comparison.o: $(BENCH_COMPARE_SRC)
+	$(CXX) $(CXXFLAGS) $(CPPFLAGS) $(GBENCH_CPPFLAGS) $(LIBPGQUERY_CPPFLAGS) -c $< -o $@
+
+bench-compare: $(BENCH_COMPARE_TARGET)
+	./$(BENCH_COMPARE_TARGET) --benchmark_format=console
+
+$(BENCH_COMPARE_TARGET): $(BENCH_DIR)/bench_main.o $(BENCH_COMPARE_OBJ) $(GBENCH_OBJS) $(LIB_TARGET) $(LIBPGQUERY_LIB)
+	$(CXX) $(CXXFLAGS) -o $@ $(BENCH_DIR)/bench_main.o $(BENCH_COMPARE_OBJ) $(GBENCH_OBJS) -L$(PROJECT_ROOT) -lsqlparser $(LIBPGQUERY_LIB) -lpthread
+
 clean:
 	rm -f $(LIB_OBJS) $(LIB_TARGET) $(TEST_OBJS) $(GTEST_OBJ) $(TEST_TARGET)
 	rm -f $(BENCH_OBJS) $(GBENCH_OBJS) $(BENCH_TARGET) $(CORPUS_TEST_TARGET)
+	rm -f $(BENCH_COMPARE_OBJ) $(BENCH_COMPARE_TARGET)
 	@echo "Cleaned."
