@@ -10,11 +10,14 @@
 
 namespace sql_parser {
 
+enum class EmitMode : uint8_t { NORMAL, DIGEST };
+
 template <Dialect D>
 class Emitter {
 public:
-    explicit Emitter(Arena& arena, const ParamBindings* bindings = nullptr)
-        : sb_(arena), bindings_(bindings), placeholder_index_(0) {}
+    explicit Emitter(Arena& arena, EmitMode mode = EmitMode::NORMAL,
+                     const ParamBindings* bindings = nullptr)
+        : sb_(arena), bindings_(bindings), placeholder_index_(0), mode_(mode) {}
 
     void emit(const AstNode* node) {
         if (!node) return;
@@ -27,6 +30,7 @@ private:
     StringBuilder sb_;
     const ParamBindings* bindings_;
     uint16_t placeholder_index_;
+    EmitMode mode_;
 
     void emit_node(const AstNode* node) {
         switch (node->type) {
@@ -103,6 +107,8 @@ private:
             // ---- Leaf nodes (emit value directly) ----
             case NodeType::NODE_LITERAL_INT:
             case NodeType::NODE_LITERAL_FLOAT:
+                if (mode_ == EmitMode::DIGEST) { sb_.append_char('?'); break; }
+                emit_value(node); break;
             case NodeType::NODE_LITERAL_NULL:
             case NodeType::NODE_COLUMN_REF:
             case NodeType::NODE_ASTERISK:
@@ -110,6 +116,7 @@ private:
                 emit_value(node); break;
 
             case NodeType::NODE_LITERAL_STRING:
+                if (mode_ == EmitMode::DIGEST) { sb_.append_char('?'); break; }
                 emit_string_literal(node); break;
 
             default:
@@ -293,6 +300,7 @@ private:
     }
 
     void emit_alias(const AstNode* node) {
+        if (mode_ == EmitMode::DIGEST) return;  // skip aliases in digest mode
         sb_.append(" AS ");
         emit_value(node);
     }
@@ -489,11 +497,16 @@ private:
             return;
         }
         sb_.append("VALUES ");
-        bool first = true;
-        for (const AstNode* child = node->first_child; child; child = child->next_sibling) {
-            if (!first) sb_.append(", ");
-            first = false;
-            emit_node(child);
+        if (mode_ == EmitMode::DIGEST) {
+            // Collapse to single row in digest mode
+            if (node->first_child) emit_node(node->first_child);
+        } else {
+            bool first = true;
+            for (const AstNode* child = node->first_child; child; child = child->next_sibling) {
+                if (!first) sb_.append(", ");
+                first = false;
+                emit_node(child);
+            }
         }
     }
 
@@ -893,11 +906,15 @@ private:
         const AstNode* expr = node->first_child;
         if (expr) emit_node(expr);
         sb_.append(" IN (");
-        bool first = true;
-        for (const AstNode* val = expr ? expr->next_sibling : nullptr; val; val = val->next_sibling) {
-            if (!first) sb_.append(", ");
-            first = false;
-            emit_node(val);
+        if (mode_ == EmitMode::DIGEST) {
+            sb_.append_char('?');
+        } else {
+            bool first = true;
+            for (const AstNode* val = expr ? expr->next_sibling : nullptr; val; val = val->next_sibling) {
+                if (!first) sb_.append(", ");
+                first = false;
+                emit_node(val);
+            }
         }
         sb_.append_char(')');
     }

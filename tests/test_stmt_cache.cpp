@@ -217,7 +217,7 @@ TEST(PreparedStmtTest, EmitWithBindings) {
     ASSERT_EQ(r.status, ParseResult::OK);
     ASSERT_NE(r.ast, nullptr);
 
-    Emitter<Dialect::MySQL> emitter(parser.arena(), &r.bindings);
+    Emitter<Dialect::MySQL> emitter(parser.arena(), EmitMode::NORMAL, &r.bindings);
     emitter.emit(r.ast);
     StringRef result = emitter.result();
     std::string out(result.ptr, result.len);
@@ -238,7 +238,7 @@ TEST(PreparedStmtTest, EmitWithStringBinding) {
     auto r = parser.execute(2, bindings);
     ASSERT_EQ(r.status, ParseResult::OK);
 
-    Emitter<Dialect::MySQL> emitter(parser.arena(), &r.bindings);
+    Emitter<Dialect::MySQL> emitter(parser.arena(), EmitMode::NORMAL, &r.bindings);
     emitter.emit(r.ast);
     StringRef result = emitter.result();
     std::string out(result.ptr, result.len);
@@ -257,7 +257,7 @@ TEST(PreparedStmtTest, EmitWithNullBinding) {
     auto r = parser.execute(3, bindings);
     ASSERT_EQ(r.status, ParseResult::OK);
 
-    Emitter<Dialect::MySQL> emitter(parser.arena(), &r.bindings);
+    Emitter<Dialect::MySQL> emitter(parser.arena(), EmitMode::NORMAL, &r.bindings);
     emitter.emit(r.ast);
     StringRef result = emitter.result();
     std::string out(result.ptr, result.len);
