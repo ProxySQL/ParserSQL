@@ -42,3 +42,7 @@ src/*_parser/*_lexer.yy.c
 src/*_parser/*_parser.output
 src/*_parser/*_parser.report
 
+# New parser build artifacts
+libsqlparser.a
+run_tests
+run_bench
