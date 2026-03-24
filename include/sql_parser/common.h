@@ -89,6 +89,10 @@ enum class StmtType : uint8_t {
     UNLOCK,
     LOAD_DATA,
     RESET,
+    EXPLAIN,
+    DESCRIBE,
+    CALL,
+    DO_STMT,
 };
 
 // -- AST node types --
@@ -170,6 +174,21 @@ enum class NodeType : uint16_t {
     // Compound query nodes
     NODE_COMPOUND_QUERY,       // root for UNION/INTERSECT/EXCEPT
     NODE_SET_OPERATION,        // operator (UNION, INTERSECT, EXCEPT) with ALL flag
+
+    // EXPLAIN/DESCRIBE
+    NODE_EXPLAIN_STMT,
+    NODE_EXPLAIN_OPTIONS,
+    NODE_EXPLAIN_FORMAT,
+
+    // CALL
+    NODE_CALL_STMT,
+
+    // DO
+    NODE_DO_STMT,
+
+    // LOAD DATA
+    NODE_LOAD_DATA_STMT,
+    NODE_LOAD_DATA_OPTIONS,
 
     // Shared
     NODE_STMT_OPTIONS,         // LOW_PRIORITY, IGNORE, QUICK, DELAYED, etc.

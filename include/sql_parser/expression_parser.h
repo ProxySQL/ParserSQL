@@ -449,6 +449,30 @@ private:
             case TokenType::TK_DUPLICATE:
             case TokenType::TK_DELAYED:
             case TokenType::TK_HIGH_PRIORITY:
+            case TokenType::TK_EXPLAIN:
+            case TokenType::TK_DESCRIBE:
+            case TokenType::TK_CALL:
+            case TokenType::TK_PROCEDURE:
+            case TokenType::TK_FORMAT:
+            case TokenType::TK_ANALYZE:
+            case TokenType::TK_VERBOSE:
+            case TokenType::TK_COSTS:
+            case TokenType::TK_SETTINGS:
+            case TokenType::TK_BUFFERS:
+            case TokenType::TK_WAL:
+            case TokenType::TK_TIMING:
+            case TokenType::TK_SUMMARY:
+            case TokenType::TK_INFILE:
+            case TokenType::TK_LINES:
+            case TokenType::TK_TERMINATED:
+            case TokenType::TK_ENCLOSED:
+            case TokenType::TK_ESCAPED:
+            case TokenType::TK_OPTIONALLY:
+            case TokenType::TK_CONCURRENT:
+            case TokenType::TK_STARTING:
+            case TokenType::TK_COLUMNS:
+            case TokenType::TK_FIELDS:
+            case TokenType::TK_ROWS:
                 return true;
             default:
                 return false;

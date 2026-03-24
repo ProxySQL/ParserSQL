@@ -79,6 +79,32 @@ enum class TokenType : uint16_t {
     // Compound query operators
     TK_INTERSECT,
     TK_EXCEPT,
+
+    // EXPLAIN/DESCRIBE/CALL/LOAD DATA related tokens
+    TK_EXPLAIN,
+    TK_DESCRIBE,
+    TK_CALL,
+    TK_PROCEDURE,
+    TK_FORMAT,
+    TK_ANALYZE,
+    TK_VERBOSE,
+    TK_COSTS,
+    TK_SETTINGS,
+    TK_BUFFERS,
+    TK_WAL,
+    TK_TIMING,
+    TK_SUMMARY,
+    TK_INFILE,
+    TK_LINES,
+    TK_TERMINATED,
+    TK_ENCLOSED,
+    TK_ESCAPED,
+    TK_OPTIONALLY,
+    TK_CONCURRENT,
+    TK_STARTING,
+    TK_COLUMNS,
+    TK_FIELDS,
+    TK_ROWS,
 };
 
 struct Token {
