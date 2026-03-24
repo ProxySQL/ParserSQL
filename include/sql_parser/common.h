@@ -143,6 +143,22 @@ enum class NodeType : uint16_t {
     NODE_BETWEEN,
     NODE_IN_LIST,
     NODE_CASE_WHEN,
+
+    // INSERT nodes
+    NODE_INSERT_STMT,
+    NODE_INSERT_COLUMNS,       // (col1, col2, ...)
+    NODE_VALUES_CLAUSE,        // VALUES keyword wrapper
+    NODE_VALUES_ROW,           // single (val1, val2, ...) row
+    NODE_INSERT_SET_CLAUSE,    // MySQL INSERT ... SET col=val form
+    NODE_ON_DUPLICATE_KEY,     // MySQL ON DUPLICATE KEY UPDATE
+    NODE_ON_CONFLICT,          // PostgreSQL ON CONFLICT
+    NODE_CONFLICT_TARGET,      // PostgreSQL conflict target (cols or ON CONSTRAINT)
+    NODE_CONFLICT_ACTION,      // DO UPDATE SET ... or DO NOTHING
+    NODE_RETURNING_CLAUSE,     // PostgreSQL RETURNING expr_list
+
+    // Shared
+    NODE_STMT_OPTIONS,         // LOW_PRIORITY, IGNORE, QUICK, DELAYED, etc.
+    NODE_UPDATE_SET_ITEM,      // single col=expr pair (shared by INSERT SET and UPDATE SET)
 };
 
 } // namespace sql_parser

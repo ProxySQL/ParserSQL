@@ -64,6 +64,17 @@ enum class TokenType : uint16_t {
     TK_UNION, TK_OF,
     TK_SQL_CALC_FOUND_ROWS,
     TK_COUNT, TK_SUM, TK_AVG, TK_MIN, TK_MAX,
+
+    // INSERT/REPLACE related tokens
+    TK_DELAYED,
+    TK_HIGH_PRIORITY,
+    TK_DUPLICATE,
+    TK_KEY,
+    TK_CONFLICT,
+    TK_DO,
+    TK_NOTHING,
+    TK_RETURNING,
+    TK_CONSTRAINT,
 };
 
 struct Token {

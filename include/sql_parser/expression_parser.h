@@ -440,6 +440,15 @@ private:
             case TokenType::TK_SHARE:
             case TokenType::TK_DATA:
             case TokenType::TK_RESET:
+            case TokenType::TK_KEY:
+            case TokenType::TK_DO:
+            case TokenType::TK_NOTHING:
+            case TokenType::TK_CONFLICT:
+            case TokenType::TK_CONSTRAINT:
+            case TokenType::TK_RETURNING:
+            case TokenType::TK_DUPLICATE:
+            case TokenType::TK_DELAYED:
+            case TokenType::TK_HIGH_PRIORITY:
                 return true;
             default:
                 return false;

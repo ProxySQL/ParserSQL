@@ -216,6 +216,11 @@ public:
             case TokenType::TK_VALUES:
             case TokenType::TK_SELECT:
             case TokenType::TK_DEFAULT:
+            case TokenType::TK_RETURNING:
+            case TokenType::TK_CONFLICT:
+            case TokenType::TK_DO:
+            case TokenType::TK_NOTHING:
+            case TokenType::TK_DUPLICATE:
                 return false;
             default:
                 return true;  // Keywords not in the blocklist can be implicit aliases
