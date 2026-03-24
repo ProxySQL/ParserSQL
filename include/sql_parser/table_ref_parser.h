@@ -208,6 +208,7 @@ public:
             case TokenType::TK_UNION:
             case TokenType::TK_SEMICOLON:
             case TokenType::TK_RPAREN:
+            case TokenType::TK_LPAREN:
             case TokenType::TK_EOF:
             case TokenType::TK_COMMA:
             case TokenType::TK_SET:
