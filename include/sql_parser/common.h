@@ -160,6 +160,10 @@ enum class NodeType : uint16_t {
     NODE_UPDATE_STMT,
     NODE_UPDATE_SET_CLAUSE,    // SET col=expr, col=expr in UPDATE context
 
+    // DELETE nodes
+    NODE_DELETE_STMT,
+    NODE_DELETE_USING_CLAUSE,  // PostgreSQL USING or MySQL USING form
+
     // Shared
     NODE_STMT_OPTIONS,         // LOW_PRIORITY, IGNORE, QUICK, DELAYED, etc.
     NODE_UPDATE_SET_ITEM,      // single col=expr pair (shared by INSERT SET and UPDATE SET)
