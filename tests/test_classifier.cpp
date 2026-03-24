@@ -131,8 +131,13 @@ TEST_F(MySQLClassifierTest, ClassifyDeallocate) {
     EXPECT_EQ(r.stmt_type, StmtType::DEALLOCATE);
 }
 
-TEST_F(MySQLClassifierTest, ClassifyUnknown) {
+TEST_F(MySQLClassifierTest, ClassifyExplain) {
     auto r = parser.parse("EXPLAIN SELECT 1", 16);
+    EXPECT_EQ(r.stmt_type, StmtType::EXPLAIN);
+}
+
+TEST_F(MySQLClassifierTest, ClassifyUnknown) {
+    auto r = parser.parse("HANDLER t1 OPEN", 15);
     EXPECT_EQ(r.stmt_type, StmtType::UNKNOWN);
 }
 
