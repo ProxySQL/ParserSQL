@@ -2,6 +2,7 @@
 #define SQL_PARSER_KEYWORDS_MYSQL_H
 
 #include "sql_parser/token.h"
+#include "sql_parser/keyword_hash.h"
 #include <algorithm>
 #include <cstring>
 
@@ -169,16 +170,14 @@ inline constexpr KeywordEntry KEYWORDS[] = {
 
 inline constexpr size_t KEYWORD_COUNT = sizeof(KEYWORDS) / sizeof(KEYWORDS[0]);
 
+inline keyword_hash::HashEntry HASH_TABLE[keyword_hash::TABLE_SIZE];
+inline bool HASH_TABLE_INIT = [] {
+    keyword_hash::build_table(KEYWORDS, HASH_TABLE);
+    return true;
+}();
+
 inline TokenType lookup(const char* text, uint32_t len) {
-    size_t lo = 0, hi = KEYWORD_COUNT;
-    while (lo < hi) {
-        size_t mid = lo + (hi - lo) / 2;
-        int cmp = sql_parser::ci_cmp(text, len, KEYWORDS[mid].text, KEYWORDS[mid].len);
-        if (cmp == 0) return KEYWORDS[mid].token;
-        if (cmp < 0) hi = mid;
-        else lo = mid + 1;
-    }
-    return TokenType::TK_IDENTIFIER;
+    return keyword_hash::lookup_in_table(HASH_TABLE, text, len);
 }
 
 } // namespace mysql_keywords
