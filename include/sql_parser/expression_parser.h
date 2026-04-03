@@ -412,6 +412,7 @@ private:
         AstNode* node = make_node(arena_, NodeType::NODE_CASE_WHEN);
         // Optional simple CASE expression: CASE expr WHEN ...
         if (tok_.peek().type != TokenType::TK_WHEN) {
+            node->flags = 1;  // simple CASE (has case_expr)
             AstNode* case_expr = parse();
             if (case_expr) node->add_child(case_expr);
         }
