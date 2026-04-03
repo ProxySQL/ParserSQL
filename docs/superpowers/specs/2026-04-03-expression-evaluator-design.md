@@ -60,7 +60,7 @@ The evaluator switches on `expr->type`:
 
 | NodeType | Action |
 |---|---|
-| `NODE_LITERAL_INT` | Parse `expr->value()` string to int64 via `strtoll` |
+| `NODE_LITERAL_INT` | Check for `"TRUE"`/`"FALSE"` text → `value_bool()`. Otherwise parse via `strtoll` → `value_int()` |
 | `NODE_LITERAL_FLOAT` | Parse `expr->value()` string to double via `strtod` |
 | `NODE_LITERAL_STRING` | `value_string(expr->value())` |
 | `NODE_LITERAL_NULL` | `value_null()` |
@@ -68,6 +68,21 @@ The evaluator switches on `expr->type`:
 | `NODE_ASTERISK` | `value_string(StringRef{"*", 1})` (for `COUNT(*)`) |
 | `NODE_PLACEHOLDER` | `value_null()` (unresolved placeholder) |
 | `NODE_IDENTIFIER` | `resolve(expr->value())` (column or keyword-as-value) |
+
+### Deferred node types (return value_null)
+
+These node types are produced by the expression parser but require features beyond the expression evaluator's scope. They return `value_null()` with a clear comment for future implementation:
+
+| NodeType | Reason deferred |
+|---|---|
+| `NODE_SUBQUERY` | Requires full executor |
+| `NODE_TUPLE` | Row constructor — requires row/tuple value type |
+| `NODE_ARRAY_CONSTRUCTOR` | ARRAY[...] — requires array value type |
+| `NODE_ARRAY_SUBSCRIPT` | expr[index] — requires array support |
+| `NODE_FIELD_ACCESS` | (expr).field — requires composite type support |
+| `NODE_EXPRESSION` | Wrapper node — unwrap and evaluate first child |
+
+Note: `NODE_EXPRESSION` should be handled by unwrapping (evaluating its first child), not by returning NULL.
 
 ### Qualified name
 
@@ -79,13 +94,18 @@ The evaluator switches on `expr->type`:
 
 ```
 1. If operator is AND/OR: use short-circuit evaluation (see below)
-2. Evaluate left child → left_val
-3. Evaluate right child → right_val
-4. NULL propagation: if either NULL → return value_null()
-5. Find common type: CoercionRules<D>::common_type(left_val.tag, right_val.tag)
-6. Coerce both to common type
-7. Apply operator → return result
+2. If operator is IS/IS NOT: handle IS TRUE/FALSE/NULL (see below)
+3. Evaluate left child → left_val
+4. Evaluate right child → right_val
+5. NULL propagation: if either NULL → return value_null()
+6. Map Value::Tag → SqlType::Kind for coercion lookup
+7. Find common type: CoercionRules<D>::common_type(left_kind, right_kind)
+8. Map result SqlType::Kind back to Value::Tag
+9. Coerce both operands: CoercionRules<D>::coerce_value(val, target_tag, arena)
+10. Apply operator → return result
 ```
+
+**Value::Tag ↔ SqlType::Kind mapping:** The evaluator needs a helper to convert between these enums since `CoercionRules` operates on `SqlType::Kind` while runtime values carry `Value::Tag`. The mapping is straightforward (TAG_INT64→INT, TAG_DOUBLE→DOUBLE, TAG_STRING→VARCHAR, etc.).
 
 **Short-circuit for AND/OR:**
 - `AND`: if left is FALSE → return FALSE without evaluating right. If left is NULL → evaluate right; if right is FALSE → FALSE, else NULL.
@@ -96,10 +116,22 @@ The evaluator switches on `expr->type`:
 - Division by zero → NULL
 - `%` / `MOD` → integer remainder
 - `DIV` → integer division (truncate toward zero)
+- Note: `DIV` and `MOD` are MySQL keywords. If the parser doesn't currently produce them as `NODE_BINARY_OP` infix operators (they may not be in `infix_precedence`), the evaluator should handle them gracefully. They may arrive as function calls instead — the function registry already has `MOD` registered.
 
 **Comparison operators** (`=`, `<>`, `!=`, `<`, `>`, `<=`, `>=`):
 - Compare coerced values
 - Return `value_bool(result)`
+
+**IS / IS NOT operators** (`IS`, `IS NOT`):
+The parser produces `NODE_BINARY_OP` with value `"IS"` or `"IS NOT"` for `IS TRUE`, `IS FALSE`, `IS NOT TRUE`, `IS NOT FALSE`. The right child is a `NODE_LITERAL_INT` with text `"TRUE"` or `"FALSE"`.
+
+- `expr IS TRUE` → evaluate expr; if it's truthy and not NULL → TRUE, else FALSE
+- `expr IS FALSE` → evaluate expr; if it's falsy and not NULL → TRUE, else FALSE
+- `expr IS NOT TRUE` → NOT (expr IS TRUE)
+- `expr IS NOT FALSE` → NOT (expr IS FALSE)
+- These NEVER return NULL — they always return TRUE or FALSE.
+
+Note: `IS NULL` and `IS NOT NULL` are handled via separate `NODE_IS_NULL`/`NODE_IS_NOT_NULL` node types, not through this path.
 
 **String operators:**
 - `||` in PostgreSQL: string concatenation
@@ -114,7 +146,8 @@ The evaluator switches on `expr->type`:
 |---|---|
 | `-` | Negate: int → `-int_val`, double → `-double_val`. NULL → NULL. |
 | `NOT` | `null_semantics::eval_not(child_val)` |
-| `+` | No-op (unary plus) |
+
+Note: The parser does not produce `NODE_UNARY_OP` for unary `+` — it discards it and returns the inner expression directly. So no `+` case is needed.
 
 ### IS NULL / IS NOT NULL
 
@@ -145,24 +178,37 @@ The evaluator switches on `expr->type`:
 
 ### CASE/WHEN
 
-`NODE_CASE_WHEN` children are interleaved: [case_expr], when1, then1, when2, then2, ..., [else_expr].
+`NODE_CASE_WHEN` children are: [case_expr], when1, then1, when2, then2, ..., [else_expr].
 
-**Searched CASE** (no case_expr — first child is a WHEN condition):
+**Disambiguation rule:** The parser's `parse_case()` adds the case expression as the first child ONLY when the token after CASE is not WHEN. This means:
+- If the child count is **even** → searched CASE (pairs of WHEN/THEN, optionally +1 ELSE makes odd, but each pair is 2)
+- If the child count is **odd** → either simple CASE (case_expr + pairs) or searched CASE with ELSE
+
+**Practical approach:** Count children. Try to interpret as searched CASE first (children are WHEN/THEN pairs + optional ELSE). Evaluate the first child as a WHEN condition. If the CASE statement doesn't match any when conditions and we have the wrong form, fall back. In practice, the parser's CASE/WHEN structure is:
+- Searched: `[condition1, value1, condition2, value2, ..., else_value]` — odd count with ELSE, even without
+- Simple: `[case_expr, match1, value1, match2, value2, ..., else_value]` — even count with ELSE, odd without
+
+**Simplest correct implementation:** Store a flag in `NODE_CASE_WHEN`'s `flags` field to distinguish the forms. The parser sets `flags = 1` for simple CASE, `flags = 0` for searched CASE. This requires a one-line change to the parser's `parse_case()` method and eliminates all ambiguity.
+
+**Searched CASE** (`flags == 0`):
 ```
+Children: when1, then1, when2, then2, ..., [else_expr]
 For each WHEN/THEN pair:
   evaluate WHEN condition
   if TRUE → evaluate and return THEN value
-If no match and ELSE exists → evaluate and return ELSE
+If remaining child exists → it's ELSE, evaluate and return
 If no match and no ELSE → NULL
 ```
 
-**Simple CASE** (first child is case_expr):
+**Simple CASE** (`flags == 1`):
 ```
+Children: case_expr, when1, then1, when2, then2, ..., [else_expr]
 Evaluate case_expr
-For each WHEN/THEN pair:
+For each WHEN/THEN pair (starting from second child):
   evaluate WHEN value
   if case_expr = WHEN value → evaluate and return THEN
-If no match → ELSE or NULL
+If remaining child → ELSE
+If no match → NULL
 ```
 
 ### Function calls
