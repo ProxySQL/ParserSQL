@@ -14,6 +14,8 @@ public:
     // Add a table with columns.
     void add_table(const char* schema, const char* table,
                    std::initializer_list<ColumnDef> columns);
+    void add_table(const char* schema, const char* table,
+                   const std::vector<ColumnDef>& columns);
 
     // Remove a table.
     void drop_table(const char* schema, const char* table);

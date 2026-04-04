@@ -423,10 +423,66 @@ int main(int argc, char* argv[]) {
         }
     }
 
+    // Auto-discover table schemas from the first backend for each sharded table
+    if (remote_exec && !shards.empty()) {
+        for (auto& sc : shards) {
+            const char* first_backend = sc.shards.empty() ? nullptr : sc.shards[0].backend_name.c_str();
+            if (!first_backend) continue;
+
+            // Query SHOW COLUMNS FROM table
+            std::string show_sql = "SHOW COLUMNS FROM " + sc.table_name;
+            sql_parser::StringRef sql_ref{show_sql.c_str(), static_cast<uint32_t>(show_sql.size())};
+            try {
+                ResultSet cols = remote_exec->execute(first_backend, sql_ref);
+                std::vector<ColumnDef> col_defs;
+                for (size_t i = 0; i < cols.row_count(); ++i) {
+                    const Row& r = cols.rows[i];
+                    std::string col_name;
+                    if (r.column_count > 0 && !r.get(0).is_null()) {
+                        col_name.assign(r.get(0).str_val.ptr, r.get(0).str_val.len);
+                    }
+                    std::string col_type_str;
+                    if (r.column_count > 1 && !r.get(1).is_null()) {
+                        col_type_str.assign(r.get(1).str_val.ptr, r.get(1).str_val.len);
+                    }
+                    // Map MySQL type string to SqlType
+                    SqlType st;
+                    if (col_type_str.find("int") != std::string::npos ||
+                        col_type_str.find("INT") != std::string::npos) {
+                        st = SqlType::make_int();
+                    } else if (col_type_str.find("decimal") != std::string::npos ||
+                               col_type_str.find("DECIMAL") != std::string::npos) {
+                        st = SqlType::make_decimal(10, 2);
+                    } else if (col_type_str.find("date") != std::string::npos ||
+                               col_type_str.find("DATE") != std::string::npos) {
+                        st = SqlType{SqlType::DATE};
+                    } else {
+                        st = SqlType::make_varchar(255);
+                    }
+                    bool nullable = true;
+                    if (r.column_count > 2 && !r.get(2).is_null()) {
+                        std::string null_str(r.get(2).str_val.ptr, r.get(2).str_val.len);
+                        nullable = (null_str == "YES");
+                    }
+                    // Store column name persistently
+                    col_defs.push_back(ColumnDef{strdup(col_name.c_str()), st, nullable});
+                }
+                if (!col_defs.empty()) {
+                    catalog.add_table("", sc.table_name.c_str(), col_defs);
+                }
+            } catch (...) {
+                // Schema discovery failed — continue without catalog entry
+            }
+        }
+    }
+
     // Create session
     Session<Dialect::MySQL> session(catalog, txn_mgr);
     if (remote_exec) {
         session.set_remote_executor(remote_exec);
+    }
+    if (!shards.empty()) {
+        session.set_shard_map(&shard_map);
     }
 
     // Detect interactive mode

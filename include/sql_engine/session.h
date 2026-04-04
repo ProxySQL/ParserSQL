@@ -6,6 +6,8 @@
 #include "sql_engine/plan_builder.h"
 #include "sql_engine/dml_plan_builder.h"
 #include "sql_engine/optimizer.h"
+#include "sql_engine/distributed_planner.h"
+#include "sql_engine/shard_map.h"
 #include "sql_engine/catalog.h"
 #include "sql_engine/function_registry.h"
 #include "sql_engine/result_set.h"
@@ -52,6 +54,10 @@ public:
         remote_executor_ = exec;
     }
 
+    void set_shard_map(const ShardMap* sm) {
+        shard_map_ = sm;
+    }
+
     // Execute a SELECT query. Returns a ResultSet.
     ResultSet execute_query(const char* sql, size_t len) {
         parser_.reset();
@@ -65,6 +71,12 @@ public:
         if (!plan) return {};
 
         plan = optimizer_.optimize(plan, parser_.arena());
+
+        // Distribute across shards if shard map is configured
+        if (shard_map_ && remote_executor_) {
+            DistributedPlanner<D> dplanner(*shard_map_, catalog_, parser_.arena(), remote_executor_, &functions_);
+            plan = dplanner.distribute(plan);
+        }
 
         PlanExecutor<D> executor(functions_, catalog_, parser_.arena());
         wire_executor(executor);
@@ -180,6 +192,7 @@ private:
     FunctionRegistry<D> functions_;
     Optimizer<D> optimizer_;
     RemoteExecutor* remote_executor_ = nullptr;
+    const ShardMap* shard_map_ = nullptr;
     std::unordered_map<std::string, DataSource*> sources_;
     std::unordered_map<std::string, MutableDataSource*> mutable_sources_;
 

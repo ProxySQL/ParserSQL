@@ -81,6 +81,40 @@ void InMemoryCatalog::add_table(const char* schema, const char* table,
     }
 }
 
+void InMemoryCatalog::add_table(const char* schema, const char* table,
+                                 const std::vector<ColumnDef>& columns) {
+    // Delegate to the initializer_list version by reconstructing the same logic
+    std::string key = make_key(schema, table);
+    TableData& td = tables_[key];
+    td.schema_str = schema ? schema : "";
+    td.table_str = table;
+    td.column_names.clear();
+    td.columns.clear();
+    uint16_t ordinal = 0;
+    for (const auto& def : columns) {
+        td.column_names.emplace_back(def.name);
+        ColumnInfo ci{};
+        ci.type = def.type;
+        ci.ordinal = ordinal++;
+        ci.nullable = def.nullable;
+        td.columns.push_back(ci);
+    }
+    for (size_t i = 0; i < td.columns.size(); ++i) {
+        td.columns[i].name = sql_parser::StringRef{
+            td.column_names[i].c_str(),
+            static_cast<uint32_t>(td.column_names[i].size())
+        };
+    }
+    td.info.schema_name = sql_parser::StringRef{
+        td.schema_str.c_str(), static_cast<uint32_t>(td.schema_str.size())
+    };
+    td.info.table_name = sql_parser::StringRef{
+        td.table_str.c_str(), static_cast<uint32_t>(td.table_str.size())
+    };
+    td.info.columns = td.columns.data();
+    td.info.column_count = static_cast<uint16_t>(td.columns.size());
+}
+
 void InMemoryCatalog::drop_table(const char* schema, const char* table) {
     std::string key = make_key(schema, table);
     tables_.erase(key);
