@@ -2,6 +2,12 @@ CXX = g++
 CXXFLAGS = -std=c++17 -Wall -Wextra -g -O2
 CPPFLAGS = -I./include -I./third_party/googletest/googletest/include
 
+# MySQL and PostgreSQL client libraries
+MYSQL_CFLAGS = $(shell mysql_config --cflags 2>/dev/null)
+MYSQL_LIBS = $(shell mysql_config --libs 2>/dev/null)
+PG_CFLAGS = -I$(shell pg_config --includedir 2>/dev/null || echo /usr/include/postgresql)
+PG_LIBS = -L$(shell pg_config --libdir 2>/dev/null || echo /usr/lib/x86_64-linux-gnu) -lpq
+
 PROJECT_ROOT = .
 SRC_DIR = $(PROJECT_ROOT)/src/sql_parser
 ENGINE_SRC_DIR = $(PROJECT_ROOT)/src/sql_engine
@@ -15,7 +21,11 @@ LIB_TARGET = $(PROJECT_ROOT)/libsqlparser.a
 
 # SQL Engine sources
 ENGINE_SRCS = $(ENGINE_SRC_DIR)/function_registry.cpp \
-              $(ENGINE_SRC_DIR)/in_memory_catalog.cpp
+              $(ENGINE_SRC_DIR)/in_memory_catalog.cpp \
+              $(ENGINE_SRC_DIR)/datetime_parse.cpp \
+              $(ENGINE_SRC_DIR)/mysql_remote_executor.cpp \
+              $(ENGINE_SRC_DIR)/pgsql_remote_executor.cpp \
+              $(ENGINE_SRC_DIR)/multi_remote_executor.cpp
 ENGINE_OBJS = $(ENGINE_SRCS:.cpp=.o)
 
 # Google Test library
@@ -59,7 +69,10 @@ TEST_SRCS = $(TEST_DIR)/test_main.cpp \
             $(TEST_DIR)/test_optimizer.cpp \
             $(TEST_DIR)/test_distributed_planner.cpp \
             $(TEST_DIR)/test_dml.cpp \
-            $(TEST_DIR)/test_distributed_dml.cpp
+            $(TEST_DIR)/test_distributed_dml.cpp \
+            $(TEST_DIR)/test_mysql_executor.cpp \
+            $(TEST_DIR)/test_pgsql_executor.cpp \
+            $(TEST_DIR)/test_distributed_real.cpp
 TEST_OBJS = $(TEST_SRCS:.cpp=.o)
 TEST_TARGET = $(PROJECT_ROOT)/run_tests
 
@@ -95,7 +108,7 @@ $(SRC_DIR)/%.o: $(SRC_DIR)/%.cpp
 
 # SQL Engine objects
 $(ENGINE_SRC_DIR)/%.o: $(ENGINE_SRC_DIR)/%.cpp
-	$(CXX) $(CXXFLAGS) $(CPPFLAGS) -c $< -o $@
+	$(CXX) $(CXXFLAGS) $(CPPFLAGS) $(MYSQL_CFLAGS) $(PG_CFLAGS) -c $< -o $@
 
 # Google Test object
 $(GTEST_OBJ): $(GTEST_SRC)
@@ -103,13 +116,13 @@ $(GTEST_OBJ): $(GTEST_SRC)
 
 # Test objects
 $(TEST_DIR)/%.o: $(TEST_DIR)/%.cpp
-	$(CXX) $(CXXFLAGS) $(CPPFLAGS) $(GTEST_CPPFLAGS) -c $< -o $@
+	$(CXX) $(CXXFLAGS) $(CPPFLAGS) $(GTEST_CPPFLAGS) $(MYSQL_CFLAGS) $(PG_CFLAGS) -c $< -o $@
 
 test: $(TEST_TARGET)
 	./$(TEST_TARGET)
 
 $(TEST_TARGET): $(TEST_OBJS) $(GTEST_OBJ) $(LIB_TARGET) $(ENGINE_OBJS)
-	$(CXX) $(CXXFLAGS) -o $@ $(TEST_OBJS) $(GTEST_OBJ) $(ENGINE_OBJS) -L$(PROJECT_ROOT) -lsqlparser -lpthread
+	$(CXX) $(CXXFLAGS) -o $@ $(TEST_OBJS) $(GTEST_OBJ) $(ENGINE_OBJS) -L$(PROJECT_ROOT) -lsqlparser -lpthread $(MYSQL_LIBS) $(PG_LIBS)
 
 # Benchmark objects
 $(GBENCH_DIR)/src/%.o: $(GBENCH_DIR)/src/%.cc
