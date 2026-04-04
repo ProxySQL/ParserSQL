@@ -1,3 +1,22 @@
+// expression_eval.h — Recursive AST expression evaluator
+//
+// Core function: evaluate_expression<D>(expr, resolve, functions, arena)
+//
+// Takes a parsed AST expression node and evaluates it recursively against
+// a row of data. The `resolve` callback maps column names (StringRef) to
+// Values — typically built via make_resolver() from catalog_resolver.h.
+//
+// Supports: literals, column refs, qualified names (table.column),
+// arithmetic (+, -, *, /, %), comparisons (=, <>, <, >, <=, >=),
+// boolean logic (AND, OR, NOT) with three-valued NULL semantics,
+// IS [NOT] NULL, BETWEEN, IN, LIKE, CASE/WHEN, function calls via
+// FunctionRegistry, unary minus, and dialect-specific || (concat in
+// PostgreSQL, OR in MySQL).
+//
+// Type coercion is handled automatically via CoercionRules<D>. NULL
+// propagates through most operators (exceptions: IS NULL, AND, OR).
+// Returns value_null() for unsupported or erroneous expressions.
+
 #ifndef SQL_ENGINE_EXPRESSION_EVAL_H
 #define SQL_ENGINE_EXPRESSION_EVAL_H
 

@@ -1,3 +1,19 @@
+// catalog.h — Table and column metadata interface
+//
+// The Catalog abstract class is the contract between the query engine and
+// the metadata store. Implementations must provide:
+//
+//   get_table(name)           — lookup by unqualified table name
+//   get_table(schema, table)  — lookup by qualified schema.table name
+//   get_column(table, name)   — find a column within a resolved table
+//
+// TableInfo and ColumnInfo must remain valid for the lifetime of any query
+// that references them. ColumnInfo::ordinal must match the column's
+// position in rows produced by the corresponding DataSource.
+//
+// See in_memory_catalog.h for the hash-map implementation. To integrate
+// with an external metadata store, implement this interface directly.
+
 #ifndef SQL_ENGINE_CATALOG_H
 #define SQL_ENGINE_CATALOG_H
 

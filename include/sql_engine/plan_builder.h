@@ -1,3 +1,21 @@
+// plan_builder.h — AST-to-logical-plan translation
+//
+// PlanBuilder<D> translates a parsed SELECT statement AST into a tree of
+// PlanNode objects (arena-allocated). The translation follows standard
+// SQL clause ordering:
+//
+//   FROM   → Scan nodes (one per table), joined via Join nodes
+//   WHERE  → Filter node above the scan/join subtree
+//   GROUP BY → Aggregate node with group-by expressions
+//   HAVING → Filter node above Aggregate
+//   SELECT → Project node with expression list and aliases
+//   DISTINCT → Distinct node above Project
+//   ORDER BY → Sort node with key expressions and directions
+//   LIMIT  → Limit node with count and offset
+//
+// Also handles compound queries (UNION/INTERSECT/EXCEPT) via SetOp nodes.
+// Currently supports SELECT statements only; returns nullptr for others.
+
 #ifndef SQL_ENGINE_PLAN_BUILDER_H
 #define SQL_ENGINE_PLAN_BUILDER_H
 

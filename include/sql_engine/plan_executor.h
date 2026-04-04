@@ -1,3 +1,23 @@
+// plan_executor.h — End-to-end query execution engine
+//
+// PlanExecutor<D> converts a PlanNode tree (built by PlanBuilder) into a
+// Volcano-model operator tree and pulls rows through it to produce a
+// ResultSet.
+//
+// Usage:
+//   1. Construct with FunctionRegistry, Catalog, and Arena
+//   2. Register data sources via add_data_source("table_name", source_ptr)
+//   3. Call execute(plan) to get a ResultSet
+//
+// Internally, execute() does:
+//   - Preprocess: push aggregate expressions from PROJECT into AGGREGATE
+//   - Build operator tree: recursively convert PlanNode → Operator
+//   - Pull rows: open() → next() loop → close()
+//   - Populate column names from plan metadata
+//
+// Supports all 9 operator types: Scan, Filter, Project, NestedLoopJoin,
+// Aggregate, Sort, Limit, Distinct, SetOp.
+
 #ifndef SQL_ENGINE_PLAN_EXECUTOR_H
 #define SQL_ENGINE_PLAN_EXECUTOR_H
 
