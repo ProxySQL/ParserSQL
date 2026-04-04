@@ -36,7 +36,7 @@ cd ParserSQL
 
 ```bash
 # Create release Makefile (-O3, no debug symbols)
-sed 's/-g -O2/-O3/' Makefile.new > Makefile.release
+sed 's/-g -O2/-O3/' Makefile > Makefile.release
 
 # Build the parser library
 make -f Makefile.release lib

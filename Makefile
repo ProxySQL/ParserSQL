@@ -1,149 +1,182 @@
-# Makefile
 CXX = g++
-LINKER = g++
+CXXFLAGS = -std=c++17 -Wall -Wextra -g -O2
+CPPFLAGS = -I./include -I./third_party/googletest/googletest/include
 
-CXXFLAGS = -std=c++17 -Wall -g -O2
-CPPFLAGS = -I$(PROJECT_ROOT)/include
+# MySQL and PostgreSQL client libraries
+MYSQL_CFLAGS = $(shell mysql_config --cflags 2>/dev/null)
+MYSQL_LIBS = $(shell mysql_config --libs 2>/dev/null)
+PG_CFLAGS = -I$(shell pg_config --includedir 2>/dev/null || echo /usr/include/postgresql)
+PG_LIBS = -L$(shell pg_config --libdir 2>/dev/null || echo /usr/lib/x86_64-linux-gnu) -lpq
 
 PROJECT_ROOT = .
-INCLUDE_DIR = $(PROJECT_ROOT)/include
-SRC_DIR = $(PROJECT_ROOT)/src
+SRC_DIR = $(PROJECT_ROOT)/src/sql_parser
+ENGINE_SRC_DIR = $(PROJECT_ROOT)/src/sql_engine
+INCLUDE_DIR = $(PROJECT_ROOT)/include/sql_parser
+TEST_DIR = $(PROJECT_ROOT)/tests
 
-# --- PostgreSQL Parser Variables ---
-PGSQL_PARSER_SRC_DIR = $(SRC_DIR)/pgsql_parser
-PGSQL_PARSER_INCLUDE_DIR = $(INCLUDE_DIR)/pgsql_parser
-PGSQL_TARGET_LIB_NAME = pgsqlparser
-PGSQL_TARGET_LIB = $(PROJECT_ROOT)/lib$(PGSQL_TARGET_LIB_NAME).a
-PGSQL_EXAMPLE_EXE = $(PROJECT_ROOT)/pgsql_example
+# Library sources
+LIB_SRCS = $(SRC_DIR)/arena.cpp $(SRC_DIR)/parser.cpp
+LIB_OBJS = $(LIB_SRCS:.cpp=.o)
+LIB_TARGET = $(PROJECT_ROOT)/libsqlparser.a
 
-PGSQL_BISON_C_FILE = pgsql_parser.tab.c
-PGSQL_BISON_H_FILE = pgsql_parser.tab.h
-PGSQL_FLEX_C_FILE = pgsql_lexer.yy.c
+# SQL Engine sources
+ENGINE_SRCS = $(ENGINE_SRC_DIR)/function_registry.cpp \
+              $(ENGINE_SRC_DIR)/in_memory_catalog.cpp \
+              $(ENGINE_SRC_DIR)/datetime_parse.cpp \
+              $(ENGINE_SRC_DIR)/mysql_remote_executor.cpp \
+              $(ENGINE_SRC_DIR)/pgsql_remote_executor.cpp \
+              $(ENGINE_SRC_DIR)/multi_remote_executor.cpp
+ENGINE_OBJS = $(ENGINE_SRCS:.cpp=.o)
 
-PGSQL_BISON_C = $(PGSQL_PARSER_SRC_DIR)/$(PGSQL_BISON_C_FILE)
-PGSQL_BISON_H = $(PGSQL_PARSER_SRC_DIR)/$(PGSQL_BISON_H_FILE)
-PGSQL_FLEX_C = $(PGSQL_PARSER_SRC_DIR)/$(PGSQL_FLEX_C_FILE)
+# Google Test library
+GTEST_DIR = $(PROJECT_ROOT)/third_party/googletest/googletest
+GTEST_SRC = $(GTEST_DIR)/src/gtest-all.cc
+GTEST_OBJ = $(GTEST_DIR)/src/gtest-all.o
+GTEST_CPPFLAGS = -I$(GTEST_DIR)/include -I$(GTEST_DIR)
 
-PGSQL_LIB_OBJS = \
-    $(PGSQL_BISON_C:.c=.o) \
-    $(PGSQL_FLEX_C:.c=.o) \
-    $(PGSQL_PARSER_SRC_DIR)/pgsql_parser.o
-PGSQL_EXAMPLE_OBJS = $(PROJECT_ROOT)/examples/main_pgsql_example.o
+# Test sources
+TEST_SRCS = $(TEST_DIR)/test_main.cpp \
+            $(TEST_DIR)/test_arena.cpp \
+            $(TEST_DIR)/test_tokenizer.cpp \
+            $(TEST_DIR)/test_classifier.cpp \
+            $(TEST_DIR)/test_expression.cpp \
+            $(TEST_DIR)/test_set.cpp \
+            $(TEST_DIR)/test_select.cpp \
+            $(TEST_DIR)/test_emitter.cpp \
+            $(TEST_DIR)/test_stmt_cache.cpp \
+            $(TEST_DIR)/test_insert.cpp \
+            $(TEST_DIR)/test_update.cpp \
+            $(TEST_DIR)/test_delete.cpp \
+            $(TEST_DIR)/test_compound.cpp \
+            $(TEST_DIR)/test_digest.cpp \
+            $(TEST_DIR)/test_misc_stmts.cpp \
+            $(TEST_DIR)/test_value.cpp \
+            $(TEST_DIR)/test_null_semantics.cpp \
+            $(TEST_DIR)/test_coercion.cpp \
+            $(TEST_DIR)/test_arithmetic.cpp \
+            $(TEST_DIR)/test_comparison.cpp \
+            $(TEST_DIR)/test_string_funcs.cpp \
+            $(TEST_DIR)/test_cast.cpp \
+            $(TEST_DIR)/test_registry.cpp \
+            $(TEST_DIR)/test_like.cpp \
+            $(TEST_DIR)/test_expression_eval.cpp \
+            $(TEST_DIR)/test_eval_integration.cpp \
+            $(TEST_DIR)/test_catalog.cpp \
+            $(TEST_DIR)/test_row.cpp \
+            $(TEST_DIR)/test_plan_builder.cpp \
+            $(TEST_DIR)/test_operators.cpp \
+            $(TEST_DIR)/test_plan_executor.cpp \
+            $(TEST_DIR)/test_optimizer.cpp \
+            $(TEST_DIR)/test_distributed_planner.cpp \
+            $(TEST_DIR)/test_dml.cpp \
+            $(TEST_DIR)/test_distributed_dml.cpp \
+            $(TEST_DIR)/test_mysql_executor.cpp \
+            $(TEST_DIR)/test_pgsql_executor.cpp \
+            $(TEST_DIR)/test_distributed_real.cpp \
+            $(TEST_DIR)/test_subquery.cpp \
+            $(TEST_DIR)/test_local_txn.cpp \
+            $(TEST_DIR)/test_session.cpp \
+            $(TEST_DIR)/test_single_backend_txn.cpp \
+            $(TEST_DIR)/test_distributed_txn.cpp
+TEST_OBJS = $(TEST_SRCS:.cpp=.o)
+TEST_TARGET = $(PROJECT_ROOT)/run_tests
 
-# --- MySQL Parser Variables ---
-MYSQL_PARSER_SRC_DIR = $(SRC_DIR)/mysql_parser
-MYSQL_PARSER_INCLUDE_DIR = $(INCLUDE_DIR)/mysql_parser
-MYSQL_TARGET_LIB_NAME = mysqlparser
-MYSQL_TARGET_LIB = $(PROJECT_ROOT)/lib$(MYSQL_TARGET_LIB_NAME).a
-MYSQL_EXAMPLE_EXE = $(PROJECT_ROOT)/mysql_example
-MYSQL_SET_EXAMPLE_EXE = $(PROJECT_ROOT)/set_mysql_example
-MYSQL_STDIN_EXAMPLE_EXE = $(PROJECT_ROOT)/mysql_stdin_parser_example
+# Google Benchmark
+GBENCH_DIR = $(PROJECT_ROOT)/third_party/benchmark
+GBENCH_SRCS = $(filter-out $(GBENCH_DIR)/src/benchmark_main.cc, $(wildcard $(GBENCH_DIR)/src/*.cc))
+GBENCH_OBJS = $(GBENCH_SRCS:.cc=.o)
+GBENCH_CPPFLAGS = -I$(GBENCH_DIR)/include -I$(GBENCH_DIR)/src -DHAVE_STD_REGEX -DHAVE_STEADY_CLOCK
 
-MYSQL_BISON_C_FILE = mysql_parser.tab.c
-MYSQL_BISON_H_FILE = mysql_parser.tab.h
-MYSQL_FLEX_C_FILE = mysql_lexer.yy.c
+BENCH_DIR = $(PROJECT_ROOT)/bench
+BENCH_SRCS = $(BENCH_DIR)/bench_main.cpp $(BENCH_DIR)/bench_parser.cpp $(BENCH_DIR)/bench_engine.cpp
+BENCH_OBJS = $(BENCH_SRCS:.cpp=.o)
+BENCH_TARGET = $(PROJECT_ROOT)/run_bench
 
-MYSQL_BISON_C = $(MYSQL_PARSER_SRC_DIR)/$(MYSQL_BISON_C_FILE)
-MYSQL_BISON_H = $(MYSQL_PARSER_SRC_DIR)/$(MYSQL_BISON_H_FILE)
-MYSQL_FLEX_C = $(MYSQL_PARSER_SRC_DIR)/$(MYSQL_FLEX_C_FILE)
+# Corpus test
+CORPUS_TEST_SRC = $(TEST_DIR)/corpus_test.cpp
+CORPUS_TEST_TARGET = $(PROJECT_ROOT)/corpus_test
 
-MYSQL_LIB_OBJS = \
-    $(MYSQL_BISON_C:.c=.o) \
-    $(MYSQL_FLEX_C:.c=.o) \
-    $(MYSQL_PARSER_SRC_DIR)/mysql_parser.o # Renamed from mysql_sql_parser.o
-MYSQL_EXAMPLE_OBJS = $(PROJECT_ROOT)/examples/main_mysql_example.o
-MYSQL_SET_EXAMPLE_OBJS = $(PROJECT_ROOT)/examples/set_mysql_example.o
-MYSQL_STDIN_EXAMPLE_OBJS = $(PROJECT_ROOT)/examples/mysql_stdin_parser_example.o
+# SQL Engine CLI tool
+SQLENGINE_SRC = $(PROJECT_ROOT)/tools/sqlengine.cpp
+SQLENGINE_TARGET = sqlengine
 
+.PHONY: all lib test bench bench-compare build-corpus-test build-sqlengine clean
 
-.PHONY: all clean examples pgsql mysql
+build-corpus-test: $(CORPUS_TEST_TARGET)
 
-all: pgsql mysql examples
+build-sqlengine: $(SQLENGINE_TARGET)
 
-pgsql: $(PGSQL_TARGET_LIB)
-mysql: $(MYSQL_TARGET_LIB)
+all: lib test
 
-examples: $(PGSQL_EXAMPLE_EXE) $(MYSQL_EXAMPLE_EXE) $(MYSQL_SET_EXAMPLE_EXE) $(MYSQL_STDIN_EXAMPLE_EXE)
+lib: $(LIB_TARGET)
 
-# --- PostgreSQL Rules ---
-$(PGSQL_TARGET_LIB): $(PGSQL_LIB_OBJS)
-	ar rcs $@ $(PGSQL_LIB_OBJS)
-	@echo "Created library $@"
+$(LIB_TARGET): $(LIB_OBJS)
+	ar rcs $@ $^
+	@echo "Built $@"
 
-$(PGSQL_EXAMPLE_EXE): $(PGSQL_EXAMPLE_OBJS) $(PGSQL_TARGET_LIB)
-	$(LINKER) $(CXXFLAGS) -o $@ $(PGSQL_EXAMPLE_OBJS) -L$(PROJECT_ROOT) -l$(PGSQL_TARGET_LIB_NAME)
-	@echo "Created PostgreSQL example $@"
-
-$(PGSQL_BISON_H) $(PGSQL_BISON_C): $(PGSQL_PARSER_SRC_DIR)/pgsql_parser.y $(PGSQL_PARSER_INCLUDE_DIR)/pgsql_ast.h $(PGSQL_PARSER_INCLUDE_DIR)/pgsql_parser.h
-	cd $(PGSQL_PARSER_SRC_DIR) && bison -d -v --report=all pgsql_parser.y
-
-$(PGSQL_FLEX_C): $(PGSQL_PARSER_SRC_DIR)/pgsql_lexer.l $(PGSQL_BISON_H)
-	cd $(PGSQL_PARSER_SRC_DIR) && flex -o $(PGSQL_FLEX_C_FILE) pgsql_lexer.l
-
-$(PGSQL_PARSER_SRC_DIR)/pgsql_parser.tab.o: $(PGSQL_BISON_C) $(PGSQL_BISON_H) $(PGSQL_PARSER_INCLUDE_DIR)/pgsql_parser.h
+$(SRC_DIR)/%.o: $(SRC_DIR)/%.cpp
 	$(CXX) $(CXXFLAGS) $(CPPFLAGS) -c $< -o $@
 
-$(PGSQL_PARSER_SRC_DIR)/pgsql_lexer.yy.o: $(PGSQL_FLEX_C) $(PGSQL_BISON_H) $(PGSQL_PARSER_INCLUDE_DIR)/pgsql_parser.h
-	$(CXX) $(CXXFLAGS) $(CPPFLAGS) -c $< -o $@
+# SQL Engine objects
+$(ENGINE_SRC_DIR)/%.o: $(ENGINE_SRC_DIR)/%.cpp
+	$(CXX) $(CXXFLAGS) $(CPPFLAGS) $(MYSQL_CFLAGS) $(PG_CFLAGS) -c $< -o $@
 
-$(PGSQL_PARSER_SRC_DIR)/pgsql_parser.o: $(PGSQL_PARSER_SRC_DIR)/pgsql_parser.cpp $(PGSQL_PARSER_INCLUDE_DIR)/pgsql_parser.h $(PGSQL_PARSER_INCLUDE_DIR)/pgsql_ast.h $(PGSQL_BISON_H)
-	$(CXX) $(CXXFLAGS) $(CPPFLAGS) -c $< -o $@
+# Google Test object
+$(GTEST_OBJ): $(GTEST_SRC)
+	$(CXX) $(CXXFLAGS) $(GTEST_CPPFLAGS) -c $< -o $@
 
-$(PROJECT_ROOT)/examples/main_pgsql_example.o: $(PROJECT_ROOT)/examples/main_pgsql_example.cpp $(PGSQL_PARSER_INCLUDE_DIR)/pgsql_parser.h $(PGSQL_PARSER_INCLUDE_DIR)/pgsql_ast.h
-	$(CXX) $(CXXFLAGS) $(CPPFLAGS) -c $< -o $@
+# Test objects
+$(TEST_DIR)/%.o: $(TEST_DIR)/%.cpp
+	$(CXX) $(CXXFLAGS) $(CPPFLAGS) $(GTEST_CPPFLAGS) $(MYSQL_CFLAGS) $(PG_CFLAGS) -c $< -o $@
 
-# --- MySQL Rules ---
-$(MYSQL_TARGET_LIB): $(MYSQL_LIB_OBJS)
-	ar rcs $@ $(MYSQL_LIB_OBJS)
-	@echo "Created library $@"
+test: $(TEST_TARGET)
+	./$(TEST_TARGET)
 
-$(MYSQL_EXAMPLE_EXE): $(MYSQL_EXAMPLE_OBJS) $(MYSQL_TARGET_LIB)
-	$(LINKER) $(CXXFLAGS) -o $@ $(MYSQL_EXAMPLE_OBJS) -L$(PROJECT_ROOT) -l$(MYSQL_TARGET_LIB_NAME)
-	@echo "Created MySQL example $@"
+$(TEST_TARGET): $(TEST_OBJS) $(GTEST_OBJ) $(LIB_TARGET) $(ENGINE_OBJS)
+	$(CXX) $(CXXFLAGS) -o $@ $(TEST_OBJS) $(GTEST_OBJ) $(ENGINE_OBJS) -L$(PROJECT_ROOT) -lsqlparser -lpthread $(MYSQL_LIBS) $(PG_LIBS)
 
-# Rule for MySQL SET example executable
-$(MYSQL_SET_EXAMPLE_EXE): $(MYSQL_SET_EXAMPLE_OBJS) $(MYSQL_TARGET_LIB)
-	$(LINKER) $(CXXFLAGS) -o $@ $(MYSQL_SET_EXAMPLE_OBJS) -L$(PROJECT_ROOT) -l$(MYSQL_TARGET_LIB_NAME)
-	@echo "Created MySQL SET statement example $@"
+# Benchmark objects
+$(GBENCH_DIR)/src/%.o: $(GBENCH_DIR)/src/%.cc
+	$(CXX) $(CXXFLAGS) $(GBENCH_CPPFLAGS) -c $< -o $@
 
-# Rule for MySQL STDIN parser example executable
-$(MYSQL_STDIN_EXAMPLE_EXE): $(MYSQL_STDIN_EXAMPLE_OBJS) $(MYSQL_TARGET_LIB)
-	$(LINKER) $(CXXFLAGS) -o $@ $(MYSQL_STDIN_EXAMPLE_OBJS) -L$(PROJECT_ROOT) -l$(MYSQL_TARGET_LIB_NAME)
-	@echo "Created MySQL STDIN parser example $@"
+$(BENCH_DIR)/%.o: $(BENCH_DIR)/%.cpp
+	$(CXX) $(CXXFLAGS) $(CPPFLAGS) $(GBENCH_CPPFLAGS) $(MYSQL_CFLAGS) $(PG_CFLAGS) -c $< -o $@
 
-$(MYSQL_BISON_H) $(MYSQL_BISON_C): $(MYSQL_PARSER_SRC_DIR)/mysql_parser.y $(MYSQL_PARSER_INCLUDE_DIR)/mysql_ast.h $(MYSQL_PARSER_INCLUDE_DIR)/mysql_parser.h
-	cd $(MYSQL_PARSER_SRC_DIR) && bison -d -v --report=all -o $(MYSQL_BISON_C_FILE) --defines=$(MYSQL_BISON_H_FILE) mysql_parser.y
+bench: $(BENCH_TARGET)
+	./$(BENCH_TARGET) --benchmark_format=console
 
-$(MYSQL_FLEX_C): $(MYSQL_PARSER_SRC_DIR)/mysql_lexer.l $(MYSQL_BISON_H)
-	cd $(MYSQL_PARSER_SRC_DIR) && flex -o $(MYSQL_FLEX_C_FILE) mysql_lexer.l
+$(BENCH_TARGET): $(BENCH_OBJS) $(GBENCH_OBJS) $(LIB_TARGET) $(ENGINE_OBJS)
+	$(CXX) $(CXXFLAGS) -o $@ $(BENCH_OBJS) $(GBENCH_OBJS) $(ENGINE_OBJS) -L$(PROJECT_ROOT) -lsqlparser -lpthread $(MYSQL_LIBS) $(PG_LIBS)
 
-$(MYSQL_PARSER_SRC_DIR)/mysql_parser.tab.o: $(MYSQL_BISON_C) $(MYSQL_BISON_H) $(MYSQL_PARSER_INCLUDE_DIR)/mysql_parser.h
-	$(CXX) $(CXXFLAGS) $(CPPFLAGS) -c $< -o $@
+# SQL Engine CLI tool
+$(SQLENGINE_TARGET): $(SQLENGINE_SRC) $(LIB_TARGET) $(ENGINE_OBJS)
+	$(CXX) $(CXXFLAGS) $(CPPFLAGS) $(MYSQL_CFLAGS) $(PG_CFLAGS) -o $@ $< $(ENGINE_OBJS) -L$(PROJECT_ROOT) -lsqlparser -lpthread $(MYSQL_LIBS) $(PG_LIBS)
 
-$(MYSQL_PARSER_SRC_DIR)/mysql_lexer.yy.o: $(MYSQL_FLEX_C) $(MYSQL_BISON_H) $(MYSQL_PARSER_INCLUDE_DIR)/mysql_parser.h
-	$(CXX) $(CXXFLAGS) $(CPPFLAGS) -c $< -o $@
+$(CORPUS_TEST_TARGET): $(CORPUS_TEST_SRC) $(LIB_TARGET)
+	$(CXX) $(CXXFLAGS) $(CPPFLAGS) -o $@ $< -L$(PROJECT_ROOT) -lsqlparser
 
-$(MYSQL_PARSER_SRC_DIR)/mysql_parser.o: $(MYSQL_PARSER_SRC_DIR)/mysql_parser.cpp $(MYSQL_PARSER_INCLUDE_DIR)/mysql_parser.h $(MYSQL_PARSER_INCLUDE_DIR)/mysql_ast.h $(MYSQL_BISON_H)
-	$(CXX) $(CXXFLAGS) $(CPPFLAGS) -c $< -o $@
+# libpg_query comparison benchmark
+LIBPGQUERY_DIR = $(PROJECT_ROOT)/third_party/libpg_query
+LIBPGQUERY_LIB = $(LIBPGQUERY_DIR)/libpg_query.a
+LIBPGQUERY_CPPFLAGS = -I$(LIBPGQUERY_DIR) -I$(LIBPGQUERY_DIR)/src -I$(LIBPGQUERY_DIR)/src/postgres/include
 
-$(PROJECT_ROOT)/examples/main_mysql_example.o: $(PROJECT_ROOT)/examples/main_mysql_example.cpp $(MYSQL_PARSER_INCLUDE_DIR)/mysql_parser.h $(MYSQL_PARSER_INCLUDE_DIR)/mysql_ast.h
-	$(CXX) $(CXXFLAGS) $(CPPFLAGS) -c $< -o $@
+BENCH_COMPARE_SRC = $(BENCH_DIR)/bench_comparison.cpp
+BENCH_COMPARE_OBJ = $(BENCH_COMPARE_SRC:.cpp=.o)
+BENCH_COMPARE_TARGET = $(PROJECT_ROOT)/run_bench_compare
 
-# Rule for MySQL SET example main.o
-$(PROJECT_ROOT)/examples/set_mysql_example.o: $(PROJECT_ROOT)/examples/set_mysql_example.cpp $(MYSQL_PARSER_INCLUDE_DIR)/mysql_parser.h $(MYSQL_PARSER_INCLUDE_DIR)/mysql_ast.h
-	$(CXX) $(CXXFLAGS) $(CPPFLAGS) -c $< -o $@
+$(BENCH_DIR)/bench_comparison.o: $(BENCH_COMPARE_SRC)
+	$(CXX) $(CXXFLAGS) $(CPPFLAGS) $(GBENCH_CPPFLAGS) $(LIBPGQUERY_CPPFLAGS) -c $< -o $@
 
-# Rule for MySQL STDIN parser example main.o
-$(PROJECT_ROOT)/examples/mysql_stdin_parser_example.o: $(PROJECT_ROOT)/examples/mysql_stdin_parser_example.cpp $(MYSQL_PARSER_INCLUDE_DIR)/mysql_parser.h $(MYSQL_PARSER_INCLUDE_DIR)/mysql_ast.h
-	$(CXX) $(CXXFLAGS) $(CPPFLAGS) -c $< -o $@
+bench-compare: $(BENCH_COMPARE_TARGET)
+	./$(BENCH_COMPARE_TARGET) --benchmark_format=console
 
+$(BENCH_COMPARE_TARGET): $(BENCH_DIR)/bench_main.o $(BENCH_COMPARE_OBJ) $(GBENCH_OBJS) $(LIB_TARGET) $(LIBPGQUERY_LIB)
+	$(CXX) $(CXXFLAGS) -o $@ $(BENCH_DIR)/bench_main.o $(BENCH_COMPARE_OBJ) $(GBENCH_OBJS) -L$(PROJECT_ROOT) -lsqlparser $(LIBPGQUERY_LIB) -lpthread
 
 clean:
-	rm -f $(PGSQL_TARGET_LIB) $(PGSQL_EXAMPLE_EXE) $(MYSQL_TARGET_LIB) $(MYSQL_EXAMPLE_EXE) $(MYSQL_SET_EXAMPLE_EXE) $(MYSQL_STDIN_EXAMPLE_EXE)
-	rm -f $(PGSQL_LIB_OBJS) $(PGSQL_EXAMPLE_OBJS) $(MYSQL_LIB_OBJS) $(MYSQL_EXAMPLE_OBJS) $(MYSQL_SET_EXAMPLE_OBJS) $(MYSQL_STDIN_EXAMPLE_OBJS)
-	rm -f $(PGSQL_BISON_C) $(PGSQL_BISON_H) $(PGSQL_FLEX_C)
-	rm -f $(MYSQL_BISON_C) $(MYSQL_BISON_H) $(MYSQL_FLEX_C)
-	rm -f $(PGSQL_PARSER_SRC_DIR)/pgsql_parser.output $(PGSQL_PARSER_SRC_DIR)/pgsql_parser.report
-	rm -f $(MYSQL_PARSER_SRC_DIR)/mysql_parser.output $(MYSQL_PARSER_SRC_DIR)/mysql_parser.report
-	rm -f $(PGSQL_PARSER_SRC_DIR)/lex.backup $(MYSQL_PARSER_SRC_DIR)/lex.backup
-	@echo "Cleaned up project."
+	rm -f $(LIB_OBJS) $(LIB_TARGET) $(TEST_OBJS) $(GTEST_OBJ) $(TEST_TARGET)
+	rm -f $(ENGINE_OBJS)
+	rm -f $(BENCH_OBJS) $(GBENCH_OBJS) $(BENCH_TARGET) $(CORPUS_TEST_TARGET)
+	rm -f $(BENCH_COMPARE_OBJ) $(BENCH_COMPARE_TARGET)
+	rm -f $(SQLENGINE_TARGET)
+	@echo "Cleaned."

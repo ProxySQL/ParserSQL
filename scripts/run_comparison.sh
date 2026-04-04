@@ -12,7 +12,7 @@ echo ""
 
 # Build everything with -O3
 echo "=== Building release ==="
-sed 's/-g -O2/-O3/' Makefile.new > /tmp/Makefile.release
+sed 's/-g -O2/-O3/' Makefile > /tmp/Makefile.release
 make -f /tmp/Makefile.release clean >/dev/null 2>&1
 make -f /tmp/Makefile.release lib >/dev/null 2>&1
 

@@ -277,14 +277,14 @@ bench/                    18 benchmarks + comparison suite
 
 ```bash
 # Build library + run tests
-make -f Makefile.new all
+make all
 
 # Build and run benchmarks
-make -f Makefile.new bench
+make bench
 
 # Build comparison benchmarks (requires libpg_query)
 cd third_party/libpg_query && make && cd ../..
-make -f Makefile.new bench-compare
+make bench-compare
 ```
 
 Requires: `g++` or `clang++` with C++17 support. No external dependencies for the parser itself. Google Test and Google Benchmark are vendored in `third_party/`.

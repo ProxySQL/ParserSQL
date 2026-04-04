@@ -19,7 +19,7 @@ jobs:
       - name: Build and test
         env:
           CXX: ${{ matrix.compiler }}
-        run: make -f Makefile.new clean && make -f Makefile.new all
+        run: make -f Makefile clean && make -f Makefile all
 
   macos:
     runs-on: macos-latest
@@ -27,7 +27,7 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Build and test
-        run: make -f Makefile.new clean && make -f Makefile.new all
+        run: make -f Makefile clean && make -f Makefile all
 
   benchmark:
     runs-on: ubuntu-24.04
@@ -36,7 +36,7 @@ jobs:
 
       - name: Build release and run benchmarks
         run: |
-          sed 's/-g -O2/-O3/' Makefile.new > /tmp/Makefile.release
+          sed 's/-g -O2/-O3/' Makefile > /tmp/Makefile.release
           make -f /tmp/Makefile.release clean
           make -f /tmp/Makefile.release lib
           make -f /tmp/Makefile.release test
@@ -55,7 +55,7 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Build
-        run: make -f Makefile.new all && make -f Makefile.new build-corpus-test
+        run: make -f Makefile all && make -f Makefile build-corpus-test
 
       - name: Test against SQLGlot
         run: |

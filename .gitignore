@@ -31,19 +31,9 @@
 *.out
 *.app
 
-mysql_stdin_parser_example
-set_mysql_example
-mysql_example
-pgsql_example
-libpgsqlparser.a
-src/*_parser/*_parser.tab.c
-src/*_parser/*_parser.tab.h
-src/*_parser/*_lexer.yy.c
-src/*_parser/*_parser.output
-src/*_parser/*_parser.report
-
-# New parser build artifacts
+# Build artifacts
 libsqlparser.a
+sqlengine
 run_tests
 run_bench
 run_bench_compare

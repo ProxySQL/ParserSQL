@@ -10,7 +10,7 @@ CORPUS_DIR="/tmp/sql_corpora"
 cd "$PROJECT_DIR"
 
 echo "=== Building release (-O3) ==="
-sed 's/-g -O2/-O3/' Makefile.new > /tmp/Makefile.release
+sed 's/-g -O2/-O3/' Makefile > /tmp/Makefile.release
 make -f /tmp/Makefile.release clean >/dev/null 2>&1
 make -f /tmp/Makefile.release lib >/dev/null 2>&1
 make -f /tmp/Makefile.release test 2>&1 | tail -1

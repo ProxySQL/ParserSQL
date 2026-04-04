@@ -9,18 +9,16 @@ High-performance hand-written recursive descent SQL parser and query engine for 
 ## Build Commands
 
 ```bash
-make -f Makefile.new all           # Build library + run all 871 tests
-make -f Makefile.new lib           # Build only libsqlparser.a
-make -f Makefile.new test          # Build + run tests
-make -f Makefile.new bench         # Build + run benchmarks
-make -f Makefile.new bench-compare # Run comparison vs libpg_query (requires libpg_query built)
-make -f Makefile.new build-corpus-test  # Build corpus test harness
-make -f Makefile.new clean         # Remove all build artifacts
+make all           # Build library + run all 871 tests
+make lib           # Build only libsqlparser.a
+make test          # Build + run tests
+make bench         # Build + run benchmarks
+make bench-compare # Run comparison vs libpg_query (requires libpg_query built)
+make build-corpus-test  # Build corpus test harness
+make clean         # Remove all build artifacts
 ```
 
-For release benchmarks: `sed 's/-g -O2/-O3/' Makefile.new > /tmp/Makefile.release && make -f /tmp/Makefile.release bench`
-
-**Note:** The old `Makefile` (no `.new`) is for the legacy Flex/Bison parser — do not use it for new code.
+For release benchmarks: `sed 's/-g -O2/-O3/' Makefile > /tmp/Makefile.release && make -f /tmp/Makefile.release bench`
 
 ## Parser Architecture
 
@@ -51,7 +49,7 @@ Everything is in `namespace sql_parser`. All templates are parameterized on `Dia
 6. Add emit methods to `emitter.h`
 7. Add `is_keyword_as_identifier()` entries in `expression_parser.h` for new keywords
 8. Update `is_alias_start()` blocklist in `table_ref_parser.h` for clause-starting keywords
-9. Write tests in `tests/test_xxx.cpp`, add to `Makefile.new` TEST_SRCS
+9. Write tests in `tests/test_xxx.cpp`, add to `Makefile` TEST_SRCS
 
 ### Expression parsing
 
