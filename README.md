@@ -115,6 +115,32 @@ for (size_t i = 0; i < rs.row_count(); ++i) {
 parser.reset();
 ```
 
+### Quick Start: CLI tool
+
+```bash
+# Build the CLI tool
+make build-sqlengine
+
+# In-memory mode — evaluate expressions without any backend
+echo "SELECT 1 + 2, UPPER('hello'), COALESCE(NULL, 42)" | ./sqlengine
+# +---+-------+----+
+# | 3 | HELLO | 42 |
+# +---+-------+----+
+# 1 row in set (0.000 sec)
+
+# Interactive mode
+./sqlengine
+
+# With a MySQL backend
+./sqlengine --backend "mysql://root:pass@127.0.0.1:3306/mydb?name=primary"
+
+# Multiple backends with sharding
+./sqlengine \
+  --backend "mysql://root:pass@host1:3306/db?name=shard1" \
+  --backend "mysql://root:pass@host2:3306/db?name=shard2" \
+  --shard "users:id:shard1,shard2"
+```
+
 ## Features
 
 ### Parser
@@ -186,7 +212,7 @@ Input SQL bytes
 
 ## Testing
 
-871 unit tests + validated against 86K+ queries from 9 external corpora:
+1,008 unit tests + validated against 86K+ queries from 9 external corpora:
 
 | Corpus | Queries | OK Rate |
 |---|---|---|
@@ -269,8 +295,11 @@ src/sql_engine/
     function_registry.cpp Built-in function registration
     in_memory_catalog.cpp InMemoryCatalog implementation
 
-tests/                    871 unit tests (Google Test)
-bench/                    18 benchmarks + comparison suite
+tools/
+    sqlengine.cpp         Interactive SQL engine CLI tool
+
+tests/                    1,008 unit tests (Google Test)
+bench/                    25 benchmarks (parser + engine + comparison)
 ```
 
 ## Building

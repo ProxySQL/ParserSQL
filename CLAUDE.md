@@ -141,7 +141,7 @@ Everything is in `namespace sql_engine`. Templates are parameterized on `Dialect
 
 ## Tests
 
-Google Test. 871 tests across 30 test files. Validated against 86K+ external queries (PostgreSQL regression, MySQL MTR, CockroachDB, Vitess, TiDB, sqlparser-rs, SQLGlot).
+Google Test. 1,008 tests across 34 test files. Validated against 86K+ external queries (PostgreSQL regression, MySQL MTR, CockroachDB, Vitess, TiDB, sqlparser-rs, SQLGlot).
 
 Run a single test: `./run_tests --gtest_filter="*SetTest*"`
 
@@ -155,8 +155,32 @@ Run a single test: `./run_tests --gtest_filter="*SetTest*"`
 
 ## Benchmarks
 
-Google Benchmark. 18 single-thread + 16 multi-thread + 4 percentile benchmarks.
+Google Benchmark. 18 single-thread parser + 7 engine + 16 multi-thread + 4 percentile benchmarks.
+Engine benchmarks in `bench/bench_engine.cpp` cover expression evaluation, plan building, pipeline execution, and operators (filter, join, sort, aggregate).
 Comparison benchmarks against libpg_query and sqlparser-rs in `bench/bench_comparison.cpp`.
+
+## CLI Tool (sqlengine)
+
+Interactive SQL engine for testing the full pipeline. Build with `make build-sqlengine`.
+
+```bash
+# In-memory mode (expression evaluation, no backends)
+echo "SELECT 1 + 2, UPPER('hello'), COALESCE(NULL, 42)" | ./sqlengine
+
+# Interactive mode
+./sqlengine
+
+# With MySQL backend
+./sqlengine --backend "mysql://root:test@127.0.0.1:13306/testdb?name=shard1"
+
+# Multiple backends with sharding
+./sqlengine \
+  --backend "mysql://root:test@127.0.0.1:13306/testdb?name=shard1" \
+  --backend "mysql://root:test@127.0.0.1:13307/testdb?name=shard2" \
+  --shard "users:id:shard1,shard2"
+```
+
+Source: `tools/sqlengine.cpp`
 
 ## Corpus testing
 
