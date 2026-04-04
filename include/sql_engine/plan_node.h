@@ -21,6 +21,11 @@ enum class PlanNodeType : uint8_t {
     REMOTE_SCAN,      // fetch from remote backend via SQL
     MERGE_AGGREGATE,  // merge partial aggregates from N sources
     MERGE_SORT,       // merge N pre-sorted streams
+
+    // DML plan nodes
+    INSERT_PLAN,
+    UPDATE_PLAN,
+    DELETE_PLAN,
 };
 
 // Join type constants
@@ -108,6 +113,29 @@ struct PlanNode {
             PlanNode** children;
             uint16_t child_count;
         } merge_sort;
+
+        // DML plan nodes
+        struct {
+            const TableInfo* table;
+            const sql_parser::AstNode** columns;       // column names (nullable = all columns in order)
+            uint16_t column_count;
+            const sql_parser::AstNode** value_rows;    // array of NODE_VALUES_ROW pointers
+            uint16_t row_count;
+            PlanNode* select_source;       // INSERT ... SELECT (nullable)
+        } insert_plan;
+
+        struct {
+            const TableInfo* table;
+            const sql_parser::AstNode** set_columns;   // column name AST nodes
+            const sql_parser::AstNode** set_exprs;     // new value expression AST nodes (parallel array)
+            uint16_t set_count;
+            const sql_parser::AstNode* where_expr;     // WHERE condition (nullable = update all)
+        } update_plan;
+
+        struct {
+            const TableInfo* table;
+            const sql_parser::AstNode* where_expr;     // WHERE condition (nullable = delete all)
+        } delete_plan;
     };
 };
 

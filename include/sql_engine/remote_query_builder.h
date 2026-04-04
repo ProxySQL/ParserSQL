@@ -94,6 +94,100 @@ public:
         return sb.finish();
     }
 
+    // Build an INSERT statement string.
+    sql_parser::StringRef build_insert(
+            const TableInfo* table,
+            const sql_parser::AstNode** columns,
+            uint16_t col_count,
+            const sql_parser::AstNode** value_rows,
+            uint16_t row_count)
+    {
+        sql_parser::StringBuilder sb(arena_, 512);
+        sb.append("INSERT INTO ");
+        if (table) {
+            sb.append(table->table_name.ptr, table->table_name.len);
+        }
+
+        // Column list
+        if (columns && col_count > 0) {
+            sb.append(" (");
+            for (uint16_t i = 0; i < col_count; ++i) {
+                if (i > 0) sb.append(", ");
+                emit_expr(columns[i], sb);
+            }
+            sb.append_char(')');
+        }
+
+        // VALUES
+        if (value_rows && row_count > 0) {
+            sb.append(" VALUES ");
+            for (uint16_t r = 0; r < row_count; ++r) {
+                if (r > 0) sb.append(", ");
+                sb.append_char('(');
+                if (value_rows[r]) {
+                    uint16_t vi = 0;
+                    for (const sql_parser::AstNode* val = value_rows[r]->first_child;
+                         val; val = val->next_sibling, ++vi) {
+                        if (vi > 0) sb.append(", ");
+                        emit_expr(val, sb);
+                    }
+                }
+                sb.append_char(')');
+            }
+        }
+
+        return sb.finish();
+    }
+
+    // Build an UPDATE statement string.
+    sql_parser::StringRef build_update(
+            const TableInfo* table,
+            const sql_parser::AstNode** set_cols,
+            const sql_parser::AstNode** set_exprs,
+            uint16_t set_count,
+            const sql_parser::AstNode* where_expr)
+    {
+        sql_parser::StringBuilder sb(arena_, 512);
+        sb.append("UPDATE ");
+        if (table) {
+            sb.append(table->table_name.ptr, table->table_name.len);
+        }
+
+        sb.append(" SET ");
+        for (uint16_t i = 0; i < set_count; ++i) {
+            if (i > 0) sb.append(", ");
+            emit_expr(set_cols[i], sb);
+            sb.append(" = ");
+            emit_expr(set_exprs[i], sb);
+        }
+
+        if (where_expr) {
+            sb.append(" WHERE ");
+            emit_expr(where_expr, sb);
+        }
+
+        return sb.finish();
+    }
+
+    // Build a DELETE statement string.
+    sql_parser::StringRef build_delete(
+            const TableInfo* table,
+            const sql_parser::AstNode* where_expr)
+    {
+        sql_parser::StringBuilder sb(arena_, 512);
+        sb.append("DELETE FROM ");
+        if (table) {
+            sb.append(table->table_name.ptr, table->table_name.len);
+        }
+
+        if (where_expr) {
+            sb.append(" WHERE ");
+            emit_expr(where_expr, sb);
+        }
+
+        return sb.finish();
+    }
+
 private:
     sql_parser::Arena& arena_;
 

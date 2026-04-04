@@ -6,12 +6,16 @@
 #include "sql_engine/catalog.h"
 #include "sql_engine/remote_query_builder.h"
 #include "sql_engine/operators/merge_aggregate_op.h"
+#include "sql_engine/expression_eval.h"
+#include "sql_engine/function_registry.h"
 #include "sql_parser/arena.h"
 #include "sql_parser/ast.h"
 #include "sql_parser/common.h"
 #include <cstring>
 #include <cstdio>
 #include <vector>
+#include <unordered_map>
+#include <functional>
 
 namespace sql_engine {
 
@@ -26,6 +30,24 @@ public:
     PlanNode* distribute(PlanNode* plan) {
         if (!plan) return nullptr;
         return distribute_node(plan);
+    }
+
+    // Distribute a DML plan node for remote execution.
+    // Returns a new plan tree with REMOTE_SCAN nodes (for DML, the remote
+    // scan carries the DML SQL; the executor calls execute_dml on it).
+    PlanNode* distribute_dml(PlanNode* plan) {
+        if (!plan) return nullptr;
+
+        switch (plan->type) {
+            case PlanNodeType::INSERT_PLAN:
+                return distribute_insert(plan);
+            case PlanNodeType::UPDATE_PLAN:
+                return distribute_update(plan);
+            case PlanNodeType::DELETE_PLAN:
+                return distribute_delete(plan);
+            default:
+                return plan;
+        }
     }
 
 private:
@@ -668,6 +690,298 @@ private:
         result->left = left_dist;
         result->right = right_dist;
         return result;
+    }
+
+    // ---- DML distribution ----
+
+    PlanNode* distribute_insert(PlanNode* plan) {
+        const auto& ip = plan->insert_plan;
+        const TableInfo* table = ip.table;
+        if (!table || !shards_.has_table(table->table_name)) return plan;
+
+        if (!shards_.is_sharded(table->table_name)) {
+            // Unsharded: single remote INSERT
+            sql_parser::StringRef sql = qb_.build_insert(
+                table, ip.columns, ip.column_count, ip.value_rows, ip.row_count);
+            return make_remote_scan(shards_.get_backend(table->table_name), sql, table);
+        }
+
+        // Sharded: group rows by shard key value
+        sql_parser::StringRef shard_key = shards_.get_shard_key(table->table_name);
+        if (!shard_key.ptr) return plan;
+
+        // Find shard key column ordinal in the column list
+        int shard_col_idx = -1;
+        if (ip.columns && ip.column_count > 0) {
+            for (uint16_t i = 0; i < ip.column_count; ++i) {
+                if (ip.columns[i] && ip.columns[i]->value().equals_ci(shard_key.ptr, shard_key.len)) {
+                    shard_col_idx = static_cast<int>(i);
+                    break;
+                }
+            }
+        } else if (table) {
+            // No explicit column list -- match by table column order
+            for (uint16_t i = 0; i < table->column_count; ++i) {
+                if (table->columns[i].name.equals_ci(shard_key.ptr, shard_key.len)) {
+                    shard_col_idx = static_cast<int>(i);
+                    break;
+                }
+            }
+        }
+
+        if (shard_col_idx < 0) {
+            // Can't determine shard -- send to all (scatter)
+            // For INSERT, this is an error in practice. Fall back to first shard.
+            sql_parser::StringRef sql = qb_.build_insert(
+                table, ip.columns, ip.column_count, ip.value_rows, ip.row_count);
+            return make_remote_scan(shards_.get_backend(table->table_name), sql, table);
+        }
+
+        const auto& shard_list = shards_.get_shards(table->table_name);
+
+        // Group rows by shard: evaluate the shard key value in each row,
+        // hash to determine target shard
+        // Map: shard_index -> list of row indices
+        std::unordered_map<size_t, std::vector<uint16_t>> shard_rows;
+        auto null_resolve = [](sql_parser::StringRef) -> Value { return value_null(); };
+
+        for (uint16_t ri = 0; ri < ip.row_count; ++ri) {
+            const sql_parser::AstNode* row_ast = ip.value_rows[ri];
+            if (!row_ast) continue;
+
+            // Get the shard key value expression (nth child of the row)
+            const sql_parser::AstNode* expr = row_ast->first_child;
+            for (int j = 0; j < shard_col_idx && expr; ++j) {
+                expr = expr->next_sibling;
+            }
+
+            // Evaluate to get the value, then hash to determine shard
+            size_t shard_idx = 0;
+            if (expr) {
+                // Simple hashing: convert to int64 and mod by shard count
+                Value v = evaluate_shard_key_value(expr);
+                if (v.tag == Value::TAG_INT64) {
+                    shard_idx = static_cast<size_t>(
+                        std::abs(v.int_val) % static_cast<int64_t>(shard_list.size()));
+                } else if (v.tag == Value::TAG_STRING && v.str_val.ptr) {
+                    // Simple string hash
+                    uint64_t h = 0;
+                    for (uint32_t k = 0; k < v.str_val.len; ++k) {
+                        h = h * 31 + static_cast<uint8_t>(v.str_val.ptr[k]);
+                    }
+                    shard_idx = static_cast<size_t>(h % shard_list.size());
+                }
+            }
+            shard_rows[shard_idx].push_back(ri);
+        }
+
+        // Generate per-shard INSERT SQL
+        if (shard_rows.size() == 1) {
+            auto it = shard_rows.begin();
+            // If all rows go to one shard, send the original INSERT
+            if (it->second.size() == ip.row_count) {
+                sql_parser::StringRef sql = qb_.build_insert(
+                    table, ip.columns, ip.column_count, ip.value_rows, ip.row_count);
+                return make_remote_scan(shard_list[it->first].backend_name.c_str(), sql, table);
+            }
+        }
+
+        // Build per-shard INSERT nodes, combine with UNION ALL (for plan structure)
+        PlanNode* current = nullptr;
+        for (auto& [shard_idx, row_indices] : shard_rows) {
+            // Build a subset value_rows array
+            uint16_t sub_count = static_cast<uint16_t>(row_indices.size());
+            auto** sub_rows = static_cast<const sql_parser::AstNode**>(
+                arena_.allocate(sizeof(sql_parser::AstNode*) * sub_count));
+            for (uint16_t i = 0; i < sub_count; ++i) {
+                sub_rows[i] = ip.value_rows[row_indices[i]];
+            }
+
+            sql_parser::StringRef sql = qb_.build_insert(
+                table, ip.columns, ip.column_count, sub_rows, sub_count);
+            PlanNode* rs = make_remote_scan(shard_list[shard_idx].backend_name.c_str(), sql, table);
+
+            if (!current) {
+                current = rs;
+            } else {
+                PlanNode* union_node = make_plan_node(arena_, PlanNodeType::SET_OP);
+                union_node->set_op.op = SET_OP_UNION;
+                union_node->set_op.all = true;
+                union_node->left = current;
+                union_node->right = rs;
+                current = union_node;
+            }
+        }
+
+        return current ? current : plan;
+    }
+
+    PlanNode* distribute_update(PlanNode* plan) {
+        const auto& up = plan->update_plan;
+        const TableInfo* table = up.table;
+        if (!table || !shards_.has_table(table->table_name)) return plan;
+
+        if (!shards_.is_sharded(table->table_name)) {
+            // Unsharded: single remote UPDATE
+            sql_parser::StringRef sql = qb_.build_update(
+                table, up.set_columns, up.set_exprs, up.set_count, up.where_expr);
+            return make_remote_scan(shards_.get_backend(table->table_name), sql, table);
+        }
+
+        // Sharded: check if WHERE references the shard key
+        sql_parser::StringRef shard_key = shards_.get_shard_key(table->table_name);
+        const auto& shard_list = shards_.get_shards(table->table_name);
+
+        int target_shard = find_shard_from_where(up.where_expr, shard_key, shard_list.size());
+
+        if (target_shard >= 0) {
+            // Route to specific shard
+            sql_parser::StringRef sql = qb_.build_update(
+                table, up.set_columns, up.set_exprs, up.set_count, up.where_expr);
+            return make_remote_scan(shard_list[target_shard].backend_name.c_str(), sql, table);
+        }
+
+        // Scatter to all shards
+        return scatter_dml_to_shards(table, shard_list, [&]() {
+            return qb_.build_update(
+                table, up.set_columns, up.set_exprs, up.set_count, up.where_expr);
+        });
+    }
+
+    PlanNode* distribute_delete(PlanNode* plan) {
+        const auto& dp = plan->delete_plan;
+        const TableInfo* table = dp.table;
+        if (!table || !shards_.has_table(table->table_name)) return plan;
+
+        if (!shards_.is_sharded(table->table_name)) {
+            // Unsharded: single remote DELETE
+            sql_parser::StringRef sql = qb_.build_delete(table, dp.where_expr);
+            return make_remote_scan(shards_.get_backend(table->table_name), sql, table);
+        }
+
+        // Sharded: check if WHERE references the shard key
+        sql_parser::StringRef shard_key = shards_.get_shard_key(table->table_name);
+        const auto& shard_list = shards_.get_shards(table->table_name);
+
+        int target_shard = find_shard_from_where(dp.where_expr, shard_key, shard_list.size());
+
+        if (target_shard >= 0) {
+            // Route to specific shard
+            sql_parser::StringRef sql = qb_.build_delete(table, dp.where_expr);
+            return make_remote_scan(shard_list[target_shard].backend_name.c_str(), sql, table);
+        }
+
+        // Scatter to all shards
+        return scatter_dml_to_shards(table, shard_list, [&]() {
+            return qb_.build_delete(table, dp.where_expr);
+        });
+    }
+
+    // Evaluate a shard key expression from a VALUES row (simple: literal values only)
+    Value evaluate_shard_key_value(const sql_parser::AstNode* expr) {
+        if (!expr) return value_null();
+        if (expr->type == sql_parser::NodeType::NODE_LITERAL_INT) {
+            sql_parser::StringRef val = expr->value();
+            int64_t n = 0;
+            for (uint32_t i = 0; i < val.len; ++i) {
+                char c = val.ptr[i];
+                if (c >= '0' && c <= '9') n = n * 10 + (c - '0');
+            }
+            return value_int(n);
+        }
+        if (expr->type == sql_parser::NodeType::NODE_LITERAL_STRING) {
+            return value_string(expr->value());
+        }
+        return value_null();
+    }
+
+    // Check if a WHERE expression contains shard_key = <literal>.
+    // Returns the target shard index, or -1 if not determinable.
+    int find_shard_from_where(const sql_parser::AstNode* where_expr,
+                               sql_parser::StringRef shard_key,
+                               size_t shard_count) {
+        if (!where_expr || !shard_key.ptr || shard_count == 0) return -1;
+
+        // Look for binary_op '=' with one side being the shard key column
+        if (where_expr->type == sql_parser::NodeType::NODE_BINARY_OP) {
+            sql_parser::StringRef op = where_expr->value();
+            if (op.len == 1 && op.ptr[0] == '=') {
+                const sql_parser::AstNode* left = where_expr->first_child;
+                const sql_parser::AstNode* right = left ? left->next_sibling : nullptr;
+                if (!left || !right) return -1;
+
+                // Check if left is the shard key column and right is a literal (or vice versa)
+                const sql_parser::AstNode* col_node = nullptr;
+                const sql_parser::AstNode* val_node = nullptr;
+
+                if (is_column_ref(left, shard_key)) {
+                    col_node = left;
+                    val_node = right;
+                } else if (is_column_ref(right, shard_key)) {
+                    col_node = right;
+                    val_node = left;
+                }
+
+                if (col_node && val_node) {
+                    Value v = evaluate_shard_key_value(val_node);
+                    if (v.tag == Value::TAG_INT64) {
+                        return static_cast<int>(
+                            std::abs(v.int_val) % static_cast<int64_t>(shard_count));
+                    }
+                    if (v.tag == Value::TAG_STRING && v.str_val.ptr) {
+                        uint64_t h = 0;
+                        for (uint32_t k = 0; k < v.str_val.len; ++k) {
+                            h = h * 31 + static_cast<uint8_t>(v.str_val.ptr[k]);
+                        }
+                        return static_cast<int>(h % shard_count);
+                    }
+                }
+            }
+
+            // Check AND: both sides might contain the shard key
+            if (op.equals_ci("AND", 3)) {
+                const sql_parser::AstNode* left = where_expr->first_child;
+                const sql_parser::AstNode* right = left ? left->next_sibling : nullptr;
+                int r = find_shard_from_where(left, shard_key, shard_count);
+                if (r >= 0) return r;
+                return find_shard_from_where(right, shard_key, shard_count);
+            }
+        }
+
+        return -1;
+    }
+
+    bool is_column_ref(const sql_parser::AstNode* node, sql_parser::StringRef col_name) {
+        if (!node) return false;
+        if (node->type == sql_parser::NodeType::NODE_COLUMN_REF ||
+            node->type == sql_parser::NodeType::NODE_IDENTIFIER) {
+            return node->value().equals_ci(col_name.ptr, col_name.len);
+        }
+        return false;
+    }
+
+    // Scatter DML SQL to all shards, combining results via UNION ALL
+    PlanNode* scatter_dml_to_shards(const TableInfo* table,
+                                     const std::vector<ShardInfo>& shard_list,
+                                     std::function<sql_parser::StringRef()> build_sql) {
+        if (shard_list.empty()) return nullptr;
+
+        PlanNode* current = nullptr;
+        for (const auto& shard : shard_list) {
+            sql_parser::StringRef sql = build_sql();
+            PlanNode* rs = make_remote_scan(shard.backend_name.c_str(), sql, table);
+            if (!current) {
+                current = rs;
+            } else {
+                PlanNode* union_node = make_plan_node(arena_, PlanNodeType::SET_OP);
+                union_node->set_op.op = SET_OP_UNION;
+                union_node->set_op.all = true;
+                union_node->left = current;
+                union_node->right = rs;
+                current = union_node;
+            }
+        }
+        return current;
     }
 
     // Case 6: Distributed DISTINCT

@@ -41,6 +41,9 @@
 #include "sql_engine/operators/merge_aggregate_op.h"
 #include "sql_engine/operators/merge_sort_op.h"
 #include "sql_engine/remote_executor.h"
+#include "sql_engine/dml_result.h"
+#include "sql_engine/mutable_data_source.h"
+#include "sql_engine/catalog_resolver.h"
 
 #include <unordered_map>
 #include <string>
@@ -58,6 +61,12 @@ public:
         : functions_(functions), catalog_(catalog), arena_(arena) {}
 
     void add_data_source(const char* table_name, DataSource* source) {
+        sources_[table_name] = source;
+    }
+
+    void add_mutable_data_source(const char* table_name, MutableDataSource* source) {
+        mutable_sources_[table_name] = source;
+        // Also register as a regular data source for reads
         sources_[table_name] = source;
     }
 
@@ -94,13 +103,206 @@ public:
         return rs;
     }
 
+    DmlResult execute_dml(PlanNode* plan) {
+        DmlResult result;
+        if (!plan) {
+            result.error_message = "null plan";
+            return result;
+        }
+
+        switch (plan->type) {
+            case PlanNodeType::INSERT_PLAN:
+                return execute_insert(plan);
+            case PlanNodeType::UPDATE_PLAN:
+                return execute_update(plan);
+            case PlanNodeType::DELETE_PLAN:
+                return execute_delete(plan);
+            default:
+                result.error_message = "not a DML plan";
+                return result;
+        }
+    }
+
 private:
     FunctionRegistry<D>& functions_;
     const Catalog& catalog_;
     sql_parser::Arena& arena_;
     std::unordered_map<std::string, DataSource*> sources_;
+    std::unordered_map<std::string, MutableDataSource*> mutable_sources_;
     std::vector<std::unique_ptr<Operator>> operators_;
     RemoteExecutor* remote_executor_ = nullptr;
+
+    // Look up mutable data source by table name (case-insensitive)
+    MutableDataSource* find_mutable_source(const TableInfo* table) {
+        if (!table) return nullptr;
+        std::string name(table->table_name.ptr, table->table_name.len);
+        for (auto& c : name) { if (c >= 'A' && c <= 'Z') c += 32; }
+        auto it = mutable_sources_.find(name);
+        if (it == mutable_sources_.end()) return nullptr;
+        return it->second;
+    }
+
+    DmlResult execute_insert(PlanNode* plan) {
+        DmlResult result;
+        const auto& ip = plan->insert_plan;
+        MutableDataSource* source = find_mutable_source(ip.table);
+        if (!source) {
+            result.error_message = "no mutable data source for table";
+            return result;
+        }
+
+        const TableInfo* table = ip.table;
+        if (!table) {
+            result.error_message = "no table info";
+            return result;
+        }
+
+        // Build column ordinal mapping
+        // If columns are specified, map column names to ordinals
+        // Otherwise, use natural order
+        std::vector<uint16_t> col_ordinals;
+        if (ip.columns && ip.column_count > 0) {
+            for (uint16_t i = 0; i < ip.column_count; ++i) {
+                const sql_parser::AstNode* col_node = ip.columns[i];
+                if (col_node) {
+                    sql_parser::StringRef col_name = col_node->value();
+                    const ColumnInfo* ci = catalog_.get_column(table, col_name);
+                    if (ci) {
+                        col_ordinals.push_back(ci->ordinal);
+                    } else {
+                        col_ordinals.push_back(i); // fallback
+                    }
+                }
+            }
+        } else {
+            for (uint16_t i = 0; i < table->column_count; ++i) {
+                col_ordinals.push_back(i);
+            }
+        }
+
+        // Resolver that returns null for all columns (used for constant expressions)
+        auto null_resolve = [](sql_parser::StringRef) -> Value { return value_null(); };
+
+        // Iterate value rows
+        uint64_t inserted = 0;
+        for (uint16_t ri = 0; ri < ip.row_count; ++ri) {
+            const sql_parser::AstNode* row_ast = ip.value_rows[ri];
+            if (!row_ast) continue;
+
+            Row row = make_row(arena_, table->column_count);
+            // Initialize all columns to NULL
+            for (uint16_t c = 0; c < table->column_count; ++c) {
+                row.set(c, value_null());
+            }
+
+            // Evaluate each expression in the values row
+            uint16_t col_idx = 0;
+            for (const sql_parser::AstNode* expr = row_ast->first_child;
+                 expr && col_idx < col_ordinals.size();
+                 expr = expr->next_sibling, ++col_idx) {
+                Value v = evaluate_expression<D>(expr, null_resolve, functions_, arena_);
+                row.set(col_ordinals[col_idx], v);
+            }
+
+            if (source->insert(row)) {
+                ++inserted;
+            }
+        }
+
+        result.affected_rows = inserted;
+        result.success = true;
+        return result;
+    }
+
+    DmlResult execute_update(PlanNode* plan) {
+        DmlResult result;
+        const auto& up = plan->update_plan;
+        MutableDataSource* source = find_mutable_source(up.table);
+        if (!source) {
+            result.error_message = "no mutable data source for table";
+            return result;
+        }
+
+        const TableInfo* table = up.table;
+        if (!table) {
+            result.error_message = "no table info";
+            return result;
+        }
+
+        // Build predicate
+        std::function<bool(const Row&)> predicate;
+        if (up.where_expr) {
+            predicate = [&](const Row& row) -> bool {
+                auto resolver = make_resolver(catalog_, table, row.values);
+                Value v = evaluate_expression<D>(up.where_expr, resolver, functions_, arena_);
+                if (v.is_null()) return false;
+                if (v.tag == Value::TAG_BOOL) return v.bool_val;
+                if (v.tag == Value::TAG_INT64) return v.int_val != 0;
+                return true;
+            };
+        } else {
+            predicate = [](const Row&) { return true; };
+        }
+
+        // Build updater
+        auto updater = [&](Row& row) {
+            for (uint16_t i = 0; i < up.set_count; ++i) {
+                const sql_parser::AstNode* col_node = up.set_columns[i];
+                const sql_parser::AstNode* expr_node = up.set_exprs[i];
+                if (!col_node || !expr_node) continue;
+
+                sql_parser::StringRef col_name = col_node->value();
+                const ColumnInfo* ci = catalog_.get_column(table, col_name);
+                if (!ci) continue;
+
+                // Evaluate expression with current row values (for SET age = age + 1)
+                auto resolver = make_resolver(catalog_, table, row.values);
+                Value v = evaluate_expression<D>(expr_node, resolver, functions_, arena_);
+                row.set(ci->ordinal, v);
+            }
+        };
+
+        uint64_t updated = source->update_where(predicate, updater);
+        result.affected_rows = updated;
+        result.success = true;
+        return result;
+    }
+
+    DmlResult execute_delete(PlanNode* plan) {
+        DmlResult result;
+        const auto& dp = plan->delete_plan;
+        MutableDataSource* source = find_mutable_source(dp.table);
+        if (!source) {
+            result.error_message = "no mutable data source for table";
+            return result;
+        }
+
+        const TableInfo* table = dp.table;
+        if (!table) {
+            result.error_message = "no table info";
+            return result;
+        }
+
+        // Build predicate
+        std::function<bool(const Row&)> predicate;
+        if (dp.where_expr) {
+            predicate = [&](const Row& row) -> bool {
+                auto resolver = make_resolver(catalog_, table, row.values);
+                Value v = evaluate_expression<D>(dp.where_expr, resolver, functions_, arena_);
+                if (v.is_null()) return false;
+                if (v.tag == Value::TAG_BOOL) return v.bool_val;
+                if (v.tag == Value::TAG_INT64) return v.int_val != 0;
+                return true;
+            };
+        } else {
+            predicate = [](const Row&) { return true; };
+        }
+
+        uint64_t deleted = source->delete_where(predicate);
+        result.affected_rows = deleted;
+        result.success = true;
+        return result;
+    }
 
     // Pre-process: for PROJECT -> AGGREGATE (or PROJECT -> FILTER -> AGGREGATE),
     // extract aggregate function expressions from the PROJECT select list
@@ -240,6 +442,10 @@ private:
                 return count_columns(node->left);
             case PlanNodeType::MERGE_SORT:
                 return count_columns(node->left);
+            case PlanNodeType::INSERT_PLAN:
+            case PlanNodeType::UPDATE_PLAN:
+            case PlanNodeType::DELETE_PLAN:
+                return 0; // DML nodes don't produce result columns
         }
         return 0;
     }
@@ -272,6 +478,10 @@ private:
                 return build_merge_aggregate(node);
             case PlanNodeType::MERGE_SORT:
                 return build_merge_sort(node);
+            case PlanNodeType::INSERT_PLAN:
+            case PlanNodeType::UPDATE_PLAN:
+            case PlanNodeType::DELETE_PLAN:
+                return nullptr; // DML nodes are not executed as operators
         }
         return nullptr;
     }
