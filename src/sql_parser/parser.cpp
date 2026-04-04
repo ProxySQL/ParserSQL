@@ -3,6 +3,7 @@
 #include "sql_parser/set_parser.h"
 #include "sql_parser/select_parser.h"
 #include "sql_parser/compound_query_parser.h"
+#include "sql_parser/subquery_parse_callback.h"
 #include "sql_parser/insert_parser.h"
 #include "sql_parser/update_parser.h"
 #include "sql_parser/delete_parser.h"
@@ -89,6 +90,7 @@ ParseResult Parser<D>::parse_select() {
     r.stmt_type = StmtType::SELECT;
 
     CompoundQueryParser<D> compound_parser(tokenizer_, arena_);
+    compound_parser.set_subquery_callback(&parse_subquery_select<D>);
     AstNode* ast = compound_parser.parse();
 
     if (ast) {
@@ -120,6 +122,7 @@ ParseResult Parser<D>::parse_select_from_lparen() {
     if (tokenizer_.peek().type == TokenType::TK_SELECT) {
         tokenizer_.skip(); // consume SELECT
         SelectParser<D> sp(tokenizer_, arena_, true);
+        sp.set_subquery_callback(&parse_subquery_select<D>);
         inner = sp.parse();
 
         // Check for set operators inside the parens
@@ -139,6 +142,7 @@ ParseResult Parser<D>::parse_select_from_lparen() {
                 tokenizer_.skip();
             }
             SelectParser<D> sp2(tokenizer_, arena_, true);
+            sp2.set_subquery_callback(&parse_subquery_select<D>);
             AstNode* right = sp2.parse();
 
             AstNode* setop = make_node(arena_, NodeType::NODE_SET_OPERATION, op_text);
@@ -154,6 +158,7 @@ ParseResult Parser<D>::parse_select_from_lparen() {
         // Nested parenthesized -- recursively handle
         // This is an edge case; for now parse as compound
         CompoundQueryParser<D> cp(tokenizer_, arena_);
+        cp.set_subquery_callback(&parse_subquery_select<D>);
         inner = cp.parse();
     }
 
@@ -193,6 +198,7 @@ ParseResult Parser<D>::parse_select_from_lparen() {
                     tokenizer_.skip();
                 }
                 SelectParser<D> sp3(tokenizer_, arena_, true);
+                sp3.set_subquery_callback(&parse_subquery_select<D>);
                 right = sp3.parse();
                 if (tokenizer_.peek().type == TokenType::TK_RPAREN) {
                     tokenizer_.skip();
@@ -200,6 +206,7 @@ ParseResult Parser<D>::parse_select_from_lparen() {
             } else if (tokenizer_.peek().type == TokenType::TK_SELECT) {
                 tokenizer_.skip();
                 SelectParser<D> sp3(tokenizer_, arena_, true);
+                sp3.set_subquery_callback(&parse_subquery_select<D>);
                 right = sp3.parse();
             }
 

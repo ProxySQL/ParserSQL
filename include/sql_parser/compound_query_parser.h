@@ -17,10 +17,15 @@ public:
     CompoundQueryParser(Tokenizer<D>& tokenizer, Arena& arena)
         : tok_(tokenizer), arena_(arena), expr_parser_(tokenizer, arena) {}
 
+    void set_subquery_callback(SubqueryParseCallback<D> cb) {
+        subquery_cb_ = cb;
+        expr_parser_.set_subquery_callback(cb);
+    }
+
     // Parse a compound query (or a plain SELECT if no set operator follows).
     // Returns NODE_SELECT_STMT for plain selects, NODE_COMPOUND_QUERY for compounds.
     AstNode* parse() {
-        AstNode* result = parse_compound_expr(0);
+        AstNode* result = parse_compound_expr(0, true);
         if (!result) return nullptr;
 
         // If the result is a set operation, wrap in COMPOUND_QUERY and parse trailing clauses
@@ -80,6 +85,7 @@ private:
     Tokenizer<D>& tok_;
     Arena& arena_;
     ExpressionParser<D> expr_parser_;
+    SubqueryParseCallback<D> subquery_cb_ = nullptr;
 
     // Precedence levels
     static constexpr int PREC_UNION_EXCEPT = 1;
@@ -103,8 +109,12 @@ private:
     }
 
     // Parse a compound expression with minimum precedence (Pratt-style)
-    AstNode* parse_compound_expr(int min_prec) {
-        AstNode* left = parse_operand();
+    // first_call: true when this is the initial call from parse() where
+    // the SELECT keyword has already been consumed by the classifier.
+    // In that case, we should NOT enter the LPAREN branch in parse_operand
+    // because (SELECT ...) could be a subquery expression in the select list.
+    AstNode* parse_compound_expr(int min_prec, bool first_call = false) {
+        AstNode* left = parse_operand(first_call);
         if (!left) return nullptr;
 
         while (true) {
@@ -141,8 +151,11 @@ private:
     }
 
     // Parse a single operand: parenthesized compound or plain SELECT
-    AstNode* parse_operand() {
-        if (tok_.peek().type == TokenType::TK_LPAREN) {
+    // When first_call=true, skip the LPAREN branch because the outer SELECT
+    // was already consumed and (SELECT ...) should be parsed as a subquery
+    // expression within the select item list.
+    AstNode* parse_operand(bool first_call = false) {
+        if (!first_call && tok_.peek().type == TokenType::TK_LPAREN) {
             tok_.skip(); // consume '('
 
             // Could be a parenthesized compound query or a parenthesized SELECT
@@ -155,6 +168,7 @@ private:
                     tok_.skip(); // consume SELECT
                     // Create a SelectParser that will parse from after SELECT
                     SelectParser<D> sp(tok_, arena_, true);
+                    if (subquery_cb_) sp.set_subquery_callback(subquery_cb_);
                     AstNode* select = sp.parse();
 
                     // Check if a set operator follows inside the parens
@@ -198,6 +212,7 @@ private:
         }
         // Use compound_mode=true so ORDER BY/LIMIT aren't consumed
         SelectParser<D> sp(tok_, arena_, true);
+        if (subquery_cb_) sp.set_subquery_callback(subquery_cb_);
         return sp.parse();
     }
 
@@ -224,6 +239,7 @@ private:
             if (tok_.peek().type == TokenType::TK_SELECT) {
                 tok_.skip();
                 SelectParser<D> sp(tok_, arena_, true);
+                if (subquery_cb_) sp.set_subquery_callback(subquery_cb_);
                 AstNode* rsel = sp.parse();
                 // Check for more operators at higher precedence
                 right = continue_compound_from(rsel, prec);

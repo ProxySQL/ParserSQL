@@ -96,6 +96,27 @@ private:
         return JOIN_INNER;
     }
 
+    // Check if an expression (or any descendant) contains an aggregate function call.
+    // Does NOT recurse into subqueries -- aggregates inside subqueries belong
+    // to the subquery's own aggregation, not the outer query.
+    static bool has_aggregate(const sql_parser::AstNode* expr) {
+        if (!expr) return false;
+        // Do not recurse into subqueries
+        if (expr->type == sql_parser::NodeType::NODE_SUBQUERY) return false;
+        if (expr->type == sql_parser::NodeType::NODE_FUNCTION_CALL) {
+            sql_parser::StringRef name = expr->value();
+            if (name.equals_ci("COUNT", 5) || name.equals_ci("SUM", 3) ||
+                name.equals_ci("AVG", 3) || name.equals_ci("MIN", 3) ||
+                name.equals_ci("MAX", 3)) {
+                return true;
+            }
+        }
+        for (const sql_parser::AstNode* c = expr->first_child; c; c = c->next_sibling) {
+            if (has_aggregate(c)) return true;
+        }
+        return false;
+    }
+
     static bool contains_ci(sql_parser::StringRef haystack, const char* needle, uint32_t nlen) {
         if (haystack.len < nlen) return false;
         for (uint32_t i = 0; i <= haystack.len - nlen; ++i) {
@@ -132,19 +153,40 @@ private:
         }
 
         // 3. GROUP BY -> Aggregate
+        // Also create an implicit AGGREGATE when SELECT has aggregate functions
+        // but no GROUP BY (e.g., SELECT MAX(age) FROM users).
         const sql_parser::AstNode* group_by = find_child(select_ast, sql_parser::NodeType::NODE_GROUP_BY_CLAUSE);
-        if (group_by) {
-            PlanNode* agg = make_plan_node(arena_, PlanNodeType::AGGREGATE);
-            uint16_t gc = count_children(group_by);
-            agg->aggregate.group_count = gc;
-            if (gc > 0) {
-                auto** gb_arr = static_cast<const sql_parser::AstNode**>(
-                    arena_.allocate(sizeof(sql_parser::AstNode*) * gc));
-                uint16_t idx = 0;
-                for (const sql_parser::AstNode* c = group_by->first_child; c; c = c->next_sibling) {
-                    gb_arr[idx++] = c;
+        bool needs_implicit_agg = false;
+        if (!group_by) {
+            // Check if SELECT list contains aggregate functions
+            const sql_parser::AstNode* items = find_child(select_ast, sql_parser::NodeType::NODE_SELECT_ITEM_LIST);
+            if (items) {
+                for (const sql_parser::AstNode* item = items->first_child; item; item = item->next_sibling) {
+                    if (item->first_child && has_aggregate(item->first_child)) {
+                        needs_implicit_agg = true;
+                        break;
+                    }
                 }
-                agg->aggregate.group_by = gb_arr;
+            }
+        }
+        if (group_by || needs_implicit_agg) {
+            PlanNode* agg = make_plan_node(arena_, PlanNodeType::AGGREGATE);
+            uint16_t gc = 0;
+            agg->aggregate.group_by = nullptr;
+            if (group_by) {
+                gc = count_children(group_by);
+                agg->aggregate.group_count = gc;
+                if (gc > 0) {
+                    auto** gb_arr = static_cast<const sql_parser::AstNode**>(
+                        arena_.allocate(sizeof(sql_parser::AstNode*) * gc));
+                    uint16_t idx = 0;
+                    for (const sql_parser::AstNode* c = group_by->first_child; c; c = c->next_sibling) {
+                        gb_arr[idx++] = c;
+                    }
+                    agg->aggregate.group_by = gb_arr;
+                }
+            } else {
+                agg->aggregate.group_count = 0;
             }
             // Aggregate expressions are extracted from the SELECT list during execution/optimization.
             // For now, store them as null/0.
@@ -314,11 +356,14 @@ private:
 
     // Build a Scan node from TABLE_REF
     PlanNode* build_scan(const sql_parser::AstNode* table_ref) {
-        PlanNode* scan = make_plan_node(arena_, PlanNodeType::SCAN);
-        scan->scan.table = nullptr;
-
         const sql_parser::AstNode* name_node = table_ref->first_child;
         if (name_node) {
+            // Check for subquery (derived table)
+            if (name_node->type == sql_parser::NodeType::NODE_SUBQUERY) {
+                return build_derived_scan(table_ref);
+            }
+            PlanNode* scan = make_plan_node(arena_, PlanNodeType::SCAN);
+            scan->scan.table = nullptr;
             if (name_node->type == sql_parser::NodeType::NODE_IDENTIFIER) {
                 scan->scan.table = catalog_.get_table(name_node->value());
             } else if (name_node->type == sql_parser::NodeType::NODE_QUALIFIED_NAME) {
@@ -328,10 +373,110 @@ private:
                     scan->scan.table = catalog_.get_table(schema->value(), table->value());
                 }
             }
-            // Subquery -> scan with null table (deferred)
+            return scan;
         }
 
+        PlanNode* scan = make_plan_node(arena_, PlanNodeType::SCAN);
+        scan->scan.table = nullptr;
         return scan;
+    }
+
+    // Build a DERIVED_SCAN node from a subquery table reference
+    PlanNode* build_derived_scan(const sql_parser::AstNode* table_ref) {
+        const sql_parser::AstNode* subquery_node = table_ref->first_child;
+        if (!subquery_node || subquery_node->type != sql_parser::NodeType::NODE_SUBQUERY)
+            return nullptr;
+
+        // The subquery's parsed SELECT AST is the first child of NODE_SUBQUERY
+        const sql_parser::AstNode* inner_ast = subquery_node->first_child;
+        if (!inner_ast) return nullptr;
+
+        // Build the inner plan recursively
+        PlanNode* inner_plan = build_select(inner_ast);
+        if (!inner_plan) return nullptr;
+
+        PlanNode* node = make_plan_node(arena_, PlanNodeType::DERIVED_SCAN);
+        node->derived_scan.inner_plan = inner_plan;
+        node->derived_scan.alias = nullptr;
+        node->derived_scan.alias_len = 0;
+        node->derived_scan.column_count = 0;
+        node->derived_scan.synth_table = nullptr;
+
+        // Check for alias
+        sql_parser::StringRef alias_ref{};
+        for (const sql_parser::AstNode* c = table_ref->first_child; c; c = c->next_sibling) {
+            if (c->type == sql_parser::NodeType::NODE_ALIAS) {
+                alias_ref = c->value();
+                node->derived_scan.alias = alias_ref.ptr;
+                node->derived_scan.alias_len = static_cast<uint16_t>(alias_ref.len);
+                break;
+            }
+        }
+
+        // Build synthetic TableInfo from the inner SELECT's column names
+        node->derived_scan.synth_table = build_synth_table(inner_ast, alias_ref);
+
+        return node;
+    }
+
+    // Create a synthetic TableInfo from a SELECT statement's output columns
+    const TableInfo* build_synth_table(const sql_parser::AstNode* select_ast,
+                                        sql_parser::StringRef alias) {
+        const sql_parser::AstNode* item_list = find_child(select_ast,
+            sql_parser::NodeType::NODE_SELECT_ITEM_LIST);
+        if (!item_list) return nullptr;
+
+        uint16_t col_count = count_children(item_list);
+        if (col_count == 0) return nullptr;
+
+        // Allocate column info array in arena
+        auto* cols = static_cast<ColumnInfo*>(
+            arena_.allocate(sizeof(ColumnInfo) * col_count));
+        if (!cols) return nullptr;
+
+        uint16_t idx = 0;
+        for (const sql_parser::AstNode* item = item_list->first_child; item;
+             item = item->next_sibling, ++idx) {
+            cols[idx].ordinal = idx;
+            cols[idx].nullable = true;
+            cols[idx].type = SqlType::make_varchar(255); // generic type
+
+            // Try to get column name from alias or expression
+            const sql_parser::AstNode* alias_node = nullptr;
+            const sql_parser::AstNode* expr_node = item->first_child;
+            for (const sql_parser::AstNode* c = item->first_child; c; c = c->next_sibling) {
+                if (c->type == sql_parser::NodeType::NODE_ALIAS) {
+                    alias_node = c;
+                }
+            }
+
+            if (alias_node) {
+                cols[idx].name = alias_node->value();
+            } else if (expr_node) {
+                // Use expression value (column name) as column name
+                if (expr_node->type == sql_parser::NodeType::NODE_COLUMN_REF ||
+                    expr_node->type == sql_parser::NodeType::NODE_IDENTIFIER) {
+                    cols[idx].name = expr_node->value();
+                } else if (expr_node->type == sql_parser::NodeType::NODE_FUNCTION_CALL) {
+                    cols[idx].name = expr_node->value(); // function name
+                } else if (expr_node->type == sql_parser::NodeType::NODE_ASTERISK) {
+                    cols[idx].name = sql_parser::StringRef{"*", 1};
+                } else {
+                    cols[idx].name = sql_parser::StringRef{"?column?", 8};
+                }
+            } else {
+                cols[idx].name = sql_parser::StringRef{"?column?", 8};
+            }
+        }
+
+        // Allocate TableInfo in arena
+        auto* table = static_cast<TableInfo*>(arena_.allocate(sizeof(TableInfo)));
+        if (!table) return nullptr;
+        table->schema_name = {};
+        table->table_name = alias;
+        table->columns = cols;
+        table->column_count = col_count;
+        return table;
     }
 
     // Build a Join node from JOIN_CLAUSE

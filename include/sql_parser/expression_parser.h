@@ -24,11 +24,23 @@ enum class Precedence : uint8_t {
     PRIMARY,       // literals, identifiers
 };
 
+// Callback type for parsing subqueries inside expressions.
+// When set, called instead of skip_to_matching_paren when (SELECT ...) is encountered.
+// The tokenizer is positioned ON the SELECT keyword (not yet consumed).
+// The callback should consume SELECT and parse the full statement, returning its AST.
+// The closing ')' should NOT be consumed by the callback.
+template <Dialect D>
+using SubqueryParseCallback = AstNode*(*)(Tokenizer<D>&, Arena&);
+
 template <Dialect D>
 class ExpressionParser {
 public:
     ExpressionParser(Tokenizer<D>& tokenizer, Arena& arena)
         : tok_(tokenizer), arena_(arena) {}
+
+    // Set a callback for parsing subqueries. When set and SELECT is encountered
+    // inside parens, calls it instead of skipping.
+    void set_subquery_callback(SubqueryParseCallback<D> cb) { subquery_cb_ = cb; }
 
     // Parse an expression with minimum precedence 0
     AstNode* parse(Precedence min_prec = Precedence::NONE) {
@@ -49,6 +61,26 @@ public:
 private:
     Tokenizer<D>& tok_;
     Arena& arena_;
+    SubqueryParseCallback<D> subquery_cb_ = nullptr;
+
+    // Parse a subquery: if callback is set, use it; otherwise skip.
+    // The tokenizer is positioned right after '(' and on the SELECT keyword.
+    // Returns a NODE_SUBQUERY node, possibly with a parsed SELECT child.
+    AstNode* parse_subquery_inner() {
+        AstNode* node = make_node(arena_, NodeType::NODE_SUBQUERY);
+        if (subquery_cb_) {
+            // Callback parses from current position (on SELECT keyword).
+            // It should consume everything up to but NOT including ')'.
+            AstNode* inner = subquery_cb_(tok_, arena_);
+            if (inner) node->add_child(inner);
+            // Consume the closing ')'
+            if (tok_.peek().type == TokenType::TK_RPAREN) tok_.skip();
+        } else {
+            // Legacy: skip to matching paren
+            skip_to_matching_paren();
+        }
+        return node;
+    }
 
     // Parse a primary expression (atom)
     AstNode* parse_atom() {
@@ -145,11 +177,23 @@ private:
             case TokenType::TK_EXISTS: {
                 tok_.skip();
                 // EXISTS (subquery)
-                AstNode* node = make_node(arena_, NodeType::NODE_SUBQUERY);
                 if (tok_.peek().type == TokenType::TK_LPAREN) {
                     tok_.skip();
+                    // We expect SELECT inside
+                    if (tok_.peek().type == TokenType::TK_SELECT) {
+                        AstNode* node = parse_subquery_inner();
+                        // Mark as EXISTS subquery via flags
+                        node->flags = 1; // 1 = EXISTS context
+                        return node;
+                    }
+                    // Fallback: skip
+                    AstNode* node = make_node(arena_, NodeType::NODE_SUBQUERY);
+                    node->flags = 1;
                     skip_to_matching_paren();
+                    return node;
                 }
+                AstNode* node = make_node(arena_, NodeType::NODE_SUBQUERY);
+                node->flags = 1;
                 return node;
             }
             case TokenType::TK_ARRAY: {
@@ -183,8 +227,7 @@ private:
                 tok_.skip();
                 // Could be subquery: (SELECT ...)
                 if (tok_.peek().type == TokenType::TK_SELECT) {
-                    AstNode* node = make_node(arena_, NodeType::NODE_SUBQUERY);
-                    skip_to_matching_paren();
+                    AstNode* node = parse_subquery_inner();
                     return parse_postfix(node);
                 }
                 // Empty tuple: ()
@@ -374,8 +417,7 @@ private:
         if (tok_.peek().type == TokenType::TK_LPAREN) {
             tok_.skip();
             if (tok_.peek().type == TokenType::TK_SELECT) {
-                AstNode* sq = make_node(arena_, NodeType::NODE_SUBQUERY);
-                skip_to_matching_paren();
+                AstNode* sq = parse_subquery_inner();
                 node->add_child(sq);
             } else {
                 while (true) {

@@ -18,6 +18,7 @@ enum class PlanNodeType : uint8_t {
     LIMIT,      // LIMIT + OFFSET
     DISTINCT,   // remove duplicates
     SET_OP,     // UNION / INTERSECT / EXCEPT
+    DERIVED_SCAN,     // subquery in FROM clause (derived table)
     REMOTE_SCAN,      // fetch from remote backend via SQL
     MERGE_AGGREGATE,  // merge partial aggregates from N sources
     MERGE_SORT,       // merge N pre-sorted streams
@@ -87,6 +88,14 @@ struct PlanNode {
             uint8_t op;                 // 0=UNION, 1=INTERSECT, 2=EXCEPT
             bool all;                   // UNION ALL vs UNION
         } set_op;
+
+        struct {
+            PlanNode* inner_plan;       // the subquery's execution plan
+            const char* alias;          // derived table alias (nullable)
+            uint16_t alias_len;
+            uint16_t column_count;      // number of columns from inner plan
+            const TableInfo* synth_table; // synthetic table info for column resolution
+        } derived_scan;
 
         struct {
             const char* backend_name;

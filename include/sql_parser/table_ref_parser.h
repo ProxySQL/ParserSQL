@@ -17,6 +17,8 @@ public:
                    ExpressionParser<D>& expr_parser)
         : tok_(tokenizer), arena_(arena), expr_parser_(expr_parser) {}
 
+    void set_subquery_callback(SubqueryParseCallback<D> cb) { subquery_cb_ = cb; }
+
     // Parse a FROM clause: table_ref [, table_ref | JOIN ...]*
     AstNode* parse_from_clause() {
         AstNode* from = make_node(arena_, NodeType::NODE_FROM_CLAUSE);
@@ -56,14 +58,22 @@ public:
         if (t.type == TokenType::TK_LPAREN) {
             tok_.skip();
             if (tok_.peek().type == TokenType::TK_SELECT) {
-                AstNode* subq = make_node(arena_, NodeType::NODE_SUBQUERY);
-                // Skip to matching paren
-                int depth = 1;
-                while (depth > 0) {
-                    Token st = tok_.next_token();
-                    if (st.type == TokenType::TK_LPAREN) ++depth;
-                    else if (st.type == TokenType::TK_RPAREN) --depth;
-                    else if (st.type == TokenType::TK_EOF) break;
+                AstNode* subq = nullptr;
+                if (subquery_cb_) {
+                    subq = make_node(arena_, NodeType::NODE_SUBQUERY);
+                    AstNode* inner = subquery_cb_(tok_, arena_);
+                    if (inner) subq->add_child(inner);
+                    if (tok_.peek().type == TokenType::TK_RPAREN) tok_.skip();
+                } else {
+                    subq = make_node(arena_, NodeType::NODE_SUBQUERY);
+                    // Legacy: skip to matching paren
+                    int depth = 1;
+                    while (depth > 0) {
+                        Token st = tok_.next_token();
+                        if (st.type == TokenType::TK_LPAREN) ++depth;
+                        else if (st.type == TokenType::TK_RPAREN) --depth;
+                        else if (st.type == TokenType::TK_EOF) break;
+                    }
                 }
                 // Optional alias
                 AstNode* ref = make_node(arena_, NodeType::NODE_TABLE_REF);
@@ -234,6 +244,7 @@ private:
     Tokenizer<D>& tok_;
     Arena& arena_;
     ExpressionParser<D>& expr_parser_;
+    SubqueryParseCallback<D> subquery_cb_ = nullptr;
 };
 
 } // namespace sql_parser

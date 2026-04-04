@@ -4,6 +4,7 @@
 #include "sql_engine/operator.h"
 #include "sql_engine/expression_eval.h"
 #include "sql_engine/catalog.h"
+#include "sql_engine/subquery_executor.h"
 #include "sql_parser/arena.h"
 #include <functional>
 #include <vector>
@@ -18,9 +19,11 @@ public:
                    const Catalog& catalog,
                    const std::vector<const TableInfo*>& tables,
                    FunctionRegistry<D>& functions,
-                   sql_parser::Arena& arena)
+                   sql_parser::Arena& arena,
+                   SubqueryExecutor<D>* subquery_exec = nullptr)
         : child_(child), expr_(expr), catalog_(catalog),
-          tables_(tables), functions_(functions), arena_(arena) {}
+          tables_(tables), functions_(functions), arena_(arena),
+          subquery_exec_(subquery_exec) {}
 
     void open() override {
         child_->open();
@@ -30,7 +33,7 @@ public:
         while (child_->next(out)) {
             // Build a resolver that can look up column names in any of the known tables
             auto resolver = make_multi_table_resolver(out);
-            Value result = evaluate_expression<D>(expr_, resolver, functions_, arena_);
+            Value result = evaluate_expression<D>(expr_, resolver, functions_, arena_, subquery_exec_);
             if (is_truthy(result)) return true;
         }
         return false;
@@ -47,6 +50,7 @@ private:
     std::vector<const TableInfo*> tables_;
     FunctionRegistry<D>& functions_;
     sql_parser::Arena& arena_;
+    SubqueryExecutor<D>* subquery_exec_ = nullptr;
 
     std::function<Value(sql_parser::StringRef)> make_multi_table_resolver(const Row& row) {
         return [this, &row](sql_parser::StringRef col_name) -> Value {

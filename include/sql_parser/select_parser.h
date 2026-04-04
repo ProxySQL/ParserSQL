@@ -19,6 +19,12 @@ public:
           table_ref_parser_(tokenizer, arena, expr_parser_),
           compound_mode_(compound_mode) {}
 
+    // Propagate subquery callback to internal expression and table ref parsers
+    void set_subquery_callback(SubqueryParseCallback<D> cb) {
+        expr_parser_.set_subquery_callback(cb);
+        table_ref_parser_.set_subquery_callback(cb);
+    }
+
     // Parse a SELECT statement (SELECT keyword already consumed by classifier).
     // In compound_mode, stops before ORDER BY / LIMIT so they can be claimed
     // by the compound query parser.

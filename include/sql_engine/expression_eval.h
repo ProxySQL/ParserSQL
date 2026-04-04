@@ -1,6 +1,6 @@
 // expression_eval.h — Recursive AST expression evaluator
 //
-// Core function: evaluate_expression<D>(expr, resolve, functions, arena)
+// Core function: evaluate_expression<D>(expr, resolve, functions, arena, subquery_exec)
 //
 // Takes a parsed AST expression node and evaluates it recursively against
 // a row of data. The `resolve` callback maps column names (StringRef) to
@@ -27,6 +27,7 @@
 #include "sql_engine/tag_kind_map.h"
 #include "sql_engine/like.h"
 #include "sql_engine/function_registry.h"
+#include "sql_engine/subquery_executor.h"
 #include "sql_parser/common.h"
 #include "sql_parser/ast.h"
 #include "sql_parser/arena.h"
@@ -34,6 +35,7 @@
 #include <cstdlib>
 #include <cstring>
 #include <cmath>
+#include <vector>
 
 namespace sql_engine {
 
@@ -97,7 +99,8 @@ template <Dialect D>
 Value evaluate_expression(const AstNode* expr,
                           const std::function<Value(StringRef)>& resolve,
                           FunctionRegistry<D>& functions,
-                          Arena& arena) {
+                          Arena& arena,
+                          SubqueryExecutor<D>* subquery_exec = nullptr) {
     if (!expr) return value_null();
 
     switch (expr->type) {
@@ -163,7 +166,7 @@ Value evaluate_expression(const AstNode* expr,
     // ---- Wrapper: unwrap and evaluate first child ----
 
     case NodeType::NODE_EXPRESSION: {
-        return evaluate_expression<D>(expr->first_child, resolve, functions, arena);
+        return evaluate_expression<D>(expr->first_child, resolve, functions, arena, subquery_exec);
     }
 
     // ---- Unary operators ----
@@ -172,7 +175,7 @@ Value evaluate_expression(const AstNode* expr,
         StringRef op = expr->value();
         const AstNode* operand_node = expr->first_child;
         if (!operand_node) return value_null();
-        Value operand = evaluate_expression<D>(operand_node, resolve, functions, arena);
+        Value operand = evaluate_expression<D>(operand_node, resolve, functions, arena, subquery_exec);
         if (op.len == 1 && op.ptr[0] == '-') {
             // Unary minus
             if (operand.is_null()) return value_null();
@@ -209,28 +212,28 @@ Value evaluate_expression(const AstNode* expr,
 
         // --- Short-circuit: AND ---
         if (detail::ref_equals_ci(op, "AND", 3)) {
-            Value left_val = evaluate_expression<D>(left_node, resolve, functions, arena);
+            Value left_val = evaluate_expression<D>(left_node, resolve, functions, arena, subquery_exec);
             // If left is FALSE -> FALSE immediately
             if (!left_val.is_null() && left_val.tag == Value::TAG_BOOL && !left_val.bool_val)
                 return value_bool(false);
-            Value right_val = evaluate_expression<D>(right_node, resolve, functions, arena);
+            Value right_val = evaluate_expression<D>(right_node, resolve, functions, arena, subquery_exec);
             return null_semantics::eval_and(left_val, right_val);
         }
 
         // --- Short-circuit: OR ---
         if (detail::ref_equals_ci(op, "OR", 2)) {
-            Value left_val = evaluate_expression<D>(left_node, resolve, functions, arena);
+            Value left_val = evaluate_expression<D>(left_node, resolve, functions, arena, subquery_exec);
             // If left is TRUE -> TRUE immediately
             if (!left_val.is_null() && left_val.tag == Value::TAG_BOOL && left_val.bool_val)
                 return value_bool(true);
-            Value right_val = evaluate_expression<D>(right_node, resolve, functions, arena);
+            Value right_val = evaluate_expression<D>(right_node, resolve, functions, arena, subquery_exec);
             return null_semantics::eval_or(left_val, right_val);
         }
 
         // --- IS / IS NOT (never return NULL) ---
         if (detail::ref_equals_ci(op, "IS", 2)) {
-            Value left_val = evaluate_expression<D>(left_node, resolve, functions, arena);
-            Value right_val = evaluate_expression<D>(right_node, resolve, functions, arena);
+            Value left_val = evaluate_expression<D>(left_node, resolve, functions, arena, subquery_exec);
+            Value right_val = evaluate_expression<D>(right_node, resolve, functions, arena, subquery_exec);
             // IS TRUE: left is truthy and not null
             if (!right_val.is_null() && right_val.tag == Value::TAG_BOOL && right_val.bool_val) {
                 // IS TRUE
@@ -251,8 +254,8 @@ Value evaluate_expression(const AstNode* expr,
             return value_null();
         }
         if (detail::ref_equals_ci(op, "IS NOT", 6)) {
-            Value left_val = evaluate_expression<D>(left_node, resolve, functions, arena);
-            Value right_val = evaluate_expression<D>(right_node, resolve, functions, arena);
+            Value left_val = evaluate_expression<D>(left_node, resolve, functions, arena, subquery_exec);
+            Value right_val = evaluate_expression<D>(right_node, resolve, functions, arena, subquery_exec);
             // IS NOT TRUE = NOT (IS TRUE)
             if (!right_val.is_null() && right_val.tag == Value::TAG_BOOL && right_val.bool_val) {
                 if (left_val.is_null()) return value_bool(true);
@@ -274,8 +277,8 @@ Value evaluate_expression(const AstNode* expr,
 
         // --- LIKE ---
         if (detail::ref_equals_ci(op, "LIKE", 4)) {
-            Value left_val = evaluate_expression<D>(left_node, resolve, functions, arena);
-            Value right_val = evaluate_expression<D>(right_node, resolve, functions, arena);
+            Value left_val = evaluate_expression<D>(left_node, resolve, functions, arena, subquery_exec);
+            Value right_val = evaluate_expression<D>(right_node, resolve, functions, arena, subquery_exec);
             if (left_val.is_null() || right_val.is_null()) return value_null();
             // Coerce both to strings if not already
             if (left_val.tag != Value::TAG_STRING)
@@ -290,8 +293,8 @@ Value evaluate_expression(const AstNode* expr,
         if (op.len == 2 && op.ptr[0] == '|' && op.ptr[1] == '|') {
             if constexpr (D == Dialect::PostgreSQL) {
                 // String concatenation
-                Value left_val = evaluate_expression<D>(left_node, resolve, functions, arena);
-                Value right_val = evaluate_expression<D>(right_node, resolve, functions, arena);
+                Value left_val = evaluate_expression<D>(left_node, resolve, functions, arena, subquery_exec);
+                Value right_val = evaluate_expression<D>(right_node, resolve, functions, arena, subquery_exec);
                 if (left_val.is_null() || right_val.is_null()) return value_null();
                 // Coerce to string
                 if (left_val.tag != Value::TAG_STRING)
@@ -308,17 +311,17 @@ Value evaluate_expression(const AstNode* expr,
                 return value_string(StringRef{buf, total});
             } else {
                 // MySQL: || is OR
-                Value left_val = evaluate_expression<D>(left_node, resolve, functions, arena);
+                Value left_val = evaluate_expression<D>(left_node, resolve, functions, arena, subquery_exec);
                 if (!left_val.is_null() && left_val.tag == Value::TAG_BOOL && left_val.bool_val)
                     return value_bool(true);
-                Value right_val = evaluate_expression<D>(right_node, resolve, functions, arena);
+                Value right_val = evaluate_expression<D>(right_node, resolve, functions, arena, subquery_exec);
                 return null_semantics::eval_or(left_val, right_val);
             }
         }
 
         // --- Standard binary: evaluate both sides, null-propagate, coerce, apply ---
-        Value left_val = evaluate_expression<D>(left_node, resolve, functions, arena);
-        Value right_val = evaluate_expression<D>(right_node, resolve, functions, arena);
+        Value left_val = evaluate_expression<D>(left_node, resolve, functions, arena, subquery_exec);
+        Value right_val = evaluate_expression<D>(right_node, resolve, functions, arena, subquery_exec);
 
         // NULL propagation
         if (left_val.is_null() || right_val.is_null()) return value_null();
@@ -448,12 +451,12 @@ Value evaluate_expression(const AstNode* expr,
     // ---- IS NULL / IS NOT NULL (never return NULL) ----
 
     case NodeType::NODE_IS_NULL: {
-        Value child = evaluate_expression<D>(expr->first_child, resolve, functions, arena);
+        Value child = evaluate_expression<D>(expr->first_child, resolve, functions, arena, subquery_exec);
         return value_bool(child.is_null());
     }
 
     case NodeType::NODE_IS_NOT_NULL: {
-        Value child = evaluate_expression<D>(expr->first_child, resolve, functions, arena);
+        Value child = evaluate_expression<D>(expr->first_child, resolve, functions, arena, subquery_exec);
         return value_bool(!child.is_null());
     }
 
@@ -465,9 +468,9 @@ Value evaluate_expression(const AstNode* expr,
         const AstNode* high_node = detail::nth_child(expr, 2);
         if (!expr_node || !low_node || !high_node) return value_null();
 
-        Value val  = evaluate_expression<D>(expr_node, resolve, functions, arena);
+        Value val  = evaluate_expression<D>(expr_node, resolve, functions, arena, subquery_exec);
         Value low  = evaluate_expression<D>(low_node,  resolve, functions, arena);
-        Value high = evaluate_expression<D>(high_node, resolve, functions, arena);
+        Value high = evaluate_expression<D>(high_node, resolve, functions, arena, subquery_exec);
 
         // NULL propagation
         if (val.is_null() || low.is_null() || high.is_null()) return value_null();
@@ -515,14 +518,25 @@ Value evaluate_expression(const AstNode* expr,
         const AstNode* expr_node = expr->first_child;
         if (!expr_node) return value_null();
 
-        Value val = evaluate_expression<D>(expr_node, resolve, functions, arena);
+        Value val = evaluate_expression<D>(expr_node, resolve, functions, arena, subquery_exec);
         if (val.is_null()) return value_null();
 
         bool found = false;
         bool has_null = false;
 
+        // Collect all IN-list values. If a child is a subquery, expand it.
+        std::vector<Value> in_values;
         for (const AstNode* item = expr_node->next_sibling; item; item = item->next_sibling) {
-            Value item_val = evaluate_expression<D>(item, resolve, functions, arena);
+            if (item->type == NodeType::NODE_SUBQUERY && subquery_exec && item->first_child) {
+                // IN (subquery) -- execute and expand
+                std::vector<Value> set_vals = subquery_exec->execute_set(item, resolve);
+                for (auto& sv : set_vals) in_values.push_back(sv);
+            } else {
+                in_values.push_back(evaluate_expression<D>(item, resolve, functions, arena, subquery_exec));
+            }
+        }
+
+        for (const auto& item_val : in_values) {
             if (item_val.is_null()) {
                 has_null = true;
                 continue;
@@ -561,13 +575,13 @@ Value evaluate_expression(const AstNode* expr,
             // Simple CASE: children = [case_expr, when1, then1, when2, then2, ..., else?]
             const AstNode* case_node = expr->first_child;
             if (!case_node) return value_null();
-            Value case_val = evaluate_expression<D>(case_node, resolve, functions, arena);
+            Value case_val = evaluate_expression<D>(case_node, resolve, functions, arena, subquery_exec);
 
             const AstNode* child = case_node->next_sibling;
             uint32_t remaining = count - 1;  // excluding case_expr
 
             while (child && child->next_sibling) {
-                Value when_val = evaluate_expression<D>(child, resolve, functions, arena);
+                Value when_val = evaluate_expression<D>(child, resolve, functions, arena, subquery_exec);
                 const AstNode* then_node = child->next_sibling;
 
                 // Compare case_val = when_val
@@ -590,7 +604,7 @@ Value evaluate_expression(const AstNode* expr,
                 }
 
                 if (match) {
-                    return evaluate_expression<D>(then_node, resolve, functions, arena);
+                    return evaluate_expression<D>(then_node, resolve, functions, arena, subquery_exec);
                 }
 
                 child = then_node->next_sibling;
@@ -599,7 +613,7 @@ Value evaluate_expression(const AstNode* expr,
 
             // Check for ELSE (one remaining child)
             if (child && remaining == 1) {
-                return evaluate_expression<D>(child, resolve, functions, arena);
+                return evaluate_expression<D>(child, resolve, functions, arena, subquery_exec);
             }
             return value_null();
         } else {
@@ -608,7 +622,7 @@ Value evaluate_expression(const AstNode* expr,
             uint32_t remaining = count;
 
             while (child && child->next_sibling) {
-                Value when_val = evaluate_expression<D>(child, resolve, functions, arena);
+                Value when_val = evaluate_expression<D>(child, resolve, functions, arena, subquery_exec);
                 const AstNode* then_node = child->next_sibling;
 
                 // Evaluate WHEN condition as boolean
@@ -621,7 +635,7 @@ Value evaluate_expression(const AstNode* expr,
                 }
 
                 if (is_true) {
-                    return evaluate_expression<D>(then_node, resolve, functions, arena);
+                    return evaluate_expression<D>(then_node, resolve, functions, arena, subquery_exec);
                 }
 
                 child = then_node->next_sibling;
@@ -630,7 +644,7 @@ Value evaluate_expression(const AstNode* expr,
 
             // Check for ELSE (one remaining child)
             if (child && remaining % 2 == 1) {
-                return evaluate_expression<D>(child, resolve, functions, arena);
+                return evaluate_expression<D>(child, resolve, functions, arena, subquery_exec);
             }
             return value_null();
         }
@@ -651,14 +665,26 @@ Value evaluate_expression(const AstNode* expr,
         uint32_t i = 0;
         for (const AstNode* arg = expr->first_child; arg && i < MAX_ARGS;
              arg = arg->next_sibling, ++i) {
-            new (&args[i]) Value(evaluate_expression<D>(arg, resolve, functions, arena));
+            new (&args[i]) Value(evaluate_expression<D>(arg, resolve, functions, arena, subquery_exec));
         }
         return entry->impl(args, static_cast<uint16_t>(i), arena);
     }
 
     // ---- Deferred node types (return value_null) ----
 
-    case NodeType::NODE_SUBQUERY:          return value_null();  // requires full executor
+    case NodeType::NODE_SUBQUERY: {
+        // If the subquery has a parsed SELECT child and we have an executor, run it
+        if (subquery_exec && expr->first_child) {
+            // Check if this is an EXISTS subquery (flags == 1)
+            if (expr->flags == 1) {
+                bool exists = subquery_exec->execute_exists(expr, resolve);
+                return value_bool(exists);
+            }
+            // Otherwise treat as scalar subquery
+            return subquery_exec->execute_scalar(expr, resolve);
+        }
+        return value_null();  // no executor or no parsed child
+    }
     case NodeType::NODE_TUPLE:             return value_null();  // requires row/tuple value type
     case NodeType::NODE_ARRAY_CONSTRUCTOR: return value_null();  // requires array value type
     case NodeType::NODE_ARRAY_SUBSCRIPT:   return value_null();  // requires array support

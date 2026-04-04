@@ -4,6 +4,7 @@
 #include "sql_engine/operator.h"
 #include "sql_engine/expression_eval.h"
 #include "sql_engine/catalog.h"
+#include "sql_engine/subquery_executor.h"
 #include "sql_parser/arena.h"
 #include <functional>
 #include <vector>
@@ -19,9 +20,11 @@ public:
                     const Catalog& catalog,
                     const std::vector<const TableInfo*>& tables,
                     FunctionRegistry<D>& functions,
-                    sql_parser::Arena& arena)
+                    sql_parser::Arena& arena,
+                    SubqueryExecutor<D>* subquery_exec = nullptr)
         : child_(child), exprs_(exprs), expr_count_(expr_count),
-          catalog_(catalog), tables_(tables), functions_(functions), arena_(arena) {}
+          catalog_(catalog), tables_(tables), functions_(functions), arena_(arena),
+          subquery_exec_(subquery_exec) {}
 
     void open() override {
         if (child_) child_->open();
@@ -56,13 +59,14 @@ private:
     std::vector<const TableInfo*> tables_;
     FunctionRegistry<D>& functions_;
     sql_parser::Arena& arena_;
+    SubqueryExecutor<D>* subquery_exec_ = nullptr;
     bool no_from_done_ = false;
 
     bool evaluate_project(const Row& input, Row& out) {
         out = make_row(arena_, expr_count_);
         auto resolver = make_multi_table_resolver(input);
         for (uint16_t i = 0; i < expr_count_; ++i) {
-            out.set(i, evaluate_expression<D>(exprs_[i], resolver, functions_, arena_));
+            out.set(i, evaluate_expression<D>(exprs_[i], resolver, functions_, arena_, subquery_exec_));
         }
         return true;
     }

@@ -22,6 +22,7 @@
 #define SQL_ENGINE_PLAN_EXECUTOR_H
 
 #include "sql_engine/plan_node.h"
+#include "sql_engine/plan_builder.h"
 #include "sql_engine/operator.h"
 #include "sql_engine/data_source.h"
 #include "sql_engine/result_set.h"
@@ -37,7 +38,9 @@
 #include "sql_engine/operators/limit_op.h"
 #include "sql_engine/operators/distinct_op.h"
 #include "sql_engine/operators/set_op_op.h"
+#include "sql_engine/operators/derived_scan_op.h"
 #include "sql_engine/operators/remote_scan_op.h"
+#include "sql_engine/subquery_executor.h"
 #include "sql_engine/operators/merge_aggregate_op.h"
 #include "sql_engine/operators/merge_sort_op.h"
 #include "sql_engine/remote_executor.h"
@@ -74,10 +77,16 @@ public:
         remote_executor_ = exec;
     }
 
+    // Access the subquery executor (for operators that need it)
+    SubqueryExecutor<D>* subquery_executor() { return &subquery_exec_; }
+
     ResultSet execute(PlanNode* plan) {
         if (!plan) return {};
 
         operators_.clear();
+
+        // Wire up subquery executor callbacks
+        setup_subquery_executor();
 
         // Pre-process: push aggregate expressions from PROJECT into AGGREGATE
         preprocess_aggregates(plan);
@@ -131,6 +140,25 @@ private:
     std::unordered_map<std::string, MutableDataSource*> mutable_sources_;
     std::vector<std::unique_ptr<Operator>> operators_;
     RemoteExecutor* remote_executor_ = nullptr;
+    SubqueryExecutor<D> subquery_exec_;
+
+    void setup_subquery_executor() {
+        // Build plan callback: uses PlanBuilder with our catalog and arena
+        subquery_exec_.set_build_plan([this](const sql_parser::AstNode* ast) -> PlanNode* {
+            // We need a PlanBuilder -- include it here; PlanBuilder is already included
+            PlanBuilder<D> builder(catalog_, arena_);
+            return builder.build(ast);
+        });
+        // Execute plan callback: create a fresh executor for the subquery
+        // to avoid interfering with the outer operator tree.
+        subquery_exec_.set_execute_plan([this](PlanNode* plan) -> ResultSet {
+            PlanExecutor<D> inner_exec(functions_, catalog_, arena_);
+            for (auto& kv : sources_) {
+                inner_exec.add_data_source(kv.first.c_str(), kv.second);
+            }
+            return inner_exec.execute(plan);
+        });
+    }
 
     // Look up mutable data source by table name (case-insensitive)
     MutableDataSource* find_mutable_source(const TableInfo* table) {
@@ -309,6 +337,11 @@ private:
     // and push them into the AGGREGATE node.
     void preprocess_aggregates(PlanNode* node) {
         if (!node) return;
+        // Recurse into derived scan's inner plan
+        if (node->type == PlanNodeType::DERIVED_SCAN) {
+            preprocess_aggregates(node->derived_scan.inner_plan);
+            return;
+        }
         preprocess_aggregates(node->left);
         preprocess_aggregates(node->right);
 
@@ -392,6 +425,12 @@ private:
     // Collect all tables referenced in a plan subtree
     void collect_tables(PlanNode* node, std::vector<const TableInfo*>& tables) {
         if (!node) return;
+        if (node->type == PlanNodeType::DERIVED_SCAN) {
+            if (node->derived_scan.synth_table) {
+                tables.push_back(node->derived_scan.synth_table);
+            }
+            return;
+        }
         if (node->type == PlanNodeType::SCAN) {
             if (node->scan.table) tables.push_back(node->scan.table);
             return;
@@ -420,6 +459,11 @@ private:
             case PlanNodeType::SCAN: {
                 if (node->scan.table) return node->scan.table->column_count;
                 return 0;
+            }
+            case PlanNodeType::DERIVED_SCAN: {
+                if (node->derived_scan.synth_table)
+                    return node->derived_scan.synth_table->column_count;
+                return count_columns(node->derived_scan.inner_plan);
             }
             case PlanNodeType::PROJECT:
                 return node->project.count;
@@ -456,6 +500,8 @@ private:
         switch (node->type) {
             case PlanNodeType::SCAN:
                 return build_scan(node);
+            case PlanNodeType::DERIVED_SCAN:
+                return build_derived_scan_op(node);
             case PlanNodeType::FILTER:
                 return build_filter(node);
             case PlanNodeType::PROJECT:
@@ -486,6 +532,16 @@ private:
         return nullptr;
     }
 
+    Operator* build_derived_scan_op(PlanNode* node) {
+        // Build the inner plan's operator tree and wrap in DerivedScanOperator
+        Operator* inner = build_operator(node->derived_scan.inner_plan);
+        if (!inner) return nullptr;
+        auto op = std::make_unique<DerivedScanOperator>(inner);
+        Operator* ptr = op.get();
+        operators_.push_back(std::move(op));
+        return ptr;
+    }
+
     Operator* build_scan(PlanNode* node) {
         const TableInfo* table = node->scan.table;
         if (!table) return nullptr;
@@ -511,7 +567,7 @@ private:
         collect_tables(node->left, tables);
 
         auto op = std::make_unique<FilterOperator<D>>(
-            child, node->filter.expr, catalog_, tables, functions_, arena_);
+            child, node->filter.expr, catalog_, tables, functions_, arena_, &subquery_exec_);
         Operator* ptr = op.get();
         operators_.push_back(std::move(op));
         return ptr;
@@ -529,7 +585,7 @@ private:
 
         auto op = std::make_unique<ProjectOperator<D>>(
             child, node->project.exprs, node->project.count,
-            catalog_, tables, functions_, arena_);
+            catalog_, tables, functions_, arena_, &subquery_exec_);
         Operator* ptr = op.get();
         operators_.push_back(std::move(op));
         return ptr;
@@ -748,6 +804,16 @@ private:
                 }
                 break;
             }
+            case PlanNodeType::DERIVED_SCAN:
+                if (plan->derived_scan.synth_table) {
+                    for (uint16_t i = 0; i < plan->derived_scan.synth_table->column_count; ++i) {
+                        auto& cn = plan->derived_scan.synth_table->columns[i].name;
+                        rs.column_names.emplace_back(cn.ptr, cn.len);
+                    }
+                } else {
+                    build_column_names(plan->derived_scan.inner_plan, rs);
+                }
+                break;
             default:
                 // For wrapping operators, recurse to child
                 build_column_names(plan->left, rs);
