@@ -8,6 +8,7 @@
 #include <queue>
 #include <functional>
 #include <cstring>
+#include <future>
 
 namespace sql_engine {
 
@@ -19,24 +20,49 @@ public:
     MergeSortOperator(std::vector<Operator*> children,
                       const uint16_t* sort_col_indices,
                       const uint8_t* directions,
-                      uint16_t key_count)
-        : children_(std::move(children)), key_count_(key_count)
+                      uint16_t key_count,
+                      bool parallel_open = false)
+        : children_(std::move(children)), key_count_(key_count),
+          parallel_open_(parallel_open)
     {
         sort_cols_.assign(sort_col_indices, sort_col_indices + key_count);
         directions_.assign(directions, directions + key_count);
     }
 
     void open() override {
-        // Open all children and get first row from each
         heads_.resize(children_.size());
         has_row_.assign(children_.size(), false);
 
-        for (size_t i = 0; i < children_.size(); ++i) {
-            children_[i]->open();
-            Row row{};
-            if (children_[i]->next(row)) {
-                heads_[i] = row;
-                has_row_[i] = true;
+        if (parallel_open_ && children_.size() > 1) {
+            // Parallel execution (#26): open all children concurrently and
+            // fetch their first row. Each child is typically a RemoteScan
+            // that performs a network call in open(); launching concurrently
+            // reduces wall-clock time from O(N*latency) to O(latency).
+            //
+            // NOTE: requires a thread-safe RemoteExecutor implementation.
+            std::vector<std::future<void>> futures;
+            futures.reserve(children_.size());
+            for (size_t i = 0; i < children_.size(); ++i) {
+                futures.push_back(std::async(std::launch::async,
+                    [this, i]{
+                        children_[i]->open();
+                        Row row{};
+                        if (children_[i]->next(row)) {
+                            heads_[i] = row;
+                            has_row_[i] = true;
+                        }
+                    }));
+            }
+            for (auto& f : futures) f.get();
+        } else {
+            // Sequential path
+            for (size_t i = 0; i < children_.size(); ++i) {
+                children_[i]->open();
+                Row row{};
+                if (children_[i]->next(row)) {
+                    heads_[i] = row;
+                    has_row_[i] = true;
+                }
             }
         }
 
@@ -88,6 +114,7 @@ private:
     std::vector<uint16_t> sort_cols_;
     std::vector<uint8_t> directions_;
     uint16_t key_count_;
+    bool parallel_open_;
 
     std::vector<Row> heads_;
     std::vector<bool> has_row_;

@@ -276,9 +276,167 @@ private:
         }
 
         // Case 2: Sharded -- N RemoteScans + UNION ALL
-        const auto& shard_list = shards_.get_shards(table->table_name);
+        // Optimization (#27): if WHERE contains shard_key = <literal> or
+        // shard_key IN (<literals>), route to only the relevant shard(s).
+        const auto& full_shard_list = shards_.get_shards(table->table_name);
+        std::vector<ShardInfo> pruned = prune_shards(table, where_expr, full_shard_list);
         return make_sharded_union(table, where_expr, nullptr, 0, nullptr, 0,
-                                  nullptr, nullptr, 0, -1, false, shard_list);
+                                  nullptr, nullptr, 0, -1, false, pruned);
+    }
+
+    // Shard pruning (#27): analyze WHERE for shard_key = <literal> or
+    // shard_key IN (<literal_list>). Returns a subset of shards when pruning
+    // is possible, otherwise returns the full shard list.
+    std::vector<ShardInfo> prune_shards(const TableInfo* table,
+                                         const sql_parser::AstNode* where_expr,
+                                         const std::vector<ShardInfo>& all_shards) {
+        if (!where_expr || all_shards.empty()) return all_shards;
+
+        sql_parser::StringRef shard_key = shards_.get_shard_key(table->table_name);
+        if (!shard_key.ptr || shard_key.len == 0) return all_shards;
+
+        // Try to extract shard key literal values from WHERE expression
+        std::vector<size_t> target_indices;
+        extract_shard_targets(where_expr, shard_key, table->table_name,
+                              all_shards.size(), target_indices);
+
+        if (target_indices.empty()) return all_shards;
+
+        // Deduplicate and collect matching shards
+        std::vector<bool> included(all_shards.size(), false);
+        for (size_t idx : target_indices) {
+            if (idx < all_shards.size()) included[idx] = true;
+        }
+        std::vector<ShardInfo> result;
+        for (size_t i = 0; i < all_shards.size(); ++i) {
+            if (included[i]) result.push_back(all_shards[i]);
+        }
+        return result.empty() ? all_shards : result;
+    }
+
+    // Walk a WHERE expression looking for shard_key = <literal> or
+    // shard_key IN (<literal>, ...). Populates target_indices with
+    // the shard index for each matched literal.
+    void extract_shard_targets(const sql_parser::AstNode* expr,
+                                sql_parser::StringRef shard_key,
+                                sql_parser::StringRef table_name,
+                                size_t num_shards,
+                                std::vector<size_t>& target_indices) {
+        if (!expr) return;
+
+        // Check for shard_key = <literal>
+        if (expr->type == sql_parser::NodeType::NODE_BINARY_OP) {
+            sql_parser::StringRef op = expr->value();
+            if (op.len == 1 && op.ptr[0] == '=') {
+                const sql_parser::AstNode* left_node = expr->first_child;
+                const sql_parser::AstNode* right_node = left_node ? left_node->next_sibling : nullptr;
+                if (left_node && right_node) {
+                    // Check if one side is the shard key column and the other is a literal
+                    const sql_parser::AstNode* col_node = nullptr;
+                    const sql_parser::AstNode* lit_node = nullptr;
+                    if (is_shard_key_ref(left_node, shard_key) && is_literal(right_node)) {
+                        col_node = left_node; lit_node = right_node;
+                    } else if (is_shard_key_ref(right_node, shard_key) && is_literal(left_node)) {
+                        col_node = right_node; lit_node = left_node;
+                    }
+                    if (col_node && lit_node) {
+                        size_t idx = literal_to_shard_index(lit_node, table_name, num_shards);
+                        target_indices.push_back(idx);
+                        return;
+                    }
+                }
+            }
+            // Recurse into AND branches
+            if (op.len == 3 &&
+                (op.ptr[0] == 'A' || op.ptr[0] == 'a') &&
+                (op.ptr[1] == 'N' || op.ptr[1] == 'n') &&
+                (op.ptr[2] == 'D' || op.ptr[2] == 'd')) {
+                const sql_parser::AstNode* left_node = expr->first_child;
+                const sql_parser::AstNode* right_node = left_node ? left_node->next_sibling : nullptr;
+                // For AND, either branch matching is sufficient (both must be true,
+                // so if one constrains the shard key, we can prune).
+                std::vector<size_t> left_targets, right_targets;
+                extract_shard_targets(left_node, shard_key, table_name, num_shards, left_targets);
+                extract_shard_targets(right_node, shard_key, table_name, num_shards, right_targets);
+                // Use whichever branch found shard targets (prefer the more selective one)
+                if (!left_targets.empty() && !right_targets.empty()) {
+                    // Intersect: both constraints must hold
+                    std::vector<bool> lset(num_shards, false), rset(num_shards, false);
+                    for (auto i : left_targets) if (i < num_shards) lset[i] = true;
+                    for (auto i : right_targets) if (i < num_shards) rset[i] = true;
+                    for (size_t i = 0; i < num_shards; ++i) {
+                        if (lset[i] && rset[i]) target_indices.push_back(i);
+                    }
+                } else if (!left_targets.empty()) {
+                    target_indices.insert(target_indices.end(), left_targets.begin(), left_targets.end());
+                } else if (!right_targets.empty()) {
+                    target_indices.insert(target_indices.end(), right_targets.begin(), right_targets.end());
+                }
+                return;
+            }
+        }
+
+        // Check for shard_key IN (literal_list)
+        if (expr->type == sql_parser::NodeType::NODE_IN_LIST) {
+            const sql_parser::AstNode* col_expr = expr->first_child;
+            if (col_expr && is_shard_key_ref(col_expr, shard_key)) {
+                for (const sql_parser::AstNode* item = col_expr->next_sibling; item; item = item->next_sibling) {
+                    if (is_literal(item)) {
+                        target_indices.push_back(literal_to_shard_index(item, table_name, num_shards));
+                    } else {
+                        // Non-literal in IN list -- can't prune
+                        target_indices.clear();
+                        return;
+                    }
+                }
+            }
+        }
+    }
+
+    bool is_shard_key_ref(const sql_parser::AstNode* node, sql_parser::StringRef shard_key) const {
+        if (!node) return false;
+        if (node->type == sql_parser::NodeType::NODE_COLUMN_REF ||
+            node->type == sql_parser::NodeType::NODE_IDENTIFIER) {
+            return node->value().equals_ci(shard_key.ptr, shard_key.len);
+        }
+        if (node->type == sql_parser::NodeType::NODE_QUALIFIED_NAME) {
+            // table.column -- check the column part
+            const sql_parser::AstNode* c = node->first_child;
+            if (c && c->next_sibling) {
+                return c->next_sibling->value().equals_ci(shard_key.ptr, shard_key.len);
+            }
+        }
+        return false;
+    }
+
+    static bool is_literal(const sql_parser::AstNode* node) {
+        if (!node) return false;
+        return node->type == sql_parser::NodeType::NODE_LITERAL_INT ||
+               node->type == sql_parser::NodeType::NODE_LITERAL_FLOAT ||
+               node->type == sql_parser::NodeType::NODE_LITERAL_STRING;
+    }
+
+    size_t literal_to_shard_index(const sql_parser::AstNode* lit,
+                                    sql_parser::StringRef table_name,
+                                    size_t num_shards) const {
+        if (!lit || num_shards == 0) return 0;
+        if (lit->type == sql_parser::NodeType::NODE_LITERAL_INT) {
+            sql_parser::StringRef sv = lit->value();
+            int64_t val = 0;
+            if (sv.ptr && sv.len > 0) val = std::strtoll(sv.ptr, nullptr, 10);
+            return shards_.shard_index_for_int(table_name, val);
+        }
+        if (lit->type == sql_parser::NodeType::NODE_LITERAL_STRING) {
+            sql_parser::StringRef sv = lit->value();
+            return shards_.shard_index_for_string(table_name, sv.ptr, sv.len);
+        }
+        if (lit->type == sql_parser::NodeType::NODE_LITERAL_FLOAT) {
+            sql_parser::StringRef sv = lit->value();
+            double dv = sv.ptr ? std::strtod(sv.ptr, nullptr) : 0.0;
+            int64_t iv = static_cast<int64_t>(dv);
+            return shards_.shard_index_for_int(table_name, iv);
+        }
+        return 0;
     }
 
     // Build N RemoteScans with UNION ALL

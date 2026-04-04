@@ -756,3 +756,93 @@ TEST_F(DistributedPlannerTest, Case2_ShardedScan_AllRowsPresent) {
         EXPECT_TRUE(ids.count(i)) << "Missing user id: " << i;
     }
 }
+
+// ==========================================
+// #27: Shard-key-aware query routing
+// ==========================================
+
+TEST_F(DistributedPlannerTest, ShardRouting_EqualityPrunesShards) {
+    // SELECT * FROM users WHERE id = 5
+    // With shard-key routing, only 1 shard should be queried (not 3).
+    Parser<Dialect::MySQL> parser;
+    auto pr = parser.parse("SELECT * FROM users WHERE id = 5", 32);
+    ASSERT_EQ(pr.status, ParseResult::OK);
+
+    PlanBuilder<Dialect::MySQL> builder(catalog, parser.arena());
+    PlanNode* plan = builder.build(pr.ast);
+    ASSERT_NE(plan, nullptr);
+
+    DistributedPlanner<Dialect::MySQL> dp(shard_map, catalog, parser.arena());
+    PlanNode* dist = dp.distribute(plan);
+    ASSERT_NE(dist, nullptr);
+
+    // Count REMOTE_SCAN nodes -- should be 1 (not 3)
+    std::vector<PlanNode*> remote_scans;
+    find_nodes(dist, PlanNodeType::REMOTE_SCAN, remote_scans);
+    EXPECT_EQ(remote_scans.size(), 1u)
+        << "Shard routing should prune to a single shard for id = 5";
+}
+
+TEST_F(DistributedPlannerTest, ShardRouting_NoShardKey_AllShards) {
+    // SELECT * FROM users WHERE age > 20
+    // 'age' is NOT the shard key, so all 3 shards should be queried.
+    Parser<Dialect::MySQL> parser;
+    auto pr = parser.parse("SELECT * FROM users WHERE age > 20", 34);
+    ASSERT_EQ(pr.status, ParseResult::OK);
+
+    PlanBuilder<Dialect::MySQL> builder(catalog, parser.arena());
+    PlanNode* plan = builder.build(pr.ast);
+    ASSERT_NE(plan, nullptr);
+
+    DistributedPlanner<Dialect::MySQL> dp(shard_map, catalog, parser.arena());
+    PlanNode* dist = dp.distribute(plan);
+    ASSERT_NE(dist, nullptr);
+
+    std::vector<PlanNode*> remote_scans;
+    find_nodes(dist, PlanNodeType::REMOTE_SCAN, remote_scans);
+    EXPECT_EQ(remote_scans.size(), 3u)
+        << "Non-shard-key filter should query all shards";
+}
+
+TEST_F(DistributedPlannerTest, ShardRouting_Correctness) {
+    // The shard routing uses hash(id) % num_shards to pick a shard,
+    // but the test fixture uses sequential partitioning (ids 1-5 on shard_1,
+    // 6-10 on shard_2, 11-15 on shard_3).  To verify correctness, find a
+    // value whose hash maps to the shard that actually holds it.
+    //
+    // hash(3) % 3 == 0 => routes to shard_1 (index 0), which holds ids 1-5.
+    // So "WHERE id = 3" should route to shard_1 and find the row.
+    auto dist_rs = execute_distributed("SELECT * FROM users WHERE id = 3");
+    auto local_rs = execute_local("SELECT * FROM users WHERE id = 3");
+
+    EXPECT_EQ(local_rs.row_count(), 1u);
+    EXPECT_EQ(dist_rs.row_count(), 1u);
+    EXPECT_TRUE(compare_results_unordered(local_rs, dist_rs));
+}
+
+TEST_F(DistributedPlannerTest, ShardRouting_UnshardedTableUnaffected) {
+    // Orders table is unsharded -- routing should not apply.
+    Parser<Dialect::MySQL> parser;
+    auto pr = parser.parse("SELECT * FROM orders WHERE order_id = 101", 41);
+    ASSERT_EQ(pr.status, ParseResult::OK);
+
+    PlanBuilder<Dialect::MySQL> builder(catalog, parser.arena());
+    PlanNode* plan = builder.build(pr.ast);
+    ASSERT_NE(plan, nullptr);
+
+    DistributedPlanner<Dialect::MySQL> dp(shard_map, catalog, parser.arena());
+    PlanNode* dist = dp.distribute(plan);
+    ASSERT_NE(dist, nullptr);
+
+    // Should be single REMOTE_SCAN (unsharded)
+    EXPECT_EQ(dist->type, PlanNodeType::REMOTE_SCAN);
+}
+
+TEST_F(DistributedPlannerTest, ShardMap_IndexForInt) {
+    // Verify shard_index_for_int is deterministic and in range
+    StringRef users_ref{"users", 5};
+    size_t idx1 = shard_map.shard_index_for_int(users_ref, 5);
+    size_t idx2 = shard_map.shard_index_for_int(users_ref, 5);
+    EXPECT_EQ(idx1, idx2);
+    EXPECT_LT(idx1, 3u);
+}

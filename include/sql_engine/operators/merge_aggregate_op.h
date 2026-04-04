@@ -9,6 +9,8 @@
 #include <unordered_map>
 #include <string>
 #include <cstring>
+#include <future>
+#include <mutex>
 
 namespace sql_engine {
 
@@ -29,11 +31,13 @@ public:
                            uint16_t group_key_count,
                            const uint8_t* merge_ops,
                            uint16_t merge_op_count,
-                           sql_parser::Arena& arena)
+                           sql_parser::Arena& arena,
+                           bool parallel_open = false)
         : children_(std::move(children)),
           group_key_count_(group_key_count),
           merge_op_count_(merge_op_count),
-          arena_(arena)
+          arena_(arena),
+          parallel_open_(parallel_open)
     {
         merge_ops_.assign(merge_ops, merge_ops + merge_op_count);
     }
@@ -43,34 +47,49 @@ public:
         group_order_.clear();
         result_idx_ = 0;
 
-        // Open and consume all children
+        if (parallel_open_ && children_.size() > 1) {
+            // Parallel execution (#26): open all children concurrently and
+            // materialize their rows. Each child is typically a RemoteScan
+            // that performs a network call in open(); launching concurrently
+            // reduces wall-clock time from O(N*latency) to O(latency).
+            // Each future fully opens+consumes its child so the remote
+            // executor call is contained within one thread.
+            //
+            // NOTE: requires a thread-safe RemoteExecutor implementation
+            // (production executors with independent per-backend connections
+            // are safe; the unit-test mock may not be).
+            std::vector<std::vector<Row>> child_rows(children_.size());
+            {
+                std::vector<std::future<void>> futures;
+                futures.reserve(children_.size());
+                for (size_t ci = 0; ci < children_.size(); ++ci) {
+                    futures.push_back(std::async(std::launch::async,
+                        [this, ci, &child_rows]{
+                            children_[ci]->open();
+                            Row row{};
+                            while (children_[ci]->next(row)) {
+                                child_rows[ci].push_back(row);
+                            }
+                            children_[ci]->close();
+                        }));
+                }
+                for (auto& f : futures) f.get();
+            }
+            // Merge all materialized rows
+            for (auto& rows : child_rows) {
+                for (auto& row : rows) {
+                    merge_into_groups(row);
+                }
+            }
+            return;
+        }
+
+        // Sequential path: open and consume each child one at a time
         for (auto* child : children_) {
             child->open();
             Row row{};
             while (child->next(row)) {
-                std::string key = compute_group_key(row);
-
-                auto it = groups_.find(key);
-                if (it == groups_.end()) {
-                    GroupState state;
-                    // Copy group key values
-                    for (uint16_t i = 0; i < group_key_count_; ++i) {
-                        state.group_values.push_back(row.get(i));
-                    }
-                    // Initialize aggregate accumulators
-                    state.agg_values.reserve(merge_op_count_);
-                    for (uint16_t i = 0; i < merge_op_count_; ++i) {
-                        state.agg_values.push_back(value_null());
-                        state.agg_counts[i] = 0;
-                        state.agg_has_value[i] = false;
-                    }
-                    groups_[key] = std::move(state);
-                    group_order_.push_back(key);
-                    it = groups_.find(key);
-                }
-
-                // Merge partial aggregates
-                merge_row(it->second, row);
+                merge_into_groups(row);
             }
             child->close();
         }
@@ -133,6 +152,7 @@ private:
     std::vector<Operator*> children_;
     uint16_t group_key_count_;
     std::vector<uint8_t> merge_ops_;
+    bool parallel_open_;
     uint16_t merge_op_count_;
     sql_parser::Arena& arena_;
 
@@ -146,6 +166,27 @@ private:
     std::unordered_map<std::string, GroupState> groups_;
     std::vector<std::string> group_order_;
     size_t result_idx_ = 0;
+
+    void merge_into_groups(const Row& row) {
+        std::string key = compute_group_key(row);
+        auto it = groups_.find(key);
+        if (it == groups_.end()) {
+            GroupState state;
+            for (uint16_t i = 0; i < group_key_count_; ++i) {
+                state.group_values.push_back(row.get(i));
+            }
+            state.agg_values.reserve(merge_op_count_);
+            for (uint16_t i = 0; i < merge_op_count_; ++i) {
+                state.agg_values.push_back(value_null());
+                state.agg_counts[i] = 0;
+                state.agg_has_value[i] = false;
+            }
+            groups_[key] = std::move(state);
+            group_order_.push_back(key);
+            it = groups_.find(key);
+        }
+        merge_row(it->second, row);
+    }
 
     std::string compute_group_key(const Row& row) {
         std::string key;

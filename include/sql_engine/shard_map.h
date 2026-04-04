@@ -6,6 +6,7 @@
 #include <vector>
 #include <unordered_map>
 #include <algorithm>
+#include <functional>
 
 namespace sql_engine {
 
@@ -54,6 +55,29 @@ public:
     bool has_table(sql_parser::StringRef table_name) const {
         std::string key = to_lower(std::string(table_name.ptr, table_name.len));
         return tables_.find(key) != tables_.end();
+    }
+
+    // Determine which shard index a value maps to (hash-based sharding).
+    // Returns the shard index in [0, num_shards).
+    size_t shard_index_for_int(sql_parser::StringRef table_name, int64_t value) const {
+        std::string key = to_lower(std::string(table_name.ptr, table_name.len));
+        auto it = tables_.find(key);
+        if (it == tables_.end() || it->second.shards.empty()) return 0;
+        size_t num_shards = it->second.shards.size();
+        // Use std::hash for consistent hash-based routing
+        size_t h = std::hash<int64_t>{}(value);
+        return h % num_shards;
+    }
+
+    // Determine shard index for a string value (hash-based sharding).
+    size_t shard_index_for_string(sql_parser::StringRef table_name,
+                                   const char* val, uint32_t val_len) const {
+        std::string key = to_lower(std::string(table_name.ptr, table_name.len));
+        auto it = tables_.find(key);
+        if (it == tables_.end() || it->second.shards.empty()) return 0;
+        size_t num_shards = it->second.shards.size();
+        size_t h = std::hash<std::string>{}(std::string(val, val_len));
+        return h % num_shards;
     }
 
     // Get the single backend for an unsharded table

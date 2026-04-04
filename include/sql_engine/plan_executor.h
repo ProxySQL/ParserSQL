@@ -40,6 +40,7 @@
 #include "sql_engine/operators/set_op_op.h"
 #include "sql_engine/operators/derived_scan_op.h"
 #include "sql_engine/operators/remote_scan_op.h"
+#include "sql_engine/operators/hash_join_op.h"
 #include "sql_engine/subquery_executor.h"
 #include "sql_engine/operators/merge_aggregate_op.h"
 #include "sql_engine/operators/merge_sort_op.h"
@@ -659,6 +660,26 @@ private:
         uint16_t left_cols = count_columns(node->left);
         uint16_t right_cols = count_columns(node->right);
 
+        // Try hash join for INNER or LEFT equi-joins (#28).
+        // An equi-join condition has the form: col_a = col_b
+        if ((node->join.join_type == JOIN_INNER || node->join.join_type == JOIN_LEFT) &&
+            node->join.condition) {
+            uint16_t left_key = 0, right_key = 0;
+            if (try_extract_equi_join_keys(node->join.condition,
+                                            left_tables, right_tables,
+                                            left_cols,
+                                            left_key, right_key)) {
+                auto op = std::make_unique<HashJoinOperator<D>>(
+                    left, right, node->join.join_type,
+                    left_key, right_key,
+                    left_cols, right_cols, arena_);
+                Operator* ptr = op.get();
+                operators_.push_back(std::move(op));
+                return ptr;
+            }
+        }
+
+        // Fallback: nested-loop join (CROSS, non-equi, FULL, RIGHT, etc.)
         auto op = std::make_unique<NestedLoopJoinOperator<D>>(
             left, right, node->join.join_type, node->join.condition,
             left_cols, right_cols,
@@ -666,6 +687,85 @@ private:
         Operator* ptr = op.get();
         operators_.push_back(std::move(op));
         return ptr;
+    }
+
+    // Try to extract column ordinals for an equi-join condition (col_a = col_b).
+    // Returns true if the condition is a simple equality between a left-side
+    // column and a right-side column.
+    bool try_extract_equi_join_keys(
+            const sql_parser::AstNode* condition,
+            const std::vector<const TableInfo*>& left_tables,
+            const std::vector<const TableInfo*>& right_tables,
+            uint16_t /* left_cols */,
+            uint16_t& left_key_out, uint16_t& right_key_out) {
+        if (!condition) return false;
+        if (condition->type != sql_parser::NodeType::NODE_BINARY_OP) return false;
+        sql_parser::StringRef op = condition->value();
+        if (!(op.len == 1 && op.ptr[0] == '=')) return false;
+
+        const sql_parser::AstNode* lhs = condition->first_child;
+        const sql_parser::AstNode* rhs = lhs ? lhs->next_sibling : nullptr;
+        if (!lhs || !rhs) return false;
+
+        // Both sides must be column references
+        if (!is_column_ref(lhs) || !is_column_ref(rhs)) return false;
+
+        sql_parser::StringRef lhs_name = extract_column_name(lhs);
+        sql_parser::StringRef rhs_name = extract_column_name(rhs);
+        if (!lhs_name.ptr || !rhs_name.ptr) return false;
+
+        // Try lhs=left_col, rhs=right_col
+        int left_ord = resolve_column_in_tables(lhs_name, left_tables);
+        int right_ord = resolve_column_in_tables(rhs_name, right_tables);
+        if (left_ord >= 0 && right_ord >= 0) {
+            left_key_out = static_cast<uint16_t>(left_ord);
+            right_key_out = static_cast<uint16_t>(right_ord);
+            return true;
+        }
+
+        // Try swapped: lhs=right_col, rhs=left_col
+        left_ord = resolve_column_in_tables(rhs_name, left_tables);
+        right_ord = resolve_column_in_tables(lhs_name, right_tables);
+        if (left_ord >= 0 && right_ord >= 0) {
+            left_key_out = static_cast<uint16_t>(left_ord);
+            right_key_out = static_cast<uint16_t>(right_ord);
+            return true;
+        }
+
+        return false;
+    }
+
+    static bool is_column_ref(const sql_parser::AstNode* node) {
+        return node &&
+               (node->type == sql_parser::NodeType::NODE_COLUMN_REF ||
+                node->type == sql_parser::NodeType::NODE_IDENTIFIER ||
+                node->type == sql_parser::NodeType::NODE_QUALIFIED_NAME);
+    }
+
+    static sql_parser::StringRef extract_column_name(const sql_parser::AstNode* node) {
+        if (!node) return {nullptr, 0};
+        if (node->type == sql_parser::NodeType::NODE_COLUMN_REF ||
+            node->type == sql_parser::NodeType::NODE_IDENTIFIER) {
+            return node->value();
+        }
+        if (node->type == sql_parser::NodeType::NODE_QUALIFIED_NAME) {
+            const sql_parser::AstNode* c = node->first_child;
+            if (c && c->next_sibling) return c->next_sibling->value();
+            if (c) return c->value();
+        }
+        return {nullptr, 0};
+    }
+
+    int resolve_column_in_tables(sql_parser::StringRef col_name,
+                                  const std::vector<const TableInfo*>& tables) {
+        uint16_t offset = 0;
+        for (const auto* table : tables) {
+            if (!table) continue;
+            const ColumnInfo* col = catalog_.get_column(table, col_name);
+            if (col) return static_cast<int>(offset + col->ordinal);
+            offset += table->column_count;
+        }
+        return -1;
     }
 
     Operator* build_aggregate(PlanNode* node) {

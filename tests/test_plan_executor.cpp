@@ -186,3 +186,105 @@ TEST_F(PlanExecutorTest, DerivedTableWithGroupByAggregate) {
     }
     EXPECT_EQ(total, 5); // 3 Engineering + 2 Sales
 }
+
+// ==========================================
+// #28: Hash join operator tests
+// ==========================================
+
+class HashJoinTest : public ::testing::Test {
+protected:
+    Arena data_arena{65536, 1048576};
+    InMemoryCatalog catalog;
+    FunctionRegistry<Dialect::MySQL> functions;
+    Parser<Dialect::MySQL> parser;
+
+    const TableInfo* users_table = nullptr;
+    InMemoryDataSource* users_source = nullptr;
+    const TableInfo* orders_table = nullptr;
+    InMemoryDataSource* orders_source = nullptr;
+
+    void SetUp() override {
+        functions.register_builtins();
+
+        catalog.add_table("", "users", {
+            {"id",   SqlType::make_int(),        false},
+            {"name", SqlType::make_varchar(255), true},
+        });
+        users_table = catalog.get_table(StringRef{"users", 5});
+
+        catalog.add_table("", "orders", {
+            {"order_id",  SqlType::make_int(),  false},
+            {"user_id",   SqlType::make_int(),  true},
+            {"amount",    SqlType::make_int(),  true},
+        });
+        orders_table = catalog.get_table(StringRef{"orders", 6});
+
+        std::vector<Row> users = {
+            build_row(data_arena, {value_int(1), value_string(arena_str(data_arena, "Alice"))}),
+            build_row(data_arena, {value_int(2), value_string(arena_str(data_arena, "Bob"))}),
+            build_row(data_arena, {value_int(3), value_string(arena_str(data_arena, "Carol"))}),
+        };
+        users_source = new InMemoryDataSource(users_table, std::move(users));
+
+        std::vector<Row> orders = {
+            build_row(data_arena, {value_int(101), value_int(1), value_int(500)}),
+            build_row(data_arena, {value_int(102), value_int(1), value_int(300)}),
+            build_row(data_arena, {value_int(103), value_int(2), value_int(750)}),
+            build_row(data_arena, {value_int(104), value_int(99), value_int(100)}),
+        };
+        orders_source = new InMemoryDataSource(orders_table, std::move(orders));
+    }
+
+    void TearDown() override {
+        delete users_source;
+        delete orders_source;
+    }
+
+    ResultSet run_query(const char* sql) {
+        parser.reset();
+        auto r = parser.parse(sql, std::strlen(sql));
+        if (r.status != ParseResult::OK || !r.ast) return {};
+
+        PlanBuilder<Dialect::MySQL> builder(catalog, parser.arena());
+        PlanNode* plan = builder.build(r.ast);
+        if (!plan) return {};
+
+        PlanExecutor<Dialect::MySQL> executor(functions, catalog, parser.arena());
+        executor.add_data_source("users", users_source);
+        executor.add_data_source("orders", orders_source);
+        return executor.execute(plan);
+    }
+};
+
+TEST_F(HashJoinTest, InnerEquiJoin_BasicResults) {
+    // Hash join should produce the same results as nested-loop for equi-join
+    auto rs = run_query("SELECT users.id, users.name, orders.amount FROM users JOIN orders ON users.id = orders.user_id");
+    // Alice has 2 orders, Bob has 1 order. Carol has none. user_id=99 has no user.
+    EXPECT_EQ(rs.row_count(), 3u);
+    int64_t total_amount = 0;
+    for (const auto& row : rs.rows) {
+        total_amount += row.get(2).int_val;
+    }
+    EXPECT_EQ(total_amount, 500 + 300 + 750);
+}
+
+TEST_F(HashJoinTest, InnerEquiJoin_MultipleMatches) {
+    // Alice (id=1) has 2 orders -- verify both appear
+    auto rs = run_query("SELECT users.name, orders.order_id FROM users JOIN orders ON users.id = orders.user_id WHERE users.id = 1");
+    EXPECT_EQ(rs.row_count(), 2u);
+}
+
+TEST_F(HashJoinTest, LeftEquiJoin_IncludesUnmatched) {
+    // LEFT JOIN: Carol (id=3) has no orders -- should appear with NULLs
+    auto rs = run_query("SELECT users.id, users.name, orders.amount FROM users LEFT JOIN orders ON users.id = orders.user_id");
+    EXPECT_EQ(rs.row_count(), 4u); // Alice(2) + Bob(1) + Carol(1 with NULLs)
+    // Find Carol's row
+    bool found_carol = false;
+    for (const auto& row : rs.rows) {
+        if (row.get(0).int_val == 3) {
+            found_carol = true;
+            EXPECT_TRUE(row.get(2).is_null()) << "Carol's amount should be NULL";
+        }
+    }
+    EXPECT_TRUE(found_carol) << "Carol should appear in LEFT JOIN results";
+}
