@@ -18,6 +18,9 @@ enum class PlanNodeType : uint8_t {
     LIMIT,      // LIMIT + OFFSET
     DISTINCT,   // remove duplicates
     SET_OP,     // UNION / INTERSECT / EXCEPT
+    REMOTE_SCAN,      // fetch from remote backend via SQL
+    MERGE_AGGREGATE,  // merge partial aggregates from N sources
+    MERGE_SORT,       // merge N pre-sorted streams
 };
 
 // Join type constants
@@ -79,6 +82,32 @@ struct PlanNode {
             uint8_t op;                 // 0=UNION, 1=INTERSECT, 2=EXCEPT
             bool all;                   // UNION ALL vs UNION
         } set_op;
+
+        struct {
+            const char* backend_name;
+            const char* remote_sql;
+            uint16_t remote_sql_len;
+            const TableInfo* table;       // expected result schema
+        } remote_scan;
+
+        // Merge operations for distributed aggregation
+        // merge_op values: 0=SUM_OF_COUNTS, 1=SUM_OF_SUMS, 2=MIN_OF_MINS,
+        //                  3=MAX_OF_MAXES, 4=AVG_FROM_SUM_COUNT
+        struct {
+            PlanNode** children;
+            uint16_t child_count;
+            uint8_t* merge_ops;       // parallel to agg columns
+            uint16_t merge_op_count;
+            uint16_t group_key_count; // number of leading group-by columns
+        } merge_aggregate;
+
+        struct {
+            const sql_parser::AstNode** keys;
+            uint8_t* directions;        // 0=ASC, 1=DESC
+            uint16_t key_count;
+            PlanNode** children;
+            uint16_t child_count;
+        } merge_sort;
     };
 };
 

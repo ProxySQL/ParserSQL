@@ -37,6 +37,10 @@
 #include "sql_engine/operators/limit_op.h"
 #include "sql_engine/operators/distinct_op.h"
 #include "sql_engine/operators/set_op_op.h"
+#include "sql_engine/operators/remote_scan_op.h"
+#include "sql_engine/operators/merge_aggregate_op.h"
+#include "sql_engine/operators/merge_sort_op.h"
+#include "sql_engine/remote_executor.h"
 
 #include <unordered_map>
 #include <string>
@@ -55,6 +59,10 @@ public:
 
     void add_data_source(const char* table_name, DataSource* source) {
         sources_[table_name] = source;
+    }
+
+    void set_remote_executor(RemoteExecutor* exec) {
+        remote_executor_ = exec;
     }
 
     ResultSet execute(PlanNode* plan) {
@@ -92,6 +100,7 @@ private:
     sql_parser::Arena& arena_;
     std::unordered_map<std::string, DataSource*> sources_;
     std::vector<std::unique_ptr<Operator>> operators_;
+    RemoteExecutor* remote_executor_ = nullptr;
 
     // Pre-process: for PROJECT -> AGGREGATE (or PROJECT -> FILTER -> AGGREGATE),
     // extract aggregate function expressions from the PROJECT select list
@@ -185,6 +194,20 @@ private:
             if (node->scan.table) tables.push_back(node->scan.table);
             return;
         }
+        if (node->type == PlanNodeType::REMOTE_SCAN) {
+            if (node->remote_scan.table) tables.push_back(node->remote_scan.table);
+            return;
+        }
+        if (node->type == PlanNodeType::MERGE_AGGREGATE) {
+            for (uint16_t i = 0; i < node->merge_aggregate.child_count; ++i)
+                collect_tables(node->merge_aggregate.children[i], tables);
+            return;
+        }
+        if (node->type == PlanNodeType::MERGE_SORT) {
+            for (uint16_t i = 0; i < node->merge_sort.child_count; ++i)
+                collect_tables(node->merge_sort.children[i], tables);
+            return;
+        }
         collect_tables(node->left, tables);
         collect_tables(node->right, tables);
     }
@@ -208,6 +231,14 @@ private:
             case PlanNodeType::DISTINCT:
                 return count_columns(node->left);
             case PlanNodeType::SET_OP:
+                return count_columns(node->left);
+            case PlanNodeType::REMOTE_SCAN:
+                if (node->remote_scan.table) return node->remote_scan.table->column_count;
+                return 0;
+            case PlanNodeType::MERGE_AGGREGATE:
+                // group keys + output agg columns
+                return count_columns(node->left);
+            case PlanNodeType::MERGE_SORT:
                 return count_columns(node->left);
         }
         return 0;
@@ -235,6 +266,12 @@ private:
                 return build_distinct(node);
             case PlanNodeType::SET_OP:
                 return build_set_op(node);
+            case PlanNodeType::REMOTE_SCAN:
+                return build_remote_scan(node);
+            case PlanNodeType::MERGE_AGGREGATE:
+                return build_merge_aggregate(node);
+            case PlanNodeType::MERGE_SORT:
+                return build_merge_sort(node);
         }
         return nullptr;
     }
@@ -376,6 +413,91 @@ private:
         return ptr;
     }
 
+    Operator* build_remote_scan(PlanNode* node) {
+        if (!remote_executor_) return nullptr;
+        sql_parser::StringRef sql{node->remote_scan.remote_sql,
+                                   node->remote_scan.remote_sql_len};
+        auto op = std::make_unique<RemoteScanOperator>(
+            remote_executor_, node->remote_scan.backend_name, sql);
+        Operator* ptr = op.get();
+        operators_.push_back(std::move(op));
+        return ptr;
+    }
+
+    Operator* build_merge_aggregate(PlanNode* node) {
+        std::vector<Operator*> children;
+        for (uint16_t i = 0; i < node->merge_aggregate.child_count; ++i) {
+            Operator* child = build_operator(node->merge_aggregate.children[i]);
+            if (child) children.push_back(child);
+        }
+        if (children.empty()) return nullptr;
+
+        auto op = std::make_unique<MergeAggregateOperator>(
+            std::move(children),
+            node->merge_aggregate.group_key_count,
+            node->merge_aggregate.merge_ops,
+            node->merge_aggregate.merge_op_count,
+            arena_);
+        Operator* ptr = op.get();
+        operators_.push_back(std::move(op));
+        return ptr;
+    }
+
+    Operator* build_merge_sort(PlanNode* node) {
+        std::vector<Operator*> children;
+        for (uint16_t i = 0; i < node->merge_sort.child_count; ++i) {
+            Operator* child = build_operator(node->merge_sort.children[i]);
+            if (child) children.push_back(child);
+        }
+        if (children.empty()) return nullptr;
+
+        // We need column indices for sort keys. The sort keys are AST nodes
+        // (column references). We need to map them to column ordinals.
+        // For distributed plans, sort keys reference columns by name in the
+        // result schema. We use the table info from the first child to resolve.
+        const TableInfo* table = nullptr;
+        if (node->merge_sort.children[0]->type == PlanNodeType::REMOTE_SCAN) {
+            table = node->merge_sort.children[0]->remote_scan.table;
+        }
+
+        std::vector<uint16_t> sort_col_indices;
+        std::vector<uint8_t> sort_dirs;
+        for (uint16_t i = 0; i < node->merge_sort.key_count; ++i) {
+            const sql_parser::AstNode* key = node->merge_sort.keys[i];
+            uint16_t col_idx = resolve_column_index(key, table);
+            sort_col_indices.push_back(col_idx);
+            sort_dirs.push_back(node->merge_sort.directions[i]);
+        }
+
+        auto op = std::make_unique<MergeSortOperator>(
+            std::move(children),
+            sort_col_indices.data(),
+            sort_dirs.data(),
+            node->merge_sort.key_count);
+        Operator* ptr = op.get();
+        operators_.push_back(std::move(op));
+        return ptr;
+    }
+
+    uint16_t resolve_column_index(const sql_parser::AstNode* key, const TableInfo* table) {
+        if (!key || !table) return 0;
+        sql_parser::StringRef col_name;
+        if (key->type == sql_parser::NodeType::NODE_COLUMN_REF ||
+            key->type == sql_parser::NodeType::NODE_IDENTIFIER) {
+            col_name = key->value();
+        } else if (key->type == sql_parser::NodeType::NODE_QUALIFIED_NAME) {
+            // table.column -- get the column part
+            const sql_parser::AstNode* c = key->first_child;
+            if (c && c->next_sibling) col_name = c->next_sibling->value();
+            else if (c) col_name = c->value();
+        }
+        if (col_name.ptr) {
+            const ColumnInfo* col = catalog_.get_column(table, col_name);
+            if (col) return col->ordinal;
+        }
+        return 0;
+    }
+
     void build_column_names(PlanNode* plan, ResultSet& rs) {
         if (!plan) return;
 
@@ -402,6 +524,15 @@ private:
                 if (plan->scan.table) {
                     for (uint16_t i = 0; i < plan->scan.table->column_count; ++i) {
                         auto& cn = plan->scan.table->columns[i].name;
+                        rs.column_names.emplace_back(cn.ptr, cn.len);
+                    }
+                }
+                break;
+            }
+            case PlanNodeType::REMOTE_SCAN: {
+                if (plan->remote_scan.table) {
+                    for (uint16_t i = 0; i < plan->remote_scan.table->column_count; ++i) {
+                        auto& cn = plan->remote_scan.table->columns[i].name;
                         rs.column_names.emplace_back(cn.ptr, cn.len);
                     }
                 }
