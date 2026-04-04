@@ -308,3 +308,65 @@ TEST_F(SubqueryTest, RegressionOrderByLimit) {
     EXPECT_EQ(rs.row_count(), 2u);
     EXPECT_EQ(rs.rows[0].get(2).int_val, 17); // youngest
 }
+
+// ==================================================================
+// Correlated subquery tests
+// ==================================================================
+
+// Simple correlated EXISTS subquery:
+// SELECT name FROM users WHERE EXISTS (SELECT 1 FROM orders WHERE orders.user_id = users.id)
+// Users with orders: Alice (id=1), Bob (id=2), Dave (id=4)
+TEST_F(SubqueryTest, CorrelatedSubqueryExists) {
+    auto rs = run_query(
+        "SELECT name FROM users WHERE EXISTS "
+        "(SELECT 1 FROM orders WHERE orders.user_id = users.id)");
+    ASSERT_EQ(rs.row_count(), 3u);
+    std::set<std::string> names;
+    for (const auto& row : rs.rows) {
+        names.insert(std::string(row.get(0).str_val.ptr, row.get(0).str_val.len));
+    }
+    EXPECT_TRUE(names.count("Alice"));
+    EXPECT_TRUE(names.count("Bob"));
+    EXPECT_TRUE(names.count("Dave"));
+}
+
+// Simple correlated scalar subquery (no aggregate):
+// SELECT name FROM users WHERE age > (SELECT age FROM users u2 WHERE u2.id = 1 LIMIT 1)
+// This should compare each user's age against Alice's age (25)
+// Users with age > 25: Bob(30), Eve(35)
+TEST_F(SubqueryTest, CorrelatedSubquerySimpleScalar) {
+    auto rs = run_query(
+        "SELECT name FROM users WHERE age > "
+        "(SELECT age FROM users WHERE id = 1 LIMIT 1)");
+    // Alice's age = 25
+    // Bob (30) > 25? Yes. Carol (17) > 25? No. Dave (22) > 25? No. Eve (35) > 25? Yes.
+    ASSERT_EQ(rs.row_count(), 2u);
+    std::set<std::string> names;
+    for (const auto& row : rs.rows) {
+        names.insert(std::string(row.get(0).str_val.ptr, row.get(0).str_val.len));
+    }
+    EXPECT_TRUE(names.count("Bob"));
+    EXPECT_TRUE(names.count("Eve"));
+}
+
+// Correlated scalar subquery with AVG:
+// SELECT * FROM users u WHERE age > (SELECT AVG(age) FROM users WHERE dept = u.dept)
+// Engineering ages: 25, 17, 35 -> avg = 25.666...
+// Sales ages: 30, 22 -> avg = 26
+// Alice (25, Eng) > 25.666? No. Bob (30, Sales) > 26? Yes.
+// Carol (17, Eng) > 25.666? No. Dave (22, Sales) > 26? No.
+// Eve (35, Eng) > 25.666? Yes.
+// Result: Bob (30), Eve (35)
+TEST_F(SubqueryTest, CorrelatedSubqueryAvg) {
+    auto rs = run_query(
+        "SELECT name FROM users u WHERE age > "
+        "(SELECT AVG(age) FROM users WHERE dept = u.dept)");
+    // We expect Bob and Eve
+    ASSERT_EQ(rs.row_count(), 2u);
+    std::set<std::string> names;
+    for (const auto& row : rs.rows) {
+        names.insert(std::string(row.get(0).str_val.ptr, row.get(0).str_val.len));
+    }
+    EXPECT_TRUE(names.count("Bob"));
+    EXPECT_TRUE(names.count("Eve"));
+}

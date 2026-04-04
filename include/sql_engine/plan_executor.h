@@ -141,23 +141,66 @@ private:
     std::vector<std::unique_ptr<Operator>> operators_;
     RemoteExecutor* remote_executor_ = nullptr;
     SubqueryExecutor<D> subquery_exec_;
+    sql_parser::Arena subquery_plan_arena_{65536, 1048576};
+    std::function<Value(sql_parser::StringRef)> outer_resolver_;
 
     void setup_subquery_executor() {
         // Build plan callback: uses PlanBuilder with our catalog and arena
         subquery_exec_.set_build_plan([this](const sql_parser::AstNode* ast) -> PlanNode* {
-            // We need a PlanBuilder -- include it here; PlanBuilder is already included
             PlanBuilder<D> builder(catalog_, arena_);
             return builder.build(ast);
         });
         // Execute plan callback: create a fresh executor for the subquery
         // to avoid interfering with the outer operator tree.
+        // Uses IndependentCursorDataSource wrappers to avoid resetting
+        // the outer query's scan cursors when both scan the same table.
         subquery_exec_.set_execute_plan([this](PlanNode* plan) -> ResultSet {
-            PlanExecutor<D> inner_exec(functions_, catalog_, arena_);
+            PlanExecutor<D> inner_exec(functions_, catalog_, subquery_plan_arena_);
+            // Create independent cursor wrappers for each data source
+            std::vector<std::unique_ptr<IndependentCursorDataSource>> wrappers;
             for (auto& kv : sources_) {
-                inner_exec.add_data_source(kv.first.c_str(), kv.second);
+                auto* in_mem = dynamic_cast<InMemoryDataSource*>(kv.second);
+                if (in_mem) {
+                    auto wrapper = std::make_unique<IndependentCursorDataSource>(in_mem);
+                    inner_exec.add_data_source(kv.first.c_str(), wrapper.get());
+                    wrappers.push_back(std::move(wrapper));
+                } else {
+                    inner_exec.add_data_source(kv.first.c_str(), kv.second);
+                }
             }
             return inner_exec.execute(plan);
         });
+        // Correlated execution: pass outer resolver as fallback.
+        // The inner executor's operators will try inner columns first,
+        // then fall back to the outer resolver for unresolved names.
+        // Note: we use the outer executor's arena for the inner plan build,
+        // but create a separate arena for inner execution to avoid corruption.
+        subquery_exec_.set_execute_plan_correlated(
+            [this](PlanNode* plan,
+                   const std::function<Value(sql_parser::StringRef)>& outer_resolve) -> ResultSet {
+                PlanExecutor<D> inner_exec(functions_, catalog_, subquery_plan_arena_);
+                // Create independent cursor wrappers for each data source
+                std::vector<std::unique_ptr<IndependentCursorDataSource>> wrappers;
+                for (auto& kv : sources_) {
+                    auto* in_mem = dynamic_cast<InMemoryDataSource*>(kv.second);
+                    if (in_mem) {
+                        auto wrapper = std::make_unique<IndependentCursorDataSource>(in_mem);
+                        inner_exec.add_data_source(kv.first.c_str(), wrapper.get());
+                        wrappers.push_back(std::move(wrapper));
+                    } else {
+                        inner_exec.add_data_source(kv.first.c_str(), kv.second);
+                    }
+                }
+                inner_exec.set_outer_resolver(outer_resolve);
+                return inner_exec.execute(plan);
+            });
+    }
+
+    // Set an outer resolver for correlated subquery support.
+    // When set, filter and project operators will fall back to this
+    // resolver for column names not found in inner tables.
+    void set_outer_resolver(const std::function<Value(sql_parser::StringRef)>& resolver) {
+        outer_resolver_ = resolver;
     }
 
     // Look up mutable data source by table name (case-insensitive)
@@ -567,7 +610,8 @@ private:
         collect_tables(node->left, tables);
 
         auto op = std::make_unique<FilterOperator<D>>(
-            child, node->filter.expr, catalog_, tables, functions_, arena_, &subquery_exec_);
+            child, node->filter.expr, catalog_, tables, functions_, arena_,
+            &subquery_exec_, outer_resolver_);
         Operator* ptr = op.get();
         operators_.push_back(std::move(op));
         return ptr;
@@ -585,7 +629,8 @@ private:
 
         auto op = std::make_unique<ProjectOperator<D>>(
             child, node->project.exprs, node->project.count,
-            catalog_, tables, functions_, arena_, &subquery_exec_);
+            catalog_, tables, functions_, arena_, &subquery_exec_,
+            outer_resolver_);
         Operator* ptr = op.get();
         operators_.push_back(std::move(op));
         return ptr;

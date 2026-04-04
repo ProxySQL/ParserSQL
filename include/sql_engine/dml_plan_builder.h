@@ -85,8 +85,17 @@ public:
         // INSERT ... SELECT (check for SELECT_STMT child)
         const sql_parser::AstNode* select = find_child(insert_ast, sql_parser::NodeType::NODE_SELECT_STMT);
         if (select) {
-            // Build a SELECT plan as sub-source (deferred -- store AST for now)
-            node->insert_plan.select_source = nullptr; // TODO: build SELECT sub-plan
+            // Store the SELECT AST in a sentinel plan node so the distributed
+            // planner can extract and distribute it later.
+            PlanNode* select_node = make_plan_node(arena_, PlanNodeType::SCAN);
+            // Repurpose the scan.table pointer to store the AST -- the distributed
+            // planner will detect this via the select_source being non-null.
+            // Store the AST pointer in remote_scan fields for retrieval.
+            select_node = make_plan_node(arena_, PlanNodeType::DERIVED_SCAN);
+            select_node->derived_scan.inner_plan = nullptr;
+            select_node->derived_scan.alias = reinterpret_cast<const char*>(select);
+            select_node->derived_scan.alias_len = 0xFFFF; // sentinel
+            node->insert_plan.select_source = select_node;
         } else {
             node->insert_plan.select_source = nullptr;
         }

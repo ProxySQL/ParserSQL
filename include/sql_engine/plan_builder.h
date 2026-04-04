@@ -147,6 +147,7 @@ private:
         const sql_parser::AstNode* where = find_child(select_ast, sql_parser::NodeType::NODE_WHERE_CLAUSE);
         if (where && where->first_child) {
             PlanNode* filter = make_plan_node(arena_, PlanNodeType::FILTER);
+            if (!filter) return nullptr;
             filter->filter.expr = where->first_child;
             filter->left = current;
             current = filter;
@@ -363,6 +364,7 @@ private:
                 return build_derived_scan(table_ref);
             }
             PlanNode* scan = make_plan_node(arena_, PlanNodeType::SCAN);
+            if (!scan) return nullptr;
             scan->scan.table = nullptr;
             if (name_node->type == sql_parser::NodeType::NODE_IDENTIFIER) {
                 scan->scan.table = catalog_.get_table(name_node->value());
@@ -373,6 +375,19 @@ private:
                     scan->scan.table = catalog_.get_table(schema->value(), table->value());
                 }
             }
+
+            // Extract table alias (e.g., FROM users u -> alias "u")
+            if (scan->scan.table) {
+                for (const sql_parser::AstNode* c = table_ref->first_child; c; c = c->next_sibling) {
+                    if (c->type == sql_parser::NodeType::NODE_ALIAS) {
+                        // Store alias on the TableInfo (mutable cast -- safe since we own it
+                        // via the catalog which allocated it in its arena)
+                        const_cast<TableInfo*>(scan->scan.table)->alias = c->value();
+                        break;
+                    }
+                }
+            }
+
             return scan;
         }
 

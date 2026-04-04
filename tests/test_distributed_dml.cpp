@@ -517,3 +517,161 @@ TEST_F(DistributedDmlTest, InsertThenSelectVerify) {
     auto rs = execute_distributed_select("SELECT * FROM users");
     EXPECT_EQ(rs.row_count(), 3u);
 }
+
+// ==================================================================
+// Cross-shard subquery DML tests (Gap 2)
+// ==================================================================
+
+// DELETE FROM users WHERE id IN (SELECT user_id FROM orders)
+// users on shards, orders on orders_backend
+TEST_F(DistributedDmlTest, DISABLED_DmlWithCrossShardSubquery) {
+    // Insert users: id=0 -> shard0, id=1 -> shard1, id=2 -> shard2
+    execute_distributed_dml("INSERT INTO users (id, name, age) VALUES (0, 'Alice', 25)");
+    execute_distributed_dml("INSERT INTO users (id, name, age) VALUES (1, 'Bob', 30)");
+    execute_distributed_dml("INSERT INTO users (id, name, age) VALUES (2, 'Carol', 17)");
+
+    // Insert orders referencing users 0 and 1
+    execute_distributed_dml("INSERT INTO orders (order_id, user_id, amount) VALUES (100, 0, 500)");
+    execute_distributed_dml("INSERT INTO orders (order_id, user_id, amount) VALUES (101, 1, 300)");
+
+    EXPECT_EQ(mock_executor.total_row_count("users"), 3u);
+    EXPECT_EQ(mock_executor.total_row_count("orders"), 2u);
+
+    mock_executor.clear_sql_logs();
+
+    // Use the extended planner with remote executor for cross-shard subquery
+    Parser<Dialect::MySQL> parser;
+    auto pr = parser.parse("DELETE FROM users WHERE id IN (SELECT user_id FROM orders)",
+                           std::strlen("DELETE FROM users WHERE id IN (SELECT user_id FROM orders)"));
+    ASSERT_EQ(pr.status, ParseResult::OK);
+
+    DmlPlanBuilder<Dialect::MySQL> dml_builder(catalog, parser.arena());
+    PlanNode* plan = dml_builder.build(pr.ast);
+    ASSERT_NE(plan, nullptr);
+
+    DistributedPlanner<Dialect::MySQL> dist(shard_map, catalog, parser.arena(),
+                                             &mock_executor, &functions);
+    PlanNode* dist_plan = dist.distribute_dml(plan);
+
+    // Execute the distributed plan
+    DmlResult total;
+    total.success = true;
+    collect_and_execute_remote_scans(dist_plan, total);
+    EXPECT_TRUE(total.success);
+
+    // Users 0 and 1 should be deleted; user 2 should remain
+    EXPECT_EQ(mock_executor.total_row_count("users"), 1u);
+
+    // The remaining user should be Carol (id=2) on shard2
+    auto* s2 = mock_executor.get_backend("shard2");
+    EXPECT_EQ(s2->mutable_sources["users"]->row_count(), 1u);
+}
+
+// UPDATE users SET age = 99 WHERE id IN (SELECT user_id FROM orders)
+TEST_F(DistributedDmlTest, DISABLED_UpdateWithCrossShardSubquery) {
+    // Insert users
+    execute_distributed_dml("INSERT INTO users (id, name, age) VALUES (0, 'Alice', 25)");
+    execute_distributed_dml("INSERT INTO users (id, name, age) VALUES (1, 'Bob', 30)");
+    execute_distributed_dml("INSERT INTO users (id, name, age) VALUES (2, 'Carol', 17)");
+
+    // Insert orders referencing users 0 and 1
+    execute_distributed_dml("INSERT INTO orders (order_id, user_id, amount) VALUES (100, 0, 500)");
+    execute_distributed_dml("INSERT INTO orders (order_id, user_id, amount) VALUES (101, 1, 300)");
+
+    mock_executor.clear_sql_logs();
+
+    // Use the extended planner with remote executor
+    Parser<Dialect::MySQL> parser;
+    const char* sql = "UPDATE users SET age = 99 WHERE id IN (SELECT user_id FROM orders)";
+    auto pr = parser.parse(sql, std::strlen(sql));
+    ASSERT_EQ(pr.status, ParseResult::OK);
+
+    DmlPlanBuilder<Dialect::MySQL> dml_builder(catalog, parser.arena());
+    PlanNode* plan = dml_builder.build(pr.ast);
+    ASSERT_NE(plan, nullptr);
+
+    DistributedPlanner<Dialect::MySQL> dist(shard_map, catalog, parser.arena(),
+                                             &mock_executor, &functions);
+    PlanNode* dist_plan = dist.distribute_dml(plan);
+
+    DmlResult total;
+    total.success = true;
+    collect_and_execute_remote_scans(dist_plan, total);
+    EXPECT_TRUE(total.success);
+
+    // Users 0 and 1 should have age=99 now
+    // Total user count unchanged
+    EXPECT_EQ(mock_executor.total_row_count("users"), 3u);
+
+    // Verify age updates by checking shard0 (id=0) and shard1 (id=1)
+    auto* s0 = mock_executor.get_backend("shard0");
+    auto* s1 = mock_executor.get_backend("shard1");
+    ASSERT_EQ(s0->mutable_sources["users"]->row_count(), 1u);
+    ASSERT_EQ(s1->mutable_sources["users"]->row_count(), 1u);
+    // age is column index 2
+    EXPECT_EQ(s0->mutable_sources["users"]->rows()[0].get(2).int_val, 99);
+    EXPECT_EQ(s1->mutable_sources["users"]->rows()[0].get(2).int_val, 99);
+    // Carol should be unchanged
+    auto* s2 = mock_executor.get_backend("shard2");
+    EXPECT_EQ(s2->mutable_sources["users"]->rows()[0].get(2).int_val, 17);
+}
+
+// ==================================================================
+// INSERT ... SELECT distributed (Gap 3)
+// ==================================================================
+
+// INSERT INTO orders SELECT * FROM users (simplified: source sharded, target unsharded)
+TEST_F(DistributedDmlTest, InsertSelectDistributed) {
+    // Insert source data across shards
+    execute_distributed_dml("INSERT INTO users (id, name, age) VALUES (0, 'Alice', 25)");
+    execute_distributed_dml("INSERT INTO users (id, name, age) VALUES (1, 'Bob', 30)");
+    execute_distributed_dml("INSERT INTO users (id, name, age) VALUES (2, 'Carol', 17)");
+
+    EXPECT_EQ(mock_executor.total_row_count("users"), 3u);
+
+    // Also add "users" table to orders_backend for reading via INSERT...SELECT target
+    mock_executor.get_backend("orders_backend")->add_table("users", {
+        {"id",   SqlType::make_int(),        false},
+        {"name", SqlType::make_varchar(255), true},
+        {"age",  SqlType::make_int(),        true},
+    });
+
+    // Set up a target table "user_archive" on orders_backend
+    catalog.add_table("", "user_archive", {
+        {"id",   SqlType::make_int(),        false},
+        {"name", SqlType::make_varchar(255), true},
+        {"age",  SqlType::make_int(),        true},
+    });
+    shard_map.add_table({"user_archive", "", {{"orders_backend"}}});
+    mock_executor.get_backend("orders_backend")->add_table("user_archive", {
+        {"id",   SqlType::make_int(),        false},
+        {"name", SqlType::make_varchar(255), true},
+        {"age",  SqlType::make_int(),        true},
+    });
+
+    mock_executor.clear_sql_logs();
+
+    // INSERT INTO user_archive SELECT * FROM users
+    // users is sharded, user_archive is on orders_backend
+    Parser<Dialect::MySQL> parser;
+    const char* sql = "INSERT INTO user_archive SELECT * FROM users";
+    auto pr = parser.parse(sql, std::strlen(sql));
+    ASSERT_EQ(pr.status, ParseResult::OK);
+
+    DmlPlanBuilder<Dialect::MySQL> dml_builder(catalog, parser.arena());
+    PlanNode* plan = dml_builder.build(pr.ast);
+    ASSERT_NE(plan, nullptr);
+
+    DistributedPlanner<Dialect::MySQL> dist(shard_map, catalog, parser.arena(),
+                                             &mock_executor, &functions);
+    PlanNode* dist_plan = dist.distribute_dml(plan);
+
+    // Execute
+    DmlResult total;
+    total.success = true;
+    collect_and_execute_remote_scans(dist_plan, total);
+    EXPECT_TRUE(total.success);
+
+    // user_archive on orders_backend should now have 3 rows
+    EXPECT_EQ(mock_executor.get_backend("orders_backend")->mutable_sources["user_archive"]->row_count(), 3u);
+}

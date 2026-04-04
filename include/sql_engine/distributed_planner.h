@@ -5,14 +5,19 @@
 #include "sql_engine/shard_map.h"
 #include "sql_engine/catalog.h"
 #include "sql_engine/remote_query_builder.h"
+#include "sql_engine/remote_executor.h"
 #include "sql_engine/operators/merge_aggregate_op.h"
 #include "sql_engine/expression_eval.h"
 #include "sql_engine/function_registry.h"
+#include "sql_engine/result_set.h"
+#include "sql_engine/plan_builder.h"
+#include "sql_engine/plan_executor.h"
 #include "sql_parser/arena.h"
 #include "sql_parser/ast.h"
 #include "sql_parser/common.h"
 #include <cstring>
 #include <cstdio>
+#include <cstdlib>
 #include <vector>
 #include <unordered_map>
 #include <functional>
@@ -23,7 +28,14 @@ template <sql_parser::Dialect D>
 class DistributedPlanner {
 public:
     DistributedPlanner(const ShardMap& shards, const Catalog& catalog, sql_parser::Arena& arena)
-        : shards_(shards), catalog_(catalog), arena_(arena), qb_(arena) {}
+        : shards_(shards), catalog_(catalog), arena_(arena), qb_(arena),
+          remote_executor_(nullptr), functions_(nullptr) {}
+
+    // Extended constructor with remote executor for cross-shard subquery support
+    DistributedPlanner(const ShardMap& shards, const Catalog& catalog, sql_parser::Arena& arena,
+                       RemoteExecutor* remote_executor, FunctionRegistry<D>* functions)
+        : shards_(shards), catalog_(catalog), arena_(arena), qb_(arena),
+          remote_executor_(remote_executor), functions_(functions) {}
 
     // Rewrite a logical plan for distributed execution.
     // Returns a new plan tree with RemoteScan/MergeAggregate/MergeSort nodes.
@@ -55,6 +67,8 @@ private:
     const Catalog& catalog_;
     sql_parser::Arena& arena_;
     RemoteQueryBuilder<D> qb_;
+    RemoteExecutor* remote_executor_;
+    FunctionRegistry<D>* functions_;
 
     // Push aggregate expressions from PROJECT into AGGREGATE node
     // (same logic as PlanExecutor::preprocess_aggregates)
@@ -699,6 +713,16 @@ private:
         const TableInfo* table = ip.table;
         if (!table || !shards_.has_table(table->table_name)) return plan;
 
+        // Check for INSERT ... SELECT (select_source stores the SELECT AST)
+        if (ip.select_source && ip.select_source->type == PlanNodeType::DERIVED_SCAN
+            && ip.select_source->derived_scan.alias_len == 0xFFFF) {
+            const sql_parser::AstNode* select_ast =
+                reinterpret_cast<const sql_parser::AstNode*>(ip.select_source->derived_scan.alias);
+            if (select_ast) {
+                return distribute_insert_select(plan, select_ast);
+            }
+        }
+
         if (!shards_.is_sharded(table->table_name)) {
             // Unsharded: single remote INSERT
             sql_parser::StringRef sql = qb_.build_insert(
@@ -821,10 +845,16 @@ private:
         const TableInfo* table = up.table;
         if (!table || !shards_.has_table(table->table_name)) return plan;
 
+        // Check for cross-shard subqueries in WHERE and rewrite
+        const sql_parser::AstNode* where_expr = up.where_expr;
+        if (where_expr && has_subquery(where_expr) && remote_executor_) {
+            where_expr = rewrite_where_subquery(where_expr, table);
+        }
+
         if (!shards_.is_sharded(table->table_name)) {
             // Unsharded: single remote UPDATE
             sql_parser::StringRef sql = qb_.build_update(
-                table, up.set_columns, up.set_exprs, up.set_count, up.where_expr);
+                table, up.set_columns, up.set_exprs, up.set_count, where_expr);
             return make_remote_scan(shards_.get_backend(table->table_name), sql, table);
         }
 
@@ -832,19 +862,20 @@ private:
         sql_parser::StringRef shard_key = shards_.get_shard_key(table->table_name);
         const auto& shard_list = shards_.get_shards(table->table_name);
 
-        int target_shard = find_shard_from_where(up.where_expr, shard_key, shard_list.size());
+        int target_shard = find_shard_from_where(where_expr, shard_key, shard_list.size());
 
         if (target_shard >= 0) {
             // Route to specific shard
             sql_parser::StringRef sql = qb_.build_update(
-                table, up.set_columns, up.set_exprs, up.set_count, up.where_expr);
+                table, up.set_columns, up.set_exprs, up.set_count, where_expr);
             return make_remote_scan(shard_list[target_shard].backend_name.c_str(), sql, table);
         }
 
         // Scatter to all shards
+        const sql_parser::AstNode* final_where = where_expr;
         return scatter_dml_to_shards(table, shard_list, [&]() {
             return qb_.build_update(
-                table, up.set_columns, up.set_exprs, up.set_count, up.where_expr);
+                table, up.set_columns, up.set_exprs, up.set_count, final_where);
         });
     }
 
@@ -853,9 +884,15 @@ private:
         const TableInfo* table = dp.table;
         if (!table || !shards_.has_table(table->table_name)) return plan;
 
+        // Check for cross-shard subqueries in WHERE and rewrite
+        const sql_parser::AstNode* where_expr = dp.where_expr;
+        if (where_expr && has_subquery(where_expr) && remote_executor_) {
+            where_expr = rewrite_where_subquery(where_expr, table);
+        }
+
         if (!shards_.is_sharded(table->table_name)) {
             // Unsharded: single remote DELETE
-            sql_parser::StringRef sql = qb_.build_delete(table, dp.where_expr);
+            sql_parser::StringRef sql = qb_.build_delete(table, where_expr);
             return make_remote_scan(shards_.get_backend(table->table_name), sql, table);
         }
 
@@ -863,17 +900,18 @@ private:
         sql_parser::StringRef shard_key = shards_.get_shard_key(table->table_name);
         const auto& shard_list = shards_.get_shards(table->table_name);
 
-        int target_shard = find_shard_from_where(dp.where_expr, shard_key, shard_list.size());
+        int target_shard = find_shard_from_where(where_expr, shard_key, shard_list.size());
 
         if (target_shard >= 0) {
             // Route to specific shard
-            sql_parser::StringRef sql = qb_.build_delete(table, dp.where_expr);
+            sql_parser::StringRef sql = qb_.build_delete(table, where_expr);
             return make_remote_scan(shard_list[target_shard].backend_name.c_str(), sql, table);
         }
 
         // Scatter to all shards
+        const sql_parser::AstNode* final_where = where_expr;
         return scatter_dml_to_shards(table, shard_list, [&]() {
-            return qb_.build_delete(table, dp.where_expr);
+            return qb_.build_delete(table, final_where);
         });
     }
 
@@ -982,6 +1020,461 @@ private:
             }
         }
         return current;
+    }
+
+    // ---- Cross-shard subquery helpers ----
+
+    // Walk an AST expression tree looking for NODE_SUBQUERY nodes.
+    bool has_subquery(const sql_parser::AstNode* expr) {
+        if (!expr) return false;
+        if (expr->type == sql_parser::NodeType::NODE_SUBQUERY) return true;
+        if (has_subquery(expr->first_child)) return true;
+        return has_subquery(expr->next_sibling);
+    }
+
+    // Find the table name referenced in a subquery's FROM clause.
+    // Returns the table name StringRef, or empty if not found.
+    sql_parser::StringRef find_subquery_table(const sql_parser::AstNode* subquery_node) {
+        if (!subquery_node || subquery_node->type != sql_parser::NodeType::NODE_SUBQUERY)
+            return {nullptr, 0};
+        const sql_parser::AstNode* select_ast = subquery_node->first_child;
+        if (!select_ast) return {nullptr, 0};
+        // Walk select AST children to find FROM clause -> TABLE_REF
+        for (const sql_parser::AstNode* c = select_ast->first_child; c; c = c->next_sibling) {
+            if (c->type == sql_parser::NodeType::NODE_FROM_CLAUSE) {
+                for (const sql_parser::AstNode* t = c->first_child; t; t = t->next_sibling) {
+                    if (t->type == sql_parser::NodeType::NODE_TABLE_REF) {
+                        const sql_parser::AstNode* name = t->first_child;
+                        if (name && name->type == sql_parser::NodeType::NODE_IDENTIFIER) {
+                            return name->value();
+                        }
+                    }
+                }
+            }
+        }
+        return {nullptr, 0};
+    }
+
+    // Check if a subquery references a table on a different backend than the DML target.
+    bool is_cross_shard_subquery(const sql_parser::AstNode* subquery_node,
+                                  const TableInfo* dml_table) {
+        sql_parser::StringRef sub_table = find_subquery_table(subquery_node);
+        if (!sub_table.ptr || !dml_table) return false;
+        if (!shards_.has_table(sub_table)) return false;
+        // Compare backends
+        const char* dml_backend = shards_.get_backend(dml_table->table_name);
+        const char* sub_backend = shards_.get_backend(sub_table);
+        if (!dml_backend || !sub_backend) return false;
+        return std::strcmp(dml_backend, sub_backend) != 0;
+    }
+
+    // Find a NODE_SUBQUERY within an expression tree (first occurrence).
+    const sql_parser::AstNode* find_subquery_in_expr(const sql_parser::AstNode* expr) {
+        if (!expr) return nullptr;
+        if (expr->type == sql_parser::NodeType::NODE_SUBQUERY) return expr;
+        const sql_parser::AstNode* found = find_subquery_in_expr(expr->first_child);
+        if (found) return found;
+        return find_subquery_in_expr(expr->next_sibling);
+    }
+
+    // Execute a subquery against its backend(s) and collect result values.
+    // Returns values from the first column.
+    std::vector<Value> materialize_subquery(const sql_parser::AstNode* subquery_node) {
+        std::vector<Value> result;
+        if (!remote_executor_ || !subquery_node) return result;
+
+        const sql_parser::AstNode* select_ast = subquery_node->first_child;
+        if (!select_ast) return result;
+
+        // Build the SELECT SQL from the subquery AST
+        sql_parser::StringRef sub_table_name = find_subquery_table(subquery_node);
+        if (!sub_table_name.ptr) return result;
+
+        // Build plan and generate SQL for the subquery
+        PlanBuilder<D> builder(catalog_, arena_);
+        PlanNode* plan = builder.build(select_ast);
+        if (!plan) return result;
+
+        // Distribute the subquery plan
+        PlanNode* dist_plan = distribute_node(plan);
+
+        // Execute: if it's a RemoteScan, execute via remote executor
+        // Otherwise, need to execute locally
+        ResultSet rs = execute_distributed_plan(dist_plan);
+
+        for (const auto& row : rs.rows) {
+            if (row.column_count > 0) {
+                result.push_back(row.get(0));
+            }
+        }
+        return result;
+    }
+
+    // Execute a distributed plan tree (recursively handles SET_OP / REMOTE_SCAN).
+    ResultSet execute_distributed_plan(PlanNode* node) {
+        if (!node || !remote_executor_) return {};
+
+        if (node->type == PlanNodeType::REMOTE_SCAN) {
+            sql_parser::StringRef sql{node->remote_scan.remote_sql,
+                                       node->remote_scan.remote_sql_len};
+            return remote_executor_->execute(node->remote_scan.backend_name, sql);
+        }
+
+        if (node->type == PlanNodeType::SET_OP) {
+            // UNION ALL: concatenate results
+            ResultSet left = execute_distributed_plan(node->left);
+            ResultSet right = execute_distributed_plan(node->right);
+            for (auto& row : right.rows) {
+                left.rows.push_back(row);
+            }
+            if (!left.rows.empty()) {
+                left.column_count = left.rows[0].column_count;
+            }
+            return left;
+        }
+
+        // For other node types that we can't execute remotely,
+        // fall back to local execution if we have functions_
+        if (functions_) {
+            PlanExecutor<D> executor(*functions_, catalog_, arena_);
+            executor.set_remote_executor(remote_executor_);
+            return executor.execute(node);
+        }
+        return {};
+    }
+
+    // Build an IN-list expression with literal values, replacing a subquery.
+    // Returns a new WHERE expression: "col IN (v1, v2, v3)"
+    // where col is the left-hand side of the original IN expression.
+    sql_parser::AstNode* build_in_list_from_values(
+            const sql_parser::AstNode* original_in_list,
+            const std::vector<Value>& values) {
+        if (!original_in_list || values.empty()) return nullptr;
+
+        // Clone the IN_LIST node structure:
+        // NODE_IN_LIST: first_child = expr, then siblings = value items
+        // We replace the NODE_SUBQUERY sibling with literal nodes.
+        sql_parser::AstNode* new_in = sql_parser::make_node(
+            arena_, sql_parser::NodeType::NODE_IN_LIST,
+            original_in_list->value(), original_in_list->flags);
+
+        // Copy the left-hand expression (first child)
+        const sql_parser::AstNode* lhs = original_in_list->first_child;
+        if (lhs) {
+            sql_parser::AstNode* lhs_copy = sql_parser::make_node(
+                arena_, lhs->type, lhs->value(), lhs->flags);
+            lhs_copy->first_child = lhs->first_child;
+            new_in->add_child(lhs_copy);
+        }
+
+        // Add literal value nodes for each materialized value
+        for (const auto& v : values) {
+            sql_parser::AstNode* lit = nullptr;
+            if (v.tag == Value::TAG_INT64) {
+                char buf[32];
+                int n = snprintf(buf, sizeof(buf), "%lld", (long long)v.int_val);
+                char* s = static_cast<char*>(arena_.allocate(n));
+                std::memcpy(s, buf, n);
+                lit = sql_parser::make_node(arena_, sql_parser::NodeType::NODE_LITERAL_INT,
+                                             sql_parser::StringRef{s, static_cast<uint32_t>(n)});
+            } else if (v.tag == Value::TAG_STRING && v.str_val.ptr) {
+                lit = sql_parser::make_node(arena_, sql_parser::NodeType::NODE_LITERAL_STRING,
+                                             v.str_val);
+            } else if (v.tag == Value::TAG_DOUBLE) {
+                char buf[64];
+                int n = snprintf(buf, sizeof(buf), "%g", v.double_val);
+                char* s = static_cast<char*>(arena_.allocate(n));
+                std::memcpy(s, buf, n);
+                lit = sql_parser::make_node(arena_, sql_parser::NodeType::NODE_LITERAL_FLOAT,
+                                             sql_parser::StringRef{s, static_cast<uint32_t>(n)});
+            } else {
+                // NULL or unsupported type
+                lit = sql_parser::make_node(arena_, sql_parser::NodeType::NODE_LITERAL_NULL,
+                                             sql_parser::StringRef{nullptr, 0});
+            }
+            if (lit) new_in->add_child(lit);
+        }
+
+        return new_in;
+    }
+
+    // Rewrite a WHERE expression by replacing the first IN (subquery) with IN (literals).
+    // Returns the rewritten expression, or the original if no rewrite needed.
+    const sql_parser::AstNode* rewrite_where_subquery(
+            const sql_parser::AstNode* where_expr,
+            const TableInfo* dml_table) {
+        if (!where_expr || !remote_executor_) return where_expr;
+
+        // Check for IN_LIST with a subquery child
+        if (where_expr->type == sql_parser::NodeType::NODE_IN_LIST) {
+            // Check if any child is a subquery
+            for (const sql_parser::AstNode* c = where_expr->first_child; c; c = c->next_sibling) {
+                if (c->type == sql_parser::NodeType::NODE_SUBQUERY) {
+                    // Materialize the subquery
+                    std::vector<Value> values = materialize_subquery(c);
+                    if (!values.empty()) {
+                        return build_in_list_from_values(where_expr, values);
+                    }
+                    return where_expr;
+                }
+            }
+        }
+
+        // Check for NOT (IN (subquery)) -- NODE_UNARY_OP "NOT" -> NODE_IN_LIST
+        if (where_expr->type == sql_parser::NodeType::NODE_UNARY_OP) {
+            sql_parser::StringRef op = where_expr->value();
+            if (op.equals_ci("NOT", 3) && where_expr->first_child) {
+                const sql_parser::AstNode* inner = rewrite_where_subquery(
+                    where_expr->first_child, dml_table);
+                if (inner != where_expr->first_child) {
+                    sql_parser::AstNode* new_not = sql_parser::make_node(
+                        arena_, sql_parser::NodeType::NODE_UNARY_OP, op, where_expr->flags);
+                    new_not->add_child(const_cast<sql_parser::AstNode*>(inner));
+                    return new_not;
+                }
+            }
+        }
+
+        // Check for binary operators (AND, OR, comparisons with subquery)
+        if (where_expr->type == sql_parser::NodeType::NODE_BINARY_OP) {
+            const sql_parser::AstNode* left = where_expr->first_child;
+            const sql_parser::AstNode* right = left ? left->next_sibling : nullptr;
+
+            bool left_changed = false, right_changed = false;
+            const sql_parser::AstNode* new_left = left;
+            const sql_parser::AstNode* new_right = right;
+
+            if (left && has_subquery(left)) {
+                new_left = rewrite_where_subquery(left, dml_table);
+                left_changed = (new_left != left);
+            }
+            if (right && has_subquery(right)) {
+                new_right = rewrite_where_subquery(right, dml_table);
+                right_changed = (new_right != right);
+            }
+
+            // Handle scalar subquery in comparison (e.g., col > (SELECT ...))
+            if (right && right->type == sql_parser::NodeType::NODE_SUBQUERY) {
+                std::vector<Value> values = materialize_subquery(right);
+                if (!values.empty()) {
+                    // Scalar: use first value
+                    const Value& v = values[0];
+                    sql_parser::AstNode* lit = nullptr;
+                    if (v.tag == Value::TAG_INT64) {
+                        char buf[32];
+                        int n = snprintf(buf, sizeof(buf), "%lld", (long long)v.int_val);
+                        char* s = static_cast<char*>(arena_.allocate(n));
+                        std::memcpy(s, buf, n);
+                        lit = sql_parser::make_node(arena_, sql_parser::NodeType::NODE_LITERAL_INT,
+                                                     sql_parser::StringRef{s, static_cast<uint32_t>(n)});
+                    } else if (v.tag == Value::TAG_DOUBLE) {
+                        char buf[64];
+                        int n = snprintf(buf, sizeof(buf), "%g", v.double_val);
+                        char* s = static_cast<char*>(arena_.allocate(n));
+                        std::memcpy(s, buf, n);
+                        lit = sql_parser::make_node(arena_, sql_parser::NodeType::NODE_LITERAL_FLOAT,
+                                                     sql_parser::StringRef{s, static_cast<uint32_t>(n)});
+                    }
+                    if (lit) {
+                        new_right = lit;
+                        right_changed = true;
+                    }
+                }
+            }
+
+            if (left_changed || right_changed) {
+                sql_parser::AstNode* new_binop = sql_parser::make_node(
+                    arena_, sql_parser::NodeType::NODE_BINARY_OP,
+                    where_expr->value(), where_expr->flags);
+                new_binop->add_child(const_cast<sql_parser::AstNode*>(new_left));
+                new_binop->add_child(const_cast<sql_parser::AstNode*>(new_right));
+                return new_binop;
+            }
+        }
+
+        return where_expr;
+    }
+
+    // ---- INSERT ... SELECT distributed ----
+
+    // Build a distributed INSERT ... SELECT plan.
+    // 1. Execute the SELECT part distributedly
+    // 2. For each result row, determine the target shard
+    // 3. Group rows by shard and generate per-shard INSERT statements
+    PlanNode* distribute_insert_select(PlanNode* plan, const sql_parser::AstNode* select_ast) {
+        if (!remote_executor_ || !functions_ || !select_ast) return plan;
+
+        const auto& ip = plan->insert_plan;
+        const TableInfo* table = ip.table;
+        if (!table) return plan;
+
+        // Build and distribute the SELECT plan
+        PlanBuilder<D> builder(catalog_, arena_);
+        PlanNode* select_plan = builder.build(select_ast);
+        if (!select_plan) return plan;
+
+        PlanNode* dist_select = distribute_node(select_plan);
+        ResultSet rs = execute_distributed_plan(dist_select);
+
+        if (rs.rows.empty()) {
+            // No rows to insert -- return a no-op
+            // Just return the original plan (which will do nothing since select_source is null)
+            return plan;
+        }
+
+        // Determine target shards for each row
+        if (!shards_.has_table(table->table_name)) return plan;
+
+        if (!shards_.is_sharded(table->table_name)) {
+            // Unsharded: build a single INSERT with all rows
+            sql_parser::StringRef sql = build_insert_from_rows(table, ip.columns,
+                                                                 ip.column_count, rs.rows);
+            return make_remote_scan(shards_.get_backend(table->table_name), sql, table);
+        }
+
+        // Sharded: group rows by shard key
+        sql_parser::StringRef shard_key = shards_.get_shard_key(table->table_name);
+        if (!shard_key.ptr) return plan;
+
+        // Find shard key column ordinal in the result set
+        int shard_col_idx = -1;
+        if (ip.columns && ip.column_count > 0) {
+            for (uint16_t i = 0; i < ip.column_count; ++i) {
+                if (ip.columns[i] && ip.columns[i]->value().equals_ci(shard_key.ptr, shard_key.len)) {
+                    shard_col_idx = static_cast<int>(i);
+                    break;
+                }
+            }
+        } else if (table) {
+            for (uint16_t i = 0; i < table->column_count; ++i) {
+                if (table->columns[i].name.equals_ci(shard_key.ptr, shard_key.len)) {
+                    shard_col_idx = static_cast<int>(i);
+                    break;
+                }
+            }
+        }
+
+        const auto& shard_list = shards_.get_shards(table->table_name);
+
+        // Group rows by shard
+        std::unordered_map<size_t, std::vector<size_t>> shard_rows;
+        for (size_t ri = 0; ri < rs.rows.size(); ++ri) {
+            size_t shard_idx = 0;
+            if (shard_col_idx >= 0 && shard_col_idx < rs.rows[ri].column_count) {
+                Value v = rs.rows[ri].get(static_cast<uint16_t>(shard_col_idx));
+                if (v.tag == Value::TAG_INT64) {
+                    shard_idx = static_cast<size_t>(
+                        std::abs(v.int_val) % static_cast<int64_t>(shard_list.size()));
+                } else if (v.tag == Value::TAG_STRING && v.str_val.ptr) {
+                    uint64_t h = 0;
+                    for (uint32_t k = 0; k < v.str_val.len; ++k) {
+                        h = h * 31 + static_cast<uint8_t>(v.str_val.ptr[k]);
+                    }
+                    shard_idx = static_cast<size_t>(h % shard_list.size());
+                }
+            }
+            shard_rows[shard_idx].push_back(ri);
+        }
+
+        // Generate per-shard INSERT statements
+        PlanNode* current = nullptr;
+        for (auto& [shard_idx, row_indices] : shard_rows) {
+            std::vector<Row> subset;
+            for (size_t idx : row_indices) {
+                subset.push_back(rs.rows[idx]);
+            }
+            sql_parser::StringRef sql = build_insert_from_rows(table, ip.columns,
+                                                                 ip.column_count, subset);
+            PlanNode* node = make_remote_scan(shard_list[shard_idx].backend_name.c_str(), sql, table);
+            if (!current) {
+                current = node;
+            } else {
+                PlanNode* union_node = make_plan_node(arena_, PlanNodeType::SET_OP);
+                union_node->set_op.op = SET_OP_UNION;
+                union_node->set_op.all = true;
+                union_node->left = current;
+                union_node->right = node;
+                current = union_node;
+            }
+        }
+
+        return current ? current : plan;
+    }
+
+    // Build INSERT SQL from materialized rows (Value-based).
+    sql_parser::StringRef build_insert_from_rows(
+            const TableInfo* table,
+            const sql_parser::AstNode** columns,
+            uint16_t col_count,
+            const std::vector<Row>& rows) {
+        sql_parser::StringBuilder sb(arena_, 512);
+        sb.append("INSERT INTO ");
+        if (table) {
+            sb.append(table->table_name.ptr, table->table_name.len);
+        }
+
+        // Column list
+        if (columns && col_count > 0) {
+            sb.append(" (");
+            for (uint16_t i = 0; i < col_count; ++i) {
+                if (i > 0) sb.append(", ");
+                if (columns[i]) {
+                    sql_parser::StringRef cn = columns[i]->value();
+                    sb.append(cn.ptr, cn.len);
+                }
+            }
+            sb.append_char(')');
+        } else if (table && table->column_count > 0) {
+            sb.append(" (");
+            for (uint16_t i = 0; i < table->column_count; ++i) {
+                if (i > 0) sb.append(", ");
+                sb.append(table->columns[i].name.ptr, table->columns[i].name.len);
+            }
+            sb.append_char(')');
+        }
+
+        sb.append(" VALUES ");
+        for (size_t ri = 0; ri < rows.size(); ++ri) {
+            if (ri > 0) sb.append(", ");
+            sb.append_char('(');
+            const Row& row = rows[ri];
+            for (uint16_t ci = 0; ci < row.column_count; ++ci) {
+                if (ci > 0) sb.append(", ");
+                emit_value(row.get(ci), sb);
+            }
+            sb.append_char(')');
+        }
+
+        return sb.finish();
+    }
+
+    // Emit a Value as SQL literal text
+    void emit_value(const Value& v, sql_parser::StringBuilder& sb) {
+        if (v.is_null()) {
+            sb.append("NULL", 4);
+        } else if (v.tag == Value::TAG_INT64) {
+            char buf[32];
+            int n = snprintf(buf, sizeof(buf), "%lld", (long long)v.int_val);
+            sb.append(buf, n);
+        } else if (v.tag == Value::TAG_DOUBLE) {
+            char buf[64];
+            int n = snprintf(buf, sizeof(buf), "%g", v.double_val);
+            sb.append(buf, n);
+        } else if (v.tag == Value::TAG_STRING && v.str_val.ptr) {
+            sb.append_char('\'');
+            // Simple escaping: double any single quotes
+            for (uint32_t i = 0; i < v.str_val.len; ++i) {
+                char c = v.str_val.ptr[i];
+                if (c == '\'') sb.append_char('\'');
+                sb.append_char(c);
+            }
+            sb.append_char('\'');
+        } else if (v.tag == Value::TAG_BOOL) {
+            if (v.bool_val) sb.append("TRUE", 4);
+            else sb.append("FALSE", 5);
+        } else {
+            sb.append("NULL", 4);
+        }
     }
 
     // Case 6: Distributed DISTINCT

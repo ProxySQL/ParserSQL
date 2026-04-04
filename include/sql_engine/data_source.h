@@ -33,10 +33,35 @@ public:
 
     void close() override { cursor_ = 0; }
 
+    const std::vector<Row>& rows() const { return rows_; }
+
 private:
     const TableInfo* table_;
     std::vector<Row> rows_;
     size_t cursor_ = 0;
+};
+
+// IndependentCursorDataSource wraps an InMemoryDataSource, sharing the same
+// row data but maintaining its own cursor. This allows inner (subquery)
+// execution to scan the same table without resetting the outer cursor.
+class IndependentCursorDataSource : public DataSource {
+public:
+    explicit IndependentCursorDataSource(InMemoryDataSource* source)
+        : source_(source), cursor_(0) {}
+
+    const TableInfo* table_info() const override { return source_->table_info(); }
+    void open() override { cursor_ = 0; }
+    bool next(Row& out) override {
+        const auto& rows = source_->rows();
+        if (cursor_ >= rows.size()) return false;
+        out = rows[cursor_++];
+        return true;
+    }
+    void close() override { cursor_ = 0; }
+
+private:
+    InMemoryDataSource* source_;
+    size_t cursor_;
 };
 
 } // namespace sql_engine

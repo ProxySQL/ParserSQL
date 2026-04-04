@@ -21,10 +21,11 @@ public:
                     const std::vector<const TableInfo*>& tables,
                     FunctionRegistry<D>& functions,
                     sql_parser::Arena& arena,
-                    SubqueryExecutor<D>* subquery_exec = nullptr)
+                    SubqueryExecutor<D>* subquery_exec = nullptr,
+                    const std::function<Value(sql_parser::StringRef)>& outer_resolver = {})
         : child_(child), exprs_(exprs), expr_count_(expr_count),
           catalog_(catalog), tables_(tables), functions_(functions), arena_(arena),
-          subquery_exec_(subquery_exec) {}
+          subquery_exec_(subquery_exec), outer_resolver_(outer_resolver) {}
 
     void open() override {
         if (child_) child_->open();
@@ -60,6 +61,7 @@ private:
     FunctionRegistry<D>& functions_;
     sql_parser::Arena& arena_;
     SubqueryExecutor<D>* subquery_exec_ = nullptr;
+    std::function<Value(sql_parser::StringRef)> outer_resolver_;
     bool no_from_done_ = false;
 
     bool evaluate_project(const Row& input, Row& out) {
@@ -74,14 +76,47 @@ private:
     std::function<Value(sql_parser::StringRef)> make_multi_table_resolver(const Row& row) {
         return [this, &row](sql_parser::StringRef col_name) -> Value {
             uint16_t offset = 0;
-            for (const auto* table : tables_) {
-                if (!table) continue;
-                const ColumnInfo* col = catalog_.get_column(table, col_name);
-                if (col) {
-                    uint16_t idx = offset + col->ordinal;
-                    if (idx < row.column_count) return row.get(idx);
+
+            // Check for qualified name (table.column or alias.column)
+            const char* dot = nullptr;
+            for (uint32_t i = 0; i < col_name.len; ++i) {
+                if (col_name.ptr[i] == '.') { dot = col_name.ptr + i; break; }
+            }
+
+            if (dot) {
+                // Qualified: extract table prefix and column suffix
+                uint32_t prefix_len = static_cast<uint32_t>(dot - col_name.ptr);
+                sql_parser::StringRef prefix{col_name.ptr, prefix_len};
+                sql_parser::StringRef suffix{dot + 1, col_name.len - prefix_len - 1};
+
+                for (const auto* table : tables_) {
+                    if (!table) continue;
+                    if (table->table_name.equals_ci(prefix.ptr, prefix.len) ||
+                        (table->alias.ptr && table->alias.equals_ci(prefix.ptr, prefix.len))) {
+                        const ColumnInfo* col = catalog_.get_column(table, suffix);
+                        if (col) {
+                            uint16_t idx = offset + col->ordinal;
+                            if (idx < row.column_count) return row.get(idx);
+                        }
+                    }
+                    offset += table->column_count;
                 }
-                offset += table->column_count;
+            } else {
+                // Unqualified: try all tables
+                for (const auto* table : tables_) {
+                    if (!table) continue;
+                    const ColumnInfo* col = catalog_.get_column(table, col_name);
+                    if (col) {
+                        uint16_t idx = offset + col->ordinal;
+                        if (idx < row.column_count) return row.get(idx);
+                    }
+                    offset += table->column_count;
+                }
+            }
+
+            // Fall back to outer resolver for correlated subqueries
+            if (outer_resolver_) {
+                return outer_resolver_(col_name);
             }
             return value_null();
         };

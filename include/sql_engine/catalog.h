@@ -35,6 +35,7 @@ struct TableInfo {
     sql_parser::StringRef table_name;
     const ColumnInfo* columns;
     uint16_t column_count;
+    sql_parser::StringRef alias;        // table alias (empty if no alias)
 };
 
 // Convenience for building columns programmatically
