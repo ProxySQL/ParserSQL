@@ -88,7 +88,7 @@ GBENCH_OBJS = $(GBENCH_SRCS:.cc=.o)
 GBENCH_CPPFLAGS = -I$(GBENCH_DIR)/include -I$(GBENCH_DIR)/src -DHAVE_STD_REGEX -DHAVE_STEADY_CLOCK
 
 BENCH_DIR = $(PROJECT_ROOT)/bench
-BENCH_SRCS = $(BENCH_DIR)/bench_main.cpp $(BENCH_DIR)/bench_parser.cpp
+BENCH_SRCS = $(BENCH_DIR)/bench_main.cpp $(BENCH_DIR)/bench_parser.cpp $(BENCH_DIR)/bench_engine.cpp
 BENCH_OBJS = $(BENCH_SRCS:.cpp=.o)
 BENCH_TARGET = $(PROJECT_ROOT)/run_bench
 
@@ -96,9 +96,15 @@ BENCH_TARGET = $(PROJECT_ROOT)/run_bench
 CORPUS_TEST_SRC = $(TEST_DIR)/corpus_test.cpp
 CORPUS_TEST_TARGET = $(PROJECT_ROOT)/corpus_test
 
-.PHONY: all lib test bench bench-compare build-corpus-test clean
+# SQL Engine CLI tool
+SQLENGINE_SRC = $(PROJECT_ROOT)/tools/sqlengine.cpp
+SQLENGINE_TARGET = sqlengine
+
+.PHONY: all lib test bench bench-compare build-corpus-test build-sqlengine clean
 
 build-corpus-test: $(CORPUS_TEST_TARGET)
+
+build-sqlengine: $(SQLENGINE_TARGET)
 
 all: lib test
 
@@ -134,13 +140,17 @@ $(GBENCH_DIR)/src/%.o: $(GBENCH_DIR)/src/%.cc
 	$(CXX) $(CXXFLAGS) $(GBENCH_CPPFLAGS) -c $< -o $@
 
 $(BENCH_DIR)/%.o: $(BENCH_DIR)/%.cpp
-	$(CXX) $(CXXFLAGS) $(CPPFLAGS) $(GBENCH_CPPFLAGS) -c $< -o $@
+	$(CXX) $(CXXFLAGS) $(CPPFLAGS) $(GBENCH_CPPFLAGS) $(MYSQL_CFLAGS) $(PG_CFLAGS) -c $< -o $@
 
 bench: $(BENCH_TARGET)
 	./$(BENCH_TARGET) --benchmark_format=console
 
-$(BENCH_TARGET): $(BENCH_OBJS) $(GBENCH_OBJS) $(LIB_TARGET)
-	$(CXX) $(CXXFLAGS) -o $@ $(BENCH_OBJS) $(GBENCH_OBJS) -L$(PROJECT_ROOT) -lsqlparser -lpthread
+$(BENCH_TARGET): $(BENCH_OBJS) $(GBENCH_OBJS) $(LIB_TARGET) $(ENGINE_OBJS)
+	$(CXX) $(CXXFLAGS) -o $@ $(BENCH_OBJS) $(GBENCH_OBJS) $(ENGINE_OBJS) -L$(PROJECT_ROOT) -lsqlparser -lpthread $(MYSQL_LIBS) $(PG_LIBS)
+
+# SQL Engine CLI tool
+$(SQLENGINE_TARGET): $(SQLENGINE_SRC) $(LIB_TARGET) $(ENGINE_OBJS)
+	$(CXX) $(CXXFLAGS) $(CPPFLAGS) $(MYSQL_CFLAGS) $(PG_CFLAGS) -o $@ $< $(ENGINE_OBJS) -L$(PROJECT_ROOT) -lsqlparser -lpthread $(MYSQL_LIBS) $(PG_LIBS)
 
 $(CORPUS_TEST_TARGET): $(CORPUS_TEST_SRC) $(LIB_TARGET)
 	$(CXX) $(CXXFLAGS) $(CPPFLAGS) -o $@ $< -L$(PROJECT_ROOT) -lsqlparser
@@ -168,4 +178,5 @@ clean:
 	rm -f $(ENGINE_OBJS)
 	rm -f $(BENCH_OBJS) $(GBENCH_OBJS) $(BENCH_TARGET) $(CORPUS_TEST_TARGET)
 	rm -f $(BENCH_COMPARE_OBJ) $(BENCH_COMPARE_TARGET)
+	rm -f $(SQLENGINE_TARGET)
 	@echo "Cleaned."
