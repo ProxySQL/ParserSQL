@@ -53,7 +53,9 @@ TEST_SRCS = $(TEST_DIR)/test_main.cpp \
             $(TEST_DIR)/test_eval_integration.cpp \
             $(TEST_DIR)/test_catalog.cpp \
             $(TEST_DIR)/test_row.cpp \
-            $(TEST_DIR)/test_plan_builder.cpp
+            $(TEST_DIR)/test_plan_builder.cpp \
+            $(TEST_DIR)/test_operators.cpp \
+            $(TEST_DIR)/test_plan_executor.cpp
 TEST_OBJS = $(TEST_SRCS:.cpp=.o)
 TEST_TARGET = $(PROJECT_ROOT)/run_tests
 
