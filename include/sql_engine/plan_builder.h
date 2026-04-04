@@ -206,7 +206,37 @@ private:
             current = filter;
         }
 
-        // 5. SELECT list -> Project
+        // 5. ORDER BY -> Sort (before Project so sort keys resolve against full row)
+        const sql_parser::AstNode* order_by = find_child(select_ast, sql_parser::NodeType::NODE_ORDER_BY_CLAUSE);
+        if (order_by) {
+            PlanNode* sort = make_plan_node(arena_, PlanNodeType::SORT);
+            uint16_t cnt = count_children(order_by);
+            sort->sort.count = cnt;
+
+            auto** keys = static_cast<const sql_parser::AstNode**>(
+                arena_.allocate(sizeof(sql_parser::AstNode*) * cnt));
+            auto* dirs = static_cast<uint8_t*>(arena_.allocate(cnt));
+
+            uint16_t idx = 0;
+            for (const sql_parser::AstNode* item = order_by->first_child; item; item = item->next_sibling) {
+                // First child is the key expression
+                keys[idx] = item->first_child;
+                // Check for DESC direction (second child with "DESC" value)
+                dirs[idx] = 0; // ASC by default
+                const sql_parser::AstNode* dir_node = find_child(item, sql_parser::NodeType::NODE_IDENTIFIER);
+                if (dir_node) {
+                    sql_parser::StringRef dir_val = dir_node->value();
+                    if (dir_val.equals_ci("DESC", 4)) dirs[idx] = 1;
+                }
+                ++idx;
+            }
+            sort->sort.keys = keys;
+            sort->sort.directions = dirs;
+            sort->left = current;
+            current = sort;
+        }
+
+        // 6. SELECT list -> Project
         const sql_parser::AstNode* item_list = find_child(select_ast, sql_parser::NodeType::NODE_SELECT_ITEM_LIST);
         if (item_list) {
             // Check if this is "SELECT *" with a single asterisk and no aliases -- skip Project for bare scan
@@ -246,41 +276,11 @@ private:
             }
         }
 
-        // 6. DISTINCT -> Distinct
+        // 7. DISTINCT -> Distinct
         if (has_distinct(select_ast)) {
             PlanNode* dist = make_plan_node(arena_, PlanNodeType::DISTINCT);
             dist->left = current;
             current = dist;
-        }
-
-        // 7. ORDER BY -> Sort
-        const sql_parser::AstNode* order_by = find_child(select_ast, sql_parser::NodeType::NODE_ORDER_BY_CLAUSE);
-        if (order_by) {
-            PlanNode* sort = make_plan_node(arena_, PlanNodeType::SORT);
-            uint16_t cnt = count_children(order_by);
-            sort->sort.count = cnt;
-
-            auto** keys = static_cast<const sql_parser::AstNode**>(
-                arena_.allocate(sizeof(sql_parser::AstNode*) * cnt));
-            auto* dirs = static_cast<uint8_t*>(arena_.allocate(cnt));
-
-            uint16_t idx = 0;
-            for (const sql_parser::AstNode* item = order_by->first_child; item; item = item->next_sibling) {
-                // First child is the key expression
-                keys[idx] = item->first_child;
-                // Check for DESC direction (second child with "DESC" value)
-                dirs[idx] = 0; // ASC by default
-                const sql_parser::AstNode* dir_node = find_child(item, sql_parser::NodeType::NODE_IDENTIFIER);
-                if (dir_node) {
-                    sql_parser::StringRef dir_val = dir_node->value();
-                    if (dir_val.equals_ci("DESC", 4)) dirs[idx] = 1;
-                }
-                ++idx;
-            }
-            sort->sort.keys = keys;
-            sort->sort.directions = dirs;
-            sort->left = current;
-            current = sort;
         }
 
         // 8. LIMIT -> Limit

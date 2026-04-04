@@ -155,3 +155,34 @@ TEST_F(PlanExecutorTest, SelectWithLike) {
     std::string name(rs.rows[0].get(0).str_val.ptr, rs.rows[0].get(0).str_val.len);
     EXPECT_EQ(name, "Alice");
 }
+
+// Bug #23: SELECT name FROM users ORDER BY age DESC -- sort by age, return only name
+TEST_F(PlanExecutorTest, OrderByColumnNotInSelectList) {
+    auto rs = run_query("SELECT name FROM users ORDER BY age DESC");
+    EXPECT_EQ(rs.row_count(), 5u);
+    EXPECT_EQ(rs.column_count, 1);
+    // Sorted by age DESC: Eve(35), Bob(30), Alice(25), Dave(22), Carol(17)
+    std::string first(rs.rows[0].get(0).str_val.ptr, rs.rows[0].get(0).str_val.len);
+    std::string last(rs.rows[4].get(0).str_val.ptr, rs.rows[4].get(0).str_val.len);
+    EXPECT_EQ(first, "Eve");
+    EXPECT_EQ(last, "Carol");
+}
+
+// Bug #24: SELECT * FROM (SELECT COUNT(*) AS cnt FROM users) AS t
+TEST_F(PlanExecutorTest, DerivedTableWithAggregate) {
+    auto rs = run_query("SELECT * FROM (SELECT COUNT(*) AS cnt FROM users) AS t");
+    EXPECT_EQ(rs.row_count(), 1u);
+    EXPECT_FALSE(rs.rows[0].get(0).is_null());
+    EXPECT_EQ(rs.rows[0].get(0).int_val, 5);
+}
+
+// Bug #24: SELECT * FROM (SELECT dept, COUNT(*) AS cnt FROM users GROUP BY dept) AS t
+TEST_F(PlanExecutorTest, DerivedTableWithGroupByAggregate) {
+    auto rs = run_query("SELECT * FROM (SELECT dept, COUNT(*) AS cnt FROM users GROUP BY dept) AS t");
+    EXPECT_EQ(rs.row_count(), 2u);
+    int64_t total = 0;
+    for (const auto& row : rs.rows) {
+        total += row.get(1).int_val;
+    }
+    EXPECT_EQ(total, 5); // 3 Engineering + 2 Sales
+}

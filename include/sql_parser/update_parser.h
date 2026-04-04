@@ -18,6 +18,10 @@ public:
         : tok_(tokenizer), arena_(arena), expr_parser_(tokenizer, arena),
           table_ref_parser_(tokenizer, arena, expr_parser_) {}
 
+    void set_subquery_callback(SubqueryParseCallback<D> cb) {
+        expr_parser_.set_subquery_callback(cb);
+    }
+
     // Parse UPDATE statement (UPDATE keyword already consumed).
     AstNode* parse() {
         AstNode* root = make_node(arena_, NodeType::NODE_UPDATE_STMT);

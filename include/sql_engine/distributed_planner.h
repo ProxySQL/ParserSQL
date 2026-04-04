@@ -129,9 +129,11 @@ private:
             }
 
             case PlanNodeType::PROJECT: {
-                // Check for PROJECT -> AGGREGATE pattern (or PROJECT -> FILTER -> AGGREGATE)
+                // Check for PROJECT -> [SORT ->] [FILTER ->] AGGREGATE pattern
                 // For aggregate queries, we want to handle the whole thing in distribute_aggregate
                 PlanNode* agg_child = node->left;
+                if (agg_child && agg_child->type == PlanNodeType::SORT)
+                    agg_child = agg_child->left;
                 if (agg_child && agg_child->type == PlanNodeType::FILTER)
                     agg_child = agg_child->left;
                 if (agg_child && agg_child->type == PlanNodeType::AGGREGATE) {

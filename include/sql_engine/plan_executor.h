@@ -390,8 +390,10 @@ private:
 
         if (node->type != PlanNodeType::PROJECT) return;
 
-        // Find AGGREGATE child (possibly through a FILTER for HAVING)
+        // Find AGGREGATE child (possibly through SORT and/or FILTER for HAVING)
         PlanNode* agg_node = node->left;
+        if (agg_node && agg_node->type == PlanNodeType::SORT)
+            agg_node = agg_node->left;
         if (agg_node && agg_node->type == PlanNodeType::FILTER)
             agg_node = agg_node->left;
         if (!agg_node || agg_node->type != PlanNodeType::AGGREGATE) return;
@@ -435,9 +437,17 @@ private:
         // output matches what we need.
 
         // Overwrite this PROJECT node to become a pass-through:
-        // Change it into the node below it.
+        // Change it into the node below it, preserving any intermediate
+        // SORT and/or FILTER (HAVING) nodes.
         PlanNode* child = node->left;
-        if (child && child->type == PlanNodeType::FILTER) {
+        if (child && child->type == PlanNodeType::SORT) {
+            // PROJECT -> SORT -> [FILTER ->] AGGREGATE
+            // Replace PROJECT with SORT (preserving the sort)
+            node->type = PlanNodeType::SORT;
+            node->sort = child->sort;
+            node->left = child->left;
+            node->right = child->right;
+        } else if (child && child->type == PlanNodeType::FILTER) {
             // PROJECT -> FILTER -> AGGREGATE: keep FILTER, remove PROJECT
             node->type = PlanNodeType::FILTER;
             node->filter.expr = child->filter.expr;
@@ -576,10 +586,11 @@ private:
     }
 
     Operator* build_derived_scan_op(PlanNode* node) {
-        // Build the inner plan's operator tree and wrap in DerivedScanOperator
+        // Build the inner plan's operator tree and wrap in DerivedScanOperator.
+        // Pass the arena so deep-copied row data persists in the outer arena.
         Operator* inner = build_operator(node->derived_scan.inner_plan);
         if (!inner) return nullptr;
-        auto op = std::make_unique<DerivedScanOperator>(inner);
+        auto op = std::make_unique<DerivedScanOperator>(inner, arena_);
         Operator* ptr = op.get();
         operators_.push_back(std::move(op));
         return ptr;

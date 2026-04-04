@@ -347,6 +347,7 @@ ParseResult Parser<D>::parse_update() {
     r.stmt_type = StmtType::UPDATE;
 
     UpdateParser<D> update_parser(tokenizer_, arena_);
+    update_parser.set_subquery_callback(&parse_subquery_select<D>);
     AstNode* ast = update_parser.parse();
 
     if (ast) {
@@ -382,6 +383,7 @@ ParseResult Parser<D>::parse_delete() {
     r.stmt_type = StmtType::DELETE_STMT;
 
     DeleteParser<D> delete_parser(tokenizer_, arena_);
+    delete_parser.set_subquery_callback(&parse_subquery_select<D>);
     AstNode* ast = delete_parser.parse();
 
     if (ast) {

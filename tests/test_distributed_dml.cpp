@@ -524,7 +524,7 @@ TEST_F(DistributedDmlTest, InsertThenSelectVerify) {
 
 // DELETE FROM users WHERE id IN (SELECT user_id FROM orders)
 // users on shards, orders on orders_backend
-TEST_F(DistributedDmlTest, DISABLED_DmlWithCrossShardSubquery) {
+TEST_F(DistributedDmlTest, DmlWithCrossShardSubquery) {
     // Insert users: id=0 -> shard0, id=1 -> shard1, id=2 -> shard2
     execute_distributed_dml("INSERT INTO users (id, name, age) VALUES (0, 'Alice', 25)");
     execute_distributed_dml("INSERT INTO users (id, name, age) VALUES (1, 'Bob', 30)");
@@ -568,7 +568,7 @@ TEST_F(DistributedDmlTest, DISABLED_DmlWithCrossShardSubquery) {
 }
 
 // UPDATE users SET age = 99 WHERE id IN (SELECT user_id FROM orders)
-TEST_F(DistributedDmlTest, DISABLED_UpdateWithCrossShardSubquery) {
+TEST_F(DistributedDmlTest, UpdateWithCrossShardSubquery) {
     // Insert users
     execute_distributed_dml("INSERT INTO users (id, name, age) VALUES (0, 'Alice', 25)");
     execute_distributed_dml("INSERT INTO users (id, name, age) VALUES (1, 'Bob', 30)");
