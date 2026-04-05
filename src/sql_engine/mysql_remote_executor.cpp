@@ -165,9 +165,9 @@ Value MySQLRemoteExecutor::mysql_field_to_value(
 
         case MYSQL_TYPE_DECIMAL:
         case MYSQL_TYPE_NEWDECIMAL: {
-            // Store as string in arena
+            // Store as decimal (numeric string) in arena
             sql_parser::StringRef s = arena_.allocate_string(data, static_cast<uint32_t>(length));
-            return value_string(s);
+            return value_decimal(s);
         }
 
         case MYSQL_TYPE_DATE: {

@@ -203,6 +203,16 @@ private:
             executor.add_mutable_data_source(kv.first.c_str(), kv.second);
         if (remote_executor_)
             executor.set_remote_executor(remote_executor_);
+        // If sharding is configured, provide a distribute callback so that
+        // subqueries also go through the distributed planner.
+        if (shard_map_ && remote_executor_) {
+            executor.set_distribute_fn(
+                [this](PlanNode* plan) -> PlanNode* {
+                    DistributedPlanner<D> dp(*shard_map_, catalog_, parser_.arena(),
+                                             remote_executor_, &functions_);
+                    return dp.distribute(plan);
+                });
+        }
     }
 };
 

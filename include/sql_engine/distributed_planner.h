@@ -116,7 +116,10 @@ private:
 
             case PlanNodeType::FILTER: {
                 // Check if child is a SCAN -- push filter to remote
-                if (node->left && node->left->type == PlanNodeType::SCAN) {
+                // (but not if the filter contains a subquery, which must be
+                // evaluated locally after distributed subquery execution)
+                if (node->left && node->left->type == PlanNodeType::SCAN &&
+                    !has_subquery(node->filter.expr)) {
                     return distribute_scan(node->left, node->filter.expr,
                                            nullptr, nullptr, nullptr, false);
                 }
@@ -140,8 +143,6 @@ private:
                     // Extract aggregate info from the PROJECT select list
                     push_agg_exprs_from_project(node, agg_child);
                     PlanNode* dist_agg = distribute_aggregate(agg_child);
-                    // If it was distributed (MERGE_AGGREGATE), no need for PROJECT wrapper
-                    // because the merge already produces the right columns
                     if (dist_agg && dist_agg->type == PlanNodeType::MERGE_AGGREGATE) {
                         // Re-add FILTER (HAVING) if present
                         if (node->left && node->left->type == PlanNodeType::FILTER) {
@@ -582,6 +583,18 @@ private:
         merge->merge_aggregate.merge_ops = static_cast<uint8_t*>(
             arena_.allocate(merge_ops.size()));
         std::memcpy(merge->merge_aggregate.merge_ops, merge_ops.data(), merge_ops.size());
+
+        // Store original output expressions for column naming:
+        // group_by expressions + aggregate expressions
+        uint16_t out_count = agg_node->aggregate.group_count + agg_node->aggregate.agg_count;
+        auto** out_exprs = static_cast<const sql_parser::AstNode**>(
+            arena_.allocate(sizeof(sql_parser::AstNode*) * out_count));
+        for (uint16_t i = 0; i < agg_node->aggregate.group_count; ++i)
+            out_exprs[i] = agg_node->aggregate.group_by[i];
+        for (uint16_t i = 0; i < agg_node->aggregate.agg_count; ++i)
+            out_exprs[agg_node->aggregate.group_count + i] = agg_node->aggregate.agg_exprs[i];
+        merge->merge_aggregate.output_exprs = out_exprs;
+        merge->merge_aggregate.output_expr_count = out_count;
 
         // Set left to first child for compatibility with tree walkers
         if (!children.empty()) merge->left = children[0];

@@ -4,6 +4,7 @@
 #include "sql_engine/types.h"
 #include "sql_parser/common.h"  // StringRef
 #include <cstdint>
+#include <cstdlib>
 #include <type_traits>
 
 namespace sql_engine {
@@ -55,6 +56,15 @@ struct Value {
             case TAG_INT64:  return static_cast<double>(int_val);
             case TAG_UINT64: return static_cast<double>(uint_val);
             case TAG_DOUBLE: return double_val;
+            case TAG_DECIMAL:
+                if (str_val.ptr && str_val.len > 0) {
+                    char buf[128];
+                    uint32_t n = str_val.len < 127 ? str_val.len : 127;
+                    for (uint32_t i = 0; i < n; ++i) buf[i] = str_val.ptr[i];
+                    buf[n] = '\0';
+                    return std::strtod(buf, nullptr);
+                }
+                return 0.0;
             default:         return 0.0;
         }
     }
@@ -66,6 +76,7 @@ struct Value {
             case TAG_INT64:  return int_val;
             case TAG_UINT64: return static_cast<int64_t>(uint_val);
             case TAG_DOUBLE: return static_cast<int64_t>(double_val);
+            case TAG_DECIMAL: return static_cast<int64_t>(to_double());
             default:         return 0;
         }
     }

@@ -113,6 +113,9 @@ struct PlanNode {
             uint8_t* merge_ops;       // parallel to agg columns
             uint16_t merge_op_count;
             uint16_t group_key_count; // number of leading group-by columns
+            // Original output column expressions (for column naming)
+            const sql_parser::AstNode** output_exprs;
+            uint16_t output_expr_count;
         } merge_aggregate;
 
         struct {

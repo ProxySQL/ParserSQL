@@ -112,8 +112,8 @@ TEST_F(MySQLExecutorTest, DecimalType) {
     sql_parser::StringRef sql{q, static_cast<uint32_t>(strlen(q))};
     auto rs = exec_->execute("test_mysql", sql);
     ASSERT_EQ(rs.row_count(), 1u);
-    // DECIMAL comes as string
-    EXPECT_EQ(rs.rows[0].get(0).tag, sql_engine::Value::TAG_STRING);
+    // DECIMAL comes as numeric decimal type
+    EXPECT_EQ(rs.rows[0].get(0).tag, sql_engine::Value::TAG_DECIMAL);
 }
 
 TEST_F(MySQLExecutorTest, NullHandling) {

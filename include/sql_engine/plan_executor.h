@@ -48,6 +48,7 @@
 #include "sql_engine/dml_result.h"
 #include "sql_engine/mutable_data_source.h"
 #include "sql_engine/catalog_resolver.h"
+#include "sql_parser/emitter.h"
 
 #include <unordered_map>
 #include <string>
@@ -80,6 +81,11 @@ public:
 
     // Access the subquery executor (for operators that need it)
     SubqueryExecutor<D>* subquery_executor() { return &subquery_exec_; }
+
+    // Set a distribute callback for subquery plans (used by Session to inject
+    // distributed planning into subquery execution).
+    using DistributeFn = std::function<PlanNode*(PlanNode*)>;
+    void set_distribute_fn(DistributeFn fn) { distribute_fn_ = std::move(fn); }
 
     ResultSet execute(PlanNode* plan) {
         if (!plan) return {};
@@ -141,15 +147,22 @@ private:
     std::unordered_map<std::string, MutableDataSource*> mutable_sources_;
     std::vector<std::unique_ptr<Operator>> operators_;
     RemoteExecutor* remote_executor_ = nullptr;
+    DistributeFn distribute_fn_;
     SubqueryExecutor<D> subquery_exec_;
     sql_parser::Arena subquery_plan_arena_{65536, 1048576};
     std::function<Value(sql_parser::StringRef)> outer_resolver_;
 
     void setup_subquery_executor() {
-        // Build plan callback: uses PlanBuilder with our catalog and arena
+        // Build plan callback: uses PlanBuilder with our catalog and arena.
+        // If a distribute function is set (for distributed/sharded execution),
+        // apply it to the plan so subqueries also go through the distributed planner.
         subquery_exec_.set_build_plan([this](const sql_parser::AstNode* ast) -> PlanNode* {
             PlanBuilder<D> builder(catalog_, arena_);
-            return builder.build(ast);
+            PlanNode* plan = builder.build(ast);
+            if (plan && distribute_fn_) {
+                plan = distribute_fn_(plan);
+            }
+            return plan;
         });
         // Execute plan callback: create a fresh executor for the subquery
         // to avoid interfering with the outer operator tree.
@@ -169,6 +182,8 @@ private:
                     inner_exec.add_data_source(kv.first.c_str(), kv.second);
                 }
             }
+            if (remote_executor_)
+                inner_exec.set_remote_executor(remote_executor_);
             return inner_exec.execute(plan);
         });
         // Correlated execution: pass outer resolver as fallback.
@@ -192,6 +207,8 @@ private:
                         inner_exec.add_data_source(kv.first.c_str(), kv.second);
                     }
                 }
+                if (remote_executor_)
+                    inner_exec.set_remote_executor(remote_executor_);
                 inner_exec.set_outer_resolver(outer_resolve);
                 return inner_exec.execute(plan);
             });
@@ -503,6 +520,13 @@ private:
                 collect_tables(node->merge_sort.children[i], tables);
             return;
         }
+        // For SET_OP (UNION ALL), only collect from left side to avoid
+        // duplicating table entries when the same table appears on both
+        // sides (e.g., sharded UNION ALL of RemoteScans for the same table).
+        if (node->type == PlanNodeType::SET_OP) {
+            collect_tables(node->left, tables);
+            return;
+        }
         collect_tables(node->left, tables);
         collect_tables(node->right, tables);
     }
@@ -536,8 +560,10 @@ private:
                 if (node->remote_scan.table) return node->remote_scan.table->column_count;
                 return 0;
             case PlanNodeType::MERGE_AGGREGATE:
-                // group keys + output agg columns
-                return count_columns(node->left);
+                // Use stored output expression count if available
+                if (node->merge_aggregate.output_expr_count > 0)
+                    return node->merge_aggregate.output_expr_count;
+                return node->merge_aggregate.group_key_count + node->merge_aggregate.merge_op_count;
             case PlanNodeType::MERGE_SORT:
                 return count_columns(node->left);
             case PlanNodeType::INSERT_PLAN:
@@ -970,6 +996,31 @@ private:
                     build_column_names(plan->derived_scan.inner_plan, rs);
                 }
                 break;
+            case PlanNodeType::MERGE_AGGREGATE: {
+                // Use the stored output expressions for column naming
+                if (plan->merge_aggregate.output_exprs &&
+                    plan->merge_aggregate.output_expr_count > 0) {
+                    for (uint16_t i = 0; i < plan->merge_aggregate.output_expr_count; ++i) {
+                        const sql_parser::AstNode* expr = plan->merge_aggregate.output_exprs[i];
+                        if (expr) {
+                            // Use the emitter to produce a readable name
+                            sql_parser::Emitter<D> emitter(arena_);
+                            emitter.emit(expr);
+                            sql_parser::StringRef name = emitter.result();
+                            if (name.ptr && name.len > 0) {
+                                rs.column_names.emplace_back(name.ptr, name.len);
+                            } else {
+                                rs.column_names.push_back("?column?");
+                            }
+                        } else {
+                            rs.column_names.push_back("?column?");
+                        }
+                    }
+                } else {
+                    build_column_names(plan->left, rs);
+                }
+                break;
+            }
             default:
                 // For wrapping operators, recurse to child
                 build_column_names(plan->left, rs);

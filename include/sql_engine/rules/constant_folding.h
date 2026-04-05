@@ -23,7 +23,17 @@ namespace rules {
 
 namespace detail_cf {
 
-// Check if an expression has any column references
+// Check if a function name is an aggregate function
+inline bool is_aggregate_function(const sql_parser::AstNode* expr) {
+    if (!expr || expr->type != sql_parser::NodeType::NODE_FUNCTION_CALL) return false;
+    sql_parser::StringRef name = expr->value();
+    return name.equals_ci("COUNT", 5) || name.equals_ci("SUM", 3) ||
+           name.equals_ci("AVG", 3) || name.equals_ci("MIN", 3) ||
+           name.equals_ci("MAX", 3);
+}
+
+// Check if an expression has any column references or aggregate functions
+// (aggregate functions depend on row data and must not be folded)
 inline bool has_column_ref(const sql_parser::AstNode* expr) {
     if (!expr) return false;
     switch (expr->type) {
@@ -33,6 +43,10 @@ inline bool has_column_ref(const sql_parser::AstNode* expr) {
         case sql_parser::NodeType::NODE_IDENTIFIER:
             // Identifiers in expression context are column references
             return true;
+        case sql_parser::NodeType::NODE_FUNCTION_CALL:
+            // Aggregate functions depend on row data, not foldable
+            if (is_aggregate_function(expr)) return true;
+            break;
         default:
             break;
     }
