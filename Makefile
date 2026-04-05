@@ -106,7 +106,15 @@ SQLENGINE_TARGET = sqlengine
 BENCH_DISTRIBUTED_SRC = $(PROJECT_ROOT)/tools/bench_distributed.cpp
 BENCH_DISTRIBUTED_TARGET = bench_distributed
 
-.PHONY: all lib test bench bench-compare bench-distributed build-corpus-test build-sqlengine clean
+# Engine stress test (direct API, multi-threaded)
+ENGINE_STRESS_SRC = $(PROJECT_ROOT)/tools/engine_stress_test.cpp
+ENGINE_STRESS_TARGET = engine_stress_test
+
+# MySQL wire protocol server
+MYSQL_SERVER_SRC = $(PROJECT_ROOT)/tools/mysql_server.cpp
+MYSQL_SERVER_TARGET = mysql_server
+
+.PHONY: all lib test bench bench-compare bench-distributed build-corpus-test build-sqlengine engine-stress mysql-server clean
 
 build-corpus-test: $(CORPUS_TEST_TARGET)
 
@@ -164,6 +172,18 @@ bench-distributed: $(BENCH_DISTRIBUTED_TARGET)
 $(BENCH_DISTRIBUTED_TARGET): $(BENCH_DISTRIBUTED_SRC) $(LIB_TARGET) $(ENGINE_OBJS)
 	$(CXX) $(CXXFLAGS) $(CPPFLAGS) $(MYSQL_CFLAGS) $(PG_CFLAGS) -o $@ $< $(ENGINE_OBJS) -L$(PROJECT_ROOT) -lsqlparser -lpthread $(MYSQL_LIBS) $(PG_LIBS)
 
+# Engine stress test
+engine-stress: $(ENGINE_STRESS_TARGET)
+
+$(ENGINE_STRESS_TARGET): $(ENGINE_STRESS_SRC) $(LIB_TARGET) $(ENGINE_OBJS)
+	$(CXX) $(CXXFLAGS) $(CPPFLAGS) $(MYSQL_CFLAGS) $(PG_CFLAGS) -o $@ $< $(ENGINE_OBJS) -L$(PROJECT_ROOT) -lsqlparser -lpthread $(MYSQL_LIBS) $(PG_LIBS)
+
+# MySQL wire protocol server
+mysql-server: $(MYSQL_SERVER_TARGET)
+
+$(MYSQL_SERVER_TARGET): $(MYSQL_SERVER_SRC) $(LIB_TARGET) $(ENGINE_OBJS)
+	$(CXX) $(CXXFLAGS) $(CPPFLAGS) $(MYSQL_CFLAGS) $(PG_CFLAGS) -o $@ $< $(ENGINE_OBJS) -L$(PROJECT_ROOT) -lsqlparser -lpthread $(MYSQL_LIBS) $(PG_LIBS)
+
 $(CORPUS_TEST_TARGET): $(CORPUS_TEST_SRC) $(LIB_TARGET)
 	$(CXX) $(CXXFLAGS) $(CPPFLAGS) -o $@ $< -L$(PROJECT_ROOT) -lsqlparser
 
@@ -192,4 +212,6 @@ clean:
 	rm -f $(BENCH_COMPARE_OBJ) $(BENCH_COMPARE_TARGET)
 	rm -f $(SQLENGINE_TARGET)
 	rm -f $(BENCH_DISTRIBUTED_TARGET)
+	rm -f $(ENGINE_STRESS_TARGET)
+	rm -f $(MYSQL_SERVER_TARGET)
 	@echo "Cleaned."
