@@ -102,7 +102,11 @@ CORPUS_TEST_TARGET = $(PROJECT_ROOT)/corpus_test
 SQLENGINE_SRC = $(PROJECT_ROOT)/tools/sqlengine.cpp
 SQLENGINE_TARGET = sqlengine
 
-.PHONY: all lib test bench bench-compare build-corpus-test build-sqlengine clean
+# Distributed benchmark tool
+BENCH_DISTRIBUTED_SRC = $(PROJECT_ROOT)/tools/bench_distributed.cpp
+BENCH_DISTRIBUTED_TARGET = bench_distributed
+
+.PHONY: all lib test bench bench-compare bench-distributed build-corpus-test build-sqlengine clean
 
 build-corpus-test: $(CORPUS_TEST_TARGET)
 
@@ -154,6 +158,12 @@ $(BENCH_TARGET): $(BENCH_OBJS) $(GBENCH_OBJS) $(LIB_TARGET) $(ENGINE_OBJS)
 $(SQLENGINE_TARGET): $(SQLENGINE_SRC) $(LIB_TARGET) $(ENGINE_OBJS)
 	$(CXX) $(CXXFLAGS) $(CPPFLAGS) $(MYSQL_CFLAGS) $(PG_CFLAGS) -o $@ $< $(ENGINE_OBJS) -L$(PROJECT_ROOT) -lsqlparser -lpthread $(MYSQL_LIBS) $(PG_LIBS)
 
+# Distributed benchmark
+bench-distributed: $(BENCH_DISTRIBUTED_TARGET)
+
+$(BENCH_DISTRIBUTED_TARGET): $(BENCH_DISTRIBUTED_SRC) $(LIB_TARGET) $(ENGINE_OBJS)
+	$(CXX) $(CXXFLAGS) $(CPPFLAGS) $(MYSQL_CFLAGS) $(PG_CFLAGS) -o $@ $< $(ENGINE_OBJS) -L$(PROJECT_ROOT) -lsqlparser -lpthread $(MYSQL_LIBS) $(PG_LIBS)
+
 $(CORPUS_TEST_TARGET): $(CORPUS_TEST_SRC) $(LIB_TARGET)
 	$(CXX) $(CXXFLAGS) $(CPPFLAGS) -o $@ $< -L$(PROJECT_ROOT) -lsqlparser
 
@@ -181,4 +191,5 @@ clean:
 	rm -f $(BENCH_OBJS) $(GBENCH_OBJS) $(BENCH_TARGET) $(CORPUS_TEST_TARGET)
 	rm -f $(BENCH_COMPARE_OBJ) $(BENCH_COMPARE_TARGET)
 	rm -f $(SQLENGINE_TARGET)
+	rm -f $(BENCH_DISTRIBUTED_TARGET)
 	@echo "Cleaned."
