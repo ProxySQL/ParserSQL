@@ -194,6 +194,16 @@ enum class NodeType : uint16_t {
     NODE_LOAD_DATA_STMT,
     NODE_LOAD_DATA_OPTIONS,
 
+    // Window function nodes
+    NODE_WINDOW_FUNCTION,      // expr OVER (...)
+    NODE_WINDOW_SPEC,          // PARTITION BY ... ORDER BY ...
+    NODE_WINDOW_PARTITION,     // PARTITION BY clause
+    NODE_WINDOW_ORDER,         // ORDER BY clause within window
+
+    // CTE nodes
+    NODE_CTE,                  // WITH clause wrapper
+    NODE_CTE_DEFINITION,       // name AS (SELECT ...)
+
     // Shared
     NODE_STMT_OPTIONS,         // LOW_PRIORITY, IGNORE, QUICK, DELAYED, etc.
     NODE_UPDATE_SET_ITEM,      // single col=expr pair (shared by INSERT SET and UPDATE SET)

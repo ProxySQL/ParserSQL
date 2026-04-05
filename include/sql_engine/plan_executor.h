@@ -44,6 +44,7 @@
 #include "sql_engine/subquery_executor.h"
 #include "sql_engine/operators/merge_aggregate_op.h"
 #include "sql_engine/operators/merge_sort_op.h"
+#include "sql_engine/operators/window_op.h"
 #include "sql_engine/remote_executor.h"
 #include "sql_engine/dml_result.h"
 #include "sql_engine/mutable_data_source.h"
@@ -86,6 +87,152 @@ public:
     // distributed planning into subquery execution).
     using DistributeFn = std::function<PlanNode*(PlanNode*)>;
     void set_distribute_fn(DistributeFn fn) { distribute_fn_ = std::move(fn); }
+
+    // Execute a query that may be wrapped in a CTE (WITH clause).
+    // Takes the AST root and handles CTE materialization before building/executing the plan.
+    ResultSet execute_with_cte(const sql_parser::AstNode* ast) {
+        if (!ast) return {};
+
+        if (ast->type != sql_parser::NodeType::NODE_CTE) {
+            // Not a CTE, build plan normally
+            PlanBuilder<D> builder(catalog_, arena_);
+            PlanNode* plan = builder.build(ast);
+            return execute(plan);
+        }
+
+        // Materialize each CTE definition
+        std::vector<std::unique_ptr<InMemoryDataSource>> cte_sources;
+        for (const sql_parser::AstNode* child = ast->first_child; child; child = child->next_sibling) {
+            if (child->type != sql_parser::NodeType::NODE_CTE_DEFINITION) continue;
+
+            sql_parser::StringRef cte_name = child->value();
+            const sql_parser::AstNode* inner_select = child->first_child;
+            if (!inner_select) continue;
+
+            // Build and execute the CTE query
+            PlanBuilder<D> cte_builder(catalog_, arena_);
+            PlanNode* cte_plan = cte_builder.build(inner_select);
+            if (!cte_plan) continue;
+
+            ResultSet cte_rs = execute(cte_plan);
+
+            // Create a synthetic TableInfo for the CTE
+            uint16_t col_count = cte_rs.column_count;
+            if (col_count == 0 && !cte_rs.rows.empty()) {
+                col_count = cte_rs.rows[0].column_count;
+            }
+
+            // Try to get column names from the original SELECT's aliases
+            // This handles cases like SELECT dept, COUNT(*) AS cnt
+            std::vector<std::string> final_col_names;
+            const sql_parser::AstNode* inner_items = nullptr;
+            if (inner_select->type == sql_parser::NodeType::NODE_SELECT_STMT) {
+                for (const sql_parser::AstNode* c = inner_select->first_child; c; c = c->next_sibling) {
+                    if (c->type == sql_parser::NodeType::NODE_SELECT_ITEM_LIST) {
+                        inner_items = c;
+                        break;
+                    }
+                }
+            }
+            if (inner_items) {
+                uint16_t idx = 0;
+                for (const sql_parser::AstNode* item = inner_items->first_child;
+                     item && idx < col_count; item = item->next_sibling, ++idx) {
+                    // Check for alias
+                    const sql_parser::AstNode* alias_node = nullptr;
+                    for (const sql_parser::AstNode* c = item->first_child; c; c = c->next_sibling) {
+                        if (c->type == sql_parser::NodeType::NODE_ALIAS) {
+                            alias_node = c;
+                            break;
+                        }
+                    }
+                    if (alias_node) {
+                        sql_parser::StringRef av = alias_node->value();
+                        final_col_names.emplace_back(av.ptr, av.len);
+                    } else if (idx < cte_rs.column_names.size()) {
+                        final_col_names.push_back(cte_rs.column_names[idx]);
+                    } else {
+                        final_col_names.push_back("?column?");
+                    }
+                }
+            } else {
+                for (uint16_t i = 0; i < col_count; ++i) {
+                    if (i < cte_rs.column_names.size())
+                        final_col_names.push_back(cte_rs.column_names[i]);
+                    else
+                        final_col_names.push_back("?column?");
+                }
+            }
+
+            auto* cols = static_cast<ColumnInfo*>(
+                arena_.allocate(sizeof(ColumnInfo) * col_count));
+            for (uint16_t i = 0; i < col_count; ++i) {
+                cols[i].ordinal = i;
+                cols[i].nullable = true;
+                cols[i].type = SqlType::make_varchar(255);
+                const std::string& cn = (i < final_col_names.size()) ? final_col_names[i] : final_col_names.back();
+                char* buf = static_cast<char*>(arena_.allocate(cn.size()));
+                std::memcpy(buf, cn.data(), cn.size());
+                cols[i].name = sql_parser::StringRef{buf, static_cast<uint32_t>(cn.size())};
+            }
+
+            auto* table_info = static_cast<TableInfo*>(arena_.allocate(sizeof(TableInfo)));
+            table_info->schema_name = {};
+            // Copy CTE name into arena
+            char* name_buf = static_cast<char*>(arena_.allocate(cte_name.len));
+            std::memcpy(name_buf, cte_name.ptr, cte_name.len);
+            table_info->table_name = sql_parser::StringRef{name_buf, cte_name.len};
+            table_info->columns = cols;
+            table_info->column_count = col_count;
+            table_info->alias = {};
+
+            // Register in catalog
+            const_cast<Catalog&>(catalog_).register_table(table_info);
+
+            // Deep-copy rows into arena so they persist
+            std::vector<Row> cte_rows;
+            for (const auto& row : cte_rs.rows) {
+                Row new_row = make_row(arena_, col_count);
+                for (uint16_t c = 0; c < col_count && c < row.column_count; ++c) {
+                    Value v = row.get(c);
+                    // Deep copy string values into arena
+                    if (v.tag == Value::TAG_STRING && v.str_val.ptr) {
+                        char* buf = static_cast<char*>(arena_.allocate(v.str_val.len));
+                        std::memcpy(buf, v.str_val.ptr, v.str_val.len);
+                        v.str_val.ptr = buf;
+                        v.str_val.len = v.str_val.len;
+                    }
+                    new_row.set(c, v);
+                }
+                cte_rows.push_back(new_row);
+            }
+
+            auto source = std::make_unique<InMemoryDataSource>(table_info, std::move(cte_rows));
+
+            // Register as data source (lowercased name)
+            std::string name_str(cte_name.ptr, cte_name.len);
+            for (auto& c : name_str) { if (c >= 'A' && c <= 'Z') c += 32; }
+            sources_[name_str] = source.get();
+            cte_sources.push_back(std::move(source));
+        }
+
+        // Now build and execute the main query
+        const sql_parser::AstNode* main_query = nullptr;
+        for (const sql_parser::AstNode* child = ast->first_child; child; child = child->next_sibling) {
+            if (child->type == sql_parser::NodeType::NODE_SELECT_STMT ||
+                child->type == sql_parser::NodeType::NODE_COMPOUND_QUERY) {
+                main_query = child;
+            }
+        }
+        if (!main_query) return {};
+
+        PlanBuilder<D> builder(catalog_, arena_);
+        PlanNode* plan = builder.build(main_query);
+        ResultSet result = execute(plan);
+
+        // CTE sources are kept alive by cte_sources until we return
+        return result;
+    }
 
     ResultSet execute(PlanNode* plan) {
         if (!plan) return {};
@@ -482,6 +629,8 @@ private:
 
     static bool is_aggregate_expr(const sql_parser::AstNode* expr) {
         if (!expr) return false;
+        // Window functions are not aggregates for this purpose
+        if (expr->type == sql_parser::NodeType::NODE_WINDOW_FUNCTION) return false;
         if (expr->type == sql_parser::NodeType::NODE_FUNCTION_CALL) {
             sql_parser::StringRef name = expr->value();
             if (name.equals_ci("COUNT", 5) || name.equals_ci("SUM", 3) ||
@@ -518,6 +667,10 @@ private:
         if (node->type == PlanNodeType::MERGE_SORT) {
             for (uint16_t i = 0; i < node->merge_sort.child_count; ++i)
                 collect_tables(node->merge_sort.children[i], tables);
+            return;
+        }
+        if (node->type == PlanNodeType::WINDOW) {
+            collect_tables(node->left, tables);
             return;
         }
         // For SET_OP (UNION ALL), only collect from left side to avoid
@@ -566,6 +719,8 @@ private:
                 return node->merge_aggregate.group_key_count + node->merge_aggregate.merge_op_count;
             case PlanNodeType::MERGE_SORT:
                 return count_columns(node->left);
+            case PlanNodeType::WINDOW:
+                return node->window.select_count;
             case PlanNodeType::INSERT_PLAN:
             case PlanNodeType::UPDATE_PLAN:
             case PlanNodeType::DELETE_PLAN:
@@ -604,6 +759,8 @@ private:
                 return build_merge_aggregate(node);
             case PlanNodeType::MERGE_SORT:
                 return build_merge_sort(node);
+            case PlanNodeType::WINDOW:
+                return build_window(node);
             case PlanNodeType::INSERT_PLAN:
             case PlanNodeType::UPDATE_PLAN:
             case PlanNodeType::DELETE_PLAN:
@@ -946,6 +1103,23 @@ private:
         return 0;
     }
 
+    Operator* build_window(PlanNode* node) {
+        Operator* child = build_operator(node->left);
+        if (!child && node->left) return nullptr;
+
+        std::vector<const TableInfo*> tables;
+        collect_tables(node->left, tables);
+
+        auto op = std::make_unique<WindowOperator<D>>(
+            child,
+            node->window.window_exprs, node->window.window_count,
+            node->window.select_exprs, node->window.select_count,
+            catalog_, tables, functions_, arena_);
+        Operator* ptr = op.get();
+        operators_.push_back(std::move(op));
+        return ptr;
+    }
+
     void build_column_names(PlanNode* plan, ResultSet& rs) {
         if (!plan) return;
 
@@ -996,6 +1170,66 @@ private:
                     build_column_names(plan->derived_scan.inner_plan, rs);
                 }
                 break;
+            case PlanNodeType::WINDOW: {
+                for (uint16_t i = 0; i < plan->window.select_count; ++i) {
+                    if (plan->window.select_aliases && plan->window.select_aliases[i]) {
+                        sql_parser::StringRef av = plan->window.select_aliases[i]->value();
+                        rs.column_names.emplace_back(av.ptr, av.len);
+                    } else if (plan->window.select_exprs[i]) {
+                        const sql_parser::AstNode* expr = plan->window.select_exprs[i];
+                        if (expr->type == sql_parser::NodeType::NODE_WINDOW_FUNCTION) {
+                            // Use the function name from the window function
+                            const sql_parser::AstNode* func = expr->first_child;
+                            if (func) {
+                                sql_parser::StringRef ev = func->value();
+                                if (ev.ptr && ev.len > 0)
+                                    rs.column_names.emplace_back(ev.ptr, ev.len);
+                                else
+                                    rs.column_names.push_back("?column?");
+                            } else {
+                                rs.column_names.push_back("?column?");
+                            }
+                        } else {
+                            sql_parser::StringRef ev = expr->value();
+                            if (ev.ptr && ev.len > 0)
+                                rs.column_names.emplace_back(ev.ptr, ev.len);
+                            else
+                                rs.column_names.push_back("?column?");
+                        }
+                    } else {
+                        rs.column_names.push_back("?column?");
+                    }
+                }
+                break;
+            }
+            case PlanNodeType::AGGREGATE: {
+                // Group-by columns first, then aggregate columns
+                for (uint16_t i = 0; i < plan->aggregate.group_count; ++i) {
+                    const sql_parser::AstNode* expr = plan->aggregate.group_by[i];
+                    if (expr) {
+                        sql_parser::StringRef ev = expr->value();
+                        if (ev.ptr && ev.len > 0)
+                            rs.column_names.emplace_back(ev.ptr, ev.len);
+                        else
+                            rs.column_names.push_back("?column?");
+                    } else {
+                        rs.column_names.push_back("?column?");
+                    }
+                }
+                for (uint16_t i = 0; i < plan->aggregate.agg_count; ++i) {
+                    const sql_parser::AstNode* expr = plan->aggregate.agg_exprs[i];
+                    if (expr) {
+                        sql_parser::StringRef ev = expr->value();
+                        if (ev.ptr && ev.len > 0)
+                            rs.column_names.emplace_back(ev.ptr, ev.len);
+                        else
+                            rs.column_names.push_back("?column?");
+                    } else {
+                        rs.column_names.push_back("?column?");
+                    }
+                }
+                break;
+            }
             case PlanNodeType::MERGE_AGGREGATE: {
                 // Use the stored output expressions for column naming
                 if (plan->merge_aggregate.output_exprs &&

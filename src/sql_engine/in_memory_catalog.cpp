@@ -115,6 +115,39 @@ void InMemoryCatalog::add_table(const char* schema, const char* table,
     td.info.column_count = static_cast<uint16_t>(td.columns.size());
 }
 
+void InMemoryCatalog::register_table(const TableInfo* table) {
+    if (!table) return;
+    std::string key = to_lower(table->table_name.ptr, table->table_name.len);
+
+    TableData& td = tables_[key];
+    td.schema_str = "";
+    td.table_str = std::string(table->table_name.ptr, table->table_name.len);
+    td.column_names.clear();
+    td.columns.clear();
+
+    for (uint16_t i = 0; i < table->column_count; ++i) {
+        td.column_names.emplace_back(table->columns[i].name.ptr, table->columns[i].name.len);
+        ColumnInfo ci = table->columns[i];
+        td.columns.push_back(ci);
+    }
+    // Fix StringRef pointers
+    for (size_t i = 0; i < td.columns.size(); ++i) {
+        td.columns[i].name = sql_parser::StringRef{
+            td.column_names[i].c_str(),
+            static_cast<uint32_t>(td.column_names[i].size())
+        };
+    }
+    td.info.schema_name = sql_parser::StringRef{
+        td.schema_str.c_str(), static_cast<uint32_t>(td.schema_str.size())
+    };
+    td.info.table_name = sql_parser::StringRef{
+        td.table_str.c_str(), static_cast<uint32_t>(td.table_str.size())
+    };
+    td.info.columns = td.columns.data();
+    td.info.column_count = static_cast<uint16_t>(td.columns.size());
+    td.info.alias = {};
+}
+
 void InMemoryCatalog::drop_table(const char* schema, const char* table) {
     std::string key = make_key(schema, table);
     tables_.erase(key);

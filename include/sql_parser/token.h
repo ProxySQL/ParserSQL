@@ -109,6 +109,21 @@ enum class TokenType : uint16_t {
     TK_ROWS,
     TK_ARRAY,
     TK_ROW,
+
+    // Window function tokens
+    TK_OVER,
+    TK_PARTITION,
+    TK_ROW_NUMBER,
+    TK_RANK,
+    TK_DENSE_RANK,
+    TK_LAG,
+    TK_LEAD,
+    TK_FIRST_VALUE,
+    TK_LAST_VALUE,
+
+    // CTE tokens
+    TK_WITH,
+    TK_RECURSIVE,
 };
 
 struct Token {

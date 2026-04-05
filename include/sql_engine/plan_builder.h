@@ -25,6 +25,7 @@
 #include "sql_parser/common.h"
 #include "sql_parser/arena.h"
 #include <cstring>
+#include <vector>
 
 namespace sql_engine {
 
@@ -44,6 +45,9 @@ public:
         }
         if (stmt_ast->type == sql_parser::NodeType::NODE_COMPOUND_QUERY) {
             return build_compound(stmt_ast);
+        }
+        if (stmt_ast->type == sql_parser::NodeType::NODE_CTE) {
+            return build_cte(stmt_ast);
         }
         return nullptr;
     }
@@ -96,13 +100,34 @@ private:
         return JOIN_INNER;
     }
 
+    // Check if an expression is a window function (NODE_WINDOW_FUNCTION)
+    static bool is_window_function(const sql_parser::AstNode* expr) {
+        if (!expr) return false;
+        return expr->type == sql_parser::NodeType::NODE_WINDOW_FUNCTION;
+    }
+
+    // Check if SELECT list contains any window functions
+    static bool has_window_functions(const sql_parser::AstNode* select_ast) {
+        const sql_parser::AstNode* items = find_child(select_ast, sql_parser::NodeType::NODE_SELECT_ITEM_LIST);
+        if (!items) return false;
+        for (const sql_parser::AstNode* item = items->first_child; item; item = item->next_sibling) {
+            if (item->first_child && is_window_function(item->first_child)) return true;
+        }
+        return false;
+    }
+
     // Check if an expression (or any descendant) contains an aggregate function call.
     // Does NOT recurse into subqueries -- aggregates inside subqueries belong
     // to the subquery's own aggregation, not the outer query.
+    // Does NOT recurse into window functions -- aggregates inside OVER() are
+    // handled by the window operator, not the aggregate operator.
     static bool has_aggregate(const sql_parser::AstNode* expr) {
         if (!expr) return false;
         // Do not recurse into subqueries
         if (expr->type == sql_parser::NodeType::NODE_SUBQUERY) return false;
+        // Do not recurse into window functions - aggregates inside OVER()
+        // belong to the window operator
+        if (expr->type == sql_parser::NodeType::NODE_WINDOW_FUNCTION) return false;
         if (expr->type == sql_parser::NodeType::NODE_FUNCTION_CALL) {
             sql_parser::StringRef name = expr->value();
             if (name.equals_ci("COUNT", 5) || name.equals_ci("SUM", 3) ||
@@ -206,6 +231,43 @@ private:
             current = filter;
         }
 
+        // 4b. WINDOW -> Window node (if SELECT list has window functions)
+        if (has_window_functions(select_ast)) {
+            const sql_parser::AstNode* wnd_items = find_child(select_ast, sql_parser::NodeType::NODE_SELECT_ITEM_LIST);
+            if (wnd_items) {
+                // Collect window function expressions and full select list
+                std::vector<const sql_parser::AstNode*> win_exprs;
+                uint16_t total_count = count_children(wnd_items);
+
+                auto** sel_exprs = static_cast<const sql_parser::AstNode**>(
+                    arena_.allocate(sizeof(sql_parser::AstNode*) * total_count));
+                auto** sel_aliases = static_cast<const sql_parser::AstNode**>(
+                    arena_.allocate(sizeof(sql_parser::AstNode*) * total_count));
+                uint16_t idx = 0;
+                for (const sql_parser::AstNode* item = wnd_items->first_child; item; item = item->next_sibling) {
+                    sel_exprs[idx] = item->first_child;
+                    sel_aliases[idx] = find_child(item, sql_parser::NodeType::NODE_ALIAS);
+                    if (item->first_child && is_window_function(item->first_child)) {
+                        win_exprs.push_back(item->first_child);
+                    }
+                    ++idx;
+                }
+
+                PlanNode* wnd = make_plan_node(arena_, PlanNodeType::WINDOW);
+                uint16_t wc = static_cast<uint16_t>(win_exprs.size());
+                auto** warr = static_cast<const sql_parser::AstNode**>(
+                    arena_.allocate(sizeof(sql_parser::AstNode*) * wc));
+                for (uint16_t i = 0; i < wc; ++i) warr[i] = win_exprs[i];
+                wnd->window.window_exprs = warr;
+                wnd->window.window_count = wc;
+                wnd->window.select_exprs = sel_exprs;
+                wnd->window.select_aliases = sel_aliases;
+                wnd->window.select_count = total_count;
+                wnd->left = current;
+                current = wnd;
+            }
+        }
+
         // 5. ORDER BY -> Sort (before Project so sort keys resolve against full row)
         const sql_parser::AstNode* order_by = find_child(select_ast, sql_parser::NodeType::NODE_ORDER_BY_CLAUSE);
         if (order_by) {
@@ -236,9 +298,10 @@ private:
             current = sort;
         }
 
-        // 6. SELECT list -> Project
+        // 6. SELECT list -> Project (skip if WINDOW node handles it)
+        bool has_window = has_window_functions(select_ast);
         const sql_parser::AstNode* item_list = find_child(select_ast, sql_parser::NodeType::NODE_SELECT_ITEM_LIST);
-        if (item_list) {
+        if (item_list && !has_window) {
             // Check if this is "SELECT *" with a single asterisk and no aliases -- skip Project for bare scan
             bool is_star_only = false;
             const sql_parser::AstNode* first_item = item_list->first_child;
@@ -327,6 +390,23 @@ private:
             }
         }
         return result;
+    }
+
+    // Build plan for CTE (WITH clause)
+    // The CTE node has CTE_DEFINITION children, with the last child being the main SELECT.
+    // We build the plan for the main SELECT, and store CTE definitions separately
+    // for the executor to materialize.
+    PlanNode* build_cte(const sql_parser::AstNode* cte_ast) {
+        // The last child is the main query (SELECT_STMT or COMPOUND_QUERY)
+        const sql_parser::AstNode* main_query = nullptr;
+        for (const sql_parser::AstNode* c = cte_ast->first_child; c; c = c->next_sibling) {
+            if (c->type == sql_parser::NodeType::NODE_SELECT_STMT ||
+                c->type == sql_parser::NodeType::NODE_COMPOUND_QUERY) {
+                main_query = c;
+            }
+        }
+        if (!main_query) return nullptr;
+        return build(main_query);
     }
 
     // Build plan from FROM clause

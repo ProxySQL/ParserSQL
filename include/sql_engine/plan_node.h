@@ -22,6 +22,7 @@ enum class PlanNodeType : uint8_t {
     REMOTE_SCAN,      // fetch from remote backend via SQL
     MERGE_AGGREGATE,  // merge partial aggregates from N sources
     MERGE_SORT,       // merge N pre-sorted streams
+    WINDOW,           // window function computation
 
     // DML plan nodes
     INSERT_PLAN,
@@ -125,6 +126,15 @@ struct PlanNode {
             PlanNode** children;
             uint16_t child_count;
         } merge_sort;
+
+        struct {
+            const sql_parser::AstNode** window_exprs;    // window function expressions (NODE_WINDOW_FUNCTION)
+            uint16_t window_count;
+            // original SELECT expression list for pass-through
+            const sql_parser::AstNode** select_exprs;
+            const sql_parser::AstNode** select_aliases;
+            uint16_t select_count;
+        } window;
 
         // DML plan nodes
         struct {

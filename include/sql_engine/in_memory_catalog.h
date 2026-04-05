@@ -20,6 +20,9 @@ public:
     // Remove a table.
     void drop_table(const char* schema, const char* table);
 
+    // Register a pre-built TableInfo (e.g., from CTE materialization)
+    void register_table(const TableInfo* table) override;
+
     // Catalog interface
     const TableInfo* get_table(sql_parser::StringRef name) const override;
     const TableInfo* get_table(sql_parser::StringRef schema,

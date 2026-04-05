@@ -291,6 +291,10 @@ private:
             if (tok_.peek().type == TokenType::TK_RPAREN) {
                 tok_.skip();
             }
+            // Check for OVER clause (window function)
+            if (tok_.peek().type == TokenType::TK_OVER) {
+                return parse_window_function(func);
+            }
             return func;
         }
 
@@ -524,6 +528,64 @@ private:
         return expr;
     }
 
+    // Parse: func_call OVER ( [PARTITION BY expr_list] [ORDER BY expr_list] )
+    AstNode* parse_window_function(AstNode* func) {
+        tok_.skip(); // consume OVER
+        AstNode* win = make_node(arena_, NodeType::NODE_WINDOW_FUNCTION);
+        win->add_child(func); // first child is the function
+
+        AstNode* spec = parse_window_spec();
+        if (spec) win->add_child(spec); // second child is window spec
+        return win;
+    }
+
+    AstNode* parse_window_spec() {
+        AstNode* spec = make_node(arena_, NodeType::NODE_WINDOW_SPEC);
+        if (tok_.peek().type != TokenType::TK_LPAREN) return spec;
+        tok_.skip(); // consume (
+
+        // PARTITION BY
+        if (tok_.peek().type == TokenType::TK_PARTITION) {
+            tok_.skip(); // consume PARTITION
+            if (tok_.peek().type == TokenType::TK_BY) tok_.skip(); // consume BY
+            AstNode* part = make_node(arena_, NodeType::NODE_WINDOW_PARTITION);
+            while (true) {
+                AstNode* expr = parse();
+                if (!expr) break;
+                part->add_child(expr);
+                if (tok_.peek().type == TokenType::TK_COMMA) tok_.skip();
+                else break;
+            }
+            spec->add_child(part);
+        }
+
+        // ORDER BY
+        if (tok_.peek().type == TokenType::TK_ORDER) {
+            tok_.skip(); // consume ORDER
+            if (tok_.peek().type == TokenType::TK_BY) tok_.skip(); // consume BY
+            AstNode* ord = make_node(arena_, NodeType::NODE_WINDOW_ORDER);
+            while (true) {
+                AstNode* expr = parse();
+                if (!expr) break;
+                AstNode* item = make_node(arena_, NodeType::NODE_ORDER_BY_ITEM);
+                item->add_child(expr);
+                // Optional ASC/DESC
+                Token dir = tok_.peek();
+                if (dir.type == TokenType::TK_ASC || dir.type == TokenType::TK_DESC) {
+                    tok_.skip();
+                    item->add_child(make_node(arena_, NodeType::NODE_IDENTIFIER, dir.text));
+                }
+                ord->add_child(item);
+                if (tok_.peek().type == TokenType::TK_COMMA) tok_.skip();
+                else break;
+            }
+            spec->add_child(ord);
+        }
+
+        if (tok_.peek().type == TokenType::TK_RPAREN) tok_.skip(); // consume )
+        return spec;
+    }
+
     // Skip tokens until matching closing paren (handles nesting)
     void skip_to_matching_paren() {
         int depth = 1;
@@ -605,6 +667,15 @@ private:
             case TokenType::TK_ROWS:
             case TokenType::TK_ARRAY:
             case TokenType::TK_ROW:
+            case TokenType::TK_ROW_NUMBER:
+            case TokenType::TK_RANK:
+            case TokenType::TK_DENSE_RANK:
+            case TokenType::TK_LAG:
+            case TokenType::TK_LEAD:
+            case TokenType::TK_FIRST_VALUE:
+            case TokenType::TK_LAST_VALUE:
+            case TokenType::TK_PARTITION:
+            case TokenType::TK_RECURSIVE:
                 return true;
             default:
                 return false;

@@ -59,6 +59,9 @@ public:
     // Find a column in a table by name. Returns nullptr if not found.
     virtual const ColumnInfo* get_column(const TableInfo* table,
                                           sql_parser::StringRef column_name) const = 0;
+
+    // Register a pre-built TableInfo (e.g., for CTEs). Default: no-op.
+    virtual void register_table(const TableInfo* /*table*/) {}
 };
 
 } // namespace sql_engine
