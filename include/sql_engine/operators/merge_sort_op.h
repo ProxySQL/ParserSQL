@@ -4,6 +4,7 @@
 #include "sql_engine/operator.h"
 #include "sql_engine/value.h"
 #include "sql_engine/row.h"
+#include "sql_engine/thread_pool.h"
 #include <vector>
 #include <queue>
 #include <functional>
@@ -21,9 +22,10 @@ public:
                       const uint16_t* sort_col_indices,
                       const uint8_t* directions,
                       uint16_t key_count,
-                      bool parallel_open = false)
+                      bool parallel_open = false,
+                      ThreadPool* pool = nullptr)
         : children_(std::move(children)), key_count_(key_count),
-          parallel_open_(parallel_open)
+          parallel_open_(parallel_open), pool_(pool)
     {
         sort_cols_.assign(sort_col_indices, sort_col_indices + key_count);
         directions_.assign(directions, directions + key_count);
@@ -34,24 +36,25 @@ public:
         has_row_.assign(children_.size(), false);
 
         if (parallel_open_ && children_.size() > 1) {
-            // Parallel execution (#26): open all children concurrently and
-            // fetch their first row. Each child is typically a RemoteScan
-            // that performs a network call in open(); launching concurrently
-            // reduces wall-clock time from O(N*latency) to O(latency).
-            //
-            // NOTE: requires a thread-safe RemoteExecutor implementation.
+            // Parallel execution: open all children concurrently and
+            // fetch their first row. Uses thread pool when available
+            // (~1-2us dispatch) vs std::async (~200us thread creation).
             std::vector<std::future<void>> futures;
             futures.reserve(children_.size());
             for (size_t i = 0; i < children_.size(); ++i) {
-                futures.push_back(std::async(std::launch::async,
-                    [this, i]{
-                        children_[i]->open();
-                        Row row{};
-                        if (children_[i]->next(row)) {
-                            heads_[i] = row;
-                            has_row_[i] = true;
-                        }
-                    }));
+                auto launcher = [this, i]{
+                    children_[i]->open();
+                    Row row{};
+                    if (children_[i]->next(row)) {
+                        heads_[i] = row;
+                        has_row_[i] = true;
+                    }
+                };
+                if (pool_) {
+                    futures.push_back(pool_->submit(std::move(launcher)));
+                } else {
+                    futures.push_back(std::async(std::launch::async, std::move(launcher)));
+                }
             }
             for (auto& f : futures) f.get();
         } else {
@@ -115,6 +118,7 @@ private:
     std::vector<uint8_t> directions_;
     uint16_t key_count_;
     bool parallel_open_;
+    ThreadPool* pool_ = nullptr;
 
     std::vector<Row> heads_;
     std::vector<bool> has_row_;

@@ -46,6 +46,7 @@
 #include "sql_engine/operators/merge_sort_op.h"
 #include "sql_engine/operators/window_op.h"
 #include "sql_engine/remote_executor.h"
+#include "sql_engine/thread_pool.h"
 #include "sql_engine/dml_result.h"
 #include "sql_engine/mutable_data_source.h"
 #include "sql_engine/catalog_resolver.h"
@@ -85,6 +86,12 @@ public:
     // with connection pooling). Disabled by default for backward compatibility.
     void set_parallel_open(bool enabled) {
         parallel_open_enabled_ = enabled;
+    }
+
+    // Set a thread pool for lightweight parallel dispatch in merge/set operators.
+    // The pool must outlive this executor.
+    void set_thread_pool(ThreadPool* pool) {
+        pool_ = pool;
     }
 
     // Access the subquery executor (for operators that need it)
@@ -302,6 +309,7 @@ private:
     std::vector<std::unique_ptr<Operator>> operators_;
     RemoteExecutor* remote_executor_ = nullptr;
     bool parallel_open_enabled_ = false;
+    ThreadPool* pool_ = nullptr;
     DistributeFn distribute_fn_;
     SubqueryExecutor<D> subquery_exec_;
     sql_parser::Arena subquery_plan_arena_{65536, 1048576};
@@ -1024,7 +1032,8 @@ private:
                          (node->left && node->left->type == PlanNodeType::REMOTE_SCAN &&
                           node->right && node->right->type == PlanNodeType::REMOTE_SCAN);
         auto op = std::make_unique<SetOpOperator>(
-            left, right, node->set_op.op, node->set_op.all, parallel);
+            left, right, node->set_op.op, node->set_op.all, parallel,
+            parallel ? pool_ : nullptr);
         Operator* ptr = op.get();
         operators_.push_back(std::move(op));
         return ptr;
@@ -1058,7 +1067,8 @@ private:
             node->merge_aggregate.merge_ops,
             node->merge_aggregate.merge_op_count,
             arena_,
-            parallel);
+            parallel,
+            parallel ? pool_ : nullptr);
         Operator* ptr = op.get();
         operators_.push_back(std::move(op));
         return ptr;
@@ -1098,7 +1108,8 @@ private:
             sort_col_indices.data(),
             sort_dirs.data(),
             node->merge_sort.key_count,
-            parallel);
+            parallel,
+            parallel ? pool_ : nullptr);
         Operator* ptr = op.get();
         operators_.push_back(std::move(op));
         return ptr;

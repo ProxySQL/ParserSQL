@@ -4,6 +4,7 @@
 #include "sql_engine/operator.h"
 #include "sql_engine/value.h"
 #include "sql_engine/row.h"
+#include "sql_engine/thread_pool.h"
 #include "sql_parser/arena.h"
 #include <vector>
 #include <unordered_map>
@@ -32,12 +33,14 @@ public:
                            const uint8_t* merge_ops,
                            uint16_t merge_op_count,
                            sql_parser::Arena& arena,
-                           bool parallel_open = false)
+                           bool parallel_open = false,
+                           ThreadPool* pool = nullptr)
         : children_(std::move(children)),
           group_key_count_(group_key_count),
           merge_op_count_(merge_op_count),
           arena_(arena),
-          parallel_open_(parallel_open)
+          parallel_open_(parallel_open),
+          pool_(pool)
     {
         merge_ops_.assign(merge_ops, merge_ops + merge_op_count);
     }
@@ -48,30 +51,27 @@ public:
         result_idx_ = 0;
 
         if (parallel_open_ && children_.size() > 1) {
-            // Parallel execution (#26): open all children concurrently and
-            // materialize their rows. Each child is typically a RemoteScan
-            // that performs a network call in open(); launching concurrently
-            // reduces wall-clock time from O(N*latency) to O(latency).
-            // Each future fully opens+consumes its child so the remote
-            // executor call is contained within one thread.
-            //
-            // NOTE: requires a thread-safe RemoteExecutor implementation
-            // (production executors with independent per-backend connections
-            // are safe; the unit-test mock may not be).
+            // Parallel execution: open all children concurrently and
+            // materialize their rows. Uses thread pool when available
+            // (~1-2us dispatch) vs std::async (~200us thread creation).
             std::vector<std::vector<Row>> child_rows(children_.size());
             {
                 std::vector<std::future<void>> futures;
                 futures.reserve(children_.size());
                 for (size_t ci = 0; ci < children_.size(); ++ci) {
-                    futures.push_back(std::async(std::launch::async,
-                        [this, ci, &child_rows]{
-                            children_[ci]->open();
-                            Row row{};
-                            while (children_[ci]->next(row)) {
-                                child_rows[ci].push_back(row);
-                            }
-                            children_[ci]->close();
-                        }));
+                    auto launcher = [this, ci, &child_rows]{
+                        children_[ci]->open();
+                        Row row{};
+                        while (children_[ci]->next(row)) {
+                            child_rows[ci].push_back(row);
+                        }
+                        children_[ci]->close();
+                    };
+                    if (pool_) {
+                        futures.push_back(pool_->submit(std::move(launcher)));
+                    } else {
+                        futures.push_back(std::async(std::launch::async, std::move(launcher)));
+                    }
                 }
                 for (auto& f : futures) f.get();
             }
@@ -155,6 +155,7 @@ private:
     uint16_t merge_op_count_;
     sql_parser::Arena& arena_;
     bool parallel_open_;
+    ThreadPool* pool_ = nullptr;
 
     struct GroupState {
         std::vector<Value> group_values;

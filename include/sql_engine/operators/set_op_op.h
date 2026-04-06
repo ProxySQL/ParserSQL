@@ -3,6 +3,7 @@
 
 #include "sql_engine/operator.h"
 #include "sql_engine/plan_node.h"
+#include "sql_engine/thread_pool.h"
 #include <unordered_set>
 #include <string>
 #include <vector>
@@ -13,15 +14,19 @@ namespace sql_engine {
 class SetOpOperator : public Operator {
 public:
     SetOpOperator(Operator* left, Operator* right, uint8_t op, bool all,
-                  bool parallel_open = false)
+                  bool parallel_open = false, ThreadPool* pool = nullptr)
         : left_(left), right_(right), op_(op), all_(all),
-          parallel_open_(parallel_open) {}
+          parallel_open_(parallel_open), pool_(pool) {}
 
     void open() override {
-        if (parallel_open_) {
-            // Parallel open (#26): launch left and right opens concurrently.
-            // This is beneficial when both children are RemoteScan operators
-            // (each performing a network round-trip in open()).
+        if (parallel_open_ && pool_) {
+            // Thread-pool parallel open: ~1-2us dispatch vs ~200us for std::async
+            auto fl = pool_->submit([this]{ left_->open(); });
+            auto fr = pool_->submit([this]{ right_->open(); });
+            fl.get();
+            fr.get();
+        } else if (parallel_open_) {
+            // Fallback: std::async when no pool available
             auto fl = std::async(std::launch::async, [this]{ left_->open(); });
             auto fr = std::async(std::launch::async, [this]{ right_->open(); });
             fl.get();
@@ -113,6 +118,7 @@ private:
     uint8_t op_;
     bool all_;
     bool parallel_open_;
+    ThreadPool* pool_ = nullptr;
     bool reading_left_ = true;
     std::unordered_set<std::string> seen_;
     std::unordered_set<std::string> right_set_;

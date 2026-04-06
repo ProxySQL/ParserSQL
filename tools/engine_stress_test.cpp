@@ -42,6 +42,7 @@
 #include "sql_engine/result_set.h"
 #include "sql_engine/dml_result.h"
 #include "sql_engine/value.h"
+#include "sql_engine/thread_pool.h"
 
 using namespace sql_parser;
 using namespace sql_engine;
@@ -229,7 +230,8 @@ static void worker_thread(
     int duration_sec,
     std::atomic<bool>& start_flag,
     std::atomic<bool>& stop_flag,
-    ThreadStats& stats)
+    ThreadStats& stats,
+    ThreadPool* pool)
 {
     (void)thread_id;
 
@@ -245,6 +247,8 @@ static void worker_thread(
     Session<Dialect::MySQL> session(catalog, txn_mgr);
     session.set_remote_executor(&remote_exec);
     session.set_parallel_open(true);  // thread-safe executor enables parallel shard I/O
+    if (pool)
+        session.set_thread_pool(pool);
     if (has_shards) {
         session.set_shard_map(&shard_map);
     }
@@ -333,13 +337,22 @@ static BenchResult run_benchmark(
     std::atomic<bool> start_flag{false};
     std::atomic<bool> stop_flag{false};
 
+    // Shared thread pool for parallel shard I/O.
+    // Each query dispatches 2 tasks (one per shard). Pool needs enough workers
+    // so tasks aren't queued behind each other. num_threads workers means each
+    // stress thread gets ~1 pool worker for its parallel shard query.
+    size_t pool_size = static_cast<size_t>(std::max(num_threads, 4));
+    if (pool_size > 128) pool_size = 128;
+    ThreadPool pool(pool_size);
+
     // Launch threads
     for (int i = 0; i < num_threads; i++) {
         threads.emplace_back(worker_thread,
             i, std::cref(backends), std::cref(catalog), std::cref(shard_map),
             has_shards, query_sql, warmup_sec, duration_sec,
             std::ref(start_flag), std::ref(stop_flag),
-            std::ref(all_stats[i]));
+            std::ref(all_stats[i]),
+            &pool);
     }
 
     // Signal start

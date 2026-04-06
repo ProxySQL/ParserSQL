@@ -45,9 +45,8 @@ public:
         MYSQL* conn = pool_.checkout(name);
         ResultSet rs;
         try {
-            std::string query(sql.ptr, sql.len);
-            if (mysql_real_query(conn, query.c_str(),
-                                 static_cast<unsigned long>(query.size())) != 0) {
+            if (mysql_real_query(conn, sql.ptr,
+                                 static_cast<unsigned long>(sql.len)) != 0) {
                 pool_.checkin(name, conn);
                 return rs;
             }
@@ -72,9 +71,8 @@ public:
         DmlResult result;
         MYSQL* conn = pool_.checkout(name);
         try {
-            std::string query(sql.ptr, sql.len);
-            if (mysql_real_query(conn, query.c_str(),
-                                 static_cast<unsigned long>(query.size())) != 0) {
+            if (mysql_real_query(conn, sql.ptr,
+                                 static_cast<unsigned long>(sql.len)) != 0) {
                 result.error_message = mysql_error(conn);
                 pool_.checkin(name, conn);
                 return result;
@@ -101,6 +99,7 @@ private:
     ConnectionPool pool_;
     std::mutex mu_;
     std::unordered_map<std::string, sql_parser::Dialect> backend_dialects_;
+
 
     static ResultSet mysql_result_to_resultset(MYSQL_RES* res) {
         ResultSet rs;

@@ -18,6 +18,8 @@
 
 #include <cstring>
 #include <string>
+#include <unordered_map>
+#include <memory>
 
 namespace sql_engine {
 
@@ -64,29 +66,62 @@ public:
         shard_map_ = sm;
     }
 
+    // Set a shared thread pool for parallel shard I/O dispatch.
+    // The pool must outlive this session. Use with set_parallel_open(true).
+    void set_thread_pool(ThreadPool* pool) {
+        pool_ = pool;
+    }
+
     // Execute a SELECT query. Returns a ResultSet.
+    // Uses plan caching: repeated identical SQL strings skip parse/plan/optimize/distribute.
     ResultSet execute_query(const char* sql, size_t len) {
-        parser_.reset();
-        auto pr = parser_.parse(sql, len);
+        // Check plan cache first
+        std::string sql_key(sql, len);
+        auto cache_it = plan_cache_.find(sql_key);
+        if (cache_it != plan_cache_.end()) {
+            // Cache hit: reuse the cached plan. Use exec_arena_ for per-query
+            // allocations (rows, operator internals). Reset it each time.
+            exec_arena_.reset();
+            auto& entry = cache_it->second;
+            PlanExecutor<D> executor(functions_, catalog_, exec_arena_);
+            wire_executor(executor);
+            return executor.execute(entry.plan);
+        }
+
+        // Cache miss: full parse -> plan -> optimize -> distribute pipeline
+        auto cached_parser = std::make_unique<sql_parser::Parser<D>>();
+        auto pr = cached_parser->parse(sql, len);
         if (pr.status != sql_parser::ParseResult::OK || !pr.ast) {
             return {};
         }
 
-        PlanBuilder<D> builder(catalog_, parser_.arena());
+        PlanBuilder<D> builder(catalog_, cached_parser->arena());
         PlanNode* plan = builder.build(pr.ast);
         if (!plan) return {};
 
-        plan = optimizer_.optimize(plan, parser_.arena());
+        plan = optimizer_.optimize(plan, cached_parser->arena());
 
         // Distribute across shards if shard map is configured
         if (shard_map_ && remote_executor_) {
-            DistributedPlanner<D> dplanner(*shard_map_, catalog_, parser_.arena(), remote_executor_, &functions_);
+            DistributedPlanner<D> dplanner(*shard_map_, catalog_, cached_parser->arena(), remote_executor_, &functions_);
             plan = dplanner.distribute(plan);
         }
 
-        PlanExecutor<D> executor(functions_, catalog_, parser_.arena());
+        // Execute first using the parser's arena. preprocess_aggregates (called
+        // inside execute()) may allocate into the arena to modify the plan in-place.
+        // Those allocations must persist in the parser arena (not exec_arena_) so
+        // the cached plan remains valid across calls.
+        PlanExecutor<D> executor(functions_, catalog_, cached_parser->arena());
         wire_executor(executor);
-        return executor.execute(plan);
+        ResultSet rs = executor.execute(plan);
+
+        // Cache the plan (parser arena keeps plan tree and strings alive)
+        CachedPlan entry;
+        entry.parser = std::move(cached_parser);
+        entry.plan = plan;
+        plan_cache_.emplace(std::move(sql_key), std::move(entry));
+
+        return rs;
     }
 
     ResultSet execute_query(const char* sql) {
@@ -203,6 +238,22 @@ private:
     std::unordered_map<std::string, DataSource*> sources_;
     std::unordered_map<std::string, MutableDataSource*> mutable_sources_;
 
+    // Per-query execution arena. Reset before each query execution so
+    // per-query allocations (rows, operator internals) don't accumulate.
+    sql_parser::Arena exec_arena_{65536, 1048576};
+
+    // Thread pool for lightweight parallel shard I/O dispatch.
+    // Externally owned; set via set_thread_pool(). Shared across sessions.
+    ThreadPool* pool_ = nullptr;
+
+    // Plan cache: maps SQL string → cached plan + parser arena.
+    // The parser's arena keeps all AST/plan string pointers valid.
+    struct CachedPlan {
+        std::unique_ptr<sql_parser::Parser<D>> parser;
+        PlanNode* plan;
+    };
+    std::unordered_map<std::string, CachedPlan> plan_cache_;
+
     void wire_executor(PlanExecutor<D>& executor) {
         for (auto& kv : sources_)
             executor.add_data_source(kv.first.c_str(), kv.second);
@@ -210,8 +261,11 @@ private:
             executor.add_mutable_data_source(kv.first.c_str(), kv.second);
         if (remote_executor_)
             executor.set_remote_executor(remote_executor_);
-        if (parallel_open_enabled_)
+        if (parallel_open_enabled_) {
             executor.set_parallel_open(true);
+            if (pool_)
+                executor.set_thread_pool(pool_);
+        }
         // If sharding is configured, provide a distribute callback so that
         // subqueries also go through the distributed planner.
         if (shard_map_ && remote_executor_) {
