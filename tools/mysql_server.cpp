@@ -688,8 +688,7 @@ static void handle_connection(int client_fd, uint32_t conn_id, const ServerConte
     Arena txn_arena{65536, 1048576};
     LocalTransactionManager txn_mgr(txn_arena);
 
-    Arena exec_arena{65536, 4194304};
-    MultiRemoteExecutor remote_exec(exec_arena);
+    MultiRemoteExecutor remote_exec;
     for (auto& bc : ctx.backends) {
         remote_exec.add_backend(bc);
     }
@@ -919,8 +918,7 @@ int main(int argc, char* argv[]) {
 
     // Schema discovery using a temporary executor
     if (!backends.empty() && has_shards) {
-        Arena setup_arena{65536, 1048576};
-        MultiRemoteExecutor setup_exec(setup_arena);
+        MultiRemoteExecutor setup_exec;
         for (auto& bc : backends) {
             setup_exec.add_backend(bc);
         }

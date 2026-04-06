@@ -1,7 +1,6 @@
 #include <gtest/gtest.h>
 #include "sql_engine/mysql_remote_executor.h"
 #include "sql_engine/backend_config.h"
-#include "sql_parser/arena.h"
 
 #include <mysql/mysql.h>
 
@@ -41,18 +40,15 @@ sql_engine::BackendConfig make_mysql_config(const char* name = "test_mysql") {
 class MySQLExecutorTest : public ::testing::Test {
 protected:
     void SetUp() override {
-        arena_ = std::make_unique<sql_parser::Arena>(65536, 1048576);
-        exec_ = std::make_unique<sql_engine::MySQLRemoteExecutor>(*arena_);
+        exec_ = std::make_unique<sql_engine::MySQLRemoteExecutor>();
         exec_->add_backend(make_mysql_config());
     }
 
     void TearDown() override {
         exec_->disconnect_all();
         exec_.reset();
-        arena_.reset();
     }
 
-    std::unique_ptr<sql_parser::Arena> arena_;
     std::unique_ptr<sql_engine::MySQLRemoteExecutor> exec_;
 };
 

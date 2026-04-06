@@ -236,8 +236,7 @@ static void worker_thread(
     Arena txn_arena{65536, 1048576};
     LocalTransactionManager txn_mgr(txn_arena);
 
-    Arena exec_arena{65536, 4194304};
-    MultiRemoteExecutor remote_exec(exec_arena);
+    MultiRemoteExecutor remote_exec;
     for (auto& bc : backends) {
         remote_exec.add_backend(bc);
     }
@@ -692,8 +691,7 @@ int main(int argc, char* argv[]) {
     bool has_shards = !shards.empty();
 
     // Create a temporary executor for schema discovery and data loading
-    Arena setup_arena{65536, 1048576};
-    MultiRemoteExecutor setup_exec(setup_arena);
+    MultiRemoteExecutor setup_exec;
     for (auto& bc : backends) {
         setup_exec.add_backend(bc);
     }

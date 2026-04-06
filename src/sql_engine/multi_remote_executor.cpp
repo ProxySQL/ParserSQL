@@ -2,8 +2,7 @@
 
 namespace sql_engine {
 
-MultiRemoteExecutor::MultiRemoteExecutor(sql_parser::Arena& arena)
-    : mysql_exec_(arena), pgsql_exec_(arena) {}
+MultiRemoteExecutor::MultiRemoteExecutor() {}
 
 MultiRemoteExecutor::~MultiRemoteExecutor() {
     disconnect_all();

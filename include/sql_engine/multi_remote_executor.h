@@ -5,7 +5,6 @@
 #include "sql_engine/mysql_remote_executor.h"
 #include "sql_engine/pgsql_remote_executor.h"
 #include "sql_engine/backend_config.h"
-#include "sql_parser/arena.h"
 #include "sql_parser/common.h"
 
 #include <unordered_map>
@@ -15,7 +14,7 @@ namespace sql_engine {
 
 class MultiRemoteExecutor : public RemoteExecutor {
 public:
-    explicit MultiRemoteExecutor(sql_parser::Arena& arena);
+    MultiRemoteExecutor();
     ~MultiRemoteExecutor() override;
 
     void add_backend(const BackendConfig& config);

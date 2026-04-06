@@ -5,7 +5,7 @@
 #include "sql_engine/backend_config.h"
 #include "sql_engine/value.h"
 #include "sql_engine/row.h"
-#include "sql_parser/arena.h"
+#include "sql_engine/result_set.h"
 
 #include <libpq-fe.h>
 #include <unordered_map>
@@ -15,7 +15,7 @@ namespace sql_engine {
 
 class PgSQLRemoteExecutor : public RemoteExecutor {
 public:
-    explicit PgSQLRemoteExecutor(sql_parser::Arena& arena);
+    PgSQLRemoteExecutor();
     ~PgSQLRemoteExecutor() override;
 
     void add_backend(const BackendConfig& config);
@@ -31,11 +31,11 @@ private:
     };
 
     std::unordered_map<std::string, Connection> backends_;
-    sql_parser::Arena& arena_;
 
     Connection& get_or_connect(const std::string& name);
     ResultSet pg_result_to_resultset(PGresult* res);
-    Value pg_field_to_value(const char* data, int length, Oid type, bool is_null);
+    Value pg_field_to_value(ResultSet& rs, const char* data, int length,
+                            Oid type, bool is_null);
 };
 
 } // namespace sql_engine

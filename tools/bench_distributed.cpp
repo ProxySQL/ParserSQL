@@ -439,10 +439,9 @@ int main(int argc, char* argv[]) {
     }
 
     // Set up multi-remote executor
-    Arena exec_arena{65536, 1048576};
     MultiRemoteExecutor* remote_exec = nullptr;
     if (!backends.empty()) {
-        remote_exec = new MultiRemoteExecutor(exec_arena);
+        remote_exec = new MultiRemoteExecutor();
         for (auto& bc : backends) {
             remote_exec->add_backend(bc);
         }

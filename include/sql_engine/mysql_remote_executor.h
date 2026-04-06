@@ -5,7 +5,7 @@
 #include "sql_engine/backend_config.h"
 #include "sql_engine/value.h"
 #include "sql_engine/row.h"
-#include "sql_parser/arena.h"
+#include "sql_engine/result_set.h"
 
 #include <mysql/mysql.h>
 #include <unordered_map>
@@ -15,7 +15,7 @@ namespace sql_engine {
 
 class MySQLRemoteExecutor : public RemoteExecutor {
 public:
-    explicit MySQLRemoteExecutor(sql_parser::Arena& arena);
+    MySQLRemoteExecutor();
     ~MySQLRemoteExecutor() override;
 
     void add_backend(const BackendConfig& config);
@@ -31,11 +31,11 @@ private:
     };
 
     std::unordered_map<std::string, Connection> backends_;
-    sql_parser::Arena& arena_;
 
     Connection& get_or_connect(const std::string& name);
     ResultSet mysql_result_to_resultset(MYSQL_RES* res);
-    Value mysql_field_to_value(const char* data, unsigned long length,
+    Value mysql_field_to_value(ResultSet& rs, const char* data,
+                               unsigned long length,
                                enum_field_types type, bool is_null);
 };
 

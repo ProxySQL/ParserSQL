@@ -29,8 +29,7 @@
 
 namespace sql_engine {
 
-PgSQLRemoteExecutor::PgSQLRemoteExecutor(sql_parser::Arena& arena)
-    : arena_(arena) {}
+PgSQLRemoteExecutor::PgSQLRemoteExecutor() {}
 
 PgSQLRemoteExecutor::~PgSQLRemoteExecutor() {
     disconnect_all();
@@ -152,22 +151,21 @@ ResultSet PgSQLRemoteExecutor::pg_result_to_resultset(PGresult* res) {
     }
 
     for (int r = 0; r < num_rows; ++r) {
-        Row row = make_row(arena_, rs.column_count);
+        Row& row = rs.add_heap_row(rs.column_count);
         for (int c = 0; c < num_fields; ++c) {
             bool is_null = PQgetisnull(res, r, c);
             Oid oid = PQftype(res, c);
             const char* data = PQgetvalue(res, r, c);
             int length = PQgetlength(res, r, c);
-            Value v = pg_field_to_value(data, length, oid, is_null);
+            Value v = pg_field_to_value(rs, data, length, oid, is_null);
             row.set(static_cast<uint16_t>(c), v);
         }
-        rs.rows.push_back(row);
     }
     return rs;
 }
 
 Value PgSQLRemoteExecutor::pg_field_to_value(
-    const char* data, int length, Oid type, bool is_null) {
+    ResultSet& rs, const char* data, int length, Oid type, bool is_null) {
 
     if (is_null) return value_null();
 
@@ -186,7 +184,7 @@ Value PgSQLRemoteExecutor::pg_field_to_value(
             return value_double(std::strtod(data, nullptr));
 
         case NUMERICOID: {
-            sql_parser::StringRef s = arena_.allocate_string(data, static_cast<uint32_t>(length));
+            sql_parser::StringRef s = rs.own_string(data, static_cast<uint32_t>(length));
             return value_string(s);
         }
 
@@ -213,19 +211,19 @@ Value PgSQLRemoteExecutor::pg_field_to_value(
         }
 
         case BYTEAOID: {
-            sql_parser::StringRef s = arena_.allocate_string(data, static_cast<uint32_t>(length));
+            sql_parser::StringRef s = rs.own_string(data, static_cast<uint32_t>(length));
             return value_bytes(s);
         }
 
         case JSONOID:
         case JSONBOID: {
-            sql_parser::StringRef s = arena_.allocate_string(data, static_cast<uint32_t>(length));
+            sql_parser::StringRef s = rs.own_string(data, static_cast<uint32_t>(length));
             return value_json(s);
         }
 
         default: {
             // TEXT, VARCHAR, BPCHAR, NAME, and everything else -- treat as string
-            sql_parser::StringRef s = arena_.allocate_string(data, static_cast<uint32_t>(length));
+            sql_parser::StringRef s = rs.own_string(data, static_cast<uint32_t>(length));
             return value_string(s);
         }
     }

@@ -6,8 +6,7 @@
 
 namespace sql_engine {
 
-MySQLRemoteExecutor::MySQLRemoteExecutor(sql_parser::Arena& arena)
-    : arena_(arena) {}
+MySQLRemoteExecutor::MySQLRemoteExecutor() {}
 
 MySQLRemoteExecutor::~MySQLRemoteExecutor() {
     disconnect_all();
@@ -131,21 +130,20 @@ ResultSet MySQLRemoteExecutor::mysql_result_to_resultset(MYSQL_RES* res) {
     MYSQL_ROW mysql_row;
     while ((mysql_row = mysql_fetch_row(res)) != nullptr) {
         unsigned long* lengths = mysql_fetch_lengths(res);
-        Row row = make_row(arena_, rs.column_count);
+        Row& row = rs.add_heap_row(rs.column_count);
         for (unsigned int i = 0; i < num_fields; ++i) {
             bool is_null = (mysql_row[i] == nullptr);
             Value v = mysql_field_to_value(
-                mysql_row[i], is_null ? 0 : lengths[i],
+                rs, mysql_row[i], is_null ? 0 : lengths[i],
                 fields[i].type, is_null);
             row.set(static_cast<uint16_t>(i), v);
         }
-        rs.rows.push_back(row);
     }
     return rs;
 }
 
 Value MySQLRemoteExecutor::mysql_field_to_value(
-    const char* data, unsigned long length,
+    ResultSet& rs, const char* data, unsigned long length,
     enum_field_types type, bool is_null) {
 
     if (is_null) return value_null();
@@ -165,8 +163,7 @@ Value MySQLRemoteExecutor::mysql_field_to_value(
 
         case MYSQL_TYPE_DECIMAL:
         case MYSQL_TYPE_NEWDECIMAL: {
-            // Store as decimal (numeric string) in arena
-            sql_parser::StringRef s = arena_.allocate_string(data, static_cast<uint32_t>(length));
+            sql_parser::StringRef s = rs.own_string(data, static_cast<uint32_t>(length));
             return value_decimal(s);
         }
 
@@ -197,18 +194,18 @@ Value MySQLRemoteExecutor::mysql_field_to_value(
         case MYSQL_TYPE_TINY_BLOB:
         case MYSQL_TYPE_MEDIUM_BLOB:
         case MYSQL_TYPE_LONG_BLOB: {
-            sql_parser::StringRef s = arena_.allocate_string(data, static_cast<uint32_t>(length));
+            sql_parser::StringRef s = rs.own_string(data, static_cast<uint32_t>(length));
             return value_bytes(s);
         }
 
         case MYSQL_TYPE_JSON: {
-            sql_parser::StringRef s = arena_.allocate_string(data, static_cast<uint32_t>(length));
+            sql_parser::StringRef s = rs.own_string(data, static_cast<uint32_t>(length));
             return value_json(s);
         }
 
         default: {
             // STRING, VAR_STRING, ENUM, SET, etc. — treat as string
-            sql_parser::StringRef s = arena_.allocate_string(data, static_cast<uint32_t>(length));
+            sql_parser::StringRef s = rs.own_string(data, static_cast<uint32_t>(length));
             return value_string(s);
         }
     }

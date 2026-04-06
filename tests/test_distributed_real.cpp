@@ -77,8 +77,7 @@ void register_test_catalog(InMemoryCatalog& catalog) {
 class DistributedRealMySQLTest : public ::testing::Test {
 protected:
     void SetUp() override {
-        exec_arena_ = std::make_unique<Arena>(65536, 1048576);
-        exec_ = std::make_unique<MySQLRemoteExecutor>(*exec_arena_);
+        exec_ = std::make_unique<MySQLRemoteExecutor>();
 
         BackendConfig cfg;
         cfg.name = "shard_1";
@@ -129,7 +128,6 @@ protected:
         return executor.execute(dist_plan);
     }
 
-    std::unique_ptr<Arena> exec_arena_;
     std::unique_ptr<MySQLRemoteExecutor> exec_;
     InMemoryCatalog catalog_;
     FunctionRegistry<Dialect::MySQL> functions_;
@@ -167,15 +165,13 @@ TEST_F(DistributedRealMySQLTest, SelectFromOrders) {
 class MultiExecutorTest : public ::testing::Test {
 protected:
     void SetUp() override {
-        arena_ = std::make_unique<Arena>(65536, 1048576);
-        exec_ = std::make_unique<MultiRemoteExecutor>(*arena_);
+        exec_ = std::make_unique<MultiRemoteExecutor>();
     }
 
     void TearDown() override {
         exec_->disconnect_all();
     }
 
-    std::unique_ptr<Arena> arena_;
     std::unique_ptr<MultiRemoteExecutor> exec_;
 };
 
