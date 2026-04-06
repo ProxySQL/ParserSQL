@@ -50,6 +50,7 @@
 #include "sql_engine/data_source.h"
 #include "sql_engine/local_txn.h"
 #include "sql_engine/multi_remote_executor.h"
+#include "sql_engine/thread_safe_executor.h"
 #include "sql_engine/shard_map.h"
 #include "sql_engine/backend_config.h"
 #include "sql_engine/result_set.h"
@@ -688,13 +689,14 @@ static void handle_connection(int client_fd, uint32_t conn_id, const ServerConte
     Arena txn_arena{65536, 1048576};
     LocalTransactionManager txn_mgr(txn_arena);
 
-    MultiRemoteExecutor remote_exec;
+    ThreadSafeMultiRemoteExecutor remote_exec;
     for (auto& bc : ctx.backends) {
         remote_exec.add_backend(bc);
     }
 
     Session<Dialect::MySQL> session(ctx.catalog, txn_mgr);
     session.set_remote_executor(&remote_exec);
+    session.set_parallel_open(true);  // thread-safe executor enables parallel shard I/O
     if (ctx.has_shards) {
         session.set_shard_map(&ctx.shard_map);
     }

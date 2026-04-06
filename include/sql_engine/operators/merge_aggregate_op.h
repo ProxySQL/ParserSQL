@@ -152,9 +152,9 @@ private:
     std::vector<Operator*> children_;
     uint16_t group_key_count_;
     std::vector<uint8_t> merge_ops_;
-    bool parallel_open_;
     uint16_t merge_op_count_;
     sql_parser::Arena& arena_;
+    bool parallel_open_;
 
     struct GroupState {
         std::vector<Value> group_values;

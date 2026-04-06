@@ -26,6 +26,7 @@
 #include "sql_engine/data_source.h"
 #include "sql_engine/local_txn.h"
 #include "sql_engine/multi_remote_executor.h"
+#include "sql_engine/thread_safe_executor.h"
 #include "sql_engine/shard_map.h"
 #include "sql_engine/backend_config.h"
 #include "sql_engine/result_set.h"
@@ -414,9 +415,9 @@ int main(int argc, char* argv[]) {
     }
 
     // Set up multi-remote executor (for backend mode)
-    MultiRemoteExecutor* remote_exec = nullptr;
+    ThreadSafeMultiRemoteExecutor* remote_exec = nullptr;
     if (!backends.empty()) {
-        remote_exec = new MultiRemoteExecutor();
+        remote_exec = new ThreadSafeMultiRemoteExecutor();
         for (auto& bc : backends) {
             remote_exec->add_backend(bc);
         }
@@ -479,6 +480,7 @@ int main(int argc, char* argv[]) {
     Session<Dialect::MySQL> session(catalog, txn_mgr);
     if (remote_exec) {
         session.set_remote_executor(remote_exec);
+        session.set_parallel_open(true);  // thread-safe executor enables parallel shard I/O
     }
     if (!shards.empty()) {
         session.set_shard_map(&shard_map);

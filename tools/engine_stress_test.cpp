@@ -1,6 +1,6 @@
 // engine_stress_test.cpp -- Multi-threaded benchmark calling Session<D> API directly
 //
-// Each thread gets its own Session, MultiRemoteExecutor, arena, etc.
+// Each thread gets its own Session, ThreadSafeMultiRemoteExecutor, arena, etc.
 // The catalog and shard map are shared (read-only after setup).
 //
 // Output: JSON compatible with compare.py
@@ -36,6 +36,7 @@
 #include "sql_engine/data_source.h"
 #include "sql_engine/local_txn.h"
 #include "sql_engine/multi_remote_executor.h"
+#include "sql_engine/thread_safe_executor.h"
 #include "sql_engine/shard_map.h"
 #include "sql_engine/backend_config.h"
 #include "sql_engine/result_set.h"
@@ -236,13 +237,14 @@ static void worker_thread(
     Arena txn_arena{65536, 1048576};
     LocalTransactionManager txn_mgr(txn_arena);
 
-    MultiRemoteExecutor remote_exec;
+    ThreadSafeMultiRemoteExecutor remote_exec;
     for (auto& bc : backends) {
         remote_exec.add_backend(bc);
     }
 
     Session<Dialect::MySQL> session(catalog, txn_mgr);
     session.set_remote_executor(&remote_exec);
+    session.set_parallel_open(true);  // thread-safe executor enables parallel shard I/O
     if (has_shards) {
         session.set_shard_map(&shard_map);
     }

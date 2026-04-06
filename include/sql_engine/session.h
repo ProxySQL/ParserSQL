@@ -54,6 +54,12 @@ public:
         remote_executor_ = exec;
     }
 
+    // Enable parallel opening of RemoteScan children. Only safe when the
+    // RemoteExecutor is thread-safe (e.g. ThreadSafeMultiRemoteExecutor).
+    void set_parallel_open(bool enabled) {
+        parallel_open_enabled_ = enabled;
+    }
+
     void set_shard_map(const ShardMap* sm) {
         shard_map_ = sm;
     }
@@ -193,6 +199,7 @@ private:
     Optimizer<D> optimizer_;
     RemoteExecutor* remote_executor_ = nullptr;
     const ShardMap* shard_map_ = nullptr;
+    bool parallel_open_enabled_ = false;
     std::unordered_map<std::string, DataSource*> sources_;
     std::unordered_map<std::string, MutableDataSource*> mutable_sources_;
 
@@ -203,6 +210,8 @@ private:
             executor.add_mutable_data_source(kv.first.c_str(), kv.second);
         if (remote_executor_)
             executor.set_remote_executor(remote_executor_);
+        if (parallel_open_enabled_)
+            executor.set_parallel_open(true);
         // If sharding is configured, provide a distribute callback so that
         // subqueries also go through the distributed planner.
         if (shard_map_ && remote_executor_) {

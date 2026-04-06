@@ -6,17 +6,30 @@
 #include <unordered_set>
 #include <string>
 #include <vector>
+#include <future>
 
 namespace sql_engine {
 
 class SetOpOperator : public Operator {
 public:
-    SetOpOperator(Operator* left, Operator* right, uint8_t op, bool all)
-        : left_(left), right_(right), op_(op), all_(all) {}
+    SetOpOperator(Operator* left, Operator* right, uint8_t op, bool all,
+                  bool parallel_open = false)
+        : left_(left), right_(right), op_(op), all_(all),
+          parallel_open_(parallel_open) {}
 
     void open() override {
-        left_->open();
-        right_->open();
+        if (parallel_open_) {
+            // Parallel open (#26): launch left and right opens concurrently.
+            // This is beneficial when both children are RemoteScan operators
+            // (each performing a network round-trip in open()).
+            auto fl = std::async(std::launch::async, [this]{ left_->open(); });
+            auto fr = std::async(std::launch::async, [this]{ right_->open(); });
+            fl.get();
+            fr.get();
+        } else {
+            left_->open();
+            right_->open();
+        }
         reading_left_ = true;
         seen_.clear();
 
@@ -99,6 +112,7 @@ private:
     Operator* right_;
     uint8_t op_;
     bool all_;
+    bool parallel_open_;
     bool reading_left_ = true;
     std::unordered_set<std::string> seen_;
     std::unordered_set<std::string> right_set_;

@@ -80,6 +80,13 @@ public:
         remote_executor_ = exec;
     }
 
+    // Enable parallel opening of RemoteScan children in merge/set operators.
+    // Only safe when the RemoteExecutor is thread-safe (e.g. ThreadSafeMultiRemoteExecutor
+    // with connection pooling). Disabled by default for backward compatibility.
+    void set_parallel_open(bool enabled) {
+        parallel_open_enabled_ = enabled;
+    }
+
     // Access the subquery executor (for operators that need it)
     SubqueryExecutor<D>* subquery_executor() { return &subquery_exec_; }
 
@@ -294,6 +301,7 @@ private:
     std::unordered_map<std::string, MutableDataSource*> mutable_sources_;
     std::vector<std::unique_ptr<Operator>> operators_;
     RemoteExecutor* remote_executor_ = nullptr;
+    bool parallel_open_enabled_ = false;
     DistributeFn distribute_fn_;
     SubqueryExecutor<D> subquery_exec_;
     sql_parser::Arena subquery_plan_arena_{65536, 1048576};
@@ -1011,8 +1019,12 @@ private:
         Operator* right = build_operator(node->right);
         if (!left || !right) return nullptr;
 
+        // Enable parallel open when both children are remote scans and executor is thread-safe
+        bool parallel = parallel_open_enabled_ &&
+                         (node->left && node->left->type == PlanNodeType::REMOTE_SCAN &&
+                          node->right && node->right->type == PlanNodeType::REMOTE_SCAN);
         auto op = std::make_unique<SetOpOperator>(
-            left, right, node->set_op.op, node->set_op.all);
+            left, right, node->set_op.op, node->set_op.all, parallel);
         Operator* ptr = op.get();
         operators_.push_back(std::move(op));
         return ptr;
@@ -1037,12 +1049,16 @@ private:
         }
         if (children.empty()) return nullptr;
 
+        // Enable parallel open when children are RemoteScans and executor is thread-safe
+        bool parallel = parallel_open_enabled_ &&
+                         (children.size() > 1) && has_remote_scan_children(node);
         auto op = std::make_unique<MergeAggregateOperator>(
             std::move(children),
             node->merge_aggregate.group_key_count,
             node->merge_aggregate.merge_ops,
             node->merge_aggregate.merge_op_count,
-            arena_);
+            arena_,
+            parallel);
         Operator* ptr = op.get();
         operators_.push_back(std::move(op));
         return ptr;
@@ -1074,14 +1090,38 @@ private:
             sort_dirs.push_back(node->merge_sort.directions[i]);
         }
 
+        // Enable parallel open when children are RemoteScans and executor is thread-safe
+        bool parallel = parallel_open_enabled_ &&
+                         (children.size() > 1) && has_remote_scan_children_merge_sort(node);
         auto op = std::make_unique<MergeSortOperator>(
             std::move(children),
             sort_col_indices.data(),
             sort_dirs.data(),
-            node->merge_sort.key_count);
+            node->merge_sort.key_count,
+            parallel);
         Operator* ptr = op.get();
         operators_.push_back(std::move(op));
         return ptr;
+    }
+
+    // Check whether all children of a MERGE_AGGREGATE node are REMOTE_SCAN.
+    static bool has_remote_scan_children(const PlanNode* node) {
+        if (!node || node->type != PlanNodeType::MERGE_AGGREGATE) return false;
+        for (uint16_t i = 0; i < node->merge_aggregate.child_count; ++i) {
+            if (node->merge_aggregate.children[i]->type != PlanNodeType::REMOTE_SCAN)
+                return false;
+        }
+        return node->merge_aggregate.child_count > 0;
+    }
+
+    // Check whether all children of a MERGE_SORT node are REMOTE_SCAN.
+    static bool has_remote_scan_children_merge_sort(const PlanNode* node) {
+        if (!node || node->type != PlanNodeType::MERGE_SORT) return false;
+        for (uint16_t i = 0; i < node->merge_sort.child_count; ++i) {
+            if (node->merge_sort.children[i]->type != PlanNodeType::REMOTE_SCAN)
+                return false;
+        }
+        return node->merge_sort.child_count > 0;
     }
 
     uint16_t resolve_column_index(const sql_parser::AstNode* key, const TableInfo* table) {
