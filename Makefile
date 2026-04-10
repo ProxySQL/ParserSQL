@@ -79,7 +79,8 @@ TEST_SRCS = $(TEST_DIR)/test_main.cpp \
             $(TEST_DIR)/test_single_backend_txn.cpp \
             $(TEST_DIR)/test_distributed_txn.cpp \
             $(TEST_DIR)/test_window.cpp \
-            $(TEST_DIR)/test_cte.cpp
+            $(TEST_DIR)/test_cte.cpp \
+            $(TEST_DIR)/test_datetime_format.cpp
 TEST_OBJS = $(TEST_SRCS:.cpp=.o)
 TEST_TARGET = $(PROJECT_ROOT)/run_tests
 

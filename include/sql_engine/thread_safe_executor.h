@@ -28,6 +28,58 @@
 
 namespace sql_engine {
 
+// ----------------------------------------------------------------------------
+// RAII guards so the pool and MYSQL_RES can't leak on early-return or exception.
+// ----------------------------------------------------------------------------
+
+// ConnectionGuard: holds a checked-out connection and returns it to the pool
+// on destruction. If poison() was called, the connection is closed and
+// discarded instead (correct for query errors and exceptions -- the handle
+// may be in an unknown state, so returning it to the pool would poison the
+// next user of that backend).
+class ConnectionGuard {
+public:
+    ConnectionGuard(ConnectionPool& pool, std::string name)
+        : pool_(pool), name_(std::move(name)), conn_(pool_.checkout(name_)) {}
+
+    ~ConnectionGuard() {
+        if (!conn_) return;
+        if (poisoned_) {
+            // Close and discard: the connection may be in a half-open state
+            // (open transaction, partial result, etc.).
+            mysql_close(conn_);
+        } else {
+            pool_.checkin(name_, conn_);
+        }
+    }
+
+    ConnectionGuard(const ConnectionGuard&) = delete;
+    ConnectionGuard& operator=(const ConnectionGuard&) = delete;
+    ConnectionGuard(ConnectionGuard&&) = delete;
+    ConnectionGuard& operator=(ConnectionGuard&&) = delete;
+
+    MYSQL* get() const { return conn_; }
+    void poison() { poisoned_ = true; }
+
+private:
+    ConnectionPool& pool_;
+    std::string name_;
+    MYSQL* conn_;
+    bool poisoned_ = false;
+};
+
+// ResultGuard: frees a MYSQL_RES on scope exit.
+class ResultGuard {
+public:
+    explicit ResultGuard(MYSQL_RES* res) : res_(res) {}
+    ~ResultGuard() { if (res_) mysql_free_result(res_); }
+    ResultGuard(const ResultGuard&) = delete;
+    ResultGuard& operator=(const ResultGuard&) = delete;
+    MYSQL_RES* get() const { return res_; }
+private:
+    MYSQL_RES* res_;
+};
+
 class ThreadSafeMultiRemoteExecutor : public RemoteExecutor {
 public:
     ThreadSafeMultiRemoteExecutor() = default;
@@ -41,53 +93,68 @@ public:
     }
 
     ResultSet execute(const char* backend_name, sql_parser::StringRef sql) override {
-        std::string name(backend_name);
-        MYSQL* conn = pool_.checkout(name);
+        ConnectionGuard guard(pool_, std::string(backend_name));
         ResultSet rs;
+        MYSQL* conn = guard.get();
+        if (!conn) {
+            guard.poison();
+            return rs;
+        }
         try {
             if (mysql_real_query(conn, sql.ptr,
                                  static_cast<unsigned long>(sql.len)) != 0) {
-                pool_.checkin(name, conn);
+                // Query failed: the connection may still be usable (most query
+                // errors leave it clean), but we poison it to be safe. Better
+                // to reconnect than to hand a possibly-poisoned connection to
+                // the next caller.
+                guard.poison();
                 return rs;
             }
             MYSQL_RES* res = mysql_store_result(conn);
             if (!res) {
-                pool_.checkin(name, conn);
+                // Non-result statement (DML) returned via execute() path, or
+                // empty result set -- either way, connection is clean.
                 return rs;
             }
+            ResultGuard res_guard(res);
             rs = mysql_result_to_resultset(res);
-            mysql_free_result(res);
         } catch (...) {
-            // On exception, close the connection rather than returning it broken
-            if (conn) mysql_close(conn);
+            guard.poison();
             return rs;
         }
-        pool_.checkin(name, conn);
         return rs;
     }
 
     DmlResult execute_dml(const char* backend_name, sql_parser::StringRef sql) override {
-        std::string name(backend_name);
+        ConnectionGuard guard(pool_, std::string(backend_name));
         DmlResult result;
-        MYSQL* conn = pool_.checkout(name);
+        MYSQL* conn = guard.get();
+        if (!conn) {
+            guard.poison();
+            result.error_message = "failed to acquire connection";
+            return result;
+        }
         try {
             if (mysql_real_query(conn, sql.ptr,
                                  static_cast<unsigned long>(sql.len)) != 0) {
                 result.error_message = mysql_error(conn);
-                pool_.checkin(name, conn);
+                guard.poison();
                 return result;
             }
             MYSQL_RES* res = mysql_store_result(conn);
-            if (res) mysql_free_result(res);
+            ResultGuard res_guard(res);  // frees res if non-null
             result.affected_rows = mysql_affected_rows(conn);
             result.last_insert_id = mysql_insert_id(conn);
             result.success = true;
         } catch (const std::exception& e) {
             result.error_message = e.what();
-            if (conn) mysql_close(conn);
+            guard.poison();
+            return result;
+        } catch (...) {
+            result.error_message = "unknown exception";
+            guard.poison();
             return result;
         }
-        pool_.checkin(name, conn);
         return result;
     }
 

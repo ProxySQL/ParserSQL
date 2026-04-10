@@ -182,3 +182,58 @@ TEST_F(SessionTest, AutoCommitDisabled) {
     EXPECT_FALSE(session->in_transaction());
     EXPECT_EQ(users_source->row_count(), 3u);
 }
+
+// ===========================================================================
+// Plan cache LRU eviction
+// ===========================================================================
+//
+// The plan cache used to be an unbounded unordered_map. With many distinct
+// SQL strings, that's a slow memory leak. Validate that the LRU bound is
+// honored and that recently-used entries survive eviction.
+
+TEST_F(SessionTest, PlanCacheRespectsMaxSize) {
+    session->set_plan_cache_max_size(3);
+
+    // Distinct SELECTs so each one is a unique cache key. We use literal
+    // filters because the cache key is the raw SQL string.
+    session->execute_query("SELECT * FROM users WHERE id = 1");
+    session->execute_query("SELECT * FROM users WHERE id = 2");
+    session->execute_query("SELECT * FROM users WHERE id = 3");
+    EXPECT_EQ(session->plan_cache_size(), 3u);
+
+    // Adding a 4th distinct query must evict the oldest one.
+    session->execute_query("SELECT * FROM users WHERE id = 4");
+    EXPECT_EQ(session->plan_cache_size(), 3u);
+
+    // And a 5th must evict the second-oldest.
+    session->execute_query("SELECT * FROM users WHERE id = 5");
+    EXPECT_EQ(session->plan_cache_size(), 3u);
+}
+
+TEST_F(SessionTest, PlanCacheLruKeepsRecentlyUsed) {
+    session->set_plan_cache_max_size(2);
+
+    session->execute_query("SELECT * FROM users WHERE id = 1");  // [1]
+    session->execute_query("SELECT * FROM users WHERE id = 2");  // [2,1]
+    // Touch query 1 -> moves it back to front: [1,2]
+    session->execute_query("SELECT * FROM users WHERE id = 1");
+    EXPECT_EQ(session->plan_cache_size(), 2u);
+
+    // Now insert query 3 -> evicts the LRU which is query 2: [3,1]
+    session->execute_query("SELECT * FROM users WHERE id = 3");
+    EXPECT_EQ(session->plan_cache_size(), 2u);
+
+    // Re-running query 1 must be a cache hit (still cached) -- size stays
+    // the same. If it were evicted, the size would still be 2 but a new
+    // parser would have been allocated. We can't directly observe that here,
+    // but the splice-on-hit codepath gets exercised.
+    session->execute_query("SELECT * FROM users WHERE id = 1");
+    EXPECT_EQ(session->plan_cache_size(), 2u);
+}
+
+TEST_F(SessionTest, PlanCacheCanBeDisabled) {
+    session->set_plan_cache_max_size(0);
+    session->execute_query("SELECT * FROM users WHERE id = 1");
+    session->execute_query("SELECT * FROM users WHERE id = 2");
+    EXPECT_EQ(session->plan_cache_size(), 0u);
+}

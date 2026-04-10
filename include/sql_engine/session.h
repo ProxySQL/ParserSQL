@@ -19,6 +19,7 @@
 #include <cstring>
 #include <string>
 #include <unordered_map>
+#include <list>
 #include <memory>
 
 namespace sql_engine {
@@ -72,6 +73,12 @@ public:
         pool_ = pool;
     }
 
+    // Configure the maximum number of cached plans. When the cache is full,
+    // the least-recently-used entry is evicted on insert. Default is 1024.
+    // Setting to 0 disables caching entirely.
+    void set_plan_cache_max_size(size_t n) { plan_cache_max_size_ = n; }
+    size_t plan_cache_size() const { return plan_cache_.size(); }
+
     // Execute a SELECT query. Returns a ResultSet.
     // Uses plan caching: repeated identical SQL strings skip parse/plan/optimize/distribute.
     ResultSet execute_query(const char* sql, size_t len) {
@@ -79,10 +86,12 @@ public:
         std::string sql_key(sql, len);
         auto cache_it = plan_cache_.find(sql_key);
         if (cache_it != plan_cache_.end()) {
-            // Cache hit: reuse the cached plan. Use exec_arena_ for per-query
-            // allocations (rows, operator internals). Reset it each time.
+            // Cache hit: move this entry to the front of the LRU list.
+            plan_cache_order_.splice(plan_cache_order_.begin(),
+                                     plan_cache_order_,
+                                     cache_it->second);
             exec_arena_.reset();
-            auto& entry = cache_it->second;
+            auto& entry = *cache_it->second;
             PlanExecutor<D> executor(functions_, catalog_, exec_arena_);
             wire_executor(executor);
             return executor.execute(entry.plan);
@@ -115,11 +124,10 @@ public:
         wire_executor(executor);
         ResultSet rs = executor.execute(plan);
 
-        // Cache the plan (parser arena keeps plan tree and strings alive)
-        CachedPlan entry;
-        entry.parser = std::move(cached_parser);
-        entry.plan = plan;
-        plan_cache_.emplace(std::move(sql_key), std::move(entry));
+        // Cache the plan, enforcing the LRU bound. The parser arena is kept
+        // alive via unique_ptr stored in the CachedPlan so all plan/AST
+        // string pointers remain valid for subsequent cache hits.
+        insert_into_plan_cache(std::move(sql_key), std::move(cached_parser), plan);
 
         return rs;
     }
@@ -246,13 +254,45 @@ private:
     // Externally owned; set via set_thread_pool(). Shared across sessions.
     ThreadPool* pool_ = nullptr;
 
-    // Plan cache: maps SQL string → cached plan + parser arena.
-    // The parser's arena keeps all AST/plan string pointers valid.
+    // Plan cache: bounded LRU keyed by SQL string. Each entry owns the
+    // parser whose arena keeps the plan tree and all AST/plan string
+    // pointers alive for as long as the entry stays in the cache.
+    //
+    // Implementation: a list keeps insertion/use order (front = most
+    // recently used) and a hash map maps each SQL string to its iterator
+    // in the list, giving O(1) lookup, O(1) move-to-front on hit, and
+    // O(1) eviction of the LRU entry on insert.
     struct CachedPlan {
+        std::string key;
         std::unique_ptr<sql_parser::Parser<D>> parser;
         PlanNode* plan;
     };
-    std::unordered_map<std::string, CachedPlan> plan_cache_;
+    using CacheList = std::list<CachedPlan>;
+    using CacheIter = typename CacheList::iterator;
+    CacheList plan_cache_order_;
+    std::unordered_map<std::string, CacheIter> plan_cache_;
+    size_t plan_cache_max_size_ = 1024;
+
+    void insert_into_plan_cache(std::string key,
+                                std::unique_ptr<sql_parser::Parser<D>> parser,
+                                PlanNode* plan) {
+        if (plan_cache_max_size_ == 0) return;  // caching disabled
+        // Evict LRU entries until we're within budget. We evict before insert
+        // so the new entry counts against the cap and we never exceed it.
+        while (plan_cache_.size() >= plan_cache_max_size_ && !plan_cache_order_.empty()) {
+            const std::string& victim_key = plan_cache_order_.back().key;
+            plan_cache_.erase(victim_key);
+            plan_cache_order_.pop_back();
+        }
+        CachedPlan entry;
+        entry.key = std::move(key);
+        entry.parser = std::move(parser);
+        entry.plan = plan;
+        plan_cache_order_.push_front(std::move(entry));
+        // The map stores the iterator and a copy of the key (so the lookup
+        // string and the entry's owned key both remain valid through moves).
+        plan_cache_[plan_cache_order_.front().key] = plan_cache_order_.begin();
+    }
 
     void wire_executor(PlanExecutor<D>& executor) {
         for (auto& kv : sources_)

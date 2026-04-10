@@ -38,6 +38,13 @@ public:
                         task = std::move(tasks_.front());
                         tasks_.pop();
                     }
+                    // Exception safety: submit() wraps callables in
+                    // std::packaged_task, which catches any exception and
+                    // stores it in the shared state to be rethrown by
+                    // future::get(). `task()` therefore does not throw, so
+                    // the worker loop cannot die on a user exception. If
+                    // submit() is ever changed to queue raw callables, this
+                    // must be wrapped in try { task(); } catch (...) { log; }.
                     task();
                 }
             });

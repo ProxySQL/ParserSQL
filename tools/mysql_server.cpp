@@ -56,6 +56,7 @@
 #include "sql_engine/result_set.h"
 #include "sql_engine/dml_result.h"
 #include "sql_engine/value.h"
+#include "sql_engine/datetime_parse.h"
 
 using namespace sql_parser;
 using namespace sql_engine;
@@ -223,6 +224,35 @@ static std::string value_to_string(const Value& v) {
             if (v.str_val.ptr && v.str_val.len > 0)
                 return std::string(v.str_val.ptr, v.str_val.len);
             return "";
+        case Value::TAG_DATE: {
+            char buf[16];
+            size_t n = sql_engine::datetime_parse::format_date(v.date_val, buf, sizeof(buf));
+            return std::string(buf, n);
+        }
+        case Value::TAG_TIME: {
+            char buf[32];
+            size_t n = sql_engine::datetime_parse::format_time(v.time_val, buf, sizeof(buf));
+            return std::string(buf, n);
+        }
+        case Value::TAG_DATETIME: {
+            char buf[32];
+            size_t n = sql_engine::datetime_parse::format_datetime(v.datetime_val, buf, sizeof(buf));
+            return std::string(buf, n);
+        }
+        case Value::TAG_TIMESTAMP: {
+            char buf[32];
+            size_t n = sql_engine::datetime_parse::format_datetime(v.timestamp_val, buf, sizeof(buf));
+            return std::string(buf, n);
+        }
+        case Value::TAG_INTERVAL: {
+            // Minimal representation: "<months> mons <microseconds> us".
+            // INTERVAL is rarely produced by local evaluation right now, but we still
+            // want to avoid silently returning an empty string.
+            std::ostringstream oss;
+            oss << v.interval_val.months << " mons "
+                << v.interval_val.microseconds << " us";
+            return oss.str();
+        }
         default:
             return "";
     }
@@ -248,7 +278,10 @@ static constexpr uint16_t MY_SERVER_STATUS_AUTOCOMMIT = 0x0002;
 static constexpr uint8_t MY_TYPE_DECIMAL    = 0x00;
 static constexpr uint8_t MY_TYPE_DOUBLE     = 0x05;
 static constexpr uint8_t MY_TYPE_NULL       = 0x06;
+static constexpr uint8_t MY_TYPE_TIMESTAMP  = 0x07;
 static constexpr uint8_t MY_TYPE_LONGLONG   = 0x08;
+static constexpr uint8_t MY_TYPE_DATE       = 0x0A;
+static constexpr uint8_t MY_TYPE_TIME       = 0x0B;
 static constexpr uint8_t MY_TYPE_DATETIME   = 0x0C;
 static constexpr uint8_t MY_TYPE_VAR_STRING = 0xFD;
 
@@ -517,9 +550,14 @@ static uint8_t sql_type_to_mysql(const Value& v) {
             return MY_TYPE_DECIMAL;
         case Value::TAG_NULL:
             return MY_TYPE_NULL;
+        case Value::TAG_DATE:
+            return MY_TYPE_DATE;
+        case Value::TAG_TIME:
+            return MY_TYPE_TIME;
         case Value::TAG_DATETIME:
-        case Value::TAG_TIMESTAMP:
             return MY_TYPE_DATETIME;
+        case Value::TAG_TIMESTAMP:
+            return MY_TYPE_TIMESTAMP;
         default:
             return MY_TYPE_VAR_STRING;
     }

@@ -8,6 +8,7 @@
 #include <string>
 #include <vector>
 #include <future>
+#include <stdexcept>
 
 namespace sql_engine {
 
@@ -37,12 +38,14 @@ public:
         }
         reading_left_ = true;
         seen_.clear();
+        expected_col_count_ = -1;
 
         if (op_ == SET_OP_INTERSECT || op_ == SET_OP_EXCEPT) {
             // Materialize right side into a set
             right_set_.clear();
             Row r{};
             while (right_->next(r)) {
+                check_col_count(r);
                 right_set_.insert(row_key(r));
             }
             right_->close();
@@ -63,6 +66,7 @@ public:
                     if (!got) return false;
                 }
                 if (got) {
+                    check_col_count(out);
                     std::string key = row_key(out);
                     if (seen_.insert(key).second) return true;
                 }
@@ -72,15 +76,23 @@ public:
         if (op_ == SET_OP_UNION && all_) {
             // UNION ALL: yield left then right
             if (reading_left_) {
-                if (left_->next(out)) return true;
+                if (left_->next(out)) {
+                    check_col_count(out);
+                    return true;
+                }
                 reading_left_ = false;
             }
-            return right_->next(out);
+            if (right_->next(out)) {
+                check_col_count(out);
+                return true;
+            }
+            return false;
         }
 
         if (op_ == SET_OP_INTERSECT) {
             // Yield left rows that also appear in right
             while (left_->next(out)) {
+                check_col_count(out);
                 std::string key = row_key(out);
                 if (right_set_.count(key)) {
                     if (all_ || seen_.insert(key).second)
@@ -93,6 +105,7 @@ public:
         if (op_ == SET_OP_EXCEPT) {
             // Yield left rows that don't appear in right
             while (left_->next(out)) {
+                check_col_count(out);
                 std::string key = row_key(out);
                 if (!right_set_.count(key)) {
                     if (all_ || seen_.insert(key).second)
@@ -122,6 +135,26 @@ private:
     bool reading_left_ = true;
     std::unordered_set<std::string> seen_;
     std::unordered_set<std::string> right_set_;
+    // Column count established by the first row we see. Used to detect
+    // schema mismatches between the two sides of a UNION/INTERSECT/EXCEPT --
+    // which the SQL standard says must have the same number of columns.
+    // Previously, mismatched column counts silently produced wrong results
+    // because row_key() would iterate a different number of values on each
+    // side. Now we throw a clear error at execution time.
+    int16_t expected_col_count_ = -1;
+
+    void check_col_count(const Row& row) {
+        if (expected_col_count_ < 0) {
+            expected_col_count_ = static_cast<int16_t>(row.column_count);
+            return;
+        }
+        if (row.column_count != static_cast<uint16_t>(expected_col_count_)) {
+            throw std::runtime_error(
+                "set operation column count mismatch: expected " +
+                std::to_string(expected_col_count_) + " columns, got " +
+                std::to_string(row.column_count));
+        }
+    }
 
     static std::string row_key(const Row& row) {
         std::string key;

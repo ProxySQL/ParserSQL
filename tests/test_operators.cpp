@@ -444,6 +444,49 @@ TEST_F(JoinOpTest, CrossJoin) {
     join.close();
 }
 
+// Regression tests: RIGHT/FULL joins previously fell through to the INNER
+// code path in JoinOperator and silently returned wrong results. Make sure
+// they now throw a clear runtime_error instead of pretending to work.
+TEST_F(JoinOpTest, RejectsRightJoin) {
+    std::vector<Row> users = {
+        build_row(arena, {value_int(1), value_string(arena_str(arena, "A"))}),
+    };
+    std::vector<Row> orders = {
+        build_row(arena, {value_int(10), value_int(1)}),
+    };
+    InMemoryDataSource ds_users(users_table, users);
+    InMemoryDataSource ds_orders(orders_table, orders);
+    ScanOperator scan_left(&ds_users);
+    ScanOperator scan_right(&ds_orders);
+
+    std::vector<const TableInfo*> lt = {users_table}, rt = {orders_table};
+    NestedLoopJoinOperator<Dialect::MySQL> join(
+        &scan_left, &scan_right, JOIN_RIGHT, nullptr,
+        2, 2, catalog, lt, rt, functions, arena);
+
+    EXPECT_THROW(join.open(), std::runtime_error);
+}
+
+TEST_F(JoinOpTest, RejectsFullJoin) {
+    std::vector<Row> users = {
+        build_row(arena, {value_int(1), value_string(arena_str(arena, "A"))}),
+    };
+    std::vector<Row> orders = {
+        build_row(arena, {value_int(10), value_int(1)}),
+    };
+    InMemoryDataSource ds_users(users_table, users);
+    InMemoryDataSource ds_orders(orders_table, orders);
+    ScanOperator scan_left(&ds_users);
+    ScanOperator scan_right(&ds_orders);
+
+    std::vector<const TableInfo*> lt = {users_table}, rt = {orders_table};
+    NestedLoopJoinOperator<Dialect::MySQL> join(
+        &scan_left, &scan_right, JOIN_FULL, nullptr,
+        2, 2, catalog, lt, rt, functions, arena);
+
+    EXPECT_THROW(join.open(), std::runtime_error);
+}
+
 // =====================================================================
 // AggregateOperator tests
 // =====================================================================
@@ -889,5 +932,70 @@ TEST_F(SetOpOpTest, UnionAll) {
     int count = 0;
     while (setop.next(out)) count++;
     EXPECT_EQ(count, 4); // all rows, including duplicate 2
+    setop.close();
+}
+
+// Regression test for silent column-count mismatch in set operations.
+// Before the validation fix, SetOpOperator::row_key would iterate each row's
+// own column_count, producing truncated/misaligned keys and silently-wrong
+// INTERSECT/EXCEPT results. The fix throws a clear runtime_error instead.
+TEST_F(SetOpOpTest, RejectsColumnCountMismatchUnionAll) {
+    // Build a two-column table for the right side so it has a different arity.
+    catalog.add_table("", "t2", {
+        {"a", SqlType::make_int(), false},
+        {"b", SqlType::make_int(), false},
+    });
+    const TableInfo* table2 = catalog.get_table(StringRef{"t2", 2});
+
+    std::vector<Row> left = {
+        build_row(arena, {value_int(1)}),
+    };
+    std::vector<Row> right = {
+        build_row(arena, {value_int(10), value_int(20)}),
+    };
+    InMemoryDataSource ds_left(table, left);
+    InMemoryDataSource ds_right(table2, right);
+    ScanOperator scan_left(&ds_left);
+    ScanOperator scan_right(&ds_right);
+
+    SetOpOperator setop(&scan_left, &scan_right, SET_OP_UNION, true);
+    setop.open();
+
+    Row out{};
+    // First row from left establishes column_count = 1.
+    ASSERT_TRUE(setop.next(out));
+    EXPECT_EQ(out.column_count, 1);
+    // Next row comes from right with column_count = 2 -- must throw.
+    EXPECT_THROW(setop.next(out), std::runtime_error);
+    setop.close();
+}
+
+TEST_F(SetOpOpTest, RejectsColumnCountMismatchIntersect) {
+    // For INTERSECT, right is materialized at open() time first, so the
+    // right's column count becomes the expected. We then feed a left row
+    // with a different count.
+    catalog.add_table("", "t3", {
+        {"a", SqlType::make_int(), false},
+        {"b", SqlType::make_int(), false},
+    });
+    const TableInfo* table2 = catalog.get_table(StringRef{"t3", 2});
+
+    std::vector<Row> left = {
+        build_row(arena, {value_int(1)}),
+    };
+    std::vector<Row> right = {
+        build_row(arena, {value_int(10), value_int(20)}),
+    };
+    InMemoryDataSource ds_left(table, left);
+    InMemoryDataSource ds_right(table2, right);
+    ScanOperator scan_left(&ds_left);
+    ScanOperator scan_right(&ds_right);
+
+    SetOpOperator setop(&scan_left, &scan_right, SET_OP_INTERSECT, false);
+    setop.open();  // materializes right (2 cols), sets expected = 2
+
+    Row out{};
+    // Left row has 1 column, should throw.
+    EXPECT_THROW(setop.next(out), std::runtime_error);
     setop.close();
 }

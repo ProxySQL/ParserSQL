@@ -9,6 +9,7 @@
 #include <functional>
 #include <vector>
 #include <unordered_map>
+#include <stdexcept>
 
 namespace sql_engine {
 
@@ -33,6 +34,18 @@ public:
           arena_(arena) {}
 
     void open() override {
+        // Only INNER and LEFT equi-joins are actually supported below.
+        // RIGHT/FULL/CROSS would silently fall through to INNER logic and
+        // return wrong results. Reject explicitly. (CROSS also doesn't
+        // belong here because it's not an equi-join; PlanExecutor's
+        // build_join should never route it to the hash join operator.)
+        if (join_type_ != JOIN_INNER && join_type_ != JOIN_LEFT) {
+            throw std::runtime_error(
+                "join type not supported by HashJoinOperator "
+                "(only INNER and LEFT equi-joins are implemented; "
+                "RIGHT, FULL and CROSS joins are not yet supported)");
+        }
+
         // Build phase: consume right side into hash table keyed by join column
         hash_table_.clear();
         right_->open();

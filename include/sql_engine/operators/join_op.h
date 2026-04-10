@@ -6,6 +6,7 @@
 #include "sql_engine/catalog.h"
 #include "sql_engine/plan_node.h"
 #include "sql_parser/arena.h"
+#include <stdexcept>
 #include <functional>
 #include <vector>
 
@@ -29,6 +30,17 @@ public:
           functions_(functions), arena_(arena) {}
 
     void open() override {
+        // Only INNER, LEFT and CROSS joins are actually implemented below.
+        // RIGHT/FULL would previously fall through to the INNER code path,
+        // silently producing wrong results. Reject them explicitly instead
+        // of corrupting query answers.
+        if (join_type_ != JOIN_INNER && join_type_ != JOIN_LEFT && join_type_ != JOIN_CROSS) {
+            throw std::runtime_error(
+                "join type not supported by NestedLoopJoinOperator "
+                "(only INNER, LEFT, CROSS are implemented; "
+                "RIGHT and FULL joins are not yet supported)");
+        }
+
         // Materialize right side
         right_->open();
         right_rows_.clear();
