@@ -2,6 +2,7 @@
 #define SQL_ENGINE_OPERATORS_DISTINCT_OP_H
 
 #include "sql_engine/operator.h"
+#include "sql_engine/engine_limits.h"
 #include <unordered_set>
 #include <string>
 
@@ -20,6 +21,10 @@ public:
     bool next(Row& out) override {
         while (child_->next(out)) {
             std::string key = row_key(out);
+            // Cap distinct row count to prevent unbounded seen_ set.
+            if (seen_.find(key) == seen_.end()) {
+                check_operator_row_limit(seen_.size(), kDefaultMaxOperatorRows, "DistinctOperator");
+            }
             if (seen_.insert(key).second) {
                 return true;
             }

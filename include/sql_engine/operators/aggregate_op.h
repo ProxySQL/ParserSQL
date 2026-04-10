@@ -4,6 +4,7 @@
 #include "sql_engine/operator.h"
 #include "sql_engine/expression_eval.h"
 #include "sql_engine/catalog.h"
+#include "sql_engine/engine_limits.h"
 #include "sql_parser/arena.h"
 #include <functional>
 #include <vector>
@@ -44,6 +45,8 @@ public:
 
             auto it = groups_.find(key);
             if (it == groups_.end()) {
+                // Cap distinct group count to prevent unbounded memory.
+                check_operator_row_limit(groups_.size(), kDefaultMaxOperatorRows, "AggregateOperator");
                 GroupState state;
                 state.group_values.reserve(group_count_);
                 for (uint16_t i = 0; i < group_count_; ++i) {

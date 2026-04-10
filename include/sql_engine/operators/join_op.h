@@ -5,6 +5,7 @@
 #include "sql_engine/expression_eval.h"
 #include "sql_engine/catalog.h"
 #include "sql_engine/plan_node.h"
+#include "sql_engine/engine_limits.h"
 #include "sql_parser/arena.h"
 #include <stdexcept>
 #include <functional>
@@ -46,6 +47,8 @@ public:
         right_rows_.clear();
         Row r{};
         while (right_->next(r)) {
+            // Cap right side to prevent O(n*m) explosion + OOM.
+            check_operator_row_limit(right_rows_.size(), kDefaultMaxOperatorRows, "NestedLoopJoinOperator");
             right_rows_.push_back(r);
         }
         right_->close();

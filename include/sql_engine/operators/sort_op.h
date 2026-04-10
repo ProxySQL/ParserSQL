@@ -4,6 +4,7 @@
 #include "sql_engine/operator.h"
 #include "sql_engine/expression_eval.h"
 #include "sql_engine/catalog.h"
+#include "sql_engine/engine_limits.h"
 #include "sql_parser/arena.h"
 #include <algorithm>
 #include <functional>
@@ -33,6 +34,8 @@ public:
 
         Row row{};
         while (child_->next(row)) {
+            // Hard cap to prevent unbounded materialization (no spill yet).
+            check_operator_row_limit(rows_.size(), kDefaultMaxOperatorRows, "SortOperator");
             rows_.push_back(row);
         }
         child_->close();

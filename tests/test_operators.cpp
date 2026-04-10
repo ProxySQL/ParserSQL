@@ -10,6 +10,8 @@
 #include "sql_engine/operators/limit_op.h"
 #include "sql_engine/operators/distinct_op.h"
 #include "sql_engine/operators/set_op_op.h"
+#include "sql_engine/operators/merge_aggregate_op.h"
+#include "sql_engine/engine_limits.h"
 #include "sql_engine/in_memory_catalog.h"
 #include "sql_engine/expression_eval.h"
 #include "sql_engine/plan_builder.h"
@@ -998,4 +1000,151 @@ TEST_F(SetOpOpTest, RejectsColumnCountMismatchIntersect) {
     // Left row has 1 column, should throw.
     EXPECT_THROW(setop.next(out), std::runtime_error);
     setop.close();
+}
+
+// =====================================================================
+// MergeAggregateOperator schema validation
+// =====================================================================
+//
+// MergeAggregate combines partial aggregate rows from N shards. The expected
+// row layout is [group_key_count group keys] + [merge_op_count partial aggs].
+// Previously, mismatched schemas were silently truncated, producing wrong
+// aggregates. Now we throw a clear error.
+
+class MergeAggOpTest : public ::testing::Test {
+protected:
+    Arena arena{65536, 1048576};
+    InMemoryCatalog catalog;
+    const TableInfo* table = nullptr;
+
+    void SetUp() override {
+        // Layout: dept (group key, varchar), partial_count (int), partial_sum (double)
+        catalog.add_table("", "agg_in", {
+            {"dept",          SqlType::make_varchar(50), true},
+            {"partial_count", SqlType::make_int(),       true},
+            {"partial_sum",   SqlType::make_int(),       true},
+        });
+        table = catalog.get_table(StringRef{"agg_in", 6});
+    }
+};
+
+TEST_F(MergeAggOpTest, MergesCorrectlyWhenSchemaMatches) {
+    // group_key_count=1 (dept), merge_op_count=2 (count, sum)
+    std::vector<Row> shard1_rows = {
+        build_row(arena, {value_string(arena_str(arena, "Eng")), value_int(2), value_int(100)}),
+        build_row(arena, {value_string(arena_str(arena, "Sales")), value_int(1), value_int(50)}),
+    };
+    std::vector<Row> shard2_rows = {
+        build_row(arena, {value_string(arena_str(arena, "Eng")), value_int(3), value_int(200)}),
+    };
+    InMemoryDataSource ds1(table, shard1_rows);
+    InMemoryDataSource ds2(table, shard2_rows);
+    ScanOperator scan1(&ds1), scan2(&ds2);
+
+    uint8_t merge_ops[] = {
+        static_cast<uint8_t>(MergeOp::SUM_OF_COUNTS),
+        static_cast<uint8_t>(MergeOp::SUM_OF_SUMS),
+    };
+    MergeAggregateOperator op(
+        std::vector<Operator*>{&scan1, &scan2},
+        /*group_key_count=*/1,
+        merge_ops, /*merge_op_count=*/2,
+        arena);
+
+    op.open();
+    int got = 0;
+    Row out{};
+    while (op.next(out)) {
+        ++got;
+        EXPECT_EQ(out.column_count, 3);  // dept + merged count + merged sum
+    }
+    EXPECT_EQ(got, 2);  // Eng and Sales
+    op.close();
+}
+
+TEST_F(MergeAggOpTest, RejectsRowWithFewerColumnsThanExpected) {
+    // The plan promised 1 group key + 2 partial aggs = 3 columns, but the
+    // shard only sends 2 columns. Previously this would be silently truncated.
+    catalog.add_table("", "bad_in", {
+        {"dept", SqlType::make_varchar(50), true},
+        {"only_count", SqlType::make_int(), true},
+    });
+    const TableInfo* bad = catalog.get_table(StringRef{"bad_in", 6});
+
+    std::vector<Row> bad_rows = {
+        build_row(arena, {value_string(arena_str(arena, "Eng")), value_int(2)}),
+    };
+    InMemoryDataSource ds(bad, bad_rows);
+    ScanOperator scan(&ds);
+
+    uint8_t merge_ops[] = {
+        static_cast<uint8_t>(MergeOp::SUM_OF_COUNTS),
+        static_cast<uint8_t>(MergeOp::SUM_OF_SUMS),
+    };
+    MergeAggregateOperator op(
+        std::vector<Operator*>{&scan},
+        /*group_key_count=*/1,
+        merge_ops, /*merge_op_count=*/2,
+        arena);
+
+    EXPECT_THROW(op.open(), std::runtime_error);
+}
+
+TEST_F(MergeAggOpTest, RejectsRowWithMoreColumnsThanExpected) {
+    catalog.add_table("", "wide_in", {
+        {"dept",          SqlType::make_varchar(50), true},
+        {"partial_count", SqlType::make_int(),       true},
+        {"partial_sum",   SqlType::make_int(),       true},
+        {"unexpected",    SqlType::make_int(),       true},
+    });
+    const TableInfo* wide = catalog.get_table(StringRef{"wide_in", 7});
+
+    std::vector<Row> wide_rows = {
+        build_row(arena, {value_string(arena_str(arena, "Eng")), value_int(2),
+                          value_int(100), value_int(999)}),
+    };
+    InMemoryDataSource ds(wide, wide_rows);
+    ScanOperator scan(&ds);
+
+    uint8_t merge_ops[] = {
+        static_cast<uint8_t>(MergeOp::SUM_OF_COUNTS),
+        static_cast<uint8_t>(MergeOp::SUM_OF_SUMS),
+    };
+    MergeAggregateOperator op(
+        std::vector<Operator*>{&scan},
+        /*group_key_count=*/1,
+        merge_ops, /*merge_op_count=*/2,
+        arena);
+
+    EXPECT_THROW(op.open(), std::runtime_error);
+}
+
+// =====================================================================
+// engine_limits.h: row cap helper
+// =====================================================================
+//
+// The materializing operators all call check_operator_row_limit() before
+// growing their working set. We can't easily exercise the 10M default cap
+// from a test (it would require gigabytes of input rows), so we test the
+// helper directly with small limits to verify the throw + message.
+
+TEST(EngineLimits, ThrowsAtLimit) {
+    EXPECT_THROW(check_operator_row_limit(5, 5, "TestOp"), std::runtime_error);
+    EXPECT_THROW(check_operator_row_limit(100, 5, "TestOp"), std::runtime_error);
+}
+
+TEST(EngineLimits, AllowsBelowLimit) {
+    EXPECT_NO_THROW(check_operator_row_limit(0, 10, "TestOp"));
+    EXPECT_NO_THROW(check_operator_row_limit(9, 10, "TestOp"));
+}
+
+TEST(EngineLimits, ErrorMessageNamesOperator) {
+    try {
+        check_operator_row_limit(100, 50, "FooOp");
+        FAIL() << "expected throw";
+    } catch (const std::runtime_error& e) {
+        std::string msg = e.what();
+        EXPECT_NE(msg.find("FooOp"), std::string::npos);
+        EXPECT_NE(msg.find("50"), std::string::npos);
+    }
 }

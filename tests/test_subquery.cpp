@@ -370,3 +370,41 @@ TEST_F(SubqueryTest, CorrelatedSubqueryAvg) {
     EXPECT_TRUE(names.count("Bob"));
     EXPECT_TRUE(names.count("Eve"));
 }
+
+// Correlated NOT EXISTS: users with NO orders.
+// Alice(1) and Bob(2) and Dave(4) have orders. Carol(3) and Eve(5) don't.
+TEST_F(SubqueryTest, CorrelatedNotExists) {
+    auto rs = run_query(
+        "SELECT name FROM users u WHERE NOT EXISTS "
+        "(SELECT 1 FROM orders WHERE orders.user_id = u.id)");
+    ASSERT_EQ(rs.row_count(), 2u);
+    std::set<std::string> names;
+    for (const auto& row : rs.rows) {
+        names.insert(std::string(row.get(0).str_val.ptr, row.get(0).str_val.len));
+    }
+    EXPECT_TRUE(names.count("Carol"));
+    EXPECT_TRUE(names.count("Eve"));
+}
+
+// Correlated IN subquery: users whose id is in the orders table for a
+// matching dept-related criterion. This exercises the IN-with-correlated-
+// subquery path which goes through expression_eval.h's NODE_IN_LIST + the
+// SubqueryExecutor::execute_set with outer resolver.
+//
+// Find users (u) such that u.id = some order's user_id where the order
+// total > u.age*10 (a contrived correlation). Per row:
+//   Alice (id=1, age=25 -> 250):  orders for u.id=1 are (500, 300). 500>250 yes.
+//   Bob   (id=2, age=30 -> 300):  orders for u.id=2 are (150). 150>300 no.
+//   Carol (id=3, age=17 -> 170):  no orders. no.
+//   Dave  (id=4, age=22 -> 220):  orders for u.id=4 are (200). 200>220 no.
+//   Eve   (id=5, age=35 -> 350):  no orders. no.
+// Result: Alice only.
+TEST_F(SubqueryTest, CorrelatedInSubquery) {
+    auto rs = run_query(
+        "SELECT name FROM users u WHERE u.id IN "
+        "(SELECT user_id FROM orders WHERE total > u.age * 10)");
+    ASSERT_EQ(rs.row_count(), 1u);
+    EXPECT_EQ(std::string(rs.rows[0].get(0).str_val.ptr,
+                          rs.rows[0].get(0).str_val.len),
+              "Alice");
+}

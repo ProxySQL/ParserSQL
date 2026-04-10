@@ -4,6 +4,7 @@
 #include "sql_engine/operator.h"
 #include "sql_engine/plan_node.h"
 #include "sql_engine/thread_pool.h"
+#include "sql_engine/engine_limits.h"
 #include <unordered_set>
 #include <string>
 #include <vector>
@@ -46,6 +47,7 @@ public:
             Row r{};
             while (right_->next(r)) {
                 check_col_count(r);
+                check_operator_row_limit(right_set_.size(), kDefaultMaxOperatorRows, "SetOpOperator");
                 right_set_.insert(row_key(r));
             }
             right_->close();
@@ -68,6 +70,9 @@ public:
                 if (got) {
                     check_col_count(out);
                     std::string key = row_key(out);
+                    if (seen_.find(key) == seen_.end()) {
+                        check_operator_row_limit(seen_.size(), kDefaultMaxOperatorRows, "SetOpOperator");
+                    }
                     if (seen_.insert(key).second) return true;
                 }
             }

@@ -5,6 +5,7 @@
 #include "sql_engine/expression_eval.h"
 #include "sql_engine/catalog.h"
 #include "sql_engine/plan_node.h"
+#include "sql_engine/engine_limits.h"
 #include "sql_parser/arena.h"
 #include <functional>
 #include <vector>
@@ -50,9 +51,13 @@ public:
         hash_table_.clear();
         right_->open();
         Row r{};
+        std::size_t total_build_rows = 0;
         while (right_->next(r)) {
+            // Cap total build-side rows to prevent unbounded hash table.
+            check_operator_row_limit(total_build_rows, kDefaultMaxOperatorRows, "HashJoinOperator");
             uint64_t h = hash_value(r.get(right_join_col_));
             hash_table_[h].push_back(copy_row(r));
+            ++total_build_rows;
         }
         right_->close();
 

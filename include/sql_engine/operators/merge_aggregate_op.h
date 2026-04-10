@@ -11,7 +11,7 @@
 #include <string>
 #include <cstring>
 #include <future>
-#include <mutex>
+#include <stdexcept>
 
 namespace sql_engine {
 
@@ -169,6 +169,15 @@ private:
     size_t result_idx_ = 0;
 
     void merge_into_groups(const Row& row) {
+        // Validate that the row's schema matches what DistributedPlanner
+        // promised: exactly [group_key_count_ group keys] +
+        // [merge_op_count_ partial aggregate columns]. Previously, mismatched
+        // schemas were silently truncated by `if (col_idx >= row.column_count)
+        // continue;` in merge_row, producing silently-wrong aggregates. Throw
+        // a clear error instead so a remote schema drift is caught at the
+        // first row.
+        check_row_schema(row);
+
         std::string key = compute_group_key(row);
         auto it = groups_.find(key);
         if (it == groups_.end()) {
@@ -187,6 +196,26 @@ private:
             it = groups_.find(key);
         }
         merge_row(it->second, row);
+    }
+
+    // Expected schema is exactly group_key_count_ + merge_op_count_ columns,
+    // in that order. We compute it once into expected_col_count_ on the first
+    // row to avoid recomputing per row. A mismatch on any row aborts the
+    // merge with a clear error message instead of silently corrupting state.
+    void check_row_schema(const Row& row) {
+        const uint16_t expected =
+            static_cast<uint16_t>(group_key_count_ + merge_op_count_);
+        if (row.column_count != expected) {
+            throw std::runtime_error(
+                "distributed aggregate merge: shard returned " +
+                std::to_string(row.column_count) +
+                " columns, expected " + std::to_string(expected) +
+                " (" + std::to_string(group_key_count_) +
+                " group key(s) + " + std::to_string(merge_op_count_) +
+                " partial aggregate(s)). Remote shard schema does not match "
+                "what DistributedPlanner built; aborting to avoid silently "
+                "corrupted aggregate results.");
+        }
     }
 
     std::string compute_group_key(const Row& row) {
@@ -214,9 +243,11 @@ private:
     }
 
     void merge_row(GroupState& state, const Row& row) {
+        // Schema is guaranteed by check_row_schema() above, so we can skip
+        // bounds checks here. Defensive: still compute col_idx with the
+        // expected layout.
         for (uint16_t i = 0; i < merge_op_count_; ++i) {
             uint16_t col_idx = group_key_count_ + i;
-            if (col_idx >= row.column_count) continue;
             Value v = row.get(col_idx);
 
             MergeOp op = static_cast<MergeOp>(merge_ops_[i]);

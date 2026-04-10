@@ -4,6 +4,7 @@
 #include "sql_engine/operator.h"
 #include "sql_engine/expression_eval.h"
 #include "sql_engine/catalog.h"
+#include "sql_engine/engine_limits.h"
 #include "sql_parser/arena.h"
 #include <functional>
 #include <vector>
@@ -44,6 +45,7 @@ public:
         // 1. Consume all child rows into buffer
         Row row{};
         while (child_->next(row)) {
+            check_operator_row_limit(buffer_.size(), kDefaultMaxOperatorRows, "WindowOperator");
             buffer_.push_back(row);
         }
         child_->close();

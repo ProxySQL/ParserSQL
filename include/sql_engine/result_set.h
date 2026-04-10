@@ -3,6 +3,7 @@
 
 #include "sql_engine/row.h"
 #include <vector>
+#include <deque>
 #include <string>
 #include <algorithm>
 #include <utility>
@@ -17,7 +18,17 @@ struct ResultSet {
     // Heap storage for row values and string data owned by this ResultSet.
     // Used by remote executors to avoid arena lifetime issues.
     std::vector<Value*> owned_value_arrays;
-    std::vector<std::string> owned_strings;
+
+    // owned_strings MUST be a container with stable element addresses across
+    // push_back. Previously this was std::vector<std::string>, which silently
+    // corrupted any StringRef captured before a vector reallocation:
+    // short strings (SSO) live INSIDE the std::string object, so when the
+    // vector resized and move-constructed each std::string at a new address,
+    // every previously-handed-out StringRef became a dangling pointer to
+    // freed memory. That matches the garbled output observed in benchmarks
+    // for short text columns. std::deque does not reallocate or move
+    // existing elements on push_back, so pointers stay valid.
+    std::deque<std::string> owned_strings;
 
     ResultSet() = default;
     ~ResultSet() {
@@ -64,7 +75,9 @@ struct ResultSet {
         return rows.back();
     }
 
-    // Store a string in owned_strings and return a StringRef pointing into it.
+    // Store a string and return a StringRef pointing into the stored copy.
+    // The pointer remains valid for the lifetime of this ResultSet (deque
+    // guarantees stable element addresses across push_back).
     sql_parser::StringRef own_string(const char* data, uint32_t len) {
         owned_strings.emplace_back(data, len);
         const std::string& s = owned_strings.back();
