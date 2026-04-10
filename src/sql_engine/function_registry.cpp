@@ -2,6 +2,7 @@
 #include "sql_engine/functions/arithmetic.h"
 #include "sql_engine/functions/comparison.h"
 #include "sql_engine/functions/string.h"
+#include "sql_engine/functions/datetime.h"
 #include "sql_parser/common.h"
 
 namespace sql_engine {
@@ -39,6 +40,35 @@ void register_comparison(FunctionRegistry<D>& reg) {
 }
 
 template <Dialect D>
+void register_datetime(FunctionRegistry<D>& reg) {
+    // Current time. All of these are non-deterministic (return different
+    // values on repeated calls) and return temporal Value tags.
+    reg.register_function(entry("NOW",               functions::fn_now,            0, 0));
+    reg.register_function(entry("CURRENT_TIMESTAMP", functions::fn_now,            0, 0));
+    reg.register_function(entry("CURRENT_DATE",      functions::fn_current_date,   0, 0));
+    reg.register_function(entry("CURDATE",           functions::fn_current_date,   0, 0));
+    reg.register_function(entry("CURRENT_TIME",      functions::fn_current_time,   0, 0));
+    reg.register_function(entry("CURTIME",           functions::fn_current_time,   0, 0));
+
+    // Component extractors. Accept DATE, DATETIME, TIMESTAMP, or a parseable
+    // string; return INT64. Returns NULL for NULL or unparseable inputs.
+    reg.register_function(entry("YEAR",   functions::fn_year,   1, 1));
+    reg.register_function(entry("MONTH",  functions::fn_month,  1, 1));
+    reg.register_function(entry("DAY",    functions::fn_day,    1, 1));
+    reg.register_function(entry("DAYOFMONTH", functions::fn_day, 1, 1));  // MySQL alias
+    reg.register_function(entry("HOUR",   functions::fn_hour,   1, 1));
+    reg.register_function(entry("MINUTE", functions::fn_minute, 1, 1));
+    reg.register_function(entry("SECOND", functions::fn_second, 1, 1));
+
+    // Epoch conversion.
+    reg.register_function(entry("UNIX_TIMESTAMP", functions::fn_unix_timestamp, 0, 1));
+    reg.register_function(entry("FROM_UNIXTIME",  functions::fn_from_unixtime,  1, 1));
+
+    // Date arithmetic (days between two dates).
+    reg.register_function(entry("DATEDIFF", functions::fn_datediff, 2, 2));
+}
+
+template <Dialect D>
 void register_string(FunctionRegistry<D>& reg) {
     reg.register_function(entry("CONCAT",      functions::fn_concat,      1, 255));
     reg.register_function(entry("CONCAT_WS",   functions::fn_concat_ws,   2, 255));
@@ -72,6 +102,7 @@ void FunctionRegistry<Dialect::MySQL>::register_builtins() {
     register_arithmetic(*this);
     register_comparison(*this);
     register_string(*this);
+    register_datetime(*this);
 
     // MySQL-specific
     register_function(entry("IFNULL", functions::fn_ifnull, 2, 2));
@@ -85,6 +116,7 @@ void FunctionRegistry<Dialect::PostgreSQL>::register_builtins() {
     register_arithmetic(*this);
     register_comparison(*this);
     register_string(*this);
+    register_datetime(*this);
     // No IFNULL or IF in PostgreSQL
 }
 

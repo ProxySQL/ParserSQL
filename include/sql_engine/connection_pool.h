@@ -19,6 +19,25 @@
 
 namespace sql_engine {
 
+// Default timeouts (seconds). These bound how long any single libmysqlclient
+// read or write can block. Without them, a wedged backend or a network
+// partition during XA PREPARE would hang the entire 2PC coordinator
+// indefinitely. Set generously enough that healthy OLTP queries never hit
+// them (30s is well above normal p99 latency on any remotely sane backend).
+//
+// These are set at mysql_options time, so they apply to the current
+// connection only; a different pooled connection on the same backend gets
+// the same default.
+#ifndef SQL_ENGINE_MYSQL_CONNECT_TIMEOUT_SEC
+#define SQL_ENGINE_MYSQL_CONNECT_TIMEOUT_SEC 5
+#endif
+#ifndef SQL_ENGINE_MYSQL_READ_TIMEOUT_SEC
+#define SQL_ENGINE_MYSQL_READ_TIMEOUT_SEC 30
+#endif
+#ifndef SQL_ENGINE_MYSQL_WRITE_TIMEOUT_SEC
+#define SQL_ENGINE_MYSQL_WRITE_TIMEOUT_SEC 30
+#endif
+
 class ConnectionPool {
 public:
     ConnectionPool() = default;
@@ -86,8 +105,12 @@ private:
         MYSQL* c = mysql_init(nullptr);
         if (!c) throw std::runtime_error("mysql_init failed for " + cfg.name);
 
-        unsigned int timeout = 5;
-        mysql_options(c, MYSQL_OPT_CONNECT_TIMEOUT, &timeout);
+        unsigned int connect_timeout = SQL_ENGINE_MYSQL_CONNECT_TIMEOUT_SEC;
+        unsigned int read_timeout    = SQL_ENGINE_MYSQL_READ_TIMEOUT_SEC;
+        unsigned int write_timeout   = SQL_ENGINE_MYSQL_WRITE_TIMEOUT_SEC;
+        mysql_options(c, MYSQL_OPT_CONNECT_TIMEOUT, &connect_timeout);
+        mysql_options(c, MYSQL_OPT_READ_TIMEOUT,    &read_timeout);
+        mysql_options(c, MYSQL_OPT_WRITE_TIMEOUT,   &write_timeout);
 
         if (!mysql_real_connect(c, cfg.host.c_str(), cfg.user.c_str(),
                                 cfg.password.c_str(), cfg.database.c_str(),

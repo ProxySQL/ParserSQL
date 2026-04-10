@@ -4,6 +4,19 @@
 #include <cstring>
 #include <stdexcept>
 
+// Matches the defaults in connection_pool.h -- keeping them aligned so
+// both connection paths behave identically. Override at compile time if
+// your workload legitimately needs longer queries.
+#ifndef SQL_ENGINE_MYSQL_CONNECT_TIMEOUT_SEC
+#define SQL_ENGINE_MYSQL_CONNECT_TIMEOUT_SEC 5
+#endif
+#ifndef SQL_ENGINE_MYSQL_READ_TIMEOUT_SEC
+#define SQL_ENGINE_MYSQL_READ_TIMEOUT_SEC 30
+#endif
+#ifndef SQL_ENGINE_MYSQL_WRITE_TIMEOUT_SEC
+#define SQL_ENGINE_MYSQL_WRITE_TIMEOUT_SEC 30
+#endif
+
 namespace sql_engine {
 
 MySQLRemoteExecutor::MySQLRemoteExecutor() {}
@@ -40,9 +53,15 @@ MySQLRemoteExecutor::Connection& MySQLRemoteExecutor::get_or_connect(const std::
         if (!c.conn) {
             throw std::runtime_error("mysql_init failed for " + name);
         }
-        // Set connection timeout
-        unsigned int timeout = 5;
-        mysql_options(c.conn, MYSQL_OPT_CONNECT_TIMEOUT, &timeout);
+        // Connect + read + write timeouts. The read/write timeouts are
+        // what protect the 2PC coordinator from hanging forever during
+        // XA PREPARE / XA COMMIT on a wedged backend.
+        unsigned int connect_timeout = SQL_ENGINE_MYSQL_CONNECT_TIMEOUT_SEC;
+        unsigned int read_timeout    = SQL_ENGINE_MYSQL_READ_TIMEOUT_SEC;
+        unsigned int write_timeout   = SQL_ENGINE_MYSQL_WRITE_TIMEOUT_SEC;
+        mysql_options(c.conn, MYSQL_OPT_CONNECT_TIMEOUT, &connect_timeout);
+        mysql_options(c.conn, MYSQL_OPT_READ_TIMEOUT,    &read_timeout);
+        mysql_options(c.conn, MYSQL_OPT_WRITE_TIMEOUT,   &write_timeout);
 
         if (!mysql_real_connect(c.conn,
                                 c.config.host.c_str(),

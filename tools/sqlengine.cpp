@@ -30,6 +30,7 @@
 #include "sql_engine/shard_map.h"
 #include "sql_engine/backend_config.h"
 #include "sql_engine/result_set.h"
+#include "sql_engine/datetime_parse.h"
 #include "sql_engine/dml_result.h"
 #include "sql_engine/value.h"
 
@@ -65,14 +66,26 @@ static std::string value_to_string(const Value& v) {
             if (v.str_val.ptr && v.str_val.len > 0)
                 return std::string(v.str_val.ptr, v.str_val.len);
             return "(binary)";
-        case Value::TAG_DATE:
-            return "DATE(" + std::to_string(v.date_val) + ")";
-        case Value::TAG_TIME:
-            return "TIME(" + std::to_string(v.time_val) + ")";
-        case Value::TAG_DATETIME:
-            return "DATETIME(" + std::to_string(v.datetime_val) + ")";
-        case Value::TAG_TIMESTAMP:
-            return "TIMESTAMP(" + std::to_string(v.timestamp_val) + ")";
+        case Value::TAG_DATE: {
+            char buf[16];
+            size_t n = datetime_parse::format_date(v.date_val, buf, sizeof(buf));
+            return std::string(buf, n);
+        }
+        case Value::TAG_TIME: {
+            char buf[32];
+            size_t n = datetime_parse::format_time(v.time_val, buf, sizeof(buf));
+            return std::string(buf, n);
+        }
+        case Value::TAG_DATETIME: {
+            char buf[32];
+            size_t n = datetime_parse::format_datetime(v.datetime_val, buf, sizeof(buf));
+            return std::string(buf, n);
+        }
+        case Value::TAG_TIMESTAMP: {
+            char buf[32];
+            size_t n = datetime_parse::format_datetime(v.timestamp_val, buf, sizeof(buf));
+            return std::string(buf, n);
+        }
         case Value::TAG_INTERVAL:
             return "INTERVAL(" + std::to_string(v.interval_val.months) + "m,"
                    + std::to_string(v.interval_val.microseconds) + "us)";

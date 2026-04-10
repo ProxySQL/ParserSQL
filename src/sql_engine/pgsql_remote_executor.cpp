@@ -60,12 +60,21 @@ PgSQLRemoteExecutor::Connection& PgSQLRemoteExecutor::get_or_connect(const std::
         }
     }
     if (!c.connected || !c.conn) {
+        // Per-session statement_timeout protects the 2PC coordinator from
+        // hanging forever during PREPARE TRANSACTION / COMMIT PREPARED on a
+        // wedged backend. 30s matches the MySQL side; override at compile
+        // time if needed.
+#ifndef SQL_ENGINE_PG_STATEMENT_TIMEOUT_MS
+#define SQL_ENGINE_PG_STATEMENT_TIMEOUT_MS 30000
+#endif
         std::string conninfo = "host=" + c.config.host
             + " port=" + std::to_string(c.config.port)
             + " user=" + c.config.user
             + " password=" + c.config.password
             + " dbname=" + c.config.database
-            + " connect_timeout=5";
+            + " connect_timeout=5"
+            + " options='-c statement_timeout="
+                + std::to_string(SQL_ENGINE_PG_STATEMENT_TIMEOUT_MS) + "'";
 
         c.conn = PQconnectdb(conninfo.c_str());
         if (PQstatus(c.conn) != CONNECTION_OK) {

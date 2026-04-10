@@ -3,6 +3,7 @@
 
 #include <gtest/gtest.h>
 #include "sql_engine/distributed_txn.h"
+#include "sql_engine/durable_txn_log.h"
 #include "sql_engine/remote_executor.h"
 #include "sql_engine/dml_result.h"
 #include "sql_parser/common.h"
@@ -11,6 +12,7 @@
 #include <vector>
 #include <cstring>
 #include <cstdlib>
+#include <unistd.h>
 
 using namespace sql_engine;
 using namespace sql_parser;
@@ -260,4 +262,283 @@ TEST(DistributedTxnIntegration, TwoPhaseCommitReal) {
 TEST(DistributedTxnIntegration, TwoPhaseRollbackReal) {
     SKIP_IF_NO_MYSQL();
     // Would test with real MySQL backends.
+}
+
+// =====================================================================
+// Durable transaction log (WAL) tests
+// =====================================================================
+//
+// These cover the write-ahead log that records 2PC decisions before
+// phase 2 dispatches them. Without this log, a crash between phase 1
+// and phase 2 leaves prepared transactions stranded on every backend
+// with no automatic recovery path. The log is a minimal append-only
+// text file, fsynced per write, scanned on startup to find in-doubt
+// transactions.
+
+namespace {
+
+// RAII wrapper that creates a unique temp file path, keeps it for the
+// duration of the test, and unlinks it afterwards.
+struct TempLogPath {
+    std::string path;
+    TempLogPath() {
+        char buf[] = "/tmp/parsersql_txnlog_XXXXXX";
+        int fd = ::mkstemp(buf);
+        if (fd >= 0) { ::close(fd); }
+        path = buf;
+        ::unlink(path.c_str());  // start from empty
+    }
+    ~TempLogPath() { ::unlink(path.c_str()); }
+};
+
+}  // namespace
+
+TEST(DurableTransactionLog, OpenAndLogDecision) {
+    TempLogPath tmp;
+    DurableTransactionLog log;
+    ASSERT_TRUE(log.open(tmp.path));
+    ASSERT_TRUE(log.is_open());
+
+    ASSERT_TRUE(log.log_decision("txn_1",
+                                 DurableTransactionLog::Decision::COMMIT,
+                                 {"backend_a", "backend_b"}));
+
+    // Without a COMPLETE record, the txn is in-doubt.
+    auto in_doubt = DurableTransactionLog::scan_in_doubt(tmp.path);
+    ASSERT_EQ(in_doubt.size(), 1u);
+    EXPECT_EQ(in_doubt[0].txn_id, "txn_1");
+    EXPECT_EQ(in_doubt[0].decision, DurableTransactionLog::Decision::COMMIT);
+    ASSERT_EQ(in_doubt[0].participants.size(), 2u);
+    EXPECT_EQ(in_doubt[0].participants[0], "backend_a");
+    EXPECT_EQ(in_doubt[0].participants[1], "backend_b");
+}
+
+TEST(DurableTransactionLog, CompleteRemovesFromInDoubt) {
+    TempLogPath tmp;
+    DurableTransactionLog log;
+    ASSERT_TRUE(log.open(tmp.path));
+
+    log.log_decision("txn_a", DurableTransactionLog::Decision::COMMIT, {"b1"});
+    log.log_decision("txn_b", DurableTransactionLog::Decision::COMMIT, {"b1", "b2"});
+    log.log_complete("txn_a");  // txn_a is done; only txn_b should be in-doubt.
+
+    auto in_doubt = DurableTransactionLog::scan_in_doubt(tmp.path);
+    ASSERT_EQ(in_doubt.size(), 1u);
+    EXPECT_EQ(in_doubt[0].txn_id, "txn_b");
+}
+
+TEST(DurableTransactionLog, RollbackDecisionRecorded) {
+    TempLogPath tmp;
+    DurableTransactionLog log;
+    ASSERT_TRUE(log.open(tmp.path));
+
+    log.log_decision("txn_r", DurableTransactionLog::Decision::ROLLBACK, {"b1", "b2"});
+
+    auto in_doubt = DurableTransactionLog::scan_in_doubt(tmp.path);
+    ASSERT_EQ(in_doubt.size(), 1u);
+    EXPECT_EQ(in_doubt[0].txn_id, "txn_r");
+    EXPECT_EQ(in_doubt[0].decision, DurableTransactionLog::Decision::ROLLBACK);
+}
+
+TEST(DurableTransactionLog, ScanEmptyFile) {
+    TempLogPath tmp;
+    DurableTransactionLog log;
+    ASSERT_TRUE(log.open(tmp.path));
+    auto in_doubt = DurableTransactionLog::scan_in_doubt(tmp.path);
+    EXPECT_TRUE(in_doubt.empty());
+}
+
+TEST(DurableTransactionLog, ScanNonexistentFile) {
+    auto in_doubt = DurableTransactionLog::scan_in_doubt("/tmp/does_not_exist_12345");
+    EXPECT_TRUE(in_doubt.empty());
+}
+
+TEST(DurableTransactionLog, LogPersistsAfterClose) {
+    TempLogPath tmp;
+    {
+        DurableTransactionLog log;
+        ASSERT_TRUE(log.open(tmp.path));
+        log.log_decision("txn_persisted", DurableTransactionLog::Decision::COMMIT, {"b1"});
+    }  // destructor closes the file; fsync already called per-record
+
+    // Re-open and scan: the record must still be there.
+    auto in_doubt = DurableTransactionLog::scan_in_doubt(tmp.path);
+    ASSERT_EQ(in_doubt.size(), 1u);
+    EXPECT_EQ(in_doubt[0].txn_id, "txn_persisted");
+}
+
+// =====================================================================
+// DistributedTransactionManager integration with the WAL
+// =====================================================================
+
+TEST(DistributedTxnWal, CommitLogsDecisionAndCompletion) {
+    TempLogPath tmp;
+    DurableTransactionLog log;
+    ASSERT_TRUE(log.open(tmp.path));
+
+    MockDistributedExecutor mock;
+    DistributedTransactionManager txn(mock);
+    txn.set_durable_log(&log);
+
+    EXPECT_TRUE(txn.begin());
+    EXPECT_TRUE(txn.enlist_backend("mysql_1"));
+    EXPECT_TRUE(txn.enlist_backend("mysql_2"));
+    EXPECT_TRUE(txn.commit());
+
+    // After a successful commit, no in-doubt transactions should remain.
+    auto in_doubt = DurableTransactionLog::scan_in_doubt(tmp.path);
+    EXPECT_TRUE(in_doubt.empty())
+        << "commit should log COMPLETE after phase 2, but found "
+        << in_doubt.size() << " in-doubt entries";
+}
+
+TEST(DistributedTxnWal, Phase2CommitFailureLeavesTxnInDoubt) {
+    // Core recovery invariant: if phase 2 commit fails for any participant,
+    // the transaction stays in-doubt in the WAL so startup recovery can
+    // pick it up and finish the commit. Without this, a partially-committed
+    // transaction would silently disappear from the log.
+    TempLogPath tmp;
+    DurableTransactionLog log;
+    ASSERT_TRUE(log.open(tmp.path));
+
+    MockDistributedExecutor mock;
+    mock.add_fail_pattern("XA COMMIT");  // phase 2 will fail on every COMMIT
+
+    DistributedTransactionManager txn(mock);
+    txn.set_durable_log(&log);
+
+    txn.begin();
+    txn.enlist_backend("mysql_1");
+    txn.enlist_backend("mysql_2");
+    EXPECT_FALSE(txn.commit());  // phase 2 fails -- commit() returns false
+
+    // The COMMIT decision is durably recorded and NOT followed by a
+    // COMPLETE (because phase 2 failed), so the txn is in-doubt.
+    auto in_doubt = DurableTransactionLog::scan_in_doubt(tmp.path);
+    ASSERT_EQ(in_doubt.size(), 1u);
+    EXPECT_EQ(in_doubt[0].decision, DurableTransactionLog::Decision::COMMIT);
+    EXPECT_EQ(in_doubt[0].participants.size(), 2u);
+}
+
+TEST(DistributedTxnWal, Phase1PrepareFailureLogsRollbackAndCompletes) {
+    // If phase 1 fails, we should log ROLLBACK and then COMPLETE after
+    // dispatching the rollback to all participants. No in-doubt state.
+    TempLogPath tmp;
+    DurableTransactionLog log;
+    ASSERT_TRUE(log.open(tmp.path));
+
+    MockDistributedExecutor mock;
+    mock.add_fail_pattern("XA PREPARE");  // phase 1 will fail
+
+    DistributedTransactionManager txn(mock);
+    txn.set_durable_log(&log);
+
+    txn.begin();
+    txn.enlist_backend("mysql_1");
+    txn.enlist_backend("mysql_2");
+    EXPECT_FALSE(txn.commit());  // phase 1 fails -> rollback
+
+    // The decision was ROLLBACK, and COMPLETE was written, so in-doubt is empty.
+    auto in_doubt = DurableTransactionLog::scan_in_doubt(tmp.path);
+    EXPECT_TRUE(in_doubt.empty());
+}
+
+TEST(DistributedTxnWal, NoLogAttachedPreservesLegacyBehavior) {
+    // When no log is attached, commit proceeds without any WAL write and
+    // returns whatever phase 2 returns -- matches pre-WAL behavior.
+    MockDistributedExecutor mock;
+    DistributedTransactionManager txn(mock);
+    // No set_durable_log() call.
+
+    txn.begin();
+    txn.enlist_backend("mysql_1");
+    EXPECT_TRUE(txn.commit());
+}
+
+TEST(DistributedTxnWal, RollbackRecordsDecision) {
+    TempLogPath tmp;
+    DurableTransactionLog log;
+    ASSERT_TRUE(log.open(tmp.path));
+
+    MockDistributedExecutor mock;
+    DistributedTransactionManager txn(mock);
+    txn.set_durable_log(&log);
+
+    txn.begin();
+    txn.enlist_backend("mysql_1");
+    txn.rollback();
+
+    // rollback() calls maybe_log_complete() after writing the decision,
+    // so the in-doubt set should be empty.
+    auto in_doubt = DurableTransactionLog::scan_in_doubt(tmp.path);
+    EXPECT_TRUE(in_doubt.empty());
+}
+
+// =====================================================================
+// Phase-level statement timeout
+// =====================================================================
+
+TEST(DistributedTxnTimeout, IssuesSetSessionBeforeEachPhaseSqlMysql) {
+    MockDistributedExecutor mock;
+    DistributedTransactionManager txn(mock);
+    txn.set_phase_statement_timeout_ms(5000);  // 5 second phase timeout
+
+    txn.begin();
+    txn.enlist_backend("mysql_1");
+    txn.commit();
+
+    // The phase timeout should result in a SET SESSION max_execution_time
+    // being issued immediately before the phase-1 XA END (and again
+    // before phase-2 XA COMMIT). Check the history.
+    const auto& h1 = mock.backend_history("mysql_1");
+    bool saw_timeout_set = false;
+    for (const auto& s : h1) {
+        if (s.find("max_execution_time") != std::string::npos &&
+            s.find("5000") != std::string::npos) {
+            saw_timeout_set = true;
+            break;
+        }
+    }
+    EXPECT_TRUE(saw_timeout_set)
+        << "expected SET SESSION max_execution_time = 5000 before phase 1/2 SQL";
+}
+
+TEST(DistributedTxnTimeout, NoTimeoutByDefault) {
+    MockDistributedExecutor mock;
+    DistributedTransactionManager txn(mock);
+    // No set_phase_statement_timeout_ms call -- default is 0 (no override).
+
+    txn.begin();
+    txn.enlist_backend("mysql_1");
+    txn.commit();
+
+    const auto& h1 = mock.backend_history("mysql_1");
+    for (const auto& s : h1) {
+        EXPECT_EQ(s.find("max_execution_time"), std::string::npos)
+            << "unexpected SET SESSION max_execution_time when no phase timeout is set: "
+            << s;
+    }
+}
+
+TEST(DistributedTxnTimeout, PostgreSqlUsesStatementTimeout) {
+    MockDistributedExecutor mock;
+    DistributedTransactionManager txn(
+        mock, DistributedTransactionManager::BackendDialect::POSTGRESQL);
+    txn.set_phase_statement_timeout_ms(10000);
+
+    txn.begin();
+    txn.enlist_backend("pg_1");
+    txn.commit();
+
+    const auto& h1 = mock.backend_history("pg_1");
+    bool saw_timeout_set = false;
+    for (const auto& s : h1) {
+        if (s.find("statement_timeout") != std::string::npos &&
+            s.find("10000") != std::string::npos) {
+            saw_timeout_set = true;
+            break;
+        }
+    }
+    EXPECT_TRUE(saw_timeout_set)
+        << "expected SET LOCAL statement_timeout = 10000 before phase 1/2 SQL";
 }
