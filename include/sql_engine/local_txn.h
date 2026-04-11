@@ -20,8 +20,6 @@ struct OwnedValue {
     Value::Tag tag = Value::TAG_NULL;
     int64_t numeric_val = 0;      // covers bool, int64, uint64, date, time, etc.
     double double_val = 0.0;
-    int32_t interval_months = 0;
-    int64_t interval_us = 0;
     std::string str_data;
 
     OwnedValue() = default;
@@ -39,10 +37,6 @@ struct OwnedValue {
             case Value::TAG_TIME:      ov.numeric_val = v.time_val; break;
             case Value::TAG_DATETIME:  ov.numeric_val = v.datetime_val; break;
             case Value::TAG_TIMESTAMP: ov.numeric_val = v.timestamp_val; break;
-            case Value::TAG_INTERVAL:
-                ov.interval_months = v.interval_val.months;
-                ov.interval_us = v.interval_val.microseconds;
-                break;
             case Value::TAG_STRING:
             case Value::TAG_DECIMAL:
             case Value::TAG_BYTES:
@@ -67,10 +61,6 @@ struct OwnedValue {
             case Value::TAG_TIME:      v.time_val = numeric_val; break;
             case Value::TAG_DATETIME:  v.datetime_val = numeric_val; break;
             case Value::TAG_TIMESTAMP: v.timestamp_val = numeric_val; break;
-            case Value::TAG_INTERVAL:
-                v.interval_val.months = interval_months;
-                v.interval_val.microseconds = interval_us;
-                break;
             case Value::TAG_STRING:
             case Value::TAG_DECIMAL:
             case Value::TAG_BYTES:

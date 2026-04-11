@@ -32,7 +32,19 @@ static bool mysql_available() {
         }                                                                   \
     } while (0)
 
-// Mock RemoteExecutor that records all SQL sent per backend
+// Mock RemoteExecutor that records all SQL sent per backend.
+//
+// When `enable_sessions_` is set (the default), checkout_session returns
+// a session object that tracks a unique session id. All calls going
+// through that session get attributed to the same session id in the
+// session_history_, so tests can verify that phase 1 and phase 2 went
+// through the SAME physical connection (which is what MySQL XA and
+// PostgreSQL PREPARE TRANSACTION require).
+//
+// When enable_sessions_ is false, checkout_session returns nullptr and
+// the transaction manager falls back to the unpinned execute_dml path,
+// matching the old behavior. Existing tests that only care about
+// call-history semantics still work.
 class MockDistributedExecutor : public RemoteExecutor {
 public:
     ResultSet execute(const char* /*backend_name*/, StringRef /*sql*/) override {
@@ -40,13 +52,31 @@ public:
     }
 
     DmlResult execute_dml(const char* backend_name, StringRef sql) override {
+        return record(backend_name, sql, /*session_id=*/-1);
+    }
+
+    // Each checkout_session call allocates a fresh session id. The
+    // returned MockSession's execute_dml records the SQL under
+    // (backend, session_id) so we can verify pinning.
+    std::unique_ptr<RemoteSession> checkout_session(const char* backend_name) override {
+        if (!enable_sessions_) return nullptr;
+        int sid = next_session_id_++;
+        return std::unique_ptr<RemoteSession>(new MockSession(*this, backend_name, sid));
+    }
+
+    // Legacy call recorder. session_id == -1 means "unpinned call".
+    DmlResult record(const char* backend_name, StringRef sql, int session_id) {
         DmlResult r;
         std::string s(sql.ptr, sql.len);
         history_[backend_name].push_back(s);
         all_history_.push_back(std::string(backend_name) + ": " + s);
+        if (session_id >= 0) {
+            session_history_[session_id].push_back(
+                std::string(backend_name) + ": " + s);
+            last_session_for_backend_[backend_name] = session_id;
+        }
 
         // Check if this backend+sql should fail
-        std::string key = std::string(backend_name) + ":" + s;
         for (auto& fail_pat : fail_patterns_) {
             if (s.find(fail_pat) != std::string::npos) {
                 r.success = false;
@@ -67,20 +97,63 @@ public:
 
     const std::vector<std::string>& all() const { return all_history_; }
 
+    // Returns the session id that the most recent call for `backend`
+    // used, or -1 if no session was used.
+    int last_session_id(const char* backend) const {
+        auto it = last_session_for_backend_.find(backend);
+        return it == last_session_for_backend_.end() ? -1 : it->second;
+    }
+
+    // Returns every call that went through the given session id. Used to
+    // verify that an entire transaction (enlist + phase 1 + phase 2)
+    // went through the same pinned session.
+    const std::vector<std::string>& session_calls(int session_id) const {
+        static const std::vector<std::string> empty;
+        auto it = session_history_.find(session_id);
+        return it == session_history_.end() ? empty : it->second;
+    }
+
     void add_fail_pattern(const std::string& pattern) {
         fail_patterns_.push_back(pattern);
     }
 
+    void set_sessions_enabled(bool enabled) { enable_sessions_ = enabled; }
+
     void clear() {
         history_.clear();
         all_history_.clear();
+        session_history_.clear();
+        last_session_for_backend_.clear();
         fail_patterns_.clear();
     }
 
 private:
+    class MockSession : public RemoteSession {
+    public:
+        MockSession(MockDistributedExecutor& e, std::string b, int id)
+            : executor_(e), backend_(std::move(b)), id_(id) {}
+
+        ResultSet execute(StringRef /*sql*/) override { return {}; }
+
+        DmlResult execute_dml(StringRef sql) override {
+            return executor_.record(backend_.c_str(), sql, id_);
+        }
+
+        void poison() override { /* mock: nothing to poison */ }
+
+    private:
+        MockDistributedExecutor& executor_;
+        std::string backend_;
+        int id_;
+    };
+
     std::unordered_map<std::string, std::vector<std::string>> history_;
     std::vector<std::string> all_history_;
     std::vector<std::string> fail_patterns_;
+    std::unordered_map<int, std::vector<std::string>> session_history_;
+    std::unordered_map<std::string, int> last_session_for_backend_;
+    int next_session_id_ = 0;
+    bool enable_sessions_ = true;
 };
 
 // Basic 2PC flow: begin, enlist two backends, commit
@@ -843,4 +916,195 @@ TEST(TransactionRecovery, EmptyLogProducesEmptyReport) {
     EXPECT_TRUE(report.recovered_rollback.empty());
     EXPECT_TRUE(report.still_in_doubt.empty());
     EXPECT_EQ(report.participants_contacted, 0u);
+}
+
+// =====================================================================
+// Connection pinning: phase 1 + phase 2 must share a physical session
+// =====================================================================
+//
+// This is the regression test for the bug that existed for the entire
+// life of DistributedTransactionManager until the pinning refactor:
+// each SQL call used to go through RemoteExecutor::execute_dml, which
+// on ThreadSafeMultiRemoteExecutor checks out a fresh pooled connection
+// per call. That silently broke MySQL XA (which requires XA START,
+// XA END, XA PREPARE to all be on the same session) and PostgreSQL
+// PREPARE TRANSACTION (which requires BEGIN and PREPARE on the same
+// session). The unit tests passed only because MockDistributedExecutor
+// didn't enforce session identity.
+//
+// Now enlist_backend checks out a pinned session via
+// RemoteExecutor::checkout_session, and phase 1 / phase 2 both go
+// through that same session. Verify that by checking the mock's
+// session-id-to-calls map.
+
+TEST(DistributedTxnPinning, AllMysqlPhasesOnSameSession) {
+    MockDistributedExecutor mock;
+    DistributedTransactionManager txn(mock);
+
+    txn.begin();
+    EXPECT_TRUE(txn.enlist_backend("mysql_1"));
+    EXPECT_TRUE(txn.commit());
+
+    // mysql_1 should have gone through exactly one session id.
+    int sid = mock.last_session_id("mysql_1");
+    ASSERT_GE(sid, 0) << "no session was used for mysql_1 -- pinning is broken";
+
+    // That session's call history must include XA START, XA END,
+    // XA PREPARE, and XA COMMIT -- all four on the same session id.
+    const auto& session_calls = mock.session_calls(sid);
+    int start_count = 0, end_count = 0, prepare_count = 0, commit_count = 0;
+    for (const auto& call : session_calls) {
+        if (call.find("XA START")   != std::string::npos) ++start_count;
+        if (call.find("XA END")     != std::string::npos) ++end_count;
+        if (call.find("XA PREPARE") != std::string::npos) ++prepare_count;
+        if (call.find("XA COMMIT")  != std::string::npos) ++commit_count;
+    }
+    EXPECT_EQ(start_count,   1) << "XA START missing from session " << sid;
+    EXPECT_EQ(end_count,     1) << "XA END missing from session " << sid;
+    EXPECT_EQ(prepare_count, 1) << "XA PREPARE missing from session " << sid;
+    EXPECT_EQ(commit_count,  1) << "XA COMMIT missing from session " << sid;
+}
+
+TEST(DistributedTxnPinning, TwoBackendsUseTwoDistinctSessions) {
+    // Two enlisted backends should each have their own pinned session
+    // (a transaction can't share a physical connection across different
+    // backends -- they're different TCP endpoints).
+    MockDistributedExecutor mock;
+    DistributedTransactionManager txn(mock);
+
+    txn.begin();
+    txn.enlist_backend("mysql_1");
+    txn.enlist_backend("mysql_2");
+    txn.commit();
+
+    int sid1 = mock.last_session_id("mysql_1");
+    int sid2 = mock.last_session_id("mysql_2");
+    ASSERT_GE(sid1, 0);
+    ASSERT_GE(sid2, 0);
+    EXPECT_NE(sid1, sid2) << "different backends must use different sessions";
+
+    // Each session still contains the full 4-statement flow for its backend.
+    auto count_in = [](const std::vector<std::string>& calls, const char* needle) {
+        int n = 0;
+        for (const auto& c : calls) if (c.find(needle) != std::string::npos) ++n;
+        return n;
+    };
+    EXPECT_EQ(count_in(mock.session_calls(sid1), "XA START"),   1);
+    EXPECT_EQ(count_in(mock.session_calls(sid1), "XA PREPARE"), 1);
+    EXPECT_EQ(count_in(mock.session_calls(sid1), "XA COMMIT"),  1);
+    EXPECT_EQ(count_in(mock.session_calls(sid2), "XA START"),   1);
+    EXPECT_EQ(count_in(mock.session_calls(sid2), "XA PREPARE"), 1);
+    EXPECT_EQ(count_in(mock.session_calls(sid2), "XA COMMIT"),  1);
+}
+
+TEST(DistributedTxnPinning, PostgreSqlPrepareAndCommitOnSameSession) {
+    MockDistributedExecutor mock;
+    DistributedTransactionManager txn(
+        mock, DistributedTransactionManager::BackendDialect::POSTGRESQL);
+
+    txn.begin();
+    txn.enlist_backend("pg_1");
+    txn.commit();
+
+    int sid = mock.last_session_id("pg_1");
+    ASSERT_GE(sid, 0) << "no session was used for pg_1";
+
+    const auto& session_calls = mock.session_calls(sid);
+    int begin_count = 0, prepare_count = 0, commit_count = 0;
+    for (const auto& call : session_calls) {
+        if (call == "pg_1: BEGIN" ||
+            (call.find("BEGIN") != std::string::npos &&
+             call.find("PREPARE") == std::string::npos)) {
+            ++begin_count;
+        }
+        if (call.find("PREPARE TRANSACTION") != std::string::npos) ++prepare_count;
+        if (call.find("COMMIT PREPARED")     != std::string::npos) ++commit_count;
+    }
+    EXPECT_EQ(begin_count,   1) << "BEGIN missing from session";
+    EXPECT_EQ(prepare_count, 1) << "PREPARE TRANSACTION missing from session";
+    EXPECT_EQ(commit_count,  1) << "COMMIT PREPARED missing from session";
+}
+
+TEST(DistributedTxnPinning, RollbackPinsSession) {
+    MockDistributedExecutor mock;
+    DistributedTransactionManager txn(mock);
+
+    txn.begin();
+    txn.enlist_backend("mysql_1");
+    txn.rollback();
+
+    int sid = mock.last_session_id("mysql_1");
+    ASSERT_GE(sid, 0);
+
+    const auto& session_calls = mock.session_calls(sid);
+    int start_count = 0, end_count = 0, rollback_count = 0;
+    for (const auto& call : session_calls) {
+        if (call.find("XA START")    != std::string::npos) ++start_count;
+        if (call.find("XA END")      != std::string::npos) ++end_count;
+        if (call.find("XA ROLLBACK") != std::string::npos) ++rollback_count;
+    }
+    EXPECT_EQ(start_count,    1);
+    EXPECT_EQ(end_count,      1) << "XA END should run on same session before XA ROLLBACK";
+    EXPECT_EQ(rollback_count, 1);
+}
+
+TEST(DistributedTxnPinning, UnpinnedFallbackStillWorks) {
+    // If the executor reports no session support, the transaction
+    // manager falls back to the unpinned execute_dml path. Verify
+    // existing tests still work by disabling the mock's session
+    // support and running the basic 2PC flow.
+    MockDistributedExecutor mock;
+    mock.set_sessions_enabled(false);
+    DistributedTransactionManager txn(mock);
+
+    txn.begin();
+    EXPECT_TRUE(txn.enlist_backend("mysql_1"));
+    EXPECT_TRUE(txn.commit());
+
+    // No session should have been used (all calls via execute_dml).
+    EXPECT_EQ(mock.last_session_id("mysql_1"), -1);
+
+    // But the backend history should still record the full 4-statement flow.
+    const auto& h = mock.backend_history("mysql_1");
+    int start_count = 0, end_count = 0, prepare_count = 0, commit_count = 0;
+    for (const auto& s : h) {
+        if (s.find("XA START")   != std::string::npos) ++start_count;
+        if (s.find("XA END")     != std::string::npos) ++end_count;
+        if (s.find("XA PREPARE") != std::string::npos) ++prepare_count;
+        if (s.find("XA COMMIT")  != std::string::npos) ++commit_count;
+    }
+    EXPECT_EQ(start_count,   1);
+    EXPECT_EQ(end_count,     1);
+    EXPECT_EQ(prepare_count, 1);
+    EXPECT_EQ(commit_count,  1);
+}
+
+TEST(DistributedTxnPinning, ExecuteParticipantDmlUsesSameSession) {
+    // DML routed via DistributedTransactionManager::execute_participant_dml
+    // should land on the same pinned session as phase 1 / phase 2. This
+    // is the hook external code uses to make in-transaction DML part of
+    // the 2PC.
+    MockDistributedExecutor mock;
+    DistributedTransactionManager txn(mock);
+
+    txn.begin();
+    txn.execute_participant_dml("mysql_1",
+        StringRef{"INSERT INTO t VALUES (1)", 24});
+    txn.commit();
+
+    int sid = mock.last_session_id("mysql_1");
+    ASSERT_GE(sid, 0);
+
+    const auto& session_calls = mock.session_calls(sid);
+    bool saw_insert = false, saw_start = false, saw_prepare = false, saw_commit = false;
+    for (const auto& call : session_calls) {
+        if (call.find("INSERT INTO t") != std::string::npos) saw_insert = true;
+        if (call.find("XA START")      != std::string::npos) saw_start = true;
+        if (call.find("XA PREPARE")    != std::string::npos) saw_prepare = true;
+        if (call.find("XA COMMIT")     != std::string::npos) saw_commit = true;
+    }
+    EXPECT_TRUE(saw_start);
+    EXPECT_TRUE(saw_insert) << "DML via execute_participant_dml must run on the pinned session";
+    EXPECT_TRUE(saw_prepare);
+    EXPECT_TRUE(saw_commit);
 }

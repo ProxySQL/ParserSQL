@@ -22,7 +22,6 @@ inline SqlType::Kind tag_to_kind(Value::Tag tag) {
         case Value::TAG_TIME:      return SqlType::TIME;
         case Value::TAG_DATETIME:  return SqlType::DATETIME;
         case Value::TAG_TIMESTAMP: return SqlType::TIMESTAMP;
-        case Value::TAG_INTERVAL:  return SqlType::INTERVAL;
         case Value::TAG_JSON:      return SqlType::JSON;
         default:                   return SqlType::UNKNOWN;
     }
@@ -53,7 +52,6 @@ inline Value::Tag kind_to_tag(SqlType::Kind kind) {
         case SqlType::TIME:                                   return Value::TAG_TIME;
         case SqlType::DATETIME:                               return Value::TAG_DATETIME;
         case SqlType::TIMESTAMP:                              return Value::TAG_TIMESTAMP;
-        case SqlType::INTERVAL:                               return Value::TAG_INTERVAL;
         case SqlType::JSON:
         case SqlType::JSONB:                                  return Value::TAG_JSON;
         default:                                              return Value::TAG_NULL;

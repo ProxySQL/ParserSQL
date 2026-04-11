@@ -215,13 +215,11 @@ TEST(ValueTest, Timestamp) {
     EXPECT_TRUE(v.is_temporal());
 }
 
-TEST(ValueTest, Interval) {
-    auto v = value_interval(2, 3600000000LL);
-    EXPECT_EQ(v.tag, Value::TAG_INTERVAL);
-    EXPECT_EQ(v.interval_val.months, 2);
-    EXPECT_EQ(v.interval_val.microseconds, 3600000000LL);
-    EXPECT_TRUE(v.is_temporal());
-}
+// TEST(ValueTest, Interval) removed along with the TAG_INTERVAL type.
+// INTERVAL had no producer anywhere in the engine; see comment in
+// include/sql_engine/value.h for the reasoning. Re-add this test when
+// INTERVAL is re-introduced with an actual producer (e.g. PostgreSQL
+// INTERVAL OID parsing).
 
 TEST(ValueTest, Json) {
     const char* j = R"({"key": "value"})";

@@ -23,7 +23,11 @@ struct SqlType {
         TIME,
         DATETIME,
         TIMESTAMP,
-        INTERVAL,
+        // INTERVAL removed along with Value::TAG_INTERVAL -- it had no
+        // producer anywhere in the engine and the scaffolding misleadingly
+        // implied temporal arithmetic worked. Re-add alongside a real
+        // producer if and when DATE_ADD(date, INTERVAL N unit) or
+        // PostgreSQL INTERVAL OID parsing is implemented.
 
         // Structured
         JSON, JSONB,
@@ -69,7 +73,7 @@ struct SqlType {
         return kind >= CHAR && kind <= BLOB;
     }
     bool is_temporal() const {
-        return kind >= DATE && kind <= INTERVAL;
+        return kind >= DATE && kind <= TIMESTAMP;
     }
     bool is_structured() const {
         return kind >= JSON && kind <= ARRAY;

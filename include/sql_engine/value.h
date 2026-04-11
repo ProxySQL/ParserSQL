@@ -25,9 +25,15 @@ struct Value {
         TAG_TIME,       // microseconds since midnight (int64)
         TAG_DATETIME,   // microseconds since epoch (int64)
         TAG_TIMESTAMP,  // microseconds since epoch (int64)
-        TAG_INTERVAL,   // months + microseconds
         TAG_JSON,       // stored as StringRef
     };
+    // INTERVAL was previously declared here with a months+microseconds
+    // representation, but nothing produced or consumed it end-to-end:
+    // neither the parser, expression evaluator, function registry, nor
+    // the MySQL/PostgreSQL remote executors. It was "scaffolding without
+    // wiring". Removed in favor of re-adding the tag later alongside an
+    // actual producer (PostgreSQL INTERVAL OID parsing, or a
+    // DATE_ADD(date, INTERVAL N unit) parser path).
 
     Tag tag = TAG_NULL;
 
@@ -41,13 +47,12 @@ struct Value {
         int64_t time_val;       // microseconds since midnight
         int64_t datetime_val;   // microseconds since epoch
         int64_t timestamp_val;  // microseconds since epoch
-        struct { int32_t months; int64_t microseconds; } interval_val;
     };
 
     bool is_null() const { return tag == TAG_NULL; }
     bool is_numeric() const { return tag >= TAG_BOOL && tag <= TAG_DECIMAL; }
     bool is_string() const { return tag == TAG_STRING; }
-    bool is_temporal() const { return tag >= TAG_DATE && tag <= TAG_INTERVAL; }
+    bool is_temporal() const { return tag >= TAG_DATE && tag <= TAG_TIMESTAMP; }
 
     // Convert numeric value to double (for arithmetic). Returns 0.0 for non-numeric.
     double to_double() const {
@@ -163,13 +168,6 @@ inline Value value_timestamp(int64_t us) {
     Value r{};
     r.tag = Value::TAG_TIMESTAMP;
     r.timestamp_val = us;
-    return r;
-}
-
-inline Value value_interval(int32_t months, int64_t us) {
-    Value r{};
-    r.tag = Value::TAG_INTERVAL;
-    r.interval_val = {months, us};
     return r;
 }
 

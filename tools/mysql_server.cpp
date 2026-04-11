@@ -244,15 +244,6 @@ static std::string value_to_string(const Value& v) {
             size_t n = sql_engine::datetime_parse::format_datetime(v.timestamp_val, buf, sizeof(buf));
             return std::string(buf, n);
         }
-        case Value::TAG_INTERVAL: {
-            // Minimal representation: "<months> mons <microseconds> us".
-            // INTERVAL is rarely produced by local evaluation right now, but we still
-            // want to avoid silently returning an empty string.
-            std::ostringstream oss;
-            oss << v.interval_val.months << " mons "
-                << v.interval_val.microseconds << " us";
-            return oss.str();
-        }
         default:
             return "";
     }

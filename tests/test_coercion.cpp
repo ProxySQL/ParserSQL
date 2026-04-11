@@ -1,5 +1,6 @@
 #include <gtest/gtest.h>
 #include "sql_engine/coercion.h"
+#include "sql_engine/datetime_parse.h"
 #include "sql_parser/arena.h"
 
 using namespace sql_engine;
@@ -155,4 +156,65 @@ TEST_F(PgSQLCoercion, CoerceIntToBoolFails) {
     auto v = value_int(1);
     auto r = CoercionRules<Dialect::PostgreSQL>::coerce_value(v, Value::TAG_BOOL, arena);
     EXPECT_TRUE(r.is_null());  // PostgreSQL: no implicit int->bool
+}
+
+// ----- String -> temporal coercion (MySQL lenient) -----
+
+TEST_F(MySQLCoercion, CoerceStringToDateValue) {
+    const char* s = "2026-04-10";
+    auto v = value_string(StringRef{s, 10});
+    auto r = CoercionRules<Dialect::MySQL>::coerce_value(v, Value::TAG_DATE, arena);
+    EXPECT_EQ(r.tag, Value::TAG_DATE);
+    EXPECT_EQ(r.date_val, datetime_parse::parse_date("2026-04-10"));
+}
+
+TEST_F(MySQLCoercion, CoerceStringToDatetimeValue) {
+    const char* s = "2026-04-10 13:45:30";
+    auto v = value_string(StringRef{s, 19});
+    auto r = CoercionRules<Dialect::MySQL>::coerce_value(v, Value::TAG_DATETIME, arena);
+    EXPECT_EQ(r.tag, Value::TAG_DATETIME);
+    EXPECT_EQ(r.datetime_val, datetime_parse::parse_datetime("2026-04-10 13:45:30"));
+}
+
+TEST_F(MySQLCoercion, CoerceStringToTime) {
+    const char* s = "13:45:30";
+    auto v = value_string(StringRef{s, 8});
+    auto r = CoercionRules<Dialect::MySQL>::coerce_value(v, Value::TAG_TIME, arena);
+    EXPECT_EQ(r.tag, Value::TAG_TIME);
+    EXPECT_EQ(r.time_val, datetime_parse::parse_time("13:45:30"));
+}
+
+TEST_F(MySQLCoercion, CoerceDateToDatetime) {
+    auto v = value_date(datetime_parse::days_since_epoch(2026, 4, 10));
+    auto r = CoercionRules<Dialect::MySQL>::coerce_value(v, Value::TAG_DATETIME, arena);
+    EXPECT_EQ(r.tag, Value::TAG_DATETIME);
+    int64_t expected = static_cast<int64_t>(datetime_parse::days_since_epoch(2026, 4, 10))
+                       * 86400LL * 1000000LL;
+    EXPECT_EQ(r.datetime_val, expected);
+}
+
+TEST_F(MySQLCoercion, CoerceDatetimeToDateTruncates) {
+    auto v = value_datetime(datetime_parse::parse_datetime("2026-04-10 13:45:30"));
+    auto r = CoercionRules<Dialect::MySQL>::coerce_value(v, Value::TAG_DATE, arena);
+    EXPECT_EQ(r.tag, Value::TAG_DATE);
+    EXPECT_EQ(r.date_val, datetime_parse::days_since_epoch(2026, 4, 10));
+}
+
+// ----- PostgreSQL: strict, string -> temporal is NOT implicit -----
+
+TEST_F(PgSQLCoercion, StringToDateIsNotImplicit) {
+    const char* s = "2026-04-10";
+    auto v = value_string(StringRef{s, 10});
+    auto r = CoercionRules<Dialect::PostgreSQL>::coerce_value(v, Value::TAG_DATE, arena);
+    EXPECT_TRUE(r.is_null())
+        << "PostgreSQL requires CAST('2026-04-10' AS date) -- implicit is NULL";
+}
+
+TEST_F(PgSQLCoercion, DateToTimestampIsImplicit) {
+    auto v = value_date(datetime_parse::days_since_epoch(2026, 4, 10));
+    auto r = CoercionRules<Dialect::PostgreSQL>::coerce_value(v, Value::TAG_TIMESTAMP, arena);
+    EXPECT_EQ(r.tag, Value::TAG_TIMESTAMP);
+    int64_t expected = static_cast<int64_t>(datetime_parse::days_since_epoch(2026, 4, 10))
+                       * 86400LL * 1000000LL;
+    EXPECT_EQ(r.timestamp_val, expected);
 }

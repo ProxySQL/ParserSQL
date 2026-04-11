@@ -86,9 +86,6 @@ static std::string value_to_string(const Value& v) {
             size_t n = datetime_parse::format_datetime(v.timestamp_val, buf, sizeof(buf));
             return std::string(buf, n);
         }
-        case Value::TAG_INTERVAL:
-            return "INTERVAL(" + std::to_string(v.interval_val.months) + "m,"
-                   + std::to_string(v.interval_val.microseconds) + "us)";
         default:
             return "?";
     }

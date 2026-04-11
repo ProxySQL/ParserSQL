@@ -3,6 +3,7 @@
 
 #include "sql_engine/types.h"
 #include "sql_engine/value.h"
+#include "sql_engine/datetime_parse.h"
 #include "sql_parser/common.h"   // Dialect, StringRef
 #include "sql_parser/arena.h"    // Arena
 #include <cstdlib>
@@ -179,6 +180,61 @@ inline Value CoercionRules<Dialect::MySQL>::coerce_value(const Value& val, Value
             if (val.tag == Value::TAG_DOUBLE) return value_bool(val.double_val != 0.0);
             return value_null();
         }
+        case Value::TAG_DATE: {
+            // String -> DATE: parse "YYYY-MM-DD" (MySQL is lenient).
+            if (val.tag == Value::TAG_STRING && val.str_val.ptr && val.str_val.len > 0) {
+                char buf[32];
+                uint32_t n = val.str_val.len < 31 ? val.str_val.len : 31;
+                for (uint32_t i = 0; i < n; ++i) buf[i] = val.str_val.ptr[i];
+                buf[n] = '\0';
+                return value_date(datetime_parse::parse_date(buf));
+            }
+            if (val.tag == Value::TAG_DATETIME) {
+                // Truncate datetime to date by floor-dividing by microseconds/day.
+                int64_t us_per_day = 86400LL * 1000000LL;
+                int64_t days = val.datetime_val / us_per_day;
+                if (val.datetime_val < 0 && val.datetime_val % us_per_day != 0) --days;
+                return value_date(static_cast<int32_t>(days));
+            }
+            return value_null();
+        }
+        case Value::TAG_TIME: {
+            if (val.tag == Value::TAG_STRING && val.str_val.ptr && val.str_val.len > 0) {
+                char buf[32];
+                uint32_t n = val.str_val.len < 31 ? val.str_val.len : 31;
+                for (uint32_t i = 0; i < n; ++i) buf[i] = val.str_val.ptr[i];
+                buf[n] = '\0';
+                return value_time(datetime_parse::parse_time(buf));
+            }
+            return value_null();
+        }
+        case Value::TAG_DATETIME:
+        case Value::TAG_TIMESTAMP: {
+            if (val.tag == Value::TAG_STRING && val.str_val.ptr && val.str_val.len > 0) {
+                char buf[64];
+                uint32_t n = val.str_val.len < 63 ? val.str_val.len : 63;
+                for (uint32_t i = 0; i < n; ++i) buf[i] = val.str_val.ptr[i];
+                buf[n] = '\0';
+                int64_t us = datetime_parse::parse_datetime(buf);
+                return (target == Value::TAG_DATETIME)
+                    ? value_datetime(us)
+                    : value_timestamp(us);
+            }
+            // DATE promoted to DATETIME at midnight UTC.
+            if (val.tag == Value::TAG_DATE) {
+                int64_t us = static_cast<int64_t>(val.date_val) * 86400LL * 1000000LL;
+                return (target == Value::TAG_DATETIME)
+                    ? value_datetime(us)
+                    : value_timestamp(us);
+            }
+            // DATETIME and TIMESTAMP share representation; allow interchange.
+            if (val.tag == Value::TAG_DATETIME || val.tag == Value::TAG_TIMESTAMP) {
+                return (target == Value::TAG_DATETIME)
+                    ? value_datetime(val.datetime_val)
+                    : value_timestamp(val.timestamp_val);
+            }
+            return value_null();
+        }
         default:
             return value_null();
     }
@@ -233,7 +289,12 @@ inline Value CoercionRules<Dialect::PostgreSQL>::coerce_value(const Value& val, 
     if (val.tag == target) return val;
     if (val.is_null()) return value_null();
 
-    // PostgreSQL: only within-category promotions
+    // PostgreSQL's implicit coercion rules are deliberately strict: no
+    // implicit string<->numeric, no implicit int<->bool, no implicit
+    // string<->temporal. Users must write explicit CAST(col AS type) for
+    // those. We return value_null() for the cases PG rejects, which
+    // surfaces as a NULL in the calling comparison -- the same end
+    // result PG would produce (via an error, in its case).
     switch (target) {
         case Value::TAG_INT64: {
             if (val.tag == Value::TAG_BOOL) return value_int(val.bool_val ? 1 : 0);
@@ -250,6 +311,24 @@ inline Value CoercionRules<Dialect::PostgreSQL>::coerce_value(const Value& val, 
         }
         case Value::TAG_BOOL: {
             // PostgreSQL does not implicitly convert int to bool
+            return value_null();
+        }
+        case Value::TAG_DATETIME:
+        case Value::TAG_TIMESTAMP: {
+            // Within-temporal promotion: DATE -> DATETIME/TIMESTAMP at
+            // midnight UTC. PG considers this implicit.
+            if (val.tag == Value::TAG_DATE) {
+                int64_t us = static_cast<int64_t>(val.date_val) * 86400LL * 1000000LL;
+                return (target == Value::TAG_DATETIME)
+                    ? value_datetime(us)
+                    : value_timestamp(us);
+            }
+            if (val.tag == Value::TAG_DATETIME || val.tag == Value::TAG_TIMESTAMP) {
+                return (target == Value::TAG_DATETIME)
+                    ? value_datetime(val.datetime_val)
+                    : value_timestamp(val.timestamp_val);
+            }
+            // String -> timestamp: NOT implicit; requires CAST.
             return value_null();
         }
         default:
