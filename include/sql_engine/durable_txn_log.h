@@ -232,6 +232,103 @@ public:
         return true;
     }
 
+    // Rewrite the log in-place so that only the currently in-doubt
+    // entries remain. Removes every COMPLETE record and its matching
+    // decision record, reducing the file to just the transactions that
+    // still need recovery attention.
+    //
+    // This is the piece that keeps the WAL from growing forever. In a
+    // healthy system, compact() is called periodically (e.g. every N
+    // successful commits, or after startup recovery runs) and reduces
+    // the file to near-zero most of the time -- only genuinely in-doubt
+    // transactions persist.
+    //
+    // Atomicity: writes the compacted contents to a temp file first,
+    // then rename(2)s over the live file. rename is POSIX-atomic on the
+    // same filesystem, so a crash mid-compact leaves either the old log
+    // or the new one, never a half-written one.
+    //
+    // Thread-safety: takes the internal mutex. Other log operations
+    // block until compaction finishes. We briefly close and reopen the
+    // underlying fd to point at the new file; any log_decision calls
+    // happening during compact() are serialized.
+    //
+    // Returns true on success. On failure the original log file is
+    // left untouched and the caller can try again later.
+    bool compact() {
+        std::lock_guard<std::mutex> lk(mu_);
+        if (path_.empty()) return false;
+
+        // 1. Scan the current file for in-doubt entries.
+        auto in_doubt = scan_in_doubt(path_);
+
+        // 2. Write the compacted contents to a temp file next to the
+        //    original (so rename stays on the same filesystem and is atomic).
+        std::string tmp_path = path_ + ".compact.tmp";
+        int tmp_fd = ::open(tmp_path.c_str(),
+                            O_WRONLY | O_CREAT | O_TRUNC,
+                            0644);
+        if (tmp_fd < 0) return false;
+
+        for (const auto& e : in_doubt) {
+            std::string line;
+            line += (e.decision == Decision::COMMIT) ? "COMMIT\t" : "ROLLBACK\t";
+            line += e.txn_id;
+            line += '\t';
+            for (size_t i = 0; i < e.participants.size(); ++i) {
+                if (i > 0) line += ',';
+                line += e.participants[i];
+            }
+            line += '\n';
+            if (!write_all(tmp_fd, line)) {
+                ::close(tmp_fd);
+                ::unlink(tmp_path.c_str());
+                return false;
+            }
+        }
+
+        // 3. fsync the temp file so its contents are durable before we
+        //    rename over the live file. Without this, a crash between
+        //    the rename and the kernel flushing the temp file could
+        //    leave us with a log that's atomically "in place" but not
+        //    actually on disk.
+        if (::fsync(tmp_fd) != 0) {
+            ::close(tmp_fd);
+            ::unlink(tmp_path.c_str());
+            return false;
+        }
+        ::close(tmp_fd);
+
+        // 4. Close the current log fd and rename the temp file over the
+        //    real one. The rename is atomic on POSIX filesystems.
+        if (fd_ >= 0) {
+            ::close(fd_);
+            fd_ = -1;
+        }
+        if (::rename(tmp_path.c_str(), path_.c_str()) != 0) {
+            // Rename failed (maybe EXDEV if the temp path ends up on a
+            // different filesystem, or ENOSPC). Best effort: reopen the
+            // original log so the manager can still log new decisions.
+            ::unlink(tmp_path.c_str());
+            fd_ = ::open(path_.c_str(),
+                         O_WRONLY | O_CREAT | O_APPEND,
+                         0644);
+            return false;
+        }
+
+        // 5. Also fsync the containing directory so the rename itself
+        //    is durable. On a crash without this, the filesystem might
+        //    replay the old name-to-inode mapping and we'd see stale
+        //    state at mount time.
+        fsync_parent_dir(path_);
+
+        // 6. Reopen the compacted file in append mode.
+        fd_ = ::open(path_.c_str(),
+                     O_WRONLY | O_CREAT | O_APPEND,
+                     0644);
+        return fd_ >= 0;
+    }
+
 private:
     mutable std::mutex mu_;
     int fd_ = -1;
@@ -255,6 +352,42 @@ private:
         // phase 2.
         if (::fsync(fd_) != 0) return false;
         return true;
+    }
+
+    // Write `data` to an arbitrary fd, retrying on EINTR and handling
+    // partial writes. Used during compaction.
+    static bool write_all(int fd, const std::string& data) {
+        const char* p = data.data();
+        size_t remaining = data.size();
+        while (remaining > 0) {
+            ssize_t w = ::write(fd, p, remaining);
+            if (w < 0) {
+                if (errno == EINTR) continue;
+                return false;
+            }
+            p += w;
+            remaining -= static_cast<size_t>(w);
+        }
+        return true;
+    }
+
+    // After an atomic rename, fsync the directory containing the file
+    // so the new dirent is durable. Best-effort: directory fsync is
+    // required by POSIX but some filesystems don't strictly need it.
+    static void fsync_parent_dir(const std::string& path) {
+        std::string dir;
+        auto slash = path.find_last_of('/');
+        if (slash == std::string::npos) {
+            dir = ".";
+        } else if (slash == 0) {
+            dir = "/";
+        } else {
+            dir = path.substr(0, slash);
+        }
+        int dfd = ::open(dir.c_str(), O_RDONLY);
+        if (dfd < 0) return;
+        (void)::fsync(dfd);
+        ::close(dfd);
     }
 };
 
