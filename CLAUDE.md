@@ -9,7 +9,7 @@ High-performance hand-written recursive descent SQL parser and query engine for 
 ## Build Commands
 
 ```bash
-make all           # Build library + run all 1152 tests
+make all           # Build library + run all 1150 tests
 make lib           # Build only libsqlparser.a
 make test          # Build + run tests
 make bench         # Build + run benchmarks
@@ -142,7 +142,7 @@ Everything is in `namespace sql_engine`. Templates are parameterized on `Dialect
 
 ## Tests
 
-Google Test. 1,152 tests across 48 test files. Validated against 86K+ external queries (PostgreSQL regression, MySQL MTR, CockroachDB, Vitess, TiDB, sqlparser-rs, SQLGlot).
+Google Test. 1,150 tests across 50 test files. Validated against 86K+ external queries (PostgreSQL regression, MySQL MTR, CockroachDB, Vitess, TiDB, sqlparser-rs, SQLGlot).
 
 Run a single test: `./run_tests --gtest_filter="*SetTest*"`
 
