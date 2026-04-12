@@ -237,6 +237,7 @@ public:
             case TokenType::TK_OVER:
             case TokenType::TK_WITH:
             case TokenType::TK_PARTITION:
+            case TokenType::TK_REPLACE:
                 return false;
             default:
                 return true;  // Keywords not in the blocklist can be implicit aliases

@@ -160,6 +160,70 @@ private:
 
         AstNode* expr = expr_parser_.parse();
         if (!expr) return nullptr;
+
+        // Check for * EXCEPT(...) or * REPLACE(...)
+        bool is_star = (expr->type == NodeType::NODE_ASTERISK);
+        if (!is_star && expr->type == NodeType::NODE_QUALIFIED_NAME) {
+            for (const AstNode* c = expr->first_child; c; c = c->next_sibling) {
+                if (!c->next_sibling) {
+                    // table.* produces NODE_IDENTIFIER with value "*"
+                    if (c->type == NodeType::NODE_ASTERISK) {
+                        is_star = true;
+                    } else if (c->type == NodeType::NODE_IDENTIFIER &&
+                               c->value_len == 1 && c->value_ptr[0] == '*') {
+                        is_star = true;
+                    }
+                }
+            }
+        }
+
+        if (is_star) {
+            Token next = tok_.peek();
+            if (next.type == TokenType::TK_EXCEPT) {
+                tok_.skip();
+                AstNode* except_node = make_node(arena_, NodeType::NODE_STAR_EXCEPT);
+                except_node->add_child(expr);
+                if (tok_.peek().type == TokenType::TK_LPAREN) {
+                    tok_.skip();
+                    while (tok_.peek().type != TokenType::TK_RPAREN &&
+                           tok_.peek().type != TokenType::TK_EOF) {
+                        Token col = tok_.next_token();
+                        AstNode* col_node = make_node(arena_, NodeType::NODE_IDENTIFIER, col.text);
+                        except_node->add_child(col_node);
+                        if (tok_.peek().type == TokenType::TK_COMMA) tok_.skip();
+                    }
+                    if (tok_.peek().type == TokenType::TK_RPAREN) tok_.skip();
+                }
+                item->add_child(except_node);
+                return item;
+            }
+            if (next.type == TokenType::TK_REPLACE) {
+                tok_.skip();
+                AstNode* replace_node = make_node(arena_, NodeType::NODE_STAR_REPLACE);
+                replace_node->add_child(expr);
+                if (tok_.peek().type == TokenType::TK_LPAREN) {
+                    tok_.skip();
+                    while (tok_.peek().type != TokenType::TK_RPAREN &&
+                           tok_.peek().type != TokenType::TK_EOF) {
+                        AstNode* replace_expr = expr_parser_.parse();
+                        AstNode* replace_item = make_node(arena_, NodeType::NODE_REPLACE_ITEM);
+                        if (replace_expr) replace_item->add_child(replace_expr);
+                        if (tok_.peek().type == TokenType::TK_AS) {
+                            tok_.skip();
+                            Token col = tok_.next_token();
+                            AstNode* col_node = make_node(arena_, NodeType::NODE_IDENTIFIER, col.text);
+                            replace_item->add_child(col_node);
+                        }
+                        replace_node->add_child(replace_item);
+                        if (tok_.peek().type == TokenType::TK_COMMA) tok_.skip();
+                    }
+                    if (tok_.peek().type == TokenType::TK_RPAREN) tok_.skip();
+                }
+                item->add_child(replace_node);
+                return item;
+            }
+        }
+
         item->add_child(expr);
 
         // Optional alias: AS name, or just name (implicit alias)

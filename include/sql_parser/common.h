@@ -204,6 +204,11 @@ enum class NodeType : uint16_t {
     NODE_CTE,                  // WITH clause wrapper
     NODE_CTE_DEFINITION,       // name AS (SELECT ...)
 
+    // Star modifiers (BigQuery-style)
+    NODE_STAR_EXCEPT,          // SELECT * EXCEPT(col1, col2)
+    NODE_STAR_REPLACE,         // SELECT * REPLACE(expr AS col)
+    NODE_REPLACE_ITEM,         // single expr AS col inside REPLACE
+
     // Shared
     NODE_STMT_OPTIONS,         // LOW_PRIORITY, IGNORE, QUICK, DELAYED, etc.
     NODE_UPDATE_SET_ITEM,      // single col=expr pair (shared by INSERT SET and UPDATE SET)

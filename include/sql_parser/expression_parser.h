@@ -676,6 +676,7 @@ private:
             case TokenType::TK_LAST_VALUE:
             case TokenType::TK_PARTITION:
             case TokenType::TK_RECURSIVE:
+            case TokenType::TK_REPLACE:
                 return true;
             default:
                 return false;

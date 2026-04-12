@@ -72,6 +72,11 @@ private:
             case NodeType::NODE_STMT_OPTIONS:    emit_stmt_options(node); break;
             case NodeType::NODE_UPDATE_SET_ITEM: emit_update_set_item(node); break;
 
+            // ---- Star modifiers ----
+            case NodeType::NODE_STAR_EXCEPT:  emit_star_except(node); break;
+            case NodeType::NODE_STAR_REPLACE: emit_star_replace(node); break;
+            case NodeType::NODE_REPLACE_ITEM: emit_replace_item(node); break;
+
             // ---- Compound query ----
             case NodeType::NODE_COMPOUND_QUERY:  emit_compound_query(node); break;
             case NodeType::NODE_SET_OPERATION:   emit_set_operation(node); break;
@@ -1163,6 +1168,44 @@ private:
         if (expr) emit_node(expr);
         sb_.append(").");
         if (field) emit_node(field);
+    }
+
+    void emit_star_except(const AstNode* node) {
+        const AstNode* star = node->first_child;
+        if (star) emit_node(star);
+        sb_.append(" EXCEPT(");
+        bool first = true;
+        for (const AstNode* col = star ? star->next_sibling : node->first_child;
+             col; col = col->next_sibling) {
+            if (!first) sb_.append(", ");
+            first = false;
+            emit_node(col);
+        }
+        sb_.append_char(')');
+    }
+
+    void emit_star_replace(const AstNode* node) {
+        const AstNode* star = node->first_child;
+        if (star) emit_node(star);
+        sb_.append(" REPLACE(");
+        bool first = true;
+        for (const AstNode* item = star ? star->next_sibling : node->first_child;
+             item; item = item->next_sibling) {
+            if (!first) sb_.append(", ");
+            first = false;
+            emit_node(item);
+        }
+        sb_.append_char(')');
+    }
+
+    void emit_replace_item(const AstNode* node) {
+        const AstNode* expr = node->first_child;
+        const AstNode* col = expr ? expr->next_sibling : nullptr;
+        if (expr) emit_node(expr);
+        if (col) {
+            sb_.append(" AS ");
+            emit_node(col);
+        }
     }
 };
 
