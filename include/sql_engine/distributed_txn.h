@@ -156,13 +156,10 @@ public:
     // backend isn't enlisted and can't be enlisted, the result is an
     // error.
     //
-    // External DML routing (Session::execute_statement) currently does
-    // NOT call this method -- it calls executor_->execute_dml directly,
-    // which means DML inside a distributed transaction currently goes
-    // through a fresh pool connection and is NOT part of the 2PC. The
-    // integration hook is a follow-up. For now, unit tests that want
-    // to simulate in-transaction DML should call this method
-    // explicitly.
+    // External DML routing: Session::execute_statement() now routes DML
+    // through this method when a distributed transaction is active and
+    // sharding is configured. This ensures DML inside a distributed
+    // transaction goes through the pinned session and is part of the 2PC.
     DmlResult execute_participant_dml(const char* backend_name,
                                       sql_parser::StringRef sql) {
         DmlResult r;
@@ -247,6 +244,13 @@ public:
     bool in_transaction() const override { return active_; }
     bool is_auto_commit() const override { return auto_commit_; }
     void set_auto_commit(bool ac) override { auto_commit_ = ac; }
+
+    bool is_distributed() const override { return true; }
+
+    DmlResult route_dml(const char* backend_name,
+                        sql_parser::StringRef sql) override {
+        return execute_participant_dml(backend_name, sql);
+    }
 
     const std::string& txn_id() const { return txn_id_; }
     const std::vector<std::string>& participants() const { return participants_; }

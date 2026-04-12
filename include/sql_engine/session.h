@@ -18,6 +18,7 @@
 
 #include <cstring>
 #include <string>
+#include <functional>
 #include <unordered_map>
 #include <list>
 #include <memory>
@@ -201,9 +202,56 @@ public:
         bool implicit_txn = txn_mgr_.is_auto_commit() && !txn_mgr_.in_transaction();
         if (implicit_txn) txn_mgr_.begin();
 
-        PlanExecutor<D> executor(functions_, catalog_, parser_.arena());
-        wire_executor(executor);
-        DmlResult result = executor.execute_dml(plan);
+        DmlResult result;
+
+        // If sharding is configured, distribute DML to remote backends.
+        if (shard_map_ && remote_executor_) {
+            DistributedPlanner<D> dp(*shard_map_, catalog_, parser_.arena(),
+                                      remote_executor_, &functions_);
+            PlanNode* dist_plan = dp.distribute_dml(plan);
+
+            if (dist_plan && dist_plan->type == PlanNodeType::REMOTE_SCAN) {
+                // Single-shard DML
+                sql_parser::StringRef sql_ref{dist_plan->remote_scan.remote_sql,
+                                              dist_plan->remote_scan.remote_sql_len};
+                if (txn_mgr_.in_transaction() && txn_mgr_.is_distributed()) {
+                    result = txn_mgr_.route_dml(dist_plan->remote_scan.backend_name, sql_ref);
+                } else {
+                    result = remote_executor_->execute_dml(
+                        dist_plan->remote_scan.backend_name, sql_ref);
+                }
+            } else if (dist_plan && dist_plan->type == PlanNodeType::SET_OP) {
+                // Scatter DML to multiple shards
+                result.success = true;
+                result.affected_rows = 0;
+                for_each_remote_scan(dist_plan, [&](const PlanNode* rs) {
+                    sql_parser::StringRef s{rs->remote_scan.remote_sql,
+                                            rs->remote_scan.remote_sql_len};
+                    DmlResult shard_result;
+                    if (txn_mgr_.in_transaction() && txn_mgr_.is_distributed()) {
+                        shard_result = txn_mgr_.route_dml(rs->remote_scan.backend_name, s);
+                    } else {
+                        shard_result = remote_executor_->execute_dml(
+                            rs->remote_scan.backend_name, s);
+                    }
+                    if (!shard_result.success) {
+                        result.success = false;
+                        result.error_message = shard_result.error_message;
+                    }
+                    result.affected_rows += shard_result.affected_rows;
+                });
+            } else {
+                // Not distributed (table not in shard map) -- local execution
+                PlanExecutor<D> executor(functions_, catalog_, parser_.arena());
+                wire_executor(executor);
+                result = executor.execute_dml(plan);
+            }
+        } else {
+            // No sharding: local execution
+            PlanExecutor<D> executor(functions_, catalog_, parser_.arena());
+            wire_executor(executor);
+            result = executor.execute_dml(plan);
+        }
 
         if (implicit_txn) {
             if (result.success)
@@ -292,6 +340,19 @@ private:
         // The map stores the iterator and a copy of the key (so the lookup
         // string and the entry's owned key both remain valid through moves).
         plan_cache_[plan_cache_order_.front().key] = plan_cache_order_.begin();
+    }
+
+    static void for_each_remote_scan(const PlanNode* node,
+                                      const std::function<void(const PlanNode*)>& fn) {
+        if (!node) return;
+        if (node->type == PlanNodeType::REMOTE_SCAN) {
+            fn(node);
+            return;
+        }
+        if (node->type == PlanNodeType::SET_OP) {
+            for_each_remote_scan(node->left, fn);
+            for_each_remote_scan(node->right, fn);
+        }
     }
 
     void wire_executor(PlanExecutor<D>& executor) {
