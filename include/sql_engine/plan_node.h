@@ -152,11 +152,13 @@ struct PlanNode {
             const sql_parser::AstNode** set_exprs;     // new value expression AST nodes (parallel array)
             uint16_t set_count;
             const sql_parser::AstNode* where_expr;     // WHERE condition (nullable = update all)
+            const sql_parser::AstNode* original_ast;   // non-null for multi-table UPDATE
         } update_plan;
 
         struct {
             const TableInfo* table;
             const sql_parser::AstNode* where_expr;     // WHERE condition (nullable = delete all)
+            const sql_parser::AstNode* original_ast;   // non-null for multi-table DELETE
         } delete_plan;
     };
 };

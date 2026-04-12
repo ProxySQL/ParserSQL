@@ -115,6 +115,12 @@ public:
             node->update_plan.table = resolve_table(table_ref);
         }
 
+        // Detect multi-table UPDATE: presence of FROM_CLAUSE child means JOINs
+        const sql_parser::AstNode* from_clause = find_child(update_ast, sql_parser::NodeType::NODE_FROM_CLAUSE);
+        if (from_clause) {
+            node->update_plan.original_ast = update_ast;
+        }
+
         // Find UPDATE_SET_CLAUSE -> extract SET items
         const sql_parser::AstNode* set_clause = find_child(update_ast, sql_parser::NodeType::NODE_UPDATE_SET_CLAUSE);
         if (set_clause) {
@@ -164,6 +170,23 @@ public:
         const sql_parser::AstNode* table_ref = find_child(delete_ast, sql_parser::NodeType::NODE_TABLE_REF);
         if (table_ref) {
             node->delete_plan.table = resolve_table(table_ref);
+        }
+
+        // Detect multi-table DELETE: FROM_CLAUSE (MySQL multi-table) or USING clause
+        const sql_parser::AstNode* from_clause = find_child(delete_ast, sql_parser::NodeType::NODE_FROM_CLAUSE);
+        const sql_parser::AstNode* using_clause = find_child(delete_ast, sql_parser::NodeType::NODE_DELETE_USING_CLAUSE);
+        if (using_clause) {
+            // USING always indicates multi-table
+            node->delete_plan.original_ast = delete_ast;
+        } else if (from_clause) {
+            // FROM_CLAUSE with multiple children indicates multi-table
+            uint16_t child_count = 0;
+            for (const sql_parser::AstNode* c = from_clause->first_child; c; c = c->next_sibling) {
+                ++child_count;
+            }
+            if (child_count > 1) {
+                node->delete_plan.original_ast = delete_ast;
+            }
         }
 
         // Find WHERE_CLAUSE

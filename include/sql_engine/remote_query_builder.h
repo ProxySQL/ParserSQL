@@ -188,6 +188,18 @@ public:
         return sb.finish();
     }
 
+    sql_parser::StringRef build_update_from_ast(const sql_parser::AstNode* ast) {
+        sql_parser::Emitter<D> emitter(arena_);
+        emitter.emit(ast);
+        return emitter.result();
+    }
+
+    sql_parser::StringRef build_delete_from_ast(const sql_parser::AstNode* ast) {
+        sql_parser::Emitter<D> emitter(arena_);
+        emitter.emit(ast);
+        return emitter.result();
+    }
+
 private:
     sql_parser::Arena& arena_;
 

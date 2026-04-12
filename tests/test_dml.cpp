@@ -251,3 +251,67 @@ TEST_F(DmlTest, InsertWithoutColumnList) {
     auto rs = run_select("SELECT * FROM users");
     EXPECT_EQ(rs.rows[3].get(0).int_val, 6);
 }
+
+// ---- Multi-table UPDATE/DELETE plan node tests ----
+
+// Multi-table UPDATE sets original_ast in the plan node
+TEST_F(DmlTest, MultiTableUpdateSetsOriginalAst) {
+    const char* sql = "UPDATE users u JOIN orders o ON u.id = o.user_id SET u.age = 30 WHERE o.total > 100";
+    parser.reset();
+    auto r = parser.parse(sql, std::strlen(sql));
+    ASSERT_EQ(r.status, ParseResult::OK);
+    ASSERT_NE(r.ast, nullptr);
+
+    DmlPlanBuilder<Dialect::MySQL> dml_builder(catalog, parser.arena());
+    PlanNode* plan = dml_builder.build(r.ast);
+    ASSERT_NE(plan, nullptr);
+    EXPECT_EQ(plan->type, PlanNodeType::UPDATE_PLAN);
+    EXPECT_NE(plan->update_plan.original_ast, nullptr);
+    EXPECT_EQ(plan->update_plan.original_ast, r.ast);
+}
+
+// Single-table UPDATE leaves original_ast as nullptr
+TEST_F(DmlTest, SingleTableUpdateOriginalAstNull) {
+    const char* sql = "UPDATE users SET age = 30 WHERE id = 1";
+    parser.reset();
+    auto r = parser.parse(sql, std::strlen(sql));
+    ASSERT_EQ(r.status, ParseResult::OK);
+    ASSERT_NE(r.ast, nullptr);
+
+    DmlPlanBuilder<Dialect::MySQL> dml_builder(catalog, parser.arena());
+    PlanNode* plan = dml_builder.build(r.ast);
+    ASSERT_NE(plan, nullptr);
+    EXPECT_EQ(plan->type, PlanNodeType::UPDATE_PLAN);
+    EXPECT_EQ(plan->update_plan.original_ast, nullptr);
+}
+
+// Multi-table DELETE (MySQL syntax) sets original_ast
+TEST_F(DmlTest, MultiTableDeleteSetsOriginalAst) {
+    const char* sql = "DELETE u FROM users u JOIN orders o ON u.id = o.user_id WHERE o.total > 100";
+    parser.reset();
+    auto r = parser.parse(sql, std::strlen(sql));
+    ASSERT_EQ(r.status, ParseResult::OK);
+    ASSERT_NE(r.ast, nullptr);
+
+    DmlPlanBuilder<Dialect::MySQL> dml_builder(catalog, parser.arena());
+    PlanNode* plan = dml_builder.build(r.ast);
+    ASSERT_NE(plan, nullptr);
+    EXPECT_EQ(plan->type, PlanNodeType::DELETE_PLAN);
+    EXPECT_NE(plan->delete_plan.original_ast, nullptr);
+    EXPECT_EQ(plan->delete_plan.original_ast, r.ast);
+}
+
+// Single-table DELETE leaves original_ast as nullptr
+TEST_F(DmlTest, SingleTableDeleteOriginalAstNull) {
+    const char* sql = "DELETE FROM users WHERE id = 1";
+    parser.reset();
+    auto r = parser.parse(sql, std::strlen(sql));
+    ASSERT_EQ(r.status, ParseResult::OK);
+    ASSERT_NE(r.ast, nullptr);
+
+    DmlPlanBuilder<Dialect::MySQL> dml_builder(catalog, parser.arena());
+    PlanNode* plan = dml_builder.build(r.ast);
+    ASSERT_NE(plan, nullptr);
+    EXPECT_EQ(plan->type, PlanNodeType::DELETE_PLAN);
+    EXPECT_EQ(plan->delete_plan.original_ast, nullptr);
+}

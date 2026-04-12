@@ -1018,6 +1018,16 @@ private:
         const TableInfo* table = up.table;
         if (!table || !shards_.has_table(table->table_name)) return plan;
 
+        // Multi-table UPDATE: emit full SQL from AST, route to primary table's backend
+        if (up.original_ast) {
+            sql_parser::StringRef sql = qb_.build_update_from_ast(up.original_ast);
+            if (!shards_.is_sharded(table->table_name)) {
+                return make_remote_scan(shards_.get_backend(table->table_name), sql, table);
+            }
+            const auto& shard_list = shards_.get_shards(table->table_name);
+            return scatter_dml_to_shards(table, shard_list, [&]() { return sql; });
+        }
+
         // Check for cross-shard subqueries in WHERE and rewrite
         const sql_parser::AstNode* where_expr = up.where_expr;
         if (where_expr && has_subquery(where_expr) && remote_executor_) {
@@ -1056,6 +1066,16 @@ private:
         const auto& dp = plan->delete_plan;
         const TableInfo* table = dp.table;
         if (!table || !shards_.has_table(table->table_name)) return plan;
+
+        // Multi-table DELETE: emit full SQL from AST, route to primary table's backend
+        if (dp.original_ast) {
+            sql_parser::StringRef sql = qb_.build_delete_from_ast(dp.original_ast);
+            if (!shards_.is_sharded(table->table_name)) {
+                return make_remote_scan(shards_.get_backend(table->table_name), sql, table);
+            }
+            const auto& shard_list = shards_.get_shards(table->table_name);
+            return scatter_dml_to_shards(table, shard_list, [&]() { return sql; });
+        }
 
         // Check for cross-shard subqueries in WHERE and rewrite
         const sql_parser::AstNode* where_expr = dp.where_expr;
