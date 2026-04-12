@@ -9,12 +9,13 @@ High-performance hand-written recursive descent SQL parser and query engine for 
 ## Build Commands
 
 ```bash
-make all           # Build library + run all 871 tests
+make all           # Build library + run all 1152 tests
 make lib           # Build only libsqlparser.a
 make test          # Build + run tests
 make bench         # Build + run benchmarks
 make bench-compare # Run comparison vs libpg_query (requires libpg_query built)
 make build-corpus-test  # Build corpus test harness
+make build-sqlengine    # Build interactive SQL engine CLI
 make clean         # Remove all build artifacts
 ```
 
@@ -141,7 +142,7 @@ Everything is in `namespace sql_engine`. Templates are parameterized on `Dialect
 
 ## Tests
 
-Google Test. 1,008 tests across 34 test files. Validated against 86K+ external queries (PostgreSQL regression, MySQL MTR, CockroachDB, Vitess, TiDB, sqlparser-rs, SQLGlot).
+Google Test. 1,152 tests across 48 test files. Validated against 86K+ external queries (PostgreSQL regression, MySQL MTR, CockroachDB, Vitess, TiDB, sqlparser-rs, SQLGlot).
 
 Run a single test: `./run_tests --gtest_filter="*SetTest*"`
 
@@ -151,7 +152,10 @@ Run a single test: `./run_tests --gtest_filter="*SetTest*"`
 `test_tokenizer.cpp`, `test_classifier.cpp`, `test_expression.cpp`, `test_select.cpp`, `test_insert.cpp`, `test_update.cpp`, `test_delete.cpp`, `test_set.cpp`, `test_compound.cpp`, `test_emitter.cpp`, `test_digest.cpp`, `test_stmt_cache.cpp`, `test_arena.cpp`, `test_misc_stmts.cpp`
 
 **Engine:**
-`test_value.cpp`, `test_row.cpp`, `test_coercion.cpp`, `test_null_semantics.cpp`, `test_like.cpp`, `test_expression_eval.cpp`, `test_eval_integration.cpp`, `test_catalog.cpp`, `test_registry.cpp`, `test_arithmetic.cpp`, `test_comparison.cpp`, `test_cast.cpp`, `test_string_funcs.cpp`, `test_operators.cpp`, `test_plan_builder.cpp`, `test_plan_executor.cpp`
+`test_value.cpp`, `test_row.cpp`, `test_coercion.cpp`, `test_null_semantics.cpp`, `test_like.cpp`, `test_expression_eval.cpp`, `test_eval_integration.cpp`, `test_catalog.cpp`, `test_registry.cpp`, `test_arithmetic.cpp`, `test_comparison.cpp`, `test_cast.cpp`, `test_string_funcs.cpp`, `test_operators.cpp`, `test_plan_builder.cpp`, `test_plan_executor.cpp`, `test_result_set.cpp`, `test_datetime_format.cpp`, `test_datetime_funcs.cpp`, `test_cte.cpp`, `test_window.cpp`, `test_subquery.cpp`, `test_optimizer.cpp`
+
+**Distributed / Integration:**
+`test_dml.cpp`, `test_distributed_dml.cpp`, `test_distributed_planner.cpp`, `test_distributed_real.cpp`, `test_distributed_txn.cpp`, `test_mysql_executor.cpp`, `test_pgsql_executor.cpp`, `test_session.cpp`, `test_local_txn.cpp`, `test_single_backend_txn.cpp`
 
 ## Benchmarks
 
