@@ -112,6 +112,21 @@ private:
         mysql_options(c, MYSQL_OPT_READ_TIMEOUT,    &read_timeout);
         mysql_options(c, MYSQL_OPT_WRITE_TIMEOUT,   &write_timeout);
 
+        // SSL/TLS options
+        if (!cfg.ssl_mode.empty()) {
+            unsigned int ssl_mode_val = SSL_MODE_DISABLED;
+            if (cfg.ssl_mode == "REQUIRED")        ssl_mode_val = SSL_MODE_REQUIRED;
+            else if (cfg.ssl_mode == "VERIFY_CA")  ssl_mode_val = SSL_MODE_VERIFY_CA;
+            else if (cfg.ssl_mode == "VERIFY_IDENTITY") ssl_mode_val = SSL_MODE_VERIFY_IDENTITY;
+            mysql_options(c, MYSQL_OPT_SSL_MODE, &ssl_mode_val);
+        }
+        if (!cfg.ssl_ca.empty())
+            mysql_options(c, MYSQL_OPT_SSL_CA, cfg.ssl_ca.c_str());
+        if (!cfg.ssl_cert.empty())
+            mysql_options(c, MYSQL_OPT_SSL_CERT, cfg.ssl_cert.c_str());
+        if (!cfg.ssl_key.empty())
+            mysql_options(c, MYSQL_OPT_SSL_KEY, cfg.ssl_key.c_str());
+
         if (!mysql_real_connect(c, cfg.host.c_str(), cfg.user.c_str(),
                                 cfg.password.c_str(), cfg.database.c_str(),
                                 cfg.port, nullptr, 0)) {

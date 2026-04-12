@@ -240,14 +240,25 @@ static ParsedBackend parse_backend_url(const std::string& url) {
         rest = rest.substr(0, qpos);
     }
 
-    // Parse name from query params
+    // Parse key=value query params
     if (!query_part.empty()) {
-        size_t name_pos = query_part.find("name=");
-        if (name_pos != std::string::npos) {
-            size_t vstart = name_pos + 5;
-            size_t vend = query_part.find('&', vstart);
-            pb.config.name = query_part.substr(vstart,
-                vend == std::string::npos ? std::string::npos : vend - vstart);
+        size_t pos = 0;
+        while (pos < query_part.size()) {
+            size_t amp = query_part.find('&', pos);
+            std::string param = query_part.substr(pos,
+                amp == std::string::npos ? std::string::npos : amp - pos);
+            size_t eq = param.find('=');
+            if (eq != std::string::npos) {
+                std::string key = param.substr(0, eq);
+                std::string val = param.substr(eq + 1);
+                if (key == "name")          pb.config.name = val;
+                else if (key == "ssl_mode") pb.config.ssl_mode = val;
+                else if (key == "ssl_ca")   pb.config.ssl_ca = val;
+                else if (key == "ssl_cert") pb.config.ssl_cert = val;
+                else if (key == "ssl_key")  pb.config.ssl_key = val;
+            }
+            if (amp == std::string::npos) break;
+            pos = amp + 1;
         }
     }
 

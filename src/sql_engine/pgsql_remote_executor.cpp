@@ -76,6 +76,16 @@ PgSQLRemoteExecutor::Connection& PgSQLRemoteExecutor::get_or_connect(const std::
             + " options='-c statement_timeout="
                 + std::to_string(SQL_ENGINE_PG_STATEMENT_TIMEOUT_MS) + "'";
 
+        // SSL/TLS options
+        if (!c.config.ssl_mode.empty())
+            conninfo += " sslmode=" + c.config.ssl_mode;
+        if (!c.config.ssl_ca.empty())
+            conninfo += " sslrootcert=" + c.config.ssl_ca;
+        if (!c.config.ssl_cert.empty())
+            conninfo += " sslcert=" + c.config.ssl_cert;
+        if (!c.config.ssl_key.empty())
+            conninfo += " sslkey=" + c.config.ssl_key;
+
         c.conn = PQconnectdb(conninfo.c_str());
         if (PQstatus(c.conn) != CONNECTION_OK) {
             std::string err = PQerrorMessage(c.conn);

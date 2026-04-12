@@ -63,6 +63,21 @@ MySQLRemoteExecutor::Connection& MySQLRemoteExecutor::get_or_connect(const std::
         mysql_options(c.conn, MYSQL_OPT_READ_TIMEOUT,    &read_timeout);
         mysql_options(c.conn, MYSQL_OPT_WRITE_TIMEOUT,   &write_timeout);
 
+        // SSL/TLS options
+        if (!c.config.ssl_mode.empty()) {
+            unsigned int ssl_mode_val = SSL_MODE_DISABLED;
+            if (c.config.ssl_mode == "REQUIRED")        ssl_mode_val = SSL_MODE_REQUIRED;
+            else if (c.config.ssl_mode == "VERIFY_CA")  ssl_mode_val = SSL_MODE_VERIFY_CA;
+            else if (c.config.ssl_mode == "VERIFY_IDENTITY") ssl_mode_val = SSL_MODE_VERIFY_IDENTITY;
+            mysql_options(c.conn, MYSQL_OPT_SSL_MODE, &ssl_mode_val);
+        }
+        if (!c.config.ssl_ca.empty())
+            mysql_options(c.conn, MYSQL_OPT_SSL_CA, c.config.ssl_ca.c_str());
+        if (!c.config.ssl_cert.empty())
+            mysql_options(c.conn, MYSQL_OPT_SSL_CERT, c.config.ssl_cert.c_str());
+        if (!c.config.ssl_key.empty())
+            mysql_options(c.conn, MYSQL_OPT_SSL_KEY, c.config.ssl_key.c_str());
+
         if (!mysql_real_connect(c.conn,
                                 c.config.host.c_str(),
                                 c.config.user.c_str(),

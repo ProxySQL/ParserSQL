@@ -15,6 +15,14 @@ struct BackendConfig {
     std::string password;
     std::string database;
     sql_parser::Dialect dialect = sql_parser::Dialect::MySQL;
+
+    // SSL/TLS configuration. Empty string = not configured (no SSL).
+    // MySQL ssl_mode values: DISABLED, REQUIRED, VERIFY_CA, VERIFY_IDENTITY
+    // PgSQL sslmode values: disable, require, verify-ca, verify-full
+    std::string ssl_mode;
+    std::string ssl_ca;
+    std::string ssl_cert;
+    std::string ssl_key;
 };
 
 } // namespace sql_engine
