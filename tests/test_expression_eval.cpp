@@ -698,3 +698,113 @@ TEST_F(ExprEvalTest, ArrayConstructorReturnsNull) {
     AstNode* n = make_node(arena, NodeType::NODE_ARRAY_CONSTRUCTOR);
     EXPECT_TRUE(eval_mysql(n).is_null());
 }
+
+// ===== Array Subscript Evaluation =====
+
+TEST_F(ExprEvalTest, ArraySubscriptPg1Based) {
+    // ARRAY[10, 20, 30][2] with PostgreSQL -> 20 (1-based)
+    AstNode* arr = make_node(arena, NodeType::NODE_ARRAY_CONSTRUCTOR);
+    arr->add_child(leaf(NodeType::NODE_LITERAL_INT, "10"));
+    arr->add_child(leaf(NodeType::NODE_LITERAL_INT, "20"));
+    arr->add_child(leaf(NodeType::NODE_LITERAL_INT, "30"));
+
+    AstNode* subscript = make_node(arena, NodeType::NODE_ARRAY_SUBSCRIPT);
+    subscript->add_child(arr);
+    subscript->add_child(leaf(NodeType::NODE_LITERAL_INT, "2"));
+
+    auto v = eval_pg(subscript);
+    EXPECT_EQ(v.tag, Value::TAG_INT64);
+    EXPECT_EQ(v.int_val, 20);
+}
+
+TEST_F(ExprEvalTest, ArraySubscriptPgFirstElement) {
+    // ARRAY[10, 20, 30][1] with PostgreSQL -> 10
+    AstNode* arr = make_node(arena, NodeType::NODE_ARRAY_CONSTRUCTOR);
+    arr->add_child(leaf(NodeType::NODE_LITERAL_INT, "10"));
+    arr->add_child(leaf(NodeType::NODE_LITERAL_INT, "20"));
+    arr->add_child(leaf(NodeType::NODE_LITERAL_INT, "30"));
+
+    AstNode* subscript = make_node(arena, NodeType::NODE_ARRAY_SUBSCRIPT);
+    subscript->add_child(arr);
+    subscript->add_child(leaf(NodeType::NODE_LITERAL_INT, "1"));
+
+    auto v = eval_pg(subscript);
+    EXPECT_EQ(v.tag, Value::TAG_INT64);
+    EXPECT_EQ(v.int_val, 10);
+}
+
+TEST_F(ExprEvalTest, ArraySubscriptOutOfBounds) {
+    // ARRAY[10, 20][5] -> null
+    AstNode* arr = make_node(arena, NodeType::NODE_ARRAY_CONSTRUCTOR);
+    arr->add_child(leaf(NodeType::NODE_LITERAL_INT, "10"));
+    arr->add_child(leaf(NodeType::NODE_LITERAL_INT, "20"));
+
+    AstNode* subscript = make_node(arena, NodeType::NODE_ARRAY_SUBSCRIPT);
+    subscript->add_child(arr);
+    subscript->add_child(leaf(NodeType::NODE_LITERAL_INT, "5"));
+
+    EXPECT_TRUE(eval_pg(subscript).is_null());
+}
+
+TEST_F(ExprEvalTest, ArraySubscriptPgZeroOutOfBounds) {
+    // ARRAY[10, 20][0] with PostgreSQL -> null (1-based, so 0 is out of bounds)
+    AstNode* arr = make_node(arena, NodeType::NODE_ARRAY_CONSTRUCTOR);
+    arr->add_child(leaf(NodeType::NODE_LITERAL_INT, "10"));
+    arr->add_child(leaf(NodeType::NODE_LITERAL_INT, "20"));
+
+    AstNode* subscript = make_node(arena, NodeType::NODE_ARRAY_SUBSCRIPT);
+    subscript->add_child(arr);
+    subscript->add_child(leaf(NodeType::NODE_LITERAL_INT, "0"));
+
+    EXPECT_TRUE(eval_pg(subscript).is_null());
+}
+
+TEST_F(ExprEvalTest, ArraySubscriptPgStringElements) {
+    // ARRAY['hello', 'world'][1] with PostgreSQL -> 'hello'
+    AstNode* arr = make_node(arena, NodeType::NODE_ARRAY_CONSTRUCTOR);
+    arr->add_child(leaf(NodeType::NODE_LITERAL_STRING, "hello"));
+    arr->add_child(leaf(NodeType::NODE_LITERAL_STRING, "world"));
+
+    AstNode* subscript = make_node(arena, NodeType::NODE_ARRAY_SUBSCRIPT);
+    subscript->add_child(arr);
+    subscript->add_child(leaf(NodeType::NODE_LITERAL_INT, "1"));
+
+    auto v = eval_pg(subscript);
+    EXPECT_EQ(v.tag, Value::TAG_STRING);
+    EXPECT_EQ(std::string(v.str_val.ptr, v.str_val.len), "hello");
+}
+
+TEST_F(ExprEvalTest, ArraySubscriptNullIndex) {
+    // ARRAY[10, 20][NULL] -> null
+    AstNode* arr = make_node(arena, NodeType::NODE_ARRAY_CONSTRUCTOR);
+    arr->add_child(leaf(NodeType::NODE_LITERAL_INT, "10"));
+    arr->add_child(leaf(NodeType::NODE_LITERAL_INT, "20"));
+
+    AstNode* subscript = make_node(arena, NodeType::NODE_ARRAY_SUBSCRIPT);
+    subscript->add_child(arr);
+    subscript->add_child(make_node(arena, NodeType::NODE_LITERAL_NULL));
+
+    EXPECT_TRUE(eval_pg(subscript).is_null());
+}
+
+TEST_F(ExprEvalTest, ArraySubscriptNoChildren) {
+    // Malformed: no children -> null
+    AstNode* subscript = make_node(arena, NodeType::NODE_ARRAY_SUBSCRIPT);
+    EXPECT_TRUE(eval_pg(subscript).is_null());
+}
+
+TEST_F(ExprEvalTest, ArraySubscriptMysql0Based) {
+    // MySQL uses 0-based indexing: ARRAY[10, 20, 30][0] -> 10
+    AstNode* arr = make_node(arena, NodeType::NODE_ARRAY_CONSTRUCTOR);
+    arr->add_child(leaf(NodeType::NODE_LITERAL_INT, "10"));
+    arr->add_child(leaf(NodeType::NODE_LITERAL_INT, "20"));
+    arr->add_child(leaf(NodeType::NODE_LITERAL_INT, "30"));
+
+    AstNode* subscript = make_node(arena, NodeType::NODE_ARRAY_SUBSCRIPT);
+    subscript->add_child(arr);
+    subscript->add_child(leaf(NodeType::NODE_LITERAL_INT, "0"));
+
+    auto v = eval_mysql(subscript);
+    EXPECT_EQ(v.tag, Value::TAG_INT64);
+    EXPECT_EQ(v.int_val, 10);
+}

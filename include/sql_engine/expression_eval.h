@@ -685,10 +685,31 @@ Value evaluate_expression(const AstNode* expr,
         }
         return value_null();  // no executor or no parsed child
     }
-    case NodeType::NODE_TUPLE:             return value_null();  // requires row/tuple value type
-    case NodeType::NODE_ARRAY_CONSTRUCTOR: return value_null();  // requires array value type
-    case NodeType::NODE_ARRAY_SUBSCRIPT:   return value_null();  // requires array support
-    case NodeType::NODE_FIELD_ACCESS:      return value_null();  // requires composite type
+    case NodeType::NODE_TUPLE:             return value_null();  // Tuple as standalone value not supported
+    case NodeType::NODE_ARRAY_CONSTRUCTOR: return value_null();  // Bare array without subscript
+    case NodeType::NODE_ARRAY_SUBSCRIPT: {
+        const AstNode* array_expr = expr->first_child;
+        const AstNode* index_expr = array_expr ? array_expr->next_sibling : nullptr;
+        if (!array_expr || !index_expr) return value_null();
+
+        Value idx = evaluate_expression<D>(index_expr, resolve, functions, arena, subquery_exec);
+        if (idx.is_null()) return value_null();
+        int64_t i = idx.to_int64();
+
+        if (array_expr->type == NodeType::NODE_ARRAY_CONSTRUCTOR) {
+            // 1-based indexing for PostgreSQL, 0-based for MySQL
+            int64_t pos = (D == sql_parser::Dialect::PostgreSQL) ? i - 1 : i;
+            if (pos < 0) return value_null();
+            const AstNode* child = array_expr->first_child;
+            for (int64_t c = 0; c < pos && child; ++c) {
+                child = child->next_sibling;
+            }
+            if (!child) return value_null();
+            return evaluate_expression<D>(child, resolve, functions, arena, subquery_exec);
+        }
+        return value_null();  // Non-literal arrays not yet supported
+    }
+    case NodeType::NODE_FIELD_ACCESS:      return value_null();  // Composite field access requires composite types
 
     default:
         return value_null();  // unknown node type
