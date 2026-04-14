@@ -1,12 +1,12 @@
 # SQL Parser Performance Report
 
-**Date:** 2026-03-25 00:53 UTC
+**Date:** 2026-04-14 13:26 UTC
 **Host:** ci-big6-202511.vm
 **CPU:** AMD Ryzen 9 5950X 16-Core Processor
 **OS:** Linux 6.17.0-14-generic
 **Compiler:** g++ (Ubuntu 13.3.0-6ubuntu2~24.04.1) 13.3.0
-**Git:** main @ 3fcb504
-**Unit tests:** 430 passing
+**Git:** main @ 1f65334
+**Unit tests:** 1160 passing
 
 ---
 
@@ -14,44 +14,53 @@
 
 | Operation | Latency | Target | Status |
 |---|---|---|---|
-| BM_Classify_Insert | 185 ns | <500ns | MET |
-| BM_Classify_Update | 191 ns | <500ns | MET |
+| BM_Classify_Insert | 189 ns | <500ns | MET |
+| BM_Classify_Update | 195 ns | <500ns | MET |
 | BM_Classify_Delete | 143 ns | <500ns | MET |
-| BM_Classify_Begin | 28.9 ns | <100ns | MET |
-| BM_Set_Simple | 114 ns | <300ns | MET |
-| BM_Set_Names | 112 ns | <300ns | MET |
-| BM_Set_MultiVar | 241 ns | <300ns | MET |
-| BM_Set_FunctionRHS | 178 ns | <300ns | MET |
-| BM_Select_Simple | 176 ns | <500ns | MET |
-| BM_Select_MultiColumn | 361 ns | <500ns | MET |
-| BM_Select_Join | 457 ns | <2us | MET |
-| BM_Select_Complex | 1048 ns | <2us | MET |
-| BM_Select_MultiJoin | 1010 ns | <2us | MET |
-| BM_Emit_SetSimple | 118 ns | <500ns | MET |
-| BM_Emit_SelectSimple | 232 ns | <500ns | MET |
-| BM_ArenaReset | 3.70 ns | <10ns | MET |
-| BM_PgSQL_Select_Simple | 182 ns | — | — |
-| BM_PgSQL_Set_Simple | 94.1 ns | — | — |
-| BM_MT_Set_Simple/threads:1 | 115 ns | — | — |
-| BM_MT_Set_Simple/threads:2 | 111 ns | — | — |
-| BM_MT_Set_Simple/threads:4 | 119 ns | — | — |
-| BM_MT_Set_Simple/threads:8 | 121 ns | — | — |
-| BM_MT_Select_Simple/threads:1 | 185 ns | — | — |
-| BM_MT_Select_Simple/threads:2 | 186 ns | — | — |
-| BM_MT_Select_Simple/threads:4 | 187 ns | — | — |
-| BM_MT_Select_Simple/threads:8 | 200 ns | — | — |
-| BM_MT_Select_Complex/threads:1 | 1023 ns | — | — |
-| BM_MT_Select_Complex/threads:2 | 1076 ns | — | — |
-| BM_MT_Select_Complex/threads:4 | 1068 ns | — | — |
-| BM_MT_Select_Complex/threads:8 | 1135 ns | — | — |
-| BM_MT_Classify_Begin/threads:1 | 30.5 ns | — | — |
-| BM_MT_Classify_Begin/threads:2 | 30.2 ns | — | — |
-| BM_MT_Classify_Begin/threads:4 | 30.1 ns | — | — |
-| BM_MT_Classify_Begin/threads:8 | 31.4 ns | — | — |
-| BM_Percentile_Set_Simple | 892 ns | — | — |
-| BM_Percentile_Select_Simple | 971 ns | — | — |
-| BM_Percentile_Select_Complex | 1686 ns | — | — |
-| BM_Percentile_Classify_Begin | 822 ns | — | — |
+| BM_Classify_Begin | 30.2 ns | <100ns | MET |
+| BM_Set_Simple | 107 ns | <300ns | MET |
+| BM_Set_Names | 105 ns | <300ns | MET |
+| BM_Set_MultiVar | 231 ns | <300ns | MET |
+| BM_Set_FunctionRHS | 168 ns | <300ns | MET |
+| BM_Select_Simple | 178 ns | <500ns | MET |
+| BM_Select_MultiColumn | 367 ns | <500ns | MET |
+| BM_Select_Join | 449 ns | <2us | MET |
+| BM_Select_Complex | 1035 ns | <2us | MET |
+| BM_Select_MultiJoin | 1038 ns | <2us | MET |
+| BM_Emit_SetSimple | 119 ns | <500ns | MET |
+| BM_Emit_SelectSimple | 256 ns | <500ns | MET |
+| BM_ArenaReset | 4.62 ns | <10ns | MET |
+| BM_PgSQL_Select_Simple | 194 ns | — | — |
+| BM_PgSQL_Set_Simple | 92.7 ns | — | — |
+| BM_MT_Set_Simple/threads:1 | 119 ns | — | — |
+| BM_MT_Set_Simple/threads:2 | 116 ns | — | — |
+| BM_MT_Set_Simple/threads:4 | 117 ns | — | — |
+| BM_MT_Set_Simple/threads:8 | 123 ns | — | — |
+| BM_MT_Select_Simple/threads:1 | 189 ns | — | — |
+| BM_MT_Select_Simple/threads:2 | 188 ns | — | — |
+| BM_MT_Select_Simple/threads:4 | 197 ns | — | — |
+| BM_MT_Select_Simple/threads:8 | 202 ns | — | — |
+| BM_MT_Select_Complex/threads:1 | 1181 ns | — | — |
+| BM_MT_Select_Complex/threads:2 | 1130 ns | — | — |
+| BM_MT_Select_Complex/threads:4 | 1410 ns | — | — |
+| BM_MT_Select_Complex/threads:8 | 1216 ns | — | — |
+| BM_MT_Classify_Begin/threads:1 | 28.9 ns | — | — |
+| BM_MT_Classify_Begin/threads:2 | 30.3 ns | — | — |
+| BM_MT_Classify_Begin/threads:4 | 30.5 ns | — | — |
+| BM_MT_Classify_Begin/threads:8 | 32.5 ns | — | — |
+| BM_Percentile_Set_Simple | 942 ns | — | — |
+| BM_Percentile_Select_Simple | 1044 ns | — | — |
+| BM_Percentile_Select_Complex | 1859 ns | — | — |
+| BM_Percentile_Classify_Begin | 890 ns | — | — |
+| BM_Expr_SimpleArith | 3.52 ns | — | — |
+| BM_Expr_ComplexCompare | 13.5 ns | — | — |
+| BM_PlanBuild_Simple | 277 ns | — | — |
+| BM_PlanBuild_Complex | 1196 ns | — | — |
+| BM_Pipeline_Simple | 9479 ns | — | — |
+| BM_Op_Filter1000 | 53221 ns | — | — |
+| BM_Op_Join1000 | 110134 ns | — | — |
+| BM_Op_Sort1000 | 287953 ns | — | — |
+| BM_Op_Aggregate1000 | 98400 ns | — | — |
 
 ---
 
@@ -59,10 +68,10 @@
 
 | Operation | 1 thread | 2 threads | 4 threads | 8 threads |
 |---|---|---|---|---|
-| BM_MT_Set_Simple | 115ns | 111ns | 119ns | 121ns |
-| BM_MT_Select_Simple | 185ns | 186ns | 187ns | 200ns |
-| BM_MT_Select_Complex | 1023ns | 1076ns | 1068ns | 1135ns |
-| BM_MT_Classify_Begin | 30.5ns | 30.2ns | 30.1ns | 31.4ns |
+| BM_MT_Set_Simple | 119ns | 116ns | 117ns | 123ns |
+| BM_MT_Select_Simple | 189ns | 188ns | 197ns | 202ns |
+| BM_MT_Select_Complex | 1181ns | 1130ns | 1410ns | 1216ns |
+| BM_MT_Classify_Begin | 28.9ns | 30.3ns | 30.5ns | 32.5ns |
 
 ---
 
@@ -70,10 +79,10 @@
 
 | Operation | avg | p50 | p95 | p99 | min | max |
 |---|---|---|---|---|---|---|
-| BM_Percentile_Set_Simple | 923.356ns | 902ns | 1.012kns | 1.252kns | 871ns | 47.558kns |
-| BM_Percentile_Select_Simple | 1.01098kns | 992ns | 1.092kns | 1.382kns | 941ns | 61.614kns |
-| BM_Percentile_Select_Complex | 1.75203kns | 1.713kns | 1.823kns | 2.635kns | 1.673kns | 217.482kns |
-| BM_Percentile_Classify_Begin | 848.873ns | 832ns | 891ns | 1.272kns | 791ns | 229.433kns |
+| BM_Percentile_Set_Simple | 971.958ns | 942ns | 1.192kns | 1.383kns | 891ns | 188.709kns |
+| BM_Percentile_Select_Simple | 1.08847kns | 1.012kns | 1.533kns | 1.824kns | 942ns | 45.023kns |
+| BM_Percentile_Select_Complex | 1.94169kns | 1.804kns | 2.845kns | 3.446kns | 1.693kns | 84.456kns |
+| BM_Percentile_Classify_Begin | 912.263ns | 852ns | 1.182kns | 1.403kns | 781ns | 247.707kns |
 
 ---
 
@@ -81,16 +90,16 @@
 
 | Corpus | Dialect | Queries | OK | PARTIAL | ERROR |
 |---|---|---|---|---|---|
-| PostgreSQL regression | pgsql | 55553 | 55342 (99.6202%) | 204 | 7 |
+| PostgreSQL regression | pgsql | 55553 | 55508 (99.919%) | 38 | 7 |
 | MySQL MTR | mysql | 2270 | 2268 (99.9119%) | 2 | 0 |
-| CockroachDB | pgsql | 17429 | 16570 (95.0714%) | 859 | 0 |
-| SQLGlot | mysql | 1450 | 1424 (98.2069%) | 13 | 13 |
+| CockroachDB | pgsql | 17429 | 17422 (99.9598%) | 7 | 0 |
+| SQLGlot | mysql | 1450 | 1437 (99.1034%) | 0 | 13 |
 | sqlparser-rs MySQL | mysql | 424 | 424 (100%) | 0 | 0 |
-| sqlparser-rs PostgreSQL | pgsql | 471 | 468 (99.3631%) | 3 | 0 |
-| sqlparser-rs Common | mysql | 1536 | 1528 (99.4792%) | 8 | 0 |
-| Vitess | mysql | 2291 | 2286 (99.7818%) | 5 | 0 |
-| TiDB | mysql | 5043 | 5031 (99.762%) | 12 | 0 |
-| **TOTAL** | | **86467** | **85341** | **1106** | **20** |
+| sqlparser-rs PostgreSQL | pgsql | 471 | 471 (100%) | 0 | 0 |
+| sqlparser-rs Common | mysql | 1536 | 1536 (100%) | 0 | 0 |
+| Vitess | mysql | 2291 | 2291 (100%) | 0 | 0 |
+| TiDB | mysql | 5043 | 5037 (99.881%) | 6 | 0 |
+| **TOTAL** | | **86467** | **86394** | **53** | **20** |
 
 ---
 
