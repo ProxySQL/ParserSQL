@@ -13,6 +13,14 @@ int32_t parse_date(const char* s);
 // Parse "YYYY-MM-DD HH:MM:SS[.uuuuuu]" to microseconds since epoch.
 int64_t parse_datetime(const char* s);
 
+// Parse a datetime string that MAY include a timezone offset.
+// Accepts: "YYYY-MM-DD HH:MM:SS[.UUUUUU][+HH:MM|+HH|Z|-HH:MM|-HH]"
+// If a timezone offset is present, normalizes the timestamp to UTC
+// (by subtracting the offset).
+// If no timezone is present, behaves identically to parse_datetime().
+// Returns microseconds since UTC epoch 1970-01-01 00:00:00.
+int64_t parse_datetime_tz(const char* s);
+
 // Parse "HH:MM:SS[.uuuuuu]" to microseconds since midnight.
 int64_t parse_time(const char* s);
 

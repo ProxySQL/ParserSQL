@@ -164,3 +164,55 @@ TEST(FormatDatetime, DateBeforeEpoch) {
     size_t n = format_datetime(us, buf, sizeof(buf));
     EXPECT_EQ(std::string(buf, n), "1969-07-20 20:17:40");
 }
+
+// ----- parse_datetime_tz timezone normalization -----
+
+TEST(DatetimeParseTimezoneTest, ParseDatetimeWithPositiveOffset) {
+    // "2024-06-15 14:30:00+05:30" -> normalized to UTC: 09:00:00 same day
+    int64_t us = parse_datetime_tz("2024-06-15 14:30:00+05:30");
+    int64_t expected_us = parse_datetime("2024-06-15 09:00:00");
+    EXPECT_EQ(us, expected_us);
+}
+
+TEST(DatetimeParseTimezoneTest, ParseDatetimeWithNegativeOffset) {
+    // "2024-06-15 14:30:00-08:00" -> UTC: 22:30:00 same day
+    int64_t us = parse_datetime_tz("2024-06-15 14:30:00-08:00");
+    int64_t expected_us = parse_datetime("2024-06-15 22:30:00");
+    EXPECT_EQ(us, expected_us);
+}
+
+TEST(DatetimeParseTimezoneTest, ParseDatetimeWithZOffset) {
+    // 'Z' is ISO-8601 UTC marker
+    int64_t us = parse_datetime_tz("2024-06-15 14:30:00Z");
+    int64_t expected_us = parse_datetime("2024-06-15 14:30:00");
+    EXPECT_EQ(us, expected_us);
+}
+
+TEST(DatetimeParseTimezoneTest, ParseDatetimeWithNoOffsetSameAsPlain) {
+    int64_t us_tz = parse_datetime_tz("2024-06-15 14:30:00");
+    int64_t us_plain = parse_datetime("2024-06-15 14:30:00");
+    EXPECT_EQ(us_tz, us_plain);
+}
+
+TEST(DatetimeParseTimezoneTest, ParseDatetimeWithZeroOffsetEquivalents) {
+    int64_t us1 = parse_datetime_tz("2024-06-15 14:30:00+00:00");
+    int64_t us2 = parse_datetime_tz("2024-06-15 14:30:00+00");
+    int64_t us3 = parse_datetime_tz("2024-06-15 14:30:00Z");
+    EXPECT_EQ(us1, us2);
+    EXPECT_EQ(us2, us3);
+}
+
+TEST(DatetimeParseTimezoneTest, ParseDatetimeWithFractionalAndTZ) {
+    // "2024-06-15 14:30:00.123456+05:30" -> 09:00:00.123456 UTC
+    int64_t us = parse_datetime_tz("2024-06-15 14:30:00.123456+05:30");
+    int64_t expected_us = parse_datetime("2024-06-15 09:00:00.123456");
+    EXPECT_EQ(us, expected_us);
+}
+
+TEST(DatetimeParseTimezoneTest, ParseDatetimeShortOffsetPostgres) {
+    // PostgreSQL often returns just "+05" without minutes
+    // "14:30:00+05" -> 09:30:00 UTC
+    int64_t us = parse_datetime_tz("2024-06-15 14:30:00+05");
+    int64_t expected_us = parse_datetime("2024-06-15 09:30:00");
+    EXPECT_EQ(us, expected_us);
+}

@@ -106,6 +106,63 @@ int64_t parse_datetime(const char* s) {
     return us;
 }
 
+// Parse an optional timezone offset at position `s`. Advances `s` past the offset.
+// Returns the offset in microseconds (positive for east of UTC, negative for west).
+// Recognized formats: "Z", "+HH", "+HH:MM", "-HH", "-HH:MM" (also without colon).
+// Returns 0 if no offset found (does not advance `s`).
+static int64_t parse_tz_offset_us(const char*& s) {
+    if (!s || !*s) return 0;
+    if (*s == 'Z' || *s == 'z') {
+        ++s;
+        return 0;
+    }
+    if (*s != '+' && *s != '-') return 0;
+    int sign = (*s == '-') ? -1 : 1;
+    ++s;
+    int hours = parse_int(s, 2);
+    int minutes = 0;
+    if (*s == ':') {
+        ++s;
+        minutes = parse_int(s, 2);
+    } else if (*s >= '0' && *s <= '9') {
+        minutes = parse_int(s, 2);
+    }
+    int64_t offset_us = (static_cast<int64_t>(hours) * 3600LL
+                       + static_cast<int64_t>(minutes) * 60LL)
+                      * 1000000LL;
+    return sign * offset_us;
+}
+
+int64_t parse_datetime_tz(const char* s) {
+    if (!s || !*s) return 0;
+    const char* p = s;
+    int year = parse_int(p, 4);
+    if (*p == '-') ++p;
+    int month = parse_int(p, 2);
+    if (*p == '-') ++p;
+    int day = parse_int(p, 2);
+    if (*p == ' ' || *p == 'T') ++p;
+    int hour = parse_int(p, 2);
+    if (*p == ':') ++p;
+    int minute = parse_int(p, 2);
+    if (*p == ':') ++p;
+    int second = parse_int(p, 2);
+    int64_t frac = parse_frac_us(p);
+
+    int32_t days = days_since_epoch(year, month, day);
+    int64_t us = static_cast<int64_t>(days) * 86400LL * 1000000LL
+               + static_cast<int64_t>(hour) * 3600LL * 1000000LL
+               + static_cast<int64_t>(minute) * 60LL * 1000000LL
+               + static_cast<int64_t>(second) * 1000000LL
+               + frac;
+
+    // Parse optional timezone offset and normalize to UTC.
+    // "2024-06-15 14:30:00+05:30" means 14:30 local with offset +05:30.
+    // UTC = local - offset. So for positive offset (east of UTC), subtract.
+    int64_t tz_us = parse_tz_offset_us(p);
+    return us - tz_us;
+}
+
 int64_t parse_time(const char* s) {
     if (!s || !*s) return 0;
     bool negative = false;
