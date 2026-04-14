@@ -539,6 +539,97 @@ TEST(DurableTransactionLog, CompactPreservesRollbackDecisions) {
 }
 
 // =====================================================================
+// Auto-compaction: DistributedTransactionManager fires compact() after
+// N successful completions when set_auto_compact_threshold(N) is used.
+// =====================================================================
+
+TEST(DurableTxnLogAutoCompactTest, AutoCompactFiresAtThreshold) {
+    TempLogPath tmp;
+    DurableTransactionLog log;
+    ASSERT_TRUE(log.open(tmp.path));
+
+    MockDistributedExecutor mock;
+    DistributedTransactionManager mgr(mock);
+    mgr.set_durable_log(&log);
+    mgr.set_auto_compact_threshold(3);  // compact after 3 completions
+
+    for (int i = 0; i < 3; ++i) {
+        ASSERT_TRUE(mgr.begin());
+        ASSERT_TRUE(mgr.enlist_backend("b1"));
+        ASSERT_TRUE(mgr.commit());
+    }
+
+    // After 3 completions, compaction should have fired.
+    // Verify: in-doubt set is empty (all 3 txns are COMPLETE).
+    auto in_doubt = DurableTransactionLog::scan_in_doubt(tmp.path);
+    EXPECT_TRUE(in_doubt.empty());
+
+    struct stat st;
+    ASSERT_EQ(::stat(tmp.path.c_str(), &st), 0);
+    // Compaction leaves only in-doubt entries (none here), so file should be small
+    EXPECT_LT(st.st_size, 1024);
+}
+
+TEST(DurableTxnLogAutoCompactTest, ThresholdZeroDisablesAutoCompact) {
+    TempLogPath tmp;
+    DurableTransactionLog log;
+    ASSERT_TRUE(log.open(tmp.path));
+
+    MockDistributedExecutor mock;
+    DistributedTransactionManager mgr(mock);
+    mgr.set_durable_log(&log);
+    // Threshold = 0 (default) means auto-compact is disabled.
+
+    for (int i = 0; i < 5; ++i) {
+        ASSERT_TRUE(mgr.begin());
+        ASSERT_TRUE(mgr.enlist_backend("b1"));
+        ASSERT_TRUE(mgr.commit());
+    }
+
+    // Without compaction, 5 txns x 2 records (DECISION + COMPLETE) each
+    // should be in the file.
+    struct stat st;
+    ASSERT_EQ(::stat(tmp.path.c_str(), &st), 0);
+    EXPECT_GT(st.st_size, 100);
+}
+
+TEST(DurableTxnLogAutoCompactTest, CounterResetsAfterCompact) {
+    TempLogPath tmp;
+    DurableTransactionLog log;
+    ASSERT_TRUE(log.open(tmp.path));
+
+    MockDistributedExecutor mock;
+    DistributedTransactionManager mgr(mock);
+    mgr.set_durable_log(&log);
+    mgr.set_auto_compact_threshold(2);
+
+    // First 2 commits -> compact fires
+    for (int i = 0; i < 2; ++i) {
+        ASSERT_TRUE(mgr.begin());
+        ASSERT_TRUE(mgr.enlist_backend("b1"));
+        ASSERT_TRUE(mgr.commit());
+    }
+
+    // 3rd commit: counter has reset, so no compact fires yet
+    ASSERT_TRUE(mgr.begin());
+    ASSERT_TRUE(mgr.enlist_backend("b1"));
+    ASSERT_TRUE(mgr.commit());
+
+    struct stat st1;
+    ASSERT_EQ(::stat(tmp.path.c_str(), &st1), 0);
+    off_t size_after_3 = st1.st_size;
+
+    // 4th commit -> counter hits 2 again, compact fires
+    ASSERT_TRUE(mgr.begin());
+    ASSERT_TRUE(mgr.enlist_backend("b1"));
+    ASSERT_TRUE(mgr.commit());
+
+    struct stat st2;
+    ASSERT_EQ(::stat(tmp.path.c_str(), &st2), 0);
+    EXPECT_LE(st2.st_size, size_after_3);
+}
+
+// =====================================================================
 // DistributedTransactionManager integration with the WAL
 // =====================================================================
 
