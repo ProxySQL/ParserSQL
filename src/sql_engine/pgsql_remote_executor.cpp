@@ -218,9 +218,8 @@ Value PgSQLRemoteExecutor::pg_field_to_value(
         }
 
         case TIMESTAMPTZOID: {
-            // PostgreSQL returns "YYYY-MM-DD HH:MM:SS+TZ" -- parse the datetime
-            // part, ignoring timezone for now (as per spec: timezone handling deferred).
-            int64_t us = datetime_parse::parse_datetime(data);
+            // PostgreSQL returns "YYYY-MM-DD HH:MM:SS+TZ". Parse and normalize to UTC.
+            int64_t us = datetime_parse::parse_datetime_tz(data);
             return value_timestamp(us);
         }
 
