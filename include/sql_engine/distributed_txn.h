@@ -78,6 +78,14 @@ public:
         phase_statement_timeout_ms_ = ms;
     }
 
+    // Auto-compact the durable log every N successful completions. When > 0,
+    // the manager calls txn_log_->compact() after every Nth completed txn.
+    // 0 (default) = disabled. Callers should pick a value balancing compaction
+    // cost vs. log growth (e.g., 100-10000 depending on txn rate).
+    void set_auto_compact_threshold(uint32_t n) {
+        auto_compact_threshold_ = n;
+    }
+
     bool begin() override {
         txn_id_ = generate_txn_id();
         participants_.clear();
@@ -277,6 +285,10 @@ private:
     bool require_durable_log_ = false;
     uint32_t phase_statement_timeout_ms_ = 0;
 
+    // Auto-compaction: count completions, fire compact when counter hits threshold.
+    uint32_t auto_compact_threshold_ = 0;
+    uint32_t completions_since_compact_ = 0;
+
     // Best-effort: set a per-session statement timeout on a backend before
     // issuing a phase-1 or phase-2 SQL. Returns true if the SET succeeded
     // OR if no timeout is configured; false only if the SET itself fails
@@ -326,7 +338,15 @@ private:
     }
 
     void maybe_log_complete() {
-        if (txn_log_) txn_log_->log_complete(txn_id_);
+        if (!txn_log_) return;
+        txn_log_->log_complete(txn_id_);
+        if (auto_compact_threshold_ > 0) {
+            ++completions_since_compact_;
+            if (completions_since_compact_ >= auto_compact_threshold_) {
+                completions_since_compact_ = 0;
+                txn_log_->compact();
+            }
+        }
     }
 
     // Generate a unique transaction ID.
