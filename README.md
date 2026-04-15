@@ -1,34 +1,89 @@
-# ParserSQL — High-Performance SQL Parser & Query Engine
+# ParserSQL — High-Performance SQL Parser & Distributed Query Engine
 
-A high-performance, hand-written recursive descent SQL parser and composable query engine for [ProxySQL](https://github.com/sysown/proxysql). Supports both MySQL and PostgreSQL dialects with compile-time dispatch — zero runtime overhead for dialect selection. The parser produces an AST that feeds directly into the query engine's plan builder and executor pipeline.
+A high-performance, hand-written recursive descent SQL parser **and distributed query engine** for [ProxySQL](https://github.com/sysown/proxysql). Parses MySQL and PostgreSQL with sub-microsecond latency, then plans and executes queries against local data sources or remote shards — with connection pooling, sharding, window functions, CTEs, 2PC distributed transactions, and a MySQL-wire protocol server.
+
+Dialect selection is compile-time (`Parser<Dialect::MySQL>` / `Parser<Dialect::PostgreSQL>`) — zero runtime overhead.
+
+## What it does
+
+- **Parse** MySQL or PostgreSQL SQL into a compact arena-allocated AST.
+- **Plan** queries into logical plans with predicate pushdown, limit pushdown, constant folding.
+- **Execute** plans through a Volcano-model operator tree: scan, filter, project, join (nested loop + hash), aggregate, window, sort, limit, distinct, set ops, CTEs.
+- **Distribute** queries across shards: shard-key routing, scatter/gather, distributed merge-aggregate, distributed sort, parallel shard I/O, hash-join across shards.
+- **Remote backends** via libmysqlclient and libpq, with thread-safe connection pools, health checks, and per-phase statement timeouts.
+- **Transactions** — local undo-log, single-backend DML, and 2PC (XA on MySQL, PREPARE TRANSACTION on PostgreSQL) with a durable WAL, crash recovery, and auto-compaction.
+- **Serve MySQL clients** — ship a wire-protocol server (`mysql_server`) that speaks the MySQL protocol directly.
+- **Validate** against 86K+ queries from 9 external corpora (PostgreSQL regression, MySQL MTR, CockroachDB, Vitess, TiDB, sqlparser-rs, SQLGlot).
 
 ## Performance
 
-All parser operations run in sub-microsecond latency on modern hardware:
+### Parser (sub-microsecond on modern hardware)
 
-| Operation | Latency | Notes |
+| Operation | Latency |
+|---|---|
+| Classify BEGIN | 29 ns |
+| Parse SET | 107 ns |
+| Parse simple SELECT | 178 ns |
+| Parse complex SELECT (JOINs + GROUP BY) | 1.04 µs |
+| Parse INSERT | ~200 ns |
+| Emit SELECT (round-trip) | 256 ns |
+| Arena reset | 4.6 ns |
+
+### Vs. other parsers
+
+| Parser | Simple SELECT | Complex SELECT |
 |---|---|---|
-| Classify statement (BEGIN) | **29 ns** | Tier 2: type + metadata only |
-| Parse SET statement | **111 ns** | Full AST |
-| Parse simple SELECT | **186 ns** | Full AST |
-| Parse complex SELECT (JOINs, GROUP BY, HAVING) | **1.1 µs** | Full AST |
-| Parse INSERT | **212 ns** | Full AST |
-| Query reconstruction (round-trip) | **116-226 ns** | Parse → emit |
-| Arena reset | **3.5 ns** | O(1) pointer rewind |
+| **ParserSQL** | **178 ns** | **1.04 µs** |
+| libpg_query | ~4× slower | ~3–4× slower |
+| sqlparser-rs (Rust) | ~25× slower | ~20× slower |
 
-Compared to other parsers on the same queries:
+### Corpus coverage (86,467 external queries, April 2026)
 
-| Parser | Simple SELECT | Complex SELECT | Notes |
-|---|---|---|---|
-| **ParserSQL** | **175 ns** | **975 ns** | This project |
-| libpg_query (raw parse) | 718 ns (4.1x slower) | 3,479 ns (3.6x) | PostgreSQL's own parser |
-| sqlparser-rs (Rust) | 4,687 ns (27x slower) | 23,411 ns (24x) | Apache DataFusion |
+| Corpus | Queries | OK Rate |
+|---|---|---|
+| PostgreSQL regression | 55,553 | **99.92%** |
+| MySQL MTR | 2,270 | 99.91% |
+| CockroachDB parser testdata | 17,429 | **99.96%** |
+| SQLGlot | 1,450 | 99.10% |
+| sqlparser-rs (MySQL + PG + common) | 2,431 | **100%** |
+| Vitess | 2,291 | **100%** |
+| TiDB | 5,043 | 99.88% |
+| **Total** | **86,467** | **99.92% OK** / 0.02% error |
 
-See [docs/benchmarks/](docs/benchmarks/) for full results and [REPRODUCING.md](docs/benchmarks/REPRODUCING.md) for reproduction instructions.
+See [`docs/benchmarks/latest.md`](docs/benchmarks/latest.md) for the full report, and [`REPRODUCING.md`](docs/benchmarks/REPRODUCING.md) for reproduction instructions.
 
 ## Quick Start
 
-### Parse and emit SQL
+### Build
+
+```bash
+make all                # Build library + run all 1,160 tests
+make lib                # Just the static library
+make bench              # Benchmarks (-O2); use scripts/run_benchmarks.sh for -O3 report
+make build-sqlengine    # Interactive SQL CLI
+make build-corpus-test  # Corpus validation harness
+```
+
+### Interactive CLI (`sqlengine`)
+
+```bash
+# In-memory expression evaluation (no backend)
+echo "SELECT 1 + 2, UPPER('hello'), COALESCE(NULL, 42)" | ./sqlengine
+
+# Against a MySQL backend
+./sqlengine --backend "mysql://root:pass@127.0.0.1:3306/mydb?name=primary"
+
+# Sharded across two backends
+./sqlengine \
+  --backend "mysql://root:pass@host1:3306/db?name=shard1" \
+  --backend "mysql://root:pass@host2:3306/db?name=shard2" \
+  --shard "users:id:shard1,shard2"
+
+# With SSL/TLS
+./sqlengine --backend "mysql://root:pass@host:3306/db?name=s1&ssl_mode=REQUIRED&ssl_ca=/etc/ssl/ca.pem"
+```
+
+### Parse + emit
 
 ```cpp
 #include "sql_parser/parser.h"
@@ -36,44 +91,36 @@ See [docs/benchmarks/](docs/benchmarks/) for full results and [REPRODUCING.md](d
 
 using namespace sql_parser;
 
-// Create a parser (one per thread)
 Parser<Dialect::MySQL> parser;
-
-// Parse a query
 auto result = parser.parse("SELECT * FROM users WHERE id = 1", 32);
-if (result.ok()) {
-    // result.ast contains the full AST
-    // result.stmt_type == StmtType::SELECT
-}
 
-// Reconstruct SQL from AST
+// result.ast has the full AST
+// result.stmt_type == StmtType::SELECT
+
 Emitter<Dialect::MySQL> emitter(parser.arena());
 emitter.emit(result.ast);
-StringRef sql = emitter.result();  // "SELECT * FROM users WHERE id = 1"
+StringRef sql = emitter.result();    // "SELECT * FROM users WHERE id = 1"
 
-// Query digest (normalize for fingerprinting)
+// Query digest for fingerprinting
 Digest<Dialect::MySQL> digest(parser.arena());
 DigestResult dr = digest.compute(result.ast);
 // dr.normalized = "SELECT * FROM users WHERE id = ?"
-// dr.hash = 0x... (64-bit FNV-1a)
+// dr.hash       = 0x... (64-bit FNV-1a)
 
-// Reset arena after each query (O(1), reuses memory)
-parser.reset();
+parser.reset();    // O(1) arena rewind — reuse memory
 ```
 
-### Full pipeline: parse, plan, execute
+### Full pipeline — parse, plan, execute (local data source)
 
 ```cpp
 #include "sql_parser/parser.h"
 #include "sql_engine/plan_builder.h"
 #include "sql_engine/plan_executor.h"
 #include "sql_engine/in_memory_catalog.h"
-#include "sql_engine/data_source.h"
 
 using namespace sql_parser;
 using namespace sql_engine;
 
-// 1. Set up catalog (table metadata)
 InMemoryCatalog catalog;
 catalog.add_table("", "users", {
     {"id",   SqlType::make_int(),        false},
@@ -81,243 +128,314 @@ catalog.add_table("", "users", {
     {"age",  SqlType::make_int(),        true},
 });
 
-// 2. Populate data source
-Arena data_arena{65536, 1048576};
-std::vector<Row> rows = {
-    // ... build rows with make_row() + value_int(), value_string(), etc.
-};
 const TableInfo* table = catalog.get_table(StringRef{"users", 5});
-InMemoryDataSource source(table, std::move(rows));
+InMemoryDataSource source(table, /* rows */);
 
-// 3. Register built-in functions (UPPER, LOWER, COALESCE, etc.)
 FunctionRegistry<Dialect::MySQL> functions;
 functions.register_builtins();
 
-// 4. Parse SQL
 Parser<Dialect::MySQL> parser;
-auto result = parser.parse("SELECT name, age FROM users WHERE age > 21", 43);
+auto pr = parser.parse("SELECT name, age FROM users WHERE age > 21", 43);
 
-// 5. Build logical plan (AST -> plan tree)
 PlanBuilder<Dialect::MySQL> builder(catalog, parser.arena());
-PlanNode* plan = builder.build(result.ast);
+PlanNode* plan = builder.build(pr.ast);
 
-// 6. Execute plan
 PlanExecutor<Dialect::MySQL> executor(functions, catalog, parser.arena());
 executor.add_data_source("users", &source);
 ResultSet rs = executor.execute(plan);
-
-// 7. Read results
-for (size_t i = 0; i < rs.row_count(); ++i) {
-    Row& row = rs.rows[i];
-    // row.get(0) = name (Value), row.get(1) = age (Value)
-}
-
-parser.reset();
 ```
 
-### Quick Start: CLI tool
+### Sharded execution via `Session`
 
-```bash
-# Build the CLI tool
-make build-sqlengine
+```cpp
+#include "sql_engine/session.h"
+#include "sql_engine/thread_safe_executor.h"
+#include "sql_engine/shard_map.h"
+#include "sql_engine/local_txn.h"
 
-# In-memory mode — evaluate expressions without any backend
-echo "SELECT 1 + 2, UPPER('hello'), COALESCE(NULL, 42)" | ./sqlengine
-# +---+-------+----+
-# | 3 | HELLO | 42 |
-# +---+-------+----+
-# 1 row in set (0.000 sec)
+// Backends (connection-pooled, thread-safe)
+ThreadSafeMultiRemoteExecutor executor;
+executor.add_backend({.name = "shard1", .host = "h1", .port = 3306, ...});
+executor.add_backend({.name = "shard2", .host = "h2", .port = 3306, ...});
 
-# Interactive mode
-./sqlengine
+// Sharding policy: "users" is sharded on "id" across shard1, shard2
+ShardMap shards;
+shards.add_sharded_table("users", "id", {"shard1", "shard2"});
 
-# With a MySQL backend
-./sqlengine --backend "mysql://root:pass@127.0.0.1:3306/mydb?name=primary"
+// Catalog, transactions, session
+InMemoryCatalog catalog;  /* ... add_table(...) ... */
+LocalTransactionManager txn;
+Session<Dialect::MySQL> session(catalog, txn);
+session.set_remote_executor(&executor);
+session.set_shard_map(&shards);
 
-# Multiple backends with sharding
-./sqlengine \
-  --backend "mysql://root:pass@host1:3306/db?name=shard1" \
-  --backend "mysql://root:pass@host2:3306/db?name=shard2" \
-  --shard "users:id:shard1,shard2"
+// Execute — routes to one shard if WHERE has shard key, otherwise scatters
+auto rs = session.execute_query("SELECT * FROM users WHERE id = 42");
+
+// DML too
+auto dml = session.execute_statement("UPDATE users SET age = age + 1 WHERE country = 'US'");
 ```
+
+### 2PC distributed transaction
+
+```cpp
+#include "sql_engine/distributed_txn.h"
+#include "sql_engine/durable_txn_log.h"
+
+// Durable WAL for crash recovery
+DurableTransactionLog log;
+log.open("/var/lib/proxysql/txn.log");
+
+DistributedTransactionManager dtxn(executor, DistributedTransactionManager::BackendDialect::MYSQL);
+dtxn.set_durable_log(&log);
+dtxn.set_require_durable_log(true);             // fail commit if WAL write fails
+dtxn.set_phase_statement_timeout_ms(30000);     // bound 2PC per-phase duration
+dtxn.set_auto_compact_threshold(1000);          // compact WAL after every 1000 completions
+
+Session<Dialect::MySQL> session(catalog, dtxn);
+session.set_remote_executor(&executor);
+session.set_shard_map(&shards);
+
+session.begin();
+session.execute_statement("UPDATE accounts SET balance = balance - 100 WHERE id = 1");  // shard1
+session.execute_statement("UPDATE accounts SET balance = balance + 100 WHERE id = 2");  // shard2
+session.commit();   // Phase 1 PREPARE + Phase 2 COMMIT across both shards
+```
+
+### Startup recovery
+
+```cpp
+// At startup, resolve any in-doubt transactions left over from a prior crash
+TransactionRecovery recovery(executor, log, BackendDialect::MYSQL);
+auto report = recovery.recover();
+// report.recovered_commit, recovered_rollback, still_in_doubt, ...
+```
+
+## Architecture
+
+```
+                    SQL bytes
+                        │
+                        ▼
+                 ┌──────────────┐
+                 │  Tokenizer   │  Zero-copy pull iterator, dialect-templated
+                 │  <Dialect D> │  Binary-search keyword lookup (~130 keywords)
+                 └──────┬───────┘
+                        ▼
+                 ┌──────────────┐
+                 │  Classifier  │  Switch on first token → Tier 1 or Tier 2
+                 └──────┬───────┘
+                        │
+          ┌─── Tier 1 (deep parse: SELECT/INSERT/UPDATE/DELETE/SET/...)
+          │           │
+          │           ▼
+          │   ┌──────────────┐
+          │   │ Full AST in  │
+          │   │ arena (32 B  │
+          │   │ nodes)       │
+          │   └──────┬───────┘
+          │          │
+          │          ▼
+          │   ┌──────────────┐
+          │   │ Plan Builder │  AST → logical plan
+          │   └──────┬───────┘
+          │          │
+          │          ▼
+          │   ┌──────────────┐
+          │   │   Optimizer  │  Predicate / limit pushdown, constant folding
+          │   └──────┬───────┘
+          │          │
+          │          ▼
+          │   ┌──────────────┐
+          │   │  Distributed │  If ShardMap configured:
+          │   │    Planner   │   - Shard-key routing (single shard)
+          │   │              │   - Scatter to all shards + merge
+          │   │              │   - Distributed aggregate/sort
+          │   │              │   - Cross-shard join materialization
+          │   └──────┬───────┘
+          │          │
+          │          ▼
+          │   ┌──────────────┐
+          │   │Plan Executor │  Volcano model: open/next/close
+          │   │  (Operators) │  Local + RemoteScan via ThreadSafeMulti
+          │   └──────┬───────┘
+          │          │
+          │          ▼
+          │      ResultSet
+          │
+          └─── Tier 2 (lightweight): DDL, transactions, SHOW, GRANT, USE ...
+```
+
+### Execution layer
+
+- **Volcano model** — every operator implements `open() / next(Row&) / close()`; rows are pulled top-down one at a time.
+- **15 operators:** scan, filter, project, nested-loop join (5 join types), hash join, aggregate, sort, limit, distinct, set-op, CTE derived-scan, window, merge-aggregate (distributed), merge-sort (distributed), remote-scan.
+- **Type system** — 30+ `SqlType::Kind` values; 14-tag runtime `Value` (null, bool, int64, uint64, double, decimal, string, bytes, date, time, datetime, timestamp, interval, json).
+- **Three-valued logic** — proper NULL propagation in AND/OR/NOT, comparisons, aggregates.
+
+### Distributed layer
+
+- **Shard map** — tables can be unsharded (pinned to one backend) or sharded on a column across N backends. Shard-key routing when WHERE filters on the key; scatter/gather otherwise.
+- **Thread-safe connection pool** — per-backend pool with checkout/checkin RAII guards, health pings, reconnection on failure, configurable connect/read/write timeouts, optional SSL/TLS.
+- **Pinned sessions** — 2PC participants use sticky connections (required for XA / PREPARE TRANSACTION).
+- **Parallel shard I/O** — optional thread pool for parallel remote-scan open, useful for scatter queries with many shards.
+- **Plan cache** — bounded LRU of (SQL → parsed plan) per Session.
+
+### Transaction layer
+
+- **`LocalTransactionManager`** — in-memory transactions for local data sources (undo log, savepoints).
+- **`SingleBackendTransactionManager`** — BEGIN/COMMIT/ROLLBACK forwarded to one backend.
+- **`DistributedTransactionManager`** — 2PC coordinator. Per-participant sticky session. Optional durable WAL for crash recovery. Per-phase statement timeouts. Auto-compaction. Strict mode (fail commit if WAL write fails).
+- **`TransactionRecovery`** — drives in-doubt transactions to completion on startup. Idempotent (safe to re-run).
+- **Session-level 2PC enlistment** — `Session::execute_statement()` automatically routes DML through the distributed transaction's pinned sessions when a distributed txn is active.
+
+### Key design decisions
+
+- **Arena allocator** — 64 KB bump allocator per parser, O(1) reset. All AST nodes and plan nodes live in the arena. No per-node new/delete.
+- **Zero-copy `StringRef`** — tokens point into the original input buffer.
+- **32-byte `AstNode`** — half a cache line; intrusive linked list (first_child + next_sibling).
+- **Compile-time dialect dispatch** — `if constexpr` for MySQL vs PostgreSQL differences. Zero runtime overhead.
+- **Header-only parsers & operators** — maximum inlining. Only `arena.cpp`, `parser.cpp`, a few engine `.cpp` files compile separately.
 
 ## Features
 
 ### Parser
 
-- **Deep parsing (Tier 1):** SELECT, INSERT, UPDATE, DELETE, SET, REPLACE, EXPLAIN, CALL, DO, LOAD DATA
+- **Tier 1 deep parse:** SELECT, INSERT, UPDATE, DELETE, SET, REPLACE, EXPLAIN, CALL, DO, LOAD DATA
 - **Compound queries:** UNION / INTERSECT / EXCEPT with SQL-standard precedence and parenthesized nesting
-- **Tier 2 classification:** All other statement types (DDL, transactions, SHOW, GRANT, etc.)
-- **Query reconstruction:** Parse → modify AST → emit valid SQL
-- **Query digest:** Normalize queries for fingerprinting (literals → `?`, IN list collapsing, keyword uppercasing) with 64-bit FNV-1a hash
-- **Prepared statement cache:** LRU cache with `parse_and_cache()` / `execute()` for binary protocol support
-- **Both dialects:** MySQL and PostgreSQL via `Parser<Dialect::MySQL>` / `Parser<Dialect::PostgreSQL>`
-- **Thread-safe:** One parser instance per thread, zero shared state, no locks
+- **CTEs:** `WITH ... [RECURSIVE] AS (...)` — non-recursive materialized, recursive planned
+- **Window functions:** ROW_NUMBER, RANK, DENSE_RANK, SUM/COUNT/AVG/MIN/MAX OVER (PARTITION BY ... ORDER BY ...)
+- **Subqueries:** scalar, IN, EXISTS, correlated — in SELECT/WHERE/FROM/HAVING
+- **Multi-table DML:** `UPDATE t1 JOIN t2 ON ... SET ...`, `DELETE t1 FROM t1 JOIN t2 ON ...` (MySQL multi-target forms; PostgreSQL FROM/USING)
+- **BigQuery extensions:** `SELECT * EXCEPT(col1, col2)`, `SELECT * REPLACE(expr AS col)`
+- **Array / tuple / field-access expressions:** `ARRAY[1,2,3][2]`, `(row).field`, `ROW(...)`
+- **Query reconstruction:** Parse → modify AST → emit valid SQL (round-trip)
+- **Digest:** Normalize for fingerprinting (literals → `?`, IN-list collapse, keyword upper-case) + 64-bit FNV-1a hash
+- **Prepared-statement cache:** LRU keyed by SQL text; one parser arena per cached plan
+- **Tier 2 classification** for all other statements (DDL, transactions, SHOW, GRANT, ...)
 
-### Query Engine
+### Query engine
 
-- **Type system:** 30+ SQL types (`SqlType::Kind`) with 14-tag runtime `Value` (null, bool, int64, uint64, double, decimal, string, bytes, date, time, datetime, timestamp, interval, json)
-- **Expression evaluator:** Recursive AST evaluator with three-valued logic (NULL propagation), type coercion, short-circuit AND/OR, BETWEEN, IN, LIKE, CASE/WHEN, IS [NOT] NULL
-- **Catalog:** Abstract `Catalog` interface + `InMemoryCatalog` implementation for table/column metadata resolution
-- **Plan builder:** Translates parsed SELECT AST into a logical plan tree (FROM → WHERE → GROUP BY → HAVING → SELECT → DISTINCT → ORDER BY → LIMIT)
-- **Executor with 9 operators:** Scan, Filter, Project, NestedLoopJoin (INNER/LEFT/RIGHT/FULL/CROSS), Aggregate (COUNT/SUM/AVG/MIN/MAX), Sort, Limit, Distinct, SetOp (UNION/INTERSECT/EXCEPT)
-- **38 built-in functions:** Arithmetic (ABS, CEIL, FLOOR, ROUND, MOD, POWER, SQRT, LOG, LN, EXP, SIGN, TRUNCATE, RAND, GREATEST, LEAST), string (UPPER, LOWER, LENGTH, CONCAT, SUBSTRING, TRIM, LTRIM, RTRIM, REPLACE, REVERSE, LEFT, RIGHT, LPAD, RPAD, REPEAT), comparison (COALESCE, NULLIF, IF, IFNULL), type (CAST)
-- **Composable data sources:** Implement `DataSource` interface for custom storage backends
+- **Plan builder** — FROM → WHERE → GROUP BY → HAVING → SELECT → DISTINCT → ORDER BY → LIMIT → window → CTE
+- **Optimizer rules** — predicate pushdown, limit pushdown, constant folding
+- **Operators (15)** — scan, filter, project, nested-loop join, hash join, aggregate, window, sort, limit, distinct, set-op, derived-scan (CTE materialization), merge-aggregate (distributed), merge-sort (distributed), remote-scan
+- **~45 built-in functions** — arithmetic (ABS, CEIL, FLOOR, ROUND, MOD, POWER, SQRT, LOG, LN, EXP, SIGN, TRUNCATE, RAND, GREATEST, LEAST), string (UPPER, LOWER, LENGTH, CONCAT, SUBSTRING, TRIM, LTRIM, RTRIM, REPLACE, REVERSE, LEFT, RIGHT, LPAD, RPAD, REPEAT), comparison (COALESCE, NULLIF, IF, IFNULL), datetime (NOW, CURRENT_DATE, CURRENT_TIME, DATE, EXTRACT, DATE_TRUNC, DATE_FORMAT, TIMESTAMPDIFF, ...), type (CAST)
+- **Catalog interface** — `Catalog` + `InMemoryCatalog`; plug in your own
+- **DataSource interface** — `DataSource` + `MutableDataSource`; plug in your own storage
 
-## Architecture
+### Distributed execution
 
-```
-Input SQL bytes
-       │
-       ▼
-┌──────────────┐
-│  Tokenizer   │  Zero-copy, dialect-templated, pull-based
-│  <Dialect D> │  Binary search keyword lookup (~110 keywords)
-└──────┬───────┘
-       │
-       ▼
-┌──────────────┐
-│  Classifier  │  Switch on first token → route to parser
-└──────┬───────┘
-       │
-       ├──── Tier 1 ──► Deep parser (SELECT, INSERT, UPDATE, DELETE, SET, ...)
-       │                  │
-       │                  ▼
-       │                Full AST in arena ──┐
-       │                                    │
-       └──── Tier 2 ──► Lightweight         │
-                         extractor           │
-                                             ▼
-                                      ┌──────────────┐
-                                      │ Plan Builder  │  AST → logical plan tree
-                                      └──────┬───────┘
-                                             │
-                                             ▼
-                                      ┌──────────────┐
-                                      │ Plan Executor │  Volcano-model iterator
-                                      │  (Operators)  │  open() / next() / close()
-                                      └──────┬───────┘
-                                             │
-                                             ▼
-                                         ResultSet
-```
+- **Shard routing** — shard-key lookups go to one backend; scatter queries go to all
+- **Distributed aggregation** — per-shard partial aggregates + coordinator merge (COUNT+SUM+MIN+MAX + AVG from SUM/COUNT)
+- **Distributed sort** — per-shard sort + coordinator merge
+- **Cross-shard joins** — hash-join coordinator; materialized subquery cache
+- **Cross-shard DML** — scatter INSERT/UPDATE/DELETE when no shard key; single-shard when key present
+- **Cross-shard INSERT ... SELECT** — source materialized, rows routed by destination shard key
 
-**Key design decisions:**
-- **Arena allocator** — 64KB bump allocator, O(1) reset. All AST nodes and plan nodes allocated from arena. No per-node new/delete.
-- **Zero-copy StringRef** — Token values point into original input buffer. No string copies during parsing.
-- **32-byte AstNode** — Compact intrusive linked-list (first_child + next_sibling). Half a cache line.
-- **Compile-time dialect dispatch** — `if constexpr` for MySQL vs PostgreSQL differences. Zero runtime overhead.
-- **Header-only parsers** — Maximum inlining opportunity. Only `arena.cpp` and `parser.cpp` are compiled separately.
-- **Volcano execution model** — Operators implement open/next/close; rows are pulled through the tree one at a time.
+### Transactions
+
+- **Local** — undo-log, savepoints, auto-commit
+- **Single-backend** — BEGIN/COMMIT/ROLLBACK forwarded to one backend
+- **Distributed 2PC** — XA (MySQL) or PREPARE TRANSACTION (PostgreSQL); per-phase statement timeouts; per-participant pinned sessions
+- **Durable WAL** — write-ahead log of phase-2 decisions, atomic rewrite compaction, in-doubt scan
+- **Crash recovery** — `TransactionRecovery` drives in-doubt txns to completion on startup (idempotent)
+- **Auto-enlistment** — `Session::execute_statement()` automatically routes DML through pinned sessions inside a distributed txn
+
+### Backends & connectivity
+
+- **MySQL** — libmysqlclient with pooled and single-connection paths, UTF-8, configurable timeouts
+- **PostgreSQL** — libpq with statement_timeout, UTC-normalized TIMESTAMPTZ handling
+- **SSL/TLS** — `ssl_mode`, `ssl_ca`, `ssl_cert`, `ssl_key` configurable per backend for both dialects
+- **Connection pool** — thread-safe with health checks, reconnection, RAII `ConnectionGuard`
+- **MySQL wire-protocol server** — `mysql_server` speaks the MySQL protocol; backends are ParserSQL engines
+
+### Thread-safety
+
+- One `Parser` instance per thread (zero shared state, no locks)
+- `ThreadSafeMultiRemoteExecutor` safe across threads
+- `DistributedTransactionManager` designed for one coordinator per transaction
+
+## Tools
+
+| Tool | Build | Purpose |
+|---|---|---|
+| `sqlengine` | `make build-sqlengine` | Interactive SQL CLI; stdin, one-shot, or REPL; optional backends and sharding |
+| `mysql_server` | `make build-mysql-server` | MySQL wire-protocol server fronted by the ParserSQL engine |
+| `corpus_test` | `make build-corpus-test` | Read SQL from stdin/files, parse each, report OK/PARTIAL/ERROR |
+| `engine_stress_test` | `make build-engine-stress` | Direct-API engine stress test |
+| `bench_distributed` | `make build-bench-distributed` | Distributed query benchmark + pipeline breakdown |
+| `run_bench` | `make bench` | Google-Benchmark micro-benchmarks |
+| `run_tests` | `make test` | 1,160 Google-Test unit tests |
 
 ## Testing
 
-1,008 unit tests + validated against 86K+ queries from 9 external corpora:
+- **1,160 unit tests** (Google Test, 50 test files)
+- **86,467 external corpus queries** validated via `scripts/run_benchmarks.sh`
+- **CI** — runs unit tests + a corpus-subset on every push/PR
+- **Integration tests** (MySQL/PgSQL) auto-skip when no live backend is reachable
 
-| Corpus | Queries | OK Rate |
-|---|---|---|
-| PostgreSQL regression suite | 55,553 | 99.6% |
-| MySQL MTR test suite | 2,270 | 99.9% |
-| CockroachDB parser testdata | 17,429 | 95.1% |
-| sqlparser-rs test cases | 2,431 | 99.5% |
-| Vitess test cases | 2,291 | 99.8% |
-| TiDB test cases | 5,043 | 99.8% |
-| SQLGlot fixtures | 1,450 | 98.2% |
+Run a single test:
 
-## File Layout
+```bash
+./run_tests --gtest_filter="*WindowFunc*"
+```
+
+## File layout (abridged)
 
 ```
-include/sql_parser/
-    parser.h              Public API: Parser<D>
-    common.h              StringRef, Dialect, StmtType, NodeType enums
-    arena.h               Arena allocator
-    ast.h                 AstNode (32 bytes)
-    token.h               TokenType enum
-    tokenizer.h           Tokenizer<D> (header-only)
-    expression_parser.h   Pratt expression parser
-    select_parser.h       SELECT deep parser
-    set_parser.h          SET deep parser
-    insert_parser.h       INSERT/REPLACE deep parser
-    update_parser.h       UPDATE deep parser
-    delete_parser.h       DELETE deep parser
-    compound_query_parser.h  UNION/INTERSECT/EXCEPT
-    table_ref_parser.h    Shared FROM/JOIN parsing
-    emitter.h             AST → SQL reconstruction
-    digest.h              Query normalization + hash
-    parse_result.h        ParseResult, BoundValue
-    stmt_cache.h          Prepared statement LRU cache
-    string_builder.h      Arena-backed string builder
-    keywords_mysql.h      MySQL keyword table
-    keywords_pgsql.h      PostgreSQL keyword table
+include/sql_parser/           Parser (header-only templates)
+    parser.h                   Public Parser<D> API
+    tokenizer.h                Pull-based, dialect-templated
+    {select,insert,update,delete,set,compound_query,table_ref,expression,...}_parser.h
+    emitter.h  digest.h  stmt_cache.h  ...
 
-include/sql_engine/
-    types.h               SqlType with 30+ SQL type kinds
-    value.h               Tagged-union Value (14 tags) + constructors
-    row.h                 Row: array of Value indexed by ordinal
-    catalog.h             Abstract Catalog interface (TableInfo, ColumnInfo)
-    in_memory_catalog.h   Hash-map Catalog implementation
-    catalog_resolver.h    Column resolver callback factory
-    data_source.h         DataSource interface + InMemoryDataSource
-    expression_eval.h     Recursive AST expression evaluator
-    function_registry.h   FunctionRegistry<D> with register_builtins()
-    plan_node.h           PlanNode union (9 node types)
-    plan_builder.h        AST → logical plan translation
-    plan_executor.h       Plan → operator tree → ResultSet
-    operator.h            Abstract Operator base (open/next/close)
-    result_set.h          ResultSet: rows + column names
-    coercion.h            Type coercion rules (dialect-specific)
-    null_semantics.h      Three-valued logic (AND/OR/NOT with NULL)
-    like.h                LIKE pattern matching
-    tag_kind_map.h        Value::Tag ↔ SqlType::Kind mapping
+include/sql_engine/           Engine
+    session.h                  High-level SQL API (parse+plan+optimize+distribute+execute)
+    plan_builder.h  plan_executor.h  dml_plan_builder.h  distributed_planner.h  optimizer.h
+    catalog.h  in_memory_catalog.h  data_source.h  mutable_data_source.h
+    types.h  value.h  row.h  result_set.h  coercion.h  null_semantics.h
+    operators/                 15 operator implementations
+    functions/                 Built-in SQL functions
+    rules/                     Optimizer rules
+    backend_config.h  connection_pool.h  thread_safe_executor.h
+    mysql_remote_executor.{h,cpp}  pgsql_remote_executor.{h,cpp}  multi_remote_executor.h
+    shard_map.h  remote_session.h  remote_query_builder.h  subquery_executor.h
+    transaction_manager.h  local_txn.h  single_backend_txn.h  distributed_txn.h
+    durable_txn_log.h  transaction_recovery.h
+    datetime_parse.h  thread_pool.h  engine_limits.h
 
-    operators/
-        scan_op.h         Table scan from DataSource
-        filter_op.h       WHERE/HAVING predicate evaluation
-        project_op.h      SELECT expression list evaluation
-        join_op.h         Nested-loop join (5 join types)
-        aggregate_op.h    GROUP BY + COUNT/SUM/AVG/MIN/MAX
-        sort_op.h         ORDER BY (in-memory sort)
-        limit_op.h        LIMIT + OFFSET
-        distinct_op.h     Duplicate elimination
-        set_op_op.h       UNION/INTERSECT/EXCEPT
+src/sql_parser/               arena.cpp, parser.cpp
+src/sql_engine/               function_registry.cpp, in_memory_catalog.cpp,
+                              datetime_parse.cpp, mysql_remote_executor.cpp,
+                              pgsql_remote_executor.cpp, multi_remote_executor.cpp
 
-    functions/
-        arithmetic.h      ABS, CEIL, FLOOR, ROUND, MOD, POWER, SQRT, ...
-        comparison.h      COALESCE, NULLIF, IF, IFNULL
-        string.h          UPPER, LOWER, LENGTH, CONCAT, SUBSTRING, TRIM, ...
-        cast.h            CAST type conversion
-
-src/sql_parser/
-    arena.cpp             Arena implementation
-    parser.cpp            Classifier + integration
-
-src/sql_engine/
-    function_registry.cpp Built-in function registration
-    in_memory_catalog.cpp InMemoryCatalog implementation
-
-tools/
-    sqlengine.cpp         Interactive SQL engine CLI tool
-
-tests/                    1,008 unit tests (Google Test)
-bench/                    25 benchmarks (parser + engine + comparison)
+tools/    sqlengine.cpp  mysql_server.cpp  engine_stress_test.cpp  bench_distributed.cpp
+tests/    1,160 Google-Test tests across 50 files
+bench/    bench_parser.cpp  bench_engine.cpp  bench_comparison.cpp
+scripts/  run_benchmarks.sh  run_comparison.sh
+docs/benchmarks/  latest.md  comparison.md  distributed_comparison.md  REPRODUCING.md
 ```
 
 ## Building
 
 ```bash
-# Build library + run tests
-make all
+make all                   # library + tests (debug -O2)
+make lib                   # just libsqlparser.a
 
-# Build and run benchmarks
-make bench
+# Release benchmarks
+sed 's/-g -O2/-O3/' Makefile > /tmp/Makefile.release
+make -f /tmp/Makefile.release bench
 
-# Build comparison benchmarks (requires libpg_query)
+# Comparison vs. libpg_query (requires third_party/libpg_query built)
 cd third_party/libpg_query && make && cd ../..
 make bench-compare
+
+# Full benchmark report (builds release, runs bench + corpora, writes Markdown)
+bash scripts/run_benchmarks.sh report.md
 ```
 
-Requires: `g++` or `clang++` with C++17 support. No external dependencies for the parser itself. Google Test and Google Benchmark are vendored in `third_party/`.
+Requires `g++` or `clang++` with C++17 support. For MySQL/PgSQL backends, `libmysqlclient-dev` and `libpq-dev`. Google Test and Google Benchmark are vendored.
 
 ## License
 
-See [LICENSE](LICENSE) file.
+See [LICENSE](LICENSE).
