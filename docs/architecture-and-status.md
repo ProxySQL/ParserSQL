@@ -18,7 +18,7 @@ This repository is a **production-targeted SQL parsing and distributed query eng
 | **Query engine**         | Functional, growing | ~30   | 15 operators, 13 value tags, ~50 builtins, 3 optimizer rules. Volcano model.           |
 | **Distributed layer**    | Functional          | ~3    | Sharding, scatter/gather, merge-aggregate, merge-sort, distributed DML, SSL, pooling.  |
 | **Transaction layer**    | Functional          | ~3    | 2PC for MySQL (XA) and PostgreSQL (PREPARE TRANSACTION); durable WAL + auto-compaction; recovery. |
-| **Tools / wire server**  | Functional          | n/a   | `sqlengine`, `mysql_server`, `bench_distributed`, `engine_stress_test`, `corpus_test`. |
+| **Tools / wire server**  | Functional          | n/a   | `sqlengine` (see [docs/sqlengine.md](sqlengine.md)), `mysql_server`, `bench_distributed`, `engine_stress_test`, `corpus_test`. |
 
 ### What is in flight (uncommitted in the working tree, 2026-04-17)
 
@@ -660,3 +660,4 @@ The order below reflects the explicit `docs/issues/` priorities and the newest s
 - **`docs/superpowers/specs/`** — historical design specs for parser, type system, evaluator, optimizer, executor, distributed planner, transactions, subqueries, backend connections, and the newest compound-value design.
 - **`docs/superpowers/plans/`** — historical implementation plans matching those specs, plus the two newest (2026-04-15 distributed-2PC-safe-pinning, 2026-04-16 compound-value-support).
 - **`docs/benchmarks/`** — benchmark outputs and reproduction notes.
+- **`docs/sqlengine.md`** — reference for the interactive `sqlengine` CLI: modes, flags, REPL behaviour, recipes for in-memory / single-backend / sharded / SSL / cross-shard JOIN, and what it deliberately does *not* do today.
