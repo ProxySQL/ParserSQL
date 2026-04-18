@@ -446,47 +446,111 @@ TEST_F(JoinOpTest, CrossJoin) {
     join.close();
 }
 
-// Regression tests: RIGHT/FULL joins previously fell through to the INNER
-// code path in JoinOperator and silently returned wrong results. Make sure
-// they now throw a clear runtime_error instead of pretending to work.
-TEST_F(JoinOpTest, RejectsRightJoin) {
+TEST_F(JoinOpTest, RightJoinIncludesUnmatchedRightRows) {
     std::vector<Row> users = {
         build_row(arena, {value_int(1), value_string(arena_str(arena, "A"))}),
+        build_row(arena, {value_int(2), value_string(arena_str(arena, "B"))}),
     };
     std::vector<Row> orders = {
         build_row(arena, {value_int(10), value_int(1)}),
+        build_row(arena, {value_int(11), value_int(99)}),
     };
     InMemoryDataSource ds_users(users_table, users);
     InMemoryDataSource ds_orders(orders_table, orders);
     ScanOperator scan_left(&ds_users);
     ScanOperator scan_right(&ds_orders);
 
+    auto r = parser.parse("SELECT * FROM users RIGHT JOIN orders ON id = user_id", 54);
+    ASSERT_EQ(r.status, ParseResult::OK);
+    PlanBuilder<Dialect::MySQL> builder(catalog, parser.arena());
+    PlanNode* plan = builder.build(r.ast);
+    ASSERT_NE(plan, nullptr);
+
     std::vector<const TableInfo*> lt = {users_table}, rt = {orders_table};
     NestedLoopJoinOperator<Dialect::MySQL> join(
-        &scan_left, &scan_right, JOIN_RIGHT, nullptr,
+        &scan_left, &scan_right, JOIN_RIGHT, plan->join.condition,
         2, 2, catalog, lt, rt, functions, arena);
 
-    EXPECT_THROW(join.open(), std::runtime_error);
+    join.open();
+    Row out{};
+    int row_count = 0;
+    bool found_matched = false;
+    bool found_unmatched_right = false;
+    while (join.next(out)) {
+        row_count++;
+        if (!out.get(0).is_null() && out.get(0).int_val == 1) {
+            found_matched = true;
+            EXPECT_EQ(out.get(2).int_val, 10);
+            EXPECT_EQ(out.get(3).int_val, 1);
+        }
+        if (out.get(2).int_val == 11) {
+            found_unmatched_right = true;
+            EXPECT_TRUE(out.get(0).is_null());
+            EXPECT_TRUE(out.get(1).is_null());
+            EXPECT_EQ(out.get(3).int_val, 99);
+        }
+    }
+    EXPECT_EQ(row_count, 2);
+    EXPECT_TRUE(found_matched);
+    EXPECT_TRUE(found_unmatched_right);
+    join.close();
 }
 
-TEST_F(JoinOpTest, RejectsFullJoin) {
+TEST_F(JoinOpTest, FullJoinIncludesUnmatchedRowsFromBothSides) {
     std::vector<Row> users = {
         build_row(arena, {value_int(1), value_string(arena_str(arena, "A"))}),
+        build_row(arena, {value_int(2), value_string(arena_str(arena, "B"))}),
     };
     std::vector<Row> orders = {
         build_row(arena, {value_int(10), value_int(1)}),
+        build_row(arena, {value_int(11), value_int(99)}),
     };
     InMemoryDataSource ds_users(users_table, users);
     InMemoryDataSource ds_orders(orders_table, orders);
     ScanOperator scan_left(&ds_users);
     ScanOperator scan_right(&ds_orders);
 
+    auto r = parser.parse("SELECT * FROM users FULL JOIN orders ON id = user_id", 53);
+    ASSERT_EQ(r.status, ParseResult::OK);
+    PlanBuilder<Dialect::MySQL> builder(catalog, parser.arena());
+    PlanNode* plan = builder.build(r.ast);
+    ASSERT_NE(plan, nullptr);
+
     std::vector<const TableInfo*> lt = {users_table}, rt = {orders_table};
     NestedLoopJoinOperator<Dialect::MySQL> join(
-        &scan_left, &scan_right, JOIN_FULL, nullptr,
+        &scan_left, &scan_right, JOIN_FULL, plan->join.condition,
         2, 2, catalog, lt, rt, functions, arena);
 
-    EXPECT_THROW(join.open(), std::runtime_error);
+    join.open();
+    Row out{};
+    int row_count = 0;
+    bool found_matched = false;
+    bool found_unmatched_left = false;
+    bool found_unmatched_right = false;
+    while (join.next(out)) {
+        row_count++;
+        if (!out.get(0).is_null() && out.get(0).int_val == 1) {
+            found_matched = true;
+            EXPECT_EQ(out.get(2).int_val, 10);
+            EXPECT_EQ(out.get(3).int_val, 1);
+        }
+        if (!out.get(0).is_null() && out.get(0).int_val == 2) {
+            found_unmatched_left = true;
+            EXPECT_TRUE(out.get(2).is_null());
+            EXPECT_TRUE(out.get(3).is_null());
+        }
+        if (out.get(2).int_val == 11) {
+            found_unmatched_right = true;
+            EXPECT_TRUE(out.get(0).is_null());
+            EXPECT_TRUE(out.get(1).is_null());
+            EXPECT_EQ(out.get(3).int_val, 99);
+        }
+    }
+    EXPECT_EQ(row_count, 3);
+    EXPECT_TRUE(found_matched);
+    EXPECT_TRUE(found_unmatched_left);
+    EXPECT_TRUE(found_unmatched_right);
+    join.close();
 }
 
 // =====================================================================

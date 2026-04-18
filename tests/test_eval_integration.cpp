@@ -206,6 +206,21 @@ TEST_F(EvalIntegrationTest, SelectLengthFunction) {
     EXPECT_EQ(v.int_val, 5);
 }
 
+TEST_F(EvalIntegrationTest, SelectLengthUsesByteCountForUtf8) {
+    auto v = eval_select_mysql("SELECT LENGTH('caf" "\xC3" "\xA9" "')");
+    EXPECT_EQ(v.int_val, 5);
+}
+
+TEST_F(EvalIntegrationTest, SelectCharLengthUsesCodePointCountForUtf8) {
+    auto v = eval_select_mysql("SELECT CHAR_LENGTH('caf" "\xC3" "\xA9" "')");
+    EXPECT_EQ(v.int_val, 4);
+}
+
+TEST_F(EvalIntegrationTest, PgSelectCharLengthUsesCodePointCountForUtf8) {
+    auto v = eval_select_pg("SELECT CHAR_LENGTH('A" "\xF0" "\x9F" "\x98" "\x80" "B')");
+    EXPECT_EQ(v.int_val, 3);
+}
+
 // ===== CASE/WHEN =====
 
 TEST_F(EvalIntegrationTest, SelectSearchedCase) {

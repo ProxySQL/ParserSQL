@@ -26,9 +26,8 @@ public:
     Parser(const Parser&) = delete;
     Parser& operator=(const Parser&) = delete;
 
-    // Parse a SQL string. Returns ParseResult with classification + metadata.
-    // For Tier 1 statements (SELECT, SET), returns PARTIAL until deep parsers
-    // are implemented (future plan).
+    // Parse a SQL string. Returns ParseResult with classification, AST, and
+    // statement metadata when parsing succeeds.
     ParseResult parse(const char* sql, size_t len);
 
     // Reset the arena. Call after each query is fully processed.

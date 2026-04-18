@@ -288,3 +288,57 @@ TEST_F(HashJoinTest, LeftEquiJoin_IncludesUnmatched) {
     }
     EXPECT_TRUE(found_carol) << "Carol should appear in LEFT JOIN results";
 }
+
+TEST_F(HashJoinTest, RightJoinIncludesUnmatchedRightRows) {
+    auto rs = run_query(
+        "SELECT users.id, users.name, orders.order_id, orders.user_id, orders.amount "
+        "FROM users RIGHT JOIN orders ON users.id = orders.user_id");
+
+    EXPECT_EQ(rs.row_count(), 4u);
+
+    bool found_unmatched_order = false;
+    int matched_rows = 0;
+    for (const auto& row : rs.rows) {
+        if (row.get(2).int_val == 104) {
+            found_unmatched_order = true;
+            EXPECT_TRUE(row.get(0).is_null());
+            EXPECT_TRUE(row.get(1).is_null());
+            EXPECT_EQ(row.get(3).int_val, 99);
+            EXPECT_EQ(row.get(4).int_val, 100);
+        } else {
+            matched_rows++;
+        }
+    }
+
+    EXPECT_EQ(matched_rows, 3);
+    EXPECT_TRUE(found_unmatched_order);
+}
+
+TEST_F(HashJoinTest, FullJoinIncludesUnmatchedRowsFromBothSides) {
+    auto rs = run_query(
+        "SELECT users.id, users.name, orders.order_id, orders.user_id, orders.amount "
+        "FROM users FULL JOIN orders ON users.id = orders.user_id");
+
+    EXPECT_EQ(rs.row_count(), 5u);
+
+    bool found_unmatched_user = false;
+    bool found_unmatched_order = false;
+    for (const auto& row : rs.rows) {
+        if (!row.get(0).is_null() && row.get(0).int_val == 3) {
+            found_unmatched_user = true;
+            EXPECT_TRUE(row.get(2).is_null());
+            EXPECT_TRUE(row.get(3).is_null());
+            EXPECT_TRUE(row.get(4).is_null());
+        }
+        if (row.get(2).int_val == 104) {
+            found_unmatched_order = true;
+            EXPECT_TRUE(row.get(0).is_null());
+            EXPECT_TRUE(row.get(1).is_null());
+            EXPECT_EQ(row.get(3).int_val, 99);
+            EXPECT_EQ(row.get(4).int_val, 100);
+        }
+    }
+
+    EXPECT_TRUE(found_unmatched_user);
+    EXPECT_TRUE(found_unmatched_order);
+}

@@ -12,7 +12,8 @@ protected:
 
 TEST_F(MySQLClassifierTest, ClassifySelect) {
     auto r = parser.parse("SELECT * FROM users", 19);
-    // SELECT is Tier 1 — for now returns PARTIAL until deep parser is implemented
+    // Dedicated parser tests validate AST details; classifier tests only need
+    // to confirm statement type routing here.
     EXPECT_EQ(r.stmt_type, StmtType::SELECT);
 }
 

@@ -31,25 +31,26 @@ public:
           functions_(functions), arena_(arena) {}
 
     void open() override {
-        // Only INNER, LEFT and CROSS joins are actually implemented below.
-        // RIGHT/FULL would previously fall through to the INNER code path,
-        // silently producing wrong results. Reject them explicitly instead
-        // of corrupting query answers.
-        if (join_type_ != JOIN_INNER && join_type_ != JOIN_LEFT && join_type_ != JOIN_CROSS) {
+        if (join_type_ != JOIN_INNER &&
+            join_type_ != JOIN_LEFT &&
+            join_type_ != JOIN_RIGHT &&
+            join_type_ != JOIN_FULL &&
+            join_type_ != JOIN_CROSS) {
             throw std::runtime_error(
                 "join type not supported by NestedLoopJoinOperator "
-                "(only INNER, LEFT, CROSS are implemented; "
-                "RIGHT and FULL joins are not yet supported)");
+                "(supported: INNER, LEFT, RIGHT, FULL, CROSS)");
         }
 
         // Materialize right side
         right_->open();
         right_rows_.clear();
+        right_matched_.clear();
         Row r{};
         while (right_->next(r)) {
             // Cap right side to prevent O(n*m) explosion + OOM.
             check_operator_row_limit(right_rows_.size(), kDefaultMaxOperatorRows, "NestedLoopJoinOperator");
             right_rows_.push_back(r);
+            right_matched_.push_back(false);
         }
         right_->close();
 
@@ -58,17 +59,41 @@ public:
         right_idx_ = 0;
         left_matched_ = false;
         left_exhausted_ = false;
+        emitting_unmatched_right_ = false;
+        unmatched_right_idx_ = 0;
     }
 
     bool next(Row& out) override {
         uint16_t total_cols = left_cols_ + right_cols_;
 
         while (true) {
+            if (emitting_unmatched_right_) {
+                while (unmatched_right_idx_ < right_rows_.size()) {
+                    size_t idx = unmatched_right_idx_++;
+                    if (right_matched_[idx]) continue;
+
+                    out = make_row(arena_, total_cols);
+                    for (uint16_t i = 0; i < left_cols_; ++i)
+                        out.set(i, value_null());
+                    for (uint16_t i = 0; i < right_cols_ && i < right_rows_[idx].column_count; ++i)
+                        out.set(left_cols_ + i, right_rows_[idx].get(i));
+                    return true;
+                }
+                return false;
+            }
+
             if (!has_left_row_) {
-                if (left_exhausted_) return false;
+                if (left_exhausted_) {
+                    if (join_type_ == JOIN_RIGHT || join_type_ == JOIN_FULL) {
+                        emitting_unmatched_right_ = true;
+                        unmatched_right_idx_ = 0;
+                        continue;
+                    }
+                    return false;
+                }
                 if (!left_->next(left_row_)) {
                     left_exhausted_ = true;
-                    return false;
+                    continue;
                 }
                 has_left_row_ = true;
                 right_idx_ = 0;
@@ -86,22 +111,23 @@ public:
                 continue;
             }
 
-            // INNER or LEFT join
+            // INNER / LEFT / RIGHT / FULL join
             while (right_idx_ < right_rows_.size()) {
-                const Row& rr = right_rows_[right_idx_];
-                right_idx_++;
+                size_t match_idx = right_idx_++;
+                const Row& rr = right_rows_[match_idx];
 
                 Row combined = combine_rows(left_row_, rr, total_cols);
                 if (!condition_ || eval_condition(combined)) {
                     left_matched_ = true;
+                    right_matched_[match_idx] = true;
                     out = combined;
                     return true;
                 }
             }
 
             // Done scanning right side for this left row
-            if (join_type_ == JOIN_LEFT && !left_matched_) {
-                // Emit left row + NULLs
+            if ((join_type_ == JOIN_LEFT || join_type_ == JOIN_FULL) && !left_matched_) {
+                // Emit left row + NULL right side.
                 out = make_row(arena_, total_cols);
                 for (uint16_t i = 0; i < left_cols_; ++i)
                     out.set(i, left_row_.get(i));
@@ -118,6 +144,7 @@ public:
     void close() override {
         left_->close();
         right_rows_.clear();
+        right_matched_.clear();
     }
 
 private:
@@ -134,11 +161,14 @@ private:
     sql_parser::Arena& arena_;
 
     std::vector<Row> right_rows_;
+    std::vector<bool> right_matched_;
     Row left_row_{};
     bool has_left_row_ = false;
     size_t right_idx_ = 0;
     bool left_matched_ = false;
     bool left_exhausted_ = false;
+    bool emitting_unmatched_right_ = false;
+    size_t unmatched_right_idx_ = 0;
 
     Row combine_rows(const Row& left, const Row& right, uint16_t total_cols) {
         Row out = make_row(arena_, total_cols);
@@ -156,10 +186,17 @@ private:
         all_tables.insert(all_tables.end(), right_tables_.begin(), right_tables_.end());
 
         auto resolver = [this, &combined, &all_tables](sql_parser::StringRef col_name) -> Value {
+            sql_parser::StringRef qualifier{nullptr, 0};
+            sql_parser::StringRef base_name = col_name;
+            bool qualified = split_qualified_name(col_name, qualifier, base_name);
             uint16_t offset = 0;
             for (const auto* table : all_tables) {
                 if (!table) continue;
-                const ColumnInfo* col = catalog_.get_column(table, col_name);
+                if (qualified && !matches_table_qualifier(table, qualifier)) {
+                    offset += table->column_count;
+                    continue;
+                }
+                const ColumnInfo* col = catalog_.get_column(table, base_name);
                 if (col) {
                     uint16_t idx = offset + col->ordinal;
                     if (idx < combined.column_count) return combined.get(idx);
@@ -174,6 +211,30 @@ private:
         if (result.tag == Value::TAG_BOOL) return result.bool_val;
         if (result.tag == Value::TAG_INT64) return result.int_val != 0;
         return true;
+    }
+
+    static bool split_qualified_name(sql_parser::StringRef ref,
+                                     sql_parser::StringRef& qualifier_out,
+                                     sql_parser::StringRef& base_out) {
+        if (!ref.ptr || ref.len == 0) return false;
+        for (uint32_t i = 0; i < ref.len; ++i) {
+            if (ref.ptr[i] == '.') {
+                qualifier_out = sql_parser::StringRef{ref.ptr, i};
+                base_out = sql_parser::StringRef{ref.ptr + i + 1, ref.len - i - 1};
+                return true;
+            }
+        }
+        return false;
+    }
+
+    static bool matches_table_qualifier(const TableInfo* table,
+                                        sql_parser::StringRef qualifier) {
+        if (!table || !qualifier.ptr) return false;
+        if (table->alias.ptr && table->alias.len > 0 &&
+            table->alias.equals_ci(qualifier.ptr, qualifier.len)) {
+            return true;
+        }
+        return table->table_name.equals_ci(qualifier.ptr, qualifier.len);
     }
 };
 
