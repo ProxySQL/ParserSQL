@@ -102,7 +102,15 @@ struct PlanNode {
             const char* backend_name;
             const char* remote_sql;
             uint16_t remote_sql_len;
-            const TableInfo* table;       // expected result schema
+            const TableInfo* table;       // expected result schema (for SELECT *)
+            // Optional projection expressions used to derive result column
+            // names when the remote SQL is not a passthrough SELECT *. When
+            // non-null, build_column_names() prefers these over the table's
+            // catalog columns. Required for aggregate / projected pushdown
+            // to a single-shard backend; otherwise the catalog's table
+            // columns mis-label the result.
+            const sql_parser::AstNode** output_exprs;
+            uint16_t output_expr_count;
         } remote_scan;
 
         // Merge operations for distributed aggregation

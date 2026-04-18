@@ -503,6 +503,26 @@ private:
         node->remote_scan.remote_sql = sql.ptr;
         node->remote_scan.remote_sql_len = static_cast<uint16_t>(sql.len);
         node->remote_scan.table = table;
+        // Caller is responsible for setting output_exprs when the remote SQL
+        // is not a passthrough SELECT *. make_plan_node() already zero-fills
+        // the union, so leaving these unset here means "fall back to the
+        // table's catalog columns".
+        return node;
+    }
+
+    PlanNode* make_remote_scan_with_outputs(
+        const char* backend, sql_parser::StringRef sql, const TableInfo* table,
+        const std::vector<const sql_parser::AstNode*>& output_exprs)
+    {
+        PlanNode* node = make_remote_scan(backend, sql, table);
+        if (!output_exprs.empty()) {
+            uint16_t n = static_cast<uint16_t>(output_exprs.size());
+            auto** arr = static_cast<const sql_parser::AstNode**>(
+                arena_.allocate(sizeof(sql_parser::AstNode*) * n));
+            for (uint16_t i = 0; i < n; ++i) arr[i] = output_exprs[i];
+            node->remote_scan.output_exprs = arr;
+            node->remote_scan.output_expr_count = n;
+        }
         return node;
     }
 
@@ -624,7 +644,12 @@ private:
             projs.data(), static_cast<uint16_t>(projs.size()),
             gb.data(), static_cast<uint16_t>(gb.size()),
             nullptr, nullptr, 0, -1, false);
-        return make_remote_scan(backend, sql, table);
+        // Carry the projection expressions on the REMOTE_SCAN so the result
+        // schema picks them up instead of mis-labelling with the source
+        // table's catalog columns. Without this, "SELECT COUNT(*) FROM users"
+        // against a single-shard config renders as the table's first
+        // column ("id") rather than the aggregate.
+        return make_remote_scan_with_outputs(backend, sql, table, projs);
     }
 
     void decompose_aggregate(const sql_parser::AstNode* expr,

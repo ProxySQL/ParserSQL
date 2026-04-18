@@ -4,11 +4,14 @@
 #include "sql_engine/row.h"
 #include <vector>
 #include <deque>
+#include <memory>
 #include <string>
 #include <algorithm>
 #include <utility>
 
 namespace sql_engine {
+
+class Operator;  // forward decl — ResultSet may extend operator lifetime
 
 struct ResultSet {
     std::vector<Row> rows;
@@ -30,6 +33,16 @@ struct ResultSet {
     // existing elements on push_back, so pointers stay valid.
     std::deque<std::string> owned_strings;
 
+    // Operators that produced rows in this ResultSet may own heap or
+    // arena storage that the rows' Value* / StringRef pointers reference
+    // (notably RemoteScanOperator's internal ResultSet returned from a
+    // remote backend). Without keeping those operators alive past
+    // PlanExecutor's stack scope, rows would dangle the moment
+    // execute_query returned. Keeping them as opaque shared_ptr<void>
+    // here avoids a circular include with operator.h while still
+    // extending their lifetime to match this ResultSet.
+    std::vector<std::shared_ptr<void>> backing_lifetimes;
+
     ResultSet() = default;
     ~ResultSet() {
         for (auto* arr : owned_value_arrays) ::operator delete(arr);
@@ -41,7 +54,8 @@ struct ResultSet {
           column_names(std::move(o.column_names)),
           column_count(o.column_count),
           owned_value_arrays(std::move(o.owned_value_arrays)),
-          owned_strings(std::move(o.owned_strings)) {
+          owned_strings(std::move(o.owned_strings)),
+          backing_lifetimes(std::move(o.backing_lifetimes)) {
         o.column_count = 0;
     }
 
@@ -53,6 +67,7 @@ struct ResultSet {
             column_count = o.column_count;
             owned_value_arrays = std::move(o.owned_value_arrays);
             owned_strings = std::move(o.owned_strings);
+            backing_lifetimes = std::move(o.backing_lifetimes);
             o.column_count = 0;
         }
         return *this;

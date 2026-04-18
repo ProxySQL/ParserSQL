@@ -595,8 +595,8 @@ Source: `docs/issues/README.md`. Status reflects the working tree on 2026-04-17.
    *New module `tool_config_parser.{h,cpp}`. Replaces ~135 lines of duplication in each of `sqlengine`, `mysql_server`, `bench_distributed`, `engine_stress_test`, plus `tests/test_ssl_config.cpp`.*
 4. **[04] Close join execution coverage gaps** — 🟦 in working tree.
    *`NestedLoopJoinOperator` now executes RIGHT and FULL outer joins (with right-row match tracking) and resolves qualified column names in join conditions.*
-8. **[08] Aggregate projection schema wrong in single-shard mode** — 📋 open. Surfaced 2026-04-18 by `scripts/test_sqlengine.sh single`.
-   *`SELECT COUNT(*)` / `SELECT SUM(salary)` against a 1-shard config show catalog table columns as headers and put the aggregate value in the wrong slot. Two-shard mode is unaffected.*
+8. **[08] Aggregate projection schema wrong in single-shard mode** — ✅ resolved 2026-04-18.
+   *Two stacked bugs. (a) `make_unsharded_aggregate` returned a bare `REMOTE_SCAN` whose `build_column_names` defaulted to the source table's columns; fixed by adding `output_exprs` to the remote-scan plan node. (b) After (a), values still rendered as `?` because `RemoteScanOperator`'s heap-owned storage died with the stack-local `PlanExecutor` while the returned rows still pointed into it; fixed by adding `backing_lifetimes` to `ResultSet` so operators outlive the executor's stack frame.*
 
 ### P2 — deferred
 

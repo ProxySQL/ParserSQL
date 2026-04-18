@@ -270,6 +270,29 @@ public:
         }
         root->close();
 
+        // Extend operator lifetimes to match the returned ResultSet.
+        // PlanExecutor is typically a stack-local in Session::execute_query,
+        // so without this every operator would die when the executor goes
+        // out of scope -- taking with it any heap storage that the rows'
+        // Value* / StringRef pointers reference. RemoteScanOperator is the
+        // canonical case: its rows live inside an internal ResultSet
+        // returned from a remote backend, owned by the operator. Bare
+        // single-shard REMOTE_SCAN paths (e.g. SELECT COUNT(*) FROM t
+        // against a one-backend "shard") have no local operator above
+        // them to copy values into the executor's arena, so without
+        // lifetime extension the caller sees garbage tag values rendered
+        // as "?" and zero-overwritten string starts.
+        for (auto& op : operators_) {
+            if (op) {
+                Operator* raw = op.release();
+                rs.backing_lifetimes.emplace_back(
+                    std::shared_ptr<void>(raw, [](void* p) {
+                        delete static_cast<Operator*>(p);
+                    }));
+            }
+        }
+        operators_.clear();
+
         if (!rs.rows.empty()) {
             rs.column_count = rs.rows[0].column_count;
         }
@@ -1203,7 +1226,27 @@ private:
                 break;
             }
             case PlanNodeType::REMOTE_SCAN: {
-                if (plan->remote_scan.table) {
+                // Prefer the projection expressions the planner attached
+                // (set by make_remote_scan_with_outputs for aggregate or
+                // projected pushdown). Fall back to the table's catalog
+                // columns only for SELECT * passthrough.
+                if (plan->remote_scan.output_exprs &&
+                    plan->remote_scan.output_expr_count > 0) {
+                    for (uint16_t i = 0; i < plan->remote_scan.output_expr_count; ++i) {
+                        const sql_parser::AstNode* expr = plan->remote_scan.output_exprs[i];
+                        if (expr) {
+                            sql_parser::Emitter<D> emitter(arena_);
+                            emitter.emit(expr);
+                            sql_parser::StringRef ev = emitter.result();
+                            if (ev.ptr && ev.len > 0)
+                                rs.column_names.emplace_back(ev.ptr, ev.len);
+                            else
+                                rs.column_names.push_back("?column?");
+                        } else {
+                            rs.column_names.push_back("?column?");
+                        }
+                    }
+                } else if (plan->remote_scan.table) {
                     for (uint16_t i = 0; i < plan->remote_scan.table->column_count; ++i) {
                         auto& cn = plan->remote_scan.table->columns[i].name;
                         rs.column_names.emplace_back(cn.ptr, cn.len);

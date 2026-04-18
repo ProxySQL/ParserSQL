@@ -6,7 +6,7 @@
 
 ## Status
 
-Open. Surfaced by `scripts/test_sqlengine.sh single` on 2026-04-18.
+Resolved 2026-04-18.
 
 ## Problem
 
@@ -91,7 +91,54 @@ Worth checking which shard-count branch in `distribute_node` runs when there is 
 docker rm -f parsersql-single 2>/dev/null
 ./scripts/setup_single_backend.sh
 make build-sqlengine
-./scripts/test_sqlengine.sh single   # expect 10/10
-make test                            # full unit suite
-./scripts/test_sqlengine.sh all      # expect all-green
+./scripts/test_sqlengine.sh single   # 10/10
+./scripts/test_sqlengine.sh all      # 34/34
 ```
+
+## Resolution Notes
+
+The single bug surfaced by the test was actually two bugs stacked.
+
+### Bug A — wrong column headers (schema)
+
+`make_unsharded_aggregate` in `distributed_planner.h` builds a remote SQL like `SELECT COUNT(*) FROM users`, sends it to the one backend, and returns a bare `REMOTE_SCAN` plan node tagged with the source `users` table. `build_column_names` in `plan_executor.h` saw the `REMOTE_SCAN` and emitted *all of* `users.columns[]` (`id, name, age, dept, salary`) as the result schema. The user saw `id` where the result was actually `COUNT(*)`.
+
+The multi-shard path dodged this because its `MERGE_AGGREGATE` node carried explicit `output_exprs` and had its own `build_column_names` case that used them. The 1-shard path had no equivalent.
+
+**Fix:**
+
+- Added optional `output_exprs` + `output_expr_count` fields to `PlanNode::remote_scan` (mirroring the same fields on `merge_aggregate`).
+- New helper `make_remote_scan_with_outputs(...)` in `distributed_planner.h` populates them.
+- `make_unsharded_aggregate` now uses the new helper, attaching the projection list (`group_by + agg_exprs`) to the REMOTE_SCAN.
+- `build_column_names(REMOTE_SCAN)` prefers the `output_exprs` (rendered through `Emitter`) when present, and falls back to the table's catalog columns only for `SELECT *` passthrough.
+
+### Bug B — `?` rendered values (use-after-free)
+
+After bug A was fixed and headers became correct, every aggregate value still rendered as `?`. Tracing showed `Value::tag = 58` arriving at the renderer — a value far outside the enum range, i.e. uninitialized memory.
+
+`PlanExecutor` is a stack-local in `Session::execute_query`. When it goes out of scope, every operator in `operators_` is destroyed. `RemoteScanOperator` owns an internal `ResultSet` (returned from `RemoteExecutor::execute`) which heap-owns the `Value` arrays the rows point into. When the operator died, those arrays were freed; the outer `ResultSet` returned to the caller had `rows[i].values` pointing at freed memory.
+
+The bug is invisible for any query whose plan tree wraps the `REMOTE_SCAN` in a local operator that re-allocates rows in the executor's arena (PROJECT, MERGE_AGGREGATE, etc.). The 1-shard aggregate path is the one shape that yields rows directly from a `REMOTE_SCAN` to the caller — that's why issue 08 only surfaced there.
+
+A first attempt moved heap arrays and strings out of the operator's `ResultSet` into the outer `ResultSet`. That worked for value arrays but corrupted SSO `std::string` content (every string lost its first byte) because `StringRef`s captured into the source string's inline buffer became dangling after the move.
+
+**Fix that worked:** keep the operators themselves alive as long as the returned `ResultSet`. A new `std::vector<std::shared_ptr<void>> backing_lifetimes` on `ResultSet` holds type-erased ownership of operators released from `PlanExecutor::operators_`. The operators (and all storage they own — heap arrays, the `owned_strings` deque, the inner `ResultSet`) survive until the caller is done with the `ResultSet`. Pointers stay valid; nothing moves.
+
+## Test Coverage
+
+- `scripts/test_sqlengine.sh single` — 10/10 with the fix; the two failing assertions (`single: total user count` finds `10` for `SELECT COUNT(*) FROM users`; `single: SUM(salary) Engineering = 530000` finds the value) now pass.
+- `scripts/test_sqlengine.sh all` — 34/34.
+
+The shell suite is the regression guard. Anyone who reintroduces either bug will see it fail loudly within seconds of running `make test-sqlengine-single`.
+
+## Files Touched
+
+- `include/sql_engine/plan_node.h` — `remote_scan.output_exprs` + `output_expr_count`.
+- `include/sql_engine/distributed_planner.h` — `make_remote_scan_with_outputs`; `make_unsharded_aggregate` uses it.
+- `include/sql_engine/plan_executor.h` — `build_column_names(REMOTE_SCAN)` honours `output_exprs`; `execute()` releases operators into `rs.backing_lifetimes`.
+- `include/sql_engine/result_set.h` — `backing_lifetimes` field; move ctor / move assignment carry it.
+
+## Future Work
+
+- Consider extending `output_exprs` to *every* `REMOTE_SCAN` produced by the planner, including projected (non-aggregate) pushdown, so the renderer can emit better column headers across the board (e.g. `name` instead of catalog ordinal-0).
+- Audit other places where rows might be returned from operator-local heap storage without lifetime extension. `SCAN` against a `MutableDataSource` that returns owned strings could have a similar shape.

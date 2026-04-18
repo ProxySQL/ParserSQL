@@ -14,7 +14,7 @@ This directory is the local working backlog for implementation gaps identified f
 2. [Make 2PC phase timeouts deterministic rather than best-effort](02-distributed-2pc-deterministic-phase-timeouts.md) — implemented in current working tree
 3. [Extract shared backend and shard configuration parsing](03-shared-backend-config-parsing.md) — implemented in current working tree
 4. [Close join execution coverage gaps or reject unsupported joins earlier](04-join-operator-coverage.md) — implemented in current working tree
-8. [Aggregate projection schema wrong in single-shard mode](08-aggregate-projection-schema-single-shard.md) — open; surfaced 2026-04-18 by `scripts/test_sqlengine.sh single`
+8. [Aggregate projection schema wrong in single-shard mode](08-aggregate-projection-schema-single-shard.md) — resolved 2026-04-18 (REMOTE_SCAN.output_exprs + ResultSet.backing_lifetimes; surfaced two stacked bugs: schema and use-after-free)
 
 ### P2
 
