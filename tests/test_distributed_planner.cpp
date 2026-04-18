@@ -805,15 +805,18 @@ TEST_F(DistributedPlannerTest, ShardRouting_NoShardKey_AllShards) {
 }
 
 TEST_F(DistributedPlannerTest, ShardRouting_Correctness) {
-    // The shard routing uses hash(id) % num_shards to pick a shard,
-    // but the test fixture uses sequential partitioning (ids 1-5 on shard_1,
-    // 6-10 on shard_2, 11-15 on shard_3).  To verify correctness, find a
-    // value whose hash maps to the shard that actually holds it.
+    // The shard routing uses FNV-1a 64-bit hash of the key % num_shards
+    // to pick a shard, but the test fixture uses sequential partitioning
+    // (ids 1-5 on shard_1, 6-10 on shard_2, 11-15 on shard_3). To verify
+    // correctness we need a key whose hash routes to the shard that
+    // actually holds it.
     //
-    // hash(3) % 3 == 0 => routes to shard_1 (index 0), which holds ids 1-5.
-    // So "WHERE id = 3" should route to shard_1 and find the row.
-    auto dist_rs = execute_distributed("SELECT * FROM users WHERE id = 3");
-    auto local_rs = execute_local("SELECT * FROM users WHERE id = 3");
+    // FNV-1a(4) % 3 == 0 => routes to shard_1 (index 0), which holds
+    // ids 1-5. So "WHERE id = 4" routes to shard_1 and finds Diana.
+    // (Until issue 09 landed this test used id=3, which worked with the
+    // old std::hash<int64_t>=identity but not with FNV-1a.)
+    auto dist_rs = execute_distributed("SELECT * FROM users WHERE id = 4");
+    auto local_rs = execute_local("SELECT * FROM users WHERE id = 4");
 
     EXPECT_EQ(local_rs.row_count(), 1u);
     EXPECT_EQ(dist_rs.row_count(), 1u);
