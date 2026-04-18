@@ -111,6 +111,7 @@ public:
             // Not a CTE, build plan normally
             PlanBuilder<D> builder(catalog_, arena_);
             PlanNode* plan = builder.build(ast);
+            if (plan && distribute_fn_) plan = distribute_fn_(plan);
             return execute(plan);
         }
 
@@ -127,6 +128,10 @@ public:
             PlanBuilder<D> cte_builder(catalog_, arena_);
             PlanNode* cte_plan = cte_builder.build(inner_select);
             if (!cte_plan) continue;
+            // Apply distributed planning to the CTE definition's inner
+            // SELECT so a CTE that scans a sharded table still materialises
+            // correctly. The materialised CTE rows live locally afterwards.
+            if (distribute_fn_) cte_plan = distribute_fn_(cte_plan);
 
             ResultSet cte_rs = execute(cte_plan);
 
@@ -242,6 +247,11 @@ public:
 
         PlanBuilder<D> builder(catalog_, arena_);
         PlanNode* plan = builder.build(main_query);
+        // The main query may itself reference sharded tables; distribute
+        // it the same way Session::execute_query would for a non-CTE
+        // SELECT. Materialised CTEs registered above show up as local
+        // data sources, so the distributor leaves them alone.
+        if (plan && distribute_fn_) plan = distribute_fn_(plan);
         ResultSet result = execute(plan);
 
         // CTE sources are kept alive by cte_sources until we return

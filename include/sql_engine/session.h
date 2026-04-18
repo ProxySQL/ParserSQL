@@ -105,6 +105,20 @@ public:
             return {};
         }
 
+        // CTE queries route through PlanExecutor::execute_with_cte so the
+        // WITH clause's CTE definitions are materialized into in-memory
+        // data sources before the main SELECT runs. We deliberately do
+        // NOT cache CTE plans: build_cte() produces only the main SELECT
+        // plan with no CTE materialization, so a cache hit would silently
+        // return wrong results. Per issue 07's "intentionally limited"
+        // scope, CTEs re-parse + re-materialize on every call. Recursive
+        // CTEs are still out of scope.
+        if (pr.ast->type == sql_parser::NodeType::NODE_CTE) {
+            PlanExecutor<D> executor(functions_, catalog_, cached_parser->arena());
+            wire_executor(executor);
+            return executor.execute_with_cte(pr.ast);
+        }
+
         PlanBuilder<D> builder(catalog_, cached_parser->arena());
         PlanNode* plan = builder.build(pr.ast);
         if (!plan) return {};

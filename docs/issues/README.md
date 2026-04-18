@@ -20,7 +20,7 @@ This directory is the local working backlog for implementation gaps identified f
 
 5. [Tighten expression and type semantics](05-expression-and-type-semantics.md) — partial; arrays/tuples/field-access landed (commit a90d147), CHAR_LENGTH UTF-8 + PostgreSQL string casts landed (commit 9f090e5); non-literal arrays through planner, decimal int128, broader decimal semantics still open
 6. [Close parser gaps around MySQL `SELECT ... INTO` and recursive CTE handling](06-parser-gaps-select-into-and-recursive-cte.md)
-7. [Integrate CTE handling into the main `Session` query path](07-session-cte-integration.md)
+7. [Integrate CTE handling into the main `Session` query path](07-session-cte-integration.md) — resolved 2026-04-18
 
 ## Notes
 

@@ -551,3 +551,46 @@ TEST(SessionAutoEnlistment, ScatterDmlRoutedThroughRouteDml) {
 
     txn_mgr.rollback();
 }
+
+// ===== CTE via the user API (issue 07) =====
+
+// Simple WITH clause executed through Session::execute_query — same SQL
+// that previously only worked through PlanExecutor::execute_with_cte.
+TEST_F(SessionTest, CteSimple) {
+    auto rs = session->execute_query(
+        "WITH adults AS (SELECT * FROM users WHERE age >= 25) SELECT * FROM adults");
+    // Both rows in the fixture are >= 25 (Alice 25, Bob 30).
+    EXPECT_EQ(rs.row_count(), 2u);
+}
+
+// CTE with aggregation; the inner SELECT runs first, materialises into
+// the catalog as a synthetic table, then the outer SELECT filters it.
+TEST_F(SessionTest, CteWithAggregation) {
+    // Insert one more row so the GROUP BY has multiple groups.
+    session->execute_statement("INSERT INTO users (id, name, age) VALUES (3, 'Carol', 30)");
+    auto rs = session->execute_query(
+        "WITH age_groups AS ("
+        "  SELECT age, COUNT(*) AS cnt FROM users GROUP BY age"
+        ") SELECT * FROM age_groups WHERE cnt > 1");
+    // age=30 has 2 users (Bob, Carol); age=25 has 1 user (Alice).
+    EXPECT_EQ(rs.row_count(), 1u);
+}
+
+// Multiple CTE definitions, only one consumed by the main SELECT.
+TEST_F(SessionTest, CteMultipleDefinitions) {
+    auto rs = session->execute_query(
+        "WITH young AS (SELECT * FROM users WHERE age < 30), "
+        "     senior AS (SELECT * FROM users WHERE age >= 30) "
+        "SELECT * FROM senior");
+    // Only Bob (age 30) is senior.
+    EXPECT_EQ(rs.row_count(), 1u);
+}
+
+// CTE result then filtered by an outer WHERE.
+TEST_F(SessionTest, CteFilteredAfterMaterialisation) {
+    auto rs = session->execute_query(
+        "WITH all_users AS (SELECT name, age FROM users) "
+        "SELECT * FROM all_users WHERE age >= 30");
+    EXPECT_EQ(rs.row_count(), 1u);
+    EXPECT_EQ(rs.rows[0].get(0).tag, Value::TAG_STRING);
+}
