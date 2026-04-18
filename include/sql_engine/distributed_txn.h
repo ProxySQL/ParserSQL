@@ -56,24 +56,23 @@ public:
     // continues (caller might prefer availability over durability).
     void set_require_durable_log(bool required) { require_durable_log_ = required; }
 
-    // Set a tight per-phase statement timeout (in milliseconds). When > 0,
-    // the manager issues a SET SESSION max_execution_time (MySQL) or
-    // SET LOCAL statement_timeout (PostgreSQL) on each participant BEFORE
-    // phase 1 (XA PREPARE / PREPARE TRANSACTION) and again before phase 2
-    // (XA COMMIT / COMMIT PREPARED). This is independent of the backend
-    // connection's default read/write timeout -- use it to bound 2PC
-    // specifically without affecting other queries.
+    // Set a tight per-phase statement timeout (in milliseconds).
     //
-    // 0 (default) means "don't override", fall back to whatever the
-    // backend connection's read/write timeout provides.
+    // PostgreSQL:
+    //   Before PREPARE TRANSACTION and COMMIT/ROLLBACK PREPARED, the manager
+    //   issues SET statement_timeout = <ms> on the participant session
+    //   immediately before the phase SQL. This gives a deterministic
+    //   session-level timeout on the same connection used for the phase
+    //   statement.
     //
-    // NOTE: because ThreadSafeMultiRemoteExecutor may hand us a different
-    // pooled connection for each execute_dml call, the SET must be issued
-    // immediately before the statement whose timeout it bounds. We do
-    // that by concatenating them with "; " when multi-statement is
-    // supported, OR by issuing two separate execute_dml calls and
-    // tolerating that the second one may not actually have the timeout
-    // in effect (best-effort). For the MVP we use the two-call approach.
+    // MySQL:
+    //   XA control statements are not bounded by max_execution_time, so we do
+    //   not emit a misleading per-phase SQL timeout. MySQL protection comes
+    //   from the connection read/write timeouts configured on the executor.
+    //
+    // 0 (default) means "don't override". PostgreSQL then falls back to the
+    // backend/session defaults, and MySQL continues to rely on connection
+    // read/write timeouts only.
     void set_phase_statement_timeout_ms(uint32_t ms) {
         phase_statement_timeout_ms_ = ms;
     }
@@ -108,14 +107,8 @@ public:
         if (started_.count(name)) return true;  // already enlisted
 
         // Acquire a pinned session. If the executor doesn't support
-        // pinning (returns nullptr), fall back to the unpinned path:
-        // BEGIN/XA START goes through execute_dml and subsequent phase
-        // calls will also use execute_dml. That mode is only correct
-        // for executors that aren't pool-based (e.g. the mock used in
-        // tests OR a non-thread-safe MySQLRemoteExecutor that holds one
-        // connection per backend). ThreadSafeMultiRemoteExecutor DOES
-        // implement checkout_session so the pinning path is taken for
-        // real workloads.
+        // pinning (returns nullptr), only executors that explicitly
+        // declare unpinned 2PC safe are allowed to use the legacy path.
         std::unique_ptr<RemoteSession> session = executor_.checkout_session(backend_name);
 
         bool ok = false;
@@ -127,9 +120,6 @@ public:
             } else {
                 sql = "BEGIN";
             }
-            if (phase_statement_timeout_ms_ > 0) {
-                session->execute_dml(make_timeout_stringref());
-            }
             DmlResult r = session->execute_dml(
                 sql_parser::StringRef{sql.c_str(),
                     static_cast<uint32_t>(sql.size())});
@@ -138,10 +128,11 @@ public:
                 sessions_[name] = std::move(session);
             }
         } else {
-            // Unpinned fallback: executor doesn't support sessions.
-            // Use the legacy path, which works with mock executors and
-            // single-connection executors but is broken for pooled
-            // real-backend 2PC.
+            // Unpinned fallback is valid only for executors that
+            // explicitly guarantee one durable connection per backend.
+            if (!executor_.allows_unpinned_distributed_2pc()) {
+                return false;
+            }
             if (dialect_ == BackendDialect::MYSQL) {
                 std::string sql = "XA START '" + txn_id_ + "'";
                 ok = send_sql(backend_name, sql);
@@ -183,7 +174,7 @@ public:
         if (it != sessions_.end() && it->second) {
             return it->second->execute_dml(sql);
         }
-        // Fallback: unpinned mode. Use the legacy path.
+        // Legacy-safe single-connection fallback.
         return executor_.execute_dml(backend_name, sql);
     }
 
@@ -288,28 +279,6 @@ private:
     // Auto-compaction: count completions, fire compact when counter hits threshold.
     uint32_t auto_compact_threshold_ = 0;
     uint32_t completions_since_compact_ = 0;
-
-    // Best-effort: set a per-session statement timeout on a backend before
-    // issuing a phase-1 or phase-2 SQL. Returns true if the SET succeeded
-    // OR if no timeout is configured; false only if the SET itself fails
-    // and the caller asked for a real timeout (in which case the caller
-    // may want to abort rather than risk an unbounded hang).
-    bool maybe_set_statement_timeout(const char* backend) {
-        if (phase_statement_timeout_ms_ == 0) return true;
-        std::string sql;
-        if (dialect_ == BackendDialect::MYSQL) {
-            // MySQL 5.7.4+: max_execution_time is in milliseconds and
-            // only bounds SELECTs. For DML and XA commands, the client
-            // read_timeout is our real protection. We still set this for
-            // SELECTs that might be issued between phases.
-            sql = "SET SESSION max_execution_time = " +
-                  std::to_string(phase_statement_timeout_ms_);
-        } else {
-            sql = "SET LOCAL statement_timeout = " +
-                  std::to_string(phase_statement_timeout_ms_);
-        }
-        return send_sql(backend, sql);
-    }
 
     // Write the phase-2 decision to the durable log before dispatching.
     // Returns true if the commit/rollback can proceed:
@@ -475,35 +444,17 @@ private:
         return send_sql(participant.c_str(), sql);
     }
 
-    // Same as maybe_set_statement_timeout but for a participant -- routes
-    // through the pinned session when available.
+    // Set a participant-scoped phase timeout immediately before the phase SQL.
+    // PostgreSQL gets a real session-level statement_timeout on the same
+    // connection. MySQL returns true without emitting SQL because XA control
+    // statements are bounded by connection read/write timeouts, not by
+    // max_execution_time.
     bool maybe_set_statement_timeout_participant(const std::string& participant) {
         if (phase_statement_timeout_ms_ == 0) return true;
-        std::string sql;
-        if (dialect_ == BackendDialect::MYSQL) {
-            sql = "SET SESSION max_execution_time = " +
-                  std::to_string(phase_statement_timeout_ms_);
-        } else {
-            sql = "SET LOCAL statement_timeout = " +
-                  std::to_string(phase_statement_timeout_ms_);
-        }
+        if (dialect_ == BackendDialect::MYSQL) return true;
+        std::string sql = "SET statement_timeout = " +
+                          std::to_string(phase_statement_timeout_ms_);
         return send_sql_participant(participant, sql);
-    }
-
-    // For passing a StringRef to session->execute_dml in enlist_backend.
-    // We only need this temporarily inside enlist_backend, so a thread-
-    // local buffer is fine.
-    sql_parser::StringRef make_timeout_stringref() {
-        static thread_local std::string buf;
-        if (dialect_ == BackendDialect::MYSQL) {
-            buf = "SET SESSION max_execution_time = " +
-                  std::to_string(phase_statement_timeout_ms_);
-        } else {
-            buf = "SET LOCAL statement_timeout = " +
-                  std::to_string(phase_statement_timeout_ms_);
-        }
-        return sql_parser::StringRef{buf.c_str(),
-            static_cast<uint32_t>(buf.size())};
     }
 };
 

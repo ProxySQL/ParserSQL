@@ -41,10 +41,8 @@ static bool mysql_available() {
 // through the SAME physical connection (which is what MySQL XA and
 // PostgreSQL PREPARE TRANSACTION require).
 //
-// When enable_sessions_ is false, checkout_session returns nullptr and
-// the transaction manager falls back to the unpinned execute_dml path,
-// matching the old behavior. Existing tests that only care about
-// call-history semantics still work.
+// When enable_sessions_ is false, checkout_session returns nullptr.
+// Tests must explicitly opt into the legacy unpinned fallback path.
 class MockDistributedExecutor : public RemoteExecutor {
 public:
     ResultSet execute(const char* /*backend_name*/, StringRef /*sql*/) override {
@@ -62,6 +60,10 @@ public:
         if (!enable_sessions_) return nullptr;
         int sid = next_session_id_++;
         return std::unique_ptr<RemoteSession>(new MockSession(*this, backend_name, sid));
+    }
+
+    bool allows_unpinned_distributed_2pc() const override {
+        return allow_unpinned_2pc_;
     }
 
     // Legacy call recorder. session_id == -1 means "unpinned call".
@@ -118,6 +120,7 @@ public:
     }
 
     void set_sessions_enabled(bool enabled) { enable_sessions_ = enabled; }
+    void set_allow_unpinned_2pc(bool allowed) { allow_unpinned_2pc_ = allowed; }
 
     void clear() {
         history_.clear();
@@ -154,6 +157,7 @@ private:
     std::unordered_map<std::string, int> last_session_for_backend_;
     int next_session_id_ = 0;
     bool enable_sessions_ = true;
+    bool allow_unpinned_2pc_ = false;
 };
 
 // Basic 2PC flow: begin, enlist two backends, commit
@@ -740,7 +744,7 @@ TEST(DistributedTxnWal, RollbackRecordsDecision) {
 // Phase-level statement timeout
 // =====================================================================
 
-TEST(DistributedTxnTimeout, IssuesSetSessionBeforeEachPhaseSqlMysql) {
+TEST(DistributedTxnTimeout, MysqlDoesNotEmitMisleadingMaxExecutionTimeForXaPhases) {
     MockDistributedExecutor mock;
     DistributedTransactionManager txn(mock);
     txn.set_phase_statement_timeout_ms(5000);  // 5 second phase timeout
@@ -749,20 +753,13 @@ TEST(DistributedTxnTimeout, IssuesSetSessionBeforeEachPhaseSqlMysql) {
     txn.enlist_backend("mysql_1");
     txn.commit();
 
-    // The phase timeout should result in a SET SESSION max_execution_time
-    // being issued immediately before the phase-1 XA END (and again
-    // before phase-2 XA COMMIT). Check the history.
+    // MySQL's max_execution_time does not apply to XA control statements,
+    // so the coordinator should not emit it as if it bounded phase 1/2.
     const auto& h1 = mock.backend_history("mysql_1");
-    bool saw_timeout_set = false;
     for (const auto& s : h1) {
-        if (s.find("max_execution_time") != std::string::npos &&
-            s.find("5000") != std::string::npos) {
-            saw_timeout_set = true;
-            break;
-        }
+        EXPECT_EQ(s.find("max_execution_time"), std::string::npos)
+            << "unexpected SET SESSION max_execution_time for XA phase SQL: " << s;
     }
-    EXPECT_TRUE(saw_timeout_set)
-        << "expected SET SESSION max_execution_time = 5000 before phase 1/2 SQL";
 }
 
 TEST(DistributedTxnTimeout, NoTimeoutByDefault) {
@@ -782,7 +779,7 @@ TEST(DistributedTxnTimeout, NoTimeoutByDefault) {
     }
 }
 
-TEST(DistributedTxnTimeout, PostgreSqlUsesStatementTimeout) {
+TEST(DistributedTxnTimeout, PostgreSqlUsesSessionStatementTimeoutBeforePrepareAndCommitPrepared) {
     MockDistributedExecutor mock;
     DistributedTransactionManager txn(
         mock, DistributedTransactionManager::BackendDialect::POSTGRESQL);
@@ -793,16 +790,36 @@ TEST(DistributedTxnTimeout, PostgreSqlUsesStatementTimeout) {
     txn.commit();
 
     const auto& h1 = mock.backend_history("pg_1");
-    bool saw_timeout_set = false;
-    for (const auto& s : h1) {
-        if (s.find("statement_timeout") != std::string::npos &&
-            s.find("10000") != std::string::npos) {
-            saw_timeout_set = true;
-            break;
+    ASSERT_GE(h1.size(), 4u);
+
+    EXPECT_TRUE(h1[0].find("BEGIN") != std::string::npos)
+        << "expected enlistment to begin with BEGIN, got: " << h1[0];
+
+    bool saw_prepare_timeout_pair = false;
+    bool saw_commit_timeout_pair = false;
+    int timeout_set_count = 0;
+
+    for (size_t i = 0; i < h1.size(); ++i) {
+        if (h1[i].find("SET statement_timeout = 10000") != std::string::npos) {
+            timeout_set_count++;
+            if (i + 1 < h1.size() &&
+                h1[i + 1].find("PREPARE TRANSACTION") != std::string::npos) {
+                saw_prepare_timeout_pair = true;
+            }
+            if (i + 1 < h1.size() &&
+                h1[i + 1].find("COMMIT PREPARED") != std::string::npos) {
+                saw_commit_timeout_pair = true;
+            }
         }
+        EXPECT_EQ(h1[i].find("SET LOCAL statement_timeout"), std::string::npos)
+            << "unexpected SET LOCAL statement_timeout in 2PC path: " << h1[i];
     }
-    EXPECT_TRUE(saw_timeout_set)
-        << "expected SET LOCAL statement_timeout = 10000 before phase 1/2 SQL";
+
+    EXPECT_TRUE(saw_prepare_timeout_pair)
+        << "expected SET statement_timeout = 10000 immediately before PREPARE TRANSACTION";
+    EXPECT_TRUE(saw_commit_timeout_pair)
+        << "expected SET statement_timeout = 10000 immediately before COMMIT PREPARED";
+    EXPECT_GE(timeout_set_count, 2);
 }
 
 // =====================================================================
@@ -1146,6 +1163,7 @@ TEST(DistributedTxnPinning, UnpinnedFallbackStillWorks) {
     // support and running the basic 2PC flow.
     MockDistributedExecutor mock;
     mock.set_sessions_enabled(false);
+    mock.set_allow_unpinned_2pc(true);
     DistributedTransactionManager txn(mock);
 
     txn.begin();
@@ -1168,6 +1186,15 @@ TEST(DistributedTxnPinning, UnpinnedFallbackStillWorks) {
     EXPECT_EQ(end_count,     1);
     EXPECT_EQ(prepare_count, 1);
     EXPECT_EQ(commit_count,  1);
+}
+
+TEST(DistributedTxnPinning, UnpinnedFallbackRejectedWithoutExplicitSafety) {
+    MockDistributedExecutor mock;
+    mock.set_sessions_enabled(false);
+    DistributedTransactionManager txn(mock);
+
+    txn.begin();
+    EXPECT_FALSE(txn.enlist_backend("mysql_1"));
 }
 
 TEST(DistributedTxnPinning, ExecuteParticipantDmlUsesSameSession) {

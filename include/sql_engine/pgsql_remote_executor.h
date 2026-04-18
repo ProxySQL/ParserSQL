@@ -21,6 +21,7 @@ public:
     void add_backend(const BackendConfig& config);
     ResultSet execute(const char* backend_name, sql_parser::StringRef sql) override;
     DmlResult execute_dml(const char* backend_name, sql_parser::StringRef sql) override;
+    bool allows_unpinned_distributed_2pc() const override { return true; }
     void disconnect_all();
 
 private:

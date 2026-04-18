@@ -288,6 +288,8 @@ public:
         r.affected_rows = 1;
         return r;
     }
+
+    bool allows_unpinned_distributed_2pc() const override { return true; }
 };
 
 TEST(DistributedTxnOverrides, IsDistributedReturnsTrue) {

@@ -43,6 +43,10 @@ DmlResult MultiRemoteExecutor::execute_dml(const char* backend_name, sql_parser:
     }
 }
 
+bool MultiRemoteExecutor::allows_unpinned_distributed_2pc() const {
+    return true;
+}
+
 void MultiRemoteExecutor::disconnect_all() {
     mysql_exec_.disconnect_all();
     pgsql_exec_.disconnect_all();
