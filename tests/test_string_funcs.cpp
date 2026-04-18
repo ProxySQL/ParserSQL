@@ -73,6 +73,31 @@ TEST_F(StringFuncTest, LengthNull) {
     EXPECT_TRUE(fn_length(args, 1, arena).is_null());
 }
 
+TEST_F(StringFuncTest, LengthCountsUtf8Bytes) {
+    Value args[] = {S("caf" "\xC3" "\xA9")};
+    EXPECT_EQ(fn_length(args, 1, arena).int_val, 5);
+}
+
+TEST_F(StringFuncTest, CharLengthCountsAsciiCharacters) {
+    Value args[] = {S("hello")};
+    EXPECT_EQ(fn_char_length(args, 1, arena).int_val, 5);
+}
+
+TEST_F(StringFuncTest, CharLengthCountsUtf8CodePoints) {
+    Value args[] = {S("caf" "\xC3" "\xA9")};
+    EXPECT_EQ(fn_char_length(args, 1, arena).int_val, 4);
+}
+
+TEST_F(StringFuncTest, CharLengthCountsEmojiAsSingleCharacter) {
+    Value args[] = {S("A" "\xF0" "\x9F" "\x98" "\x80" "B")};
+    EXPECT_EQ(fn_char_length(args, 1, arena).int_val, 3);
+}
+
+TEST_F(StringFuncTest, CharLengthNull) {
+    Value args[] = {value_null()};
+    EXPECT_TRUE(fn_char_length(args, 1, arena).is_null());
+}
+
 // --- UPPER / LOWER ---
 
 TEST_F(StringFuncTest, UpperBasic) {

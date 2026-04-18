@@ -103,6 +103,7 @@ TEST_F(CastTest, PgSQLStringToBoolTrue) {
     EXPECT_TRUE(cast_value<Dialect::PostgreSQL>(S("t"), SqlType::BOOLEAN, arena).bool_val);
     EXPECT_TRUE(cast_value<Dialect::PostgreSQL>(S("yes"), SqlType::BOOLEAN, arena).bool_val);
     EXPECT_TRUE(cast_value<Dialect::PostgreSQL>(S("1"), SqlType::BOOLEAN, arena).bool_val);
+    EXPECT_TRUE(cast_value<Dialect::PostgreSQL>(S("on"), SqlType::BOOLEAN, arena).bool_val);
 }
 
 TEST_F(CastTest, PgSQLStringToBoolFalse) {
@@ -110,6 +111,7 @@ TEST_F(CastTest, PgSQLStringToBoolFalse) {
     EXPECT_FALSE(cast_value<Dialect::PostgreSQL>(S("f"), SqlType::BOOLEAN, arena).bool_val);
     EXPECT_FALSE(cast_value<Dialect::PostgreSQL>(S("no"), SqlType::BOOLEAN, arena).bool_val);
     EXPECT_FALSE(cast_value<Dialect::PostgreSQL>(S("0"), SqlType::BOOLEAN, arena).bool_val);
+    EXPECT_FALSE(cast_value<Dialect::PostgreSQL>(S("off"), SqlType::BOOLEAN, arena).bool_val);
 }
 
 TEST_F(CastTest, PgSQLStringToBoolInvalid) {
@@ -119,6 +121,28 @@ TEST_F(CastTest, PgSQLStringToBoolInvalid) {
 TEST_F(CastTest, PgSQLIntToBool) {
     EXPECT_TRUE(cast_value<Dialect::PostgreSQL>(value_int(1), SqlType::BOOLEAN, arena).bool_val);
     EXPECT_FALSE(cast_value<Dialect::PostgreSQL>(value_int(0), SqlType::BOOLEAN, arena).bool_val);
+}
+
+TEST_F(CastTest, PgSQLStringToDate) {
+    auto r = cast_value<Dialect::PostgreSQL>(S("2024-06-15"), SqlType::DATE, arena);
+    EXPECT_EQ(r.tag, Value::TAG_DATE);
+}
+
+TEST_F(CastTest, PgSQLStringToTime) {
+    auto r = cast_value<Dialect::PostgreSQL>(S("14:30:00"), SqlType::TIME, arena);
+    EXPECT_EQ(r.tag, Value::TAG_TIME);
+    EXPECT_EQ(r.time_val, (14LL * 3600LL + 30LL * 60LL) * 1000000LL);
+}
+
+TEST_F(CastTest, PgSQLStringToDatetime) {
+    auto r = cast_value<Dialect::PostgreSQL>(S("2024-06-15 14:30:00"), SqlType::DATETIME, arena);
+    EXPECT_EQ(r.tag, Value::TAG_DATETIME);
+}
+
+TEST_F(CastTest, PgSQLStringToTimestampWithTimezone) {
+    auto r = cast_value<Dialect::PostgreSQL>(
+        S("2024-06-15 14:30:00+02:00"), SqlType::TIMESTAMP, arena);
+    EXPECT_EQ(r.tag, Value::TAG_TIMESTAMP);
 }
 
 TEST_F(CastTest, PgSQLNullPassthrough) {

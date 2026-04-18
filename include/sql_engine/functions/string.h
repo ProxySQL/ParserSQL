@@ -12,6 +12,17 @@ namespace functions {
 
 using sql_parser::Arena;
 
+inline uint32_t utf8_codepoint_count(StringRef s) {
+    uint32_t count = 0;
+    for (uint32_t i = 0; i < s.len; ++i) {
+        unsigned char byte = static_cast<unsigned char>(s.ptr[i]);
+        if ((byte & 0xC0u) != 0x80u) {
+            ++count;
+        }
+    }
+    return count;
+}
+
 // CONCAT(s1, s2, ...) -- NULL if any arg is NULL (MySQL behavior)
 inline Value fn_concat(const Value* args, uint16_t arg_count, Arena& arena) {
     // Check for NULL args
@@ -67,10 +78,16 @@ inline Value fn_concat_ws(const Value* args, uint16_t arg_count, Arena& arena) {
     return value_string(StringRef{buf, total_len});
 }
 
-// LENGTH(s) / CHAR_LENGTH(s) -- byte length (for now, same as char length for ASCII)
+// LENGTH(s) -- byte length
 inline Value fn_length(const Value* args, uint16_t /*arg_count*/, Arena& /*arena*/) {
     if (args[0].is_null()) return value_null();
     return value_int(static_cast<int64_t>(args[0].str_val.len));
+}
+
+// CHAR_LENGTH(s) -- UTF-8 code point count
+inline Value fn_char_length(const Value* args, uint16_t /*arg_count*/, Arena& /*arena*/) {
+    if (args[0].is_null()) return value_null();
+    return value_int(static_cast<int64_t>(utf8_codepoint_count(args[0].str_val)));
 }
 
 // UPPER(s) / UCASE(s)

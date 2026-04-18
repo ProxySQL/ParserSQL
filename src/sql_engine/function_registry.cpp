@@ -73,7 +73,7 @@ void register_string(FunctionRegistry<D>& reg) {
     reg.register_function(entry("CONCAT",      functions::fn_concat,      1, 255));
     reg.register_function(entry("CONCAT_WS",   functions::fn_concat_ws,   2, 255));
     reg.register_function(entry("LENGTH",      functions::fn_length,      1, 1));
-    reg.register_function(entry("CHAR_LENGTH",  functions::fn_length,     1, 1));
+    reg.register_function(entry("CHAR_LENGTH", functions::fn_char_length, 1, 1));
     reg.register_function(entry("UPPER",       functions::fn_upper,       1, 1));
     reg.register_function(entry("UCASE",       functions::fn_upper,       1, 1));
     reg.register_function(entry("LOWER",       functions::fn_lower,       1, 1));

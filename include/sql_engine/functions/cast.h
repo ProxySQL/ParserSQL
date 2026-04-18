@@ -4,6 +4,7 @@
 #include "sql_engine/types.h"
 #include "sql_engine/value.h"
 #include "sql_engine/coercion.h"
+#include "sql_engine/datetime_parse.h"
 #include "sql_parser/common.h"
 #include "sql_parser/arena.h"
 #include <cstdio>
@@ -68,7 +69,7 @@ Value cast_value(const Value& val, SqlType::Kind target, sql_parser::Arena& aren
                 if (val.tag == Value::TAG_BOOL) return value_double(val.bool_val ? 1.0 : 0.0);
                 if (val.tag == Value::TAG_INT64) return value_double(static_cast<double>(val.int_val));
                 if (val.tag == Value::TAG_UINT64) return value_double(static_cast<double>(val.uint_val));
-                if (val.tag == Value::TAG_STRING) {
+                if (val.tag == Value::TAG_STRING || val.tag == Value::TAG_DECIMAL) {
                     double out;
                     if (detail::parse_double_lenient(val.str_val.ptr, val.str_val.len, out))
                         return value_double(out);
@@ -92,12 +93,54 @@ Value cast_value(const Value& val, SqlType::Kind target, sql_parser::Arena& aren
                 if (val.tag == Value::TAG_STRING) {
                     // PostgreSQL: 'true'/'t'/'1'/'yes'/'on' -> true
                     if (val.str_val.equals_ci("true", 4) || val.str_val.equals_ci("t", 1) ||
-                        val.str_val.equals_ci("1", 1) || val.str_val.equals_ci("yes", 3))
+                        val.str_val.equals_ci("1", 1) || val.str_val.equals_ci("yes", 3) ||
+                        val.str_val.equals_ci("on", 2))
                         return value_bool(true);
                     if (val.str_val.equals_ci("false", 5) || val.str_val.equals_ci("f", 1) ||
-                        val.str_val.equals_ci("0", 1) || val.str_val.equals_ci("no", 2))
+                        val.str_val.equals_ci("0", 1) || val.str_val.equals_ci("no", 2) ||
+                        val.str_val.equals_ci("off", 3))
                         return value_bool(false);
                     return value_null();
+                }
+                return value_null();
+            }
+            case Value::TAG_DATE: {
+                if (val.tag == Value::TAG_STRING && val.str_val.ptr && val.str_val.len > 0) {
+                    char buf[32];
+                    uint32_t n = val.str_val.len < 31 ? val.str_val.len : 31;
+                    std::memcpy(buf, val.str_val.ptr, n);
+                    buf[n] = '\0';
+                    return value_date(datetime_parse::parse_date(buf));
+                }
+                return value_null();
+            }
+            case Value::TAG_TIME: {
+                if (val.tag == Value::TAG_STRING && val.str_val.ptr && val.str_val.len > 0) {
+                    char buf[32];
+                    uint32_t n = val.str_val.len < 31 ? val.str_val.len : 31;
+                    std::memcpy(buf, val.str_val.ptr, n);
+                    buf[n] = '\0';
+                    return value_time(datetime_parse::parse_time(buf));
+                }
+                return value_null();
+            }
+            case Value::TAG_DATETIME: {
+                if (val.tag == Value::TAG_STRING && val.str_val.ptr && val.str_val.len > 0) {
+                    char buf[64];
+                    uint32_t n = val.str_val.len < 63 ? val.str_val.len : 63;
+                    std::memcpy(buf, val.str_val.ptr, n);
+                    buf[n] = '\0';
+                    return value_datetime(datetime_parse::parse_datetime(buf));
+                }
+                return value_null();
+            }
+            case Value::TAG_TIMESTAMP: {
+                if (val.tag == Value::TAG_STRING && val.str_val.ptr && val.str_val.len > 0) {
+                    char buf[64];
+                    uint32_t n = val.str_val.len < 63 ? val.str_val.len : 63;
+                    std::memcpy(buf, val.str_val.ptr, n);
+                    buf[n] = '\0';
+                    return value_timestamp(datetime_parse::parse_datetime_tz(buf));
                 }
                 return value_null();
             }
