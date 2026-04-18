@@ -20,22 +20,23 @@ This repository is a **production-targeted SQL parsing and distributed query eng
 | **Transaction layer**    | Functional          | ~3    | 2PC for MySQL (XA) and PostgreSQL (PREPARE TRANSACTION); durable WAL + auto-compaction; recovery. |
 | **Tools / wire server**  | Functional          | n/a   | `sqlengine` (see [docs/sqlengine.md](sqlengine.md)), `mysql_server`, `bench_distributed`, `engine_stress_test`, `corpus_test`. |
 
-### What is in flight (uncommitted in the working tree, 2026-04-17)
+### What landed recently (committed on `main`, 2026-04-17 to 2026-04-18)
 
-The last session completed a P0 + three P1 items from `docs/issues/` and started follow-up work; nothing is committed yet. See [§9 Working-tree changes](#9-working-tree-changes-not-yet-committed) for the full list and `docs/issues/README.md` for context. Highlights:
+- **Issue 01 (P0) — 2PC safe pinning** — fail-closed unless the executor declares unpinned 2PC safe (`ebefb9f`).
+- **Issue 02 (P1) — 2PC deterministic phase timeouts** — PostgreSQL `SET statement_timeout` per phase; MySQL no longer claims to bound XA control statements (`ebefb9f`, bundled with 01).
+- **Issue 03 (P1) — shared backend + shard config parsing** — extracted from four tools + one test helper into `tool_config_parser.{h,cpp}` (`f0f2915`, bundled with 09).
+- **Issue 04 (P1) — RIGHT and FULL outer joins** — promoted from "rejected at runtime" to "executed correctly", with qualified column resolution (`07d09cb`).
+- **Issue 05 (P2) — partial** — compound runtime values (`a90d147`), `CHAR_LENGTH` UTF-8 + PostgreSQL string casts (`9f090e5`).
+- **Issue 08 (P1) — single-shard aggregate schema + use-after-free** — `REMOTE_SCAN.output_exprs` + `ResultSet.backing_lifetimes` (`ab8b7fb`).
+- **Issue 09 (P0) — shard-key route misdirection** — FNV-1a hash + `RoutingStrategy` enum: HASH/RANGE/LIST (`f0f2915`).
+- **Test infra** — `scripts/test_sqlengine.sh` functional suite + 4 Makefile targets (`2ee4128`); 14 ShardMap unit tests + 11 parser-strategy tests.
 
-- **2PC safe pinning (P0)** — fail-closed if the executor cannot guarantee a pinned session.
-- **2PC deterministic phase timeouts (P1)** — PostgreSQL gets `SET statement_timeout`; MySQL no longer claims to bound XA control statements.
-- **Shared backend / shard config parsing (P1)** — extracted from four tools + one test helper into `tool_config_parser.{h,cpp}`.
-- **RIGHT and FULL outer joins (P1)** — promoted from "rejected at runtime" to "executed correctly", with qualified column resolution.
-- **Cast / string semantics tightening (P2 in progress)** — `CHAR_LENGTH` UTF-8, PostgreSQL bool/date/time casts.
+### What is next (open issues)
 
-### What is next (open issues + new specs)
-
-- **Compound `Value`s (arrays + tuples)** — design + plan landed Apr 16; spec scope is local runtime only (no remote serialization).
-- **Tighten expression and type semantics (P2 issue 05)** — composite field access, non-literal arrays, decimal as int128.
-- **Parser gaps (P2 issue 06)** — `SELECT ... INTO` placement, recursive CTE semantics.
-- **CTE in main `Session` path (P2 issue 07)** — non-recursive CTEs through the user API, not just the test executor.
+- **Issue 05 (P2) — remaining** — non-literal array semantics through the planner, decimal as int128, broader string-backed decimal semantics beyond the cast path.
+- **Issue 06 (P2)** — `SELECT ... INTO` placement, recursive CTE semantics.
+- **Issue 07 (P2)** — non-recursive CTEs through `Session::execute_query`, not just the test executor.
+- **Future sharding strategy** — `PROXYSQL_RULES` value of `RoutingStrategy` to delegate to ProxySQL's `mysql_query_rules` when this engine is embedded inside ProxySQL.
 
 ---
 
@@ -141,7 +142,7 @@ docs/issues/               Local P0/P1/P2 backlog
 
 ## 3. Status Matrix
 
-Legend: ✅ done · 🟡 partial · 🟦 in working tree (uncommitted) · 📋 planned · ❌ explicitly out of scope.
+Legend: ✅ done · 🟡 partial · 📋 planned · ❌ explicitly out of scope.
 
 ### 3.1 Parser
 
@@ -181,8 +182,10 @@ Legend: ✅ done · 🟡 partial · 🟦 in working tree (uncommitted) · 📋 p
 | Decimal as int128                                              | 📋     | spec deferral                                                                |
 | Aggregate functions (COUNT/SUM/AVG/MIN/MAX) — implemented as operator state, not registry entries | ✅     | `aggregate_op.h`                                                             |
 | JSON functions                                                 | ❌     | spec non-goal (P3, not yet scheduled)                                        |
-| `CHAR_LENGTH` counts UTF-8 code points (not bytes)             | 🟦     | `functions/string.h` uncommitted                                             |
-| PostgreSQL casts handle bool / date / time strings             | 🟦     | `functions/cast.h` uncommitted                                               |
+| `CHAR_LENGTH` counts UTF-8 code points (not bytes)             | ✅     | `functions/string.h` (issue 05 partial)                                      |
+| PostgreSQL casts handle bool / date / time strings             | ✅     | `functions/cast.h` (issue 05 partial)                                        |
+| Tuple values (`TAG_TUPLE`) + named field access                | ✅     | `value.h`, `expression_eval.h` (issue 05 partial)                            |
+| Array values (`TAG_ARRAY`) + non-literal arrays + subscript    | ✅     | `value.h`, `expression_eval.h` (issue 05 partial)                            |
 
 ### 3.3 Query Engine — Plan & Execution
 
@@ -194,7 +197,7 @@ Legend: ✅ done · 🟡 partial · 🟦 in working tree (uncommitted) · 📋 p
 | Volcano executor — open / next / close                         | ✅     | `plan_executor.h`                                                            |
 | Operators (15): scan, filter, project, join, hash_join, aggregate, sort, limit, distinct, set_op, derived_scan, window, remote_scan, merge_aggregate, merge_sort | ✅     | `operators/`                                                                 |
 | `NestedLoopJoinOperator` — INNER, LEFT, CROSS                  | ✅     | `join_op.h`                                                                  |
-| `NestedLoopJoinOperator` — RIGHT and FULL outer joins          | 🟦     | `join_op.h` uncommitted (right-match tracking + qualified name resolution)   |
+| `NestedLoopJoinOperator` — RIGHT and FULL outer joins          | ✅     | `join_op.h` (right-match tracking + qualified name resolution; issue 04)     |
 | Optimizer — predicate pushdown                                 | ✅     | `rules/predicate_pushdown.h`                                                 |
 | Optimizer — limit pushdown                                     | ✅     | `rules/limit_pushdown.h`                                                     |
 | Optimizer — constant folding                                   | ✅     | `rules/constant_folding.h`                                                   |
@@ -223,7 +226,7 @@ Legend: ✅ done · 🟡 partial · 🟦 in working tree (uncommitted) · 📋 p
 | `RemoteScanOperator`, `MergeAggregateOperator`, `MergeSortOperator`, `HashJoinOperator` | ✅ | `operators/`                                                                 |
 | TIMESTAMPTZ normalised to UTC in PgSQL executor                | ✅     | recent commit `1f65334`                                                      |
 | `PgSQLRemoteExecutor` returns `parse_datetime_tz` UTC-normalised values | ✅ | recent commit `293b19b`                                                      |
-| Shared backend-URL + shard-spec parsing                        | 🟦     | `tool_config_parser.{h,cpp}` uncommitted (issue 03)                          |
+| Shared backend-URL + shard-spec parsing                        | ✅     | `tool_config_parser.{h,cpp}` (issue 03)                                      |
 | Wire-protocol *server* for the engine                          | ✅     | `tools/mysql_server.cpp` (this is the proxy front-end)                       |
 | Async / parallel shard I/O beyond pool concurrency             | 📋     | spec defers                                                                  |
 | `RETURNING` clause through remote DML                          | 📋     | parser non-goal until INSERT/UPDATE/DELETE Tier 1 promotion completes        |
@@ -242,8 +245,8 @@ Legend: ✅ done · 🟡 partial · 🟦 in working tree (uncommitted) · 📋 p
 | WAL auto-compaction on completion threshold                    | ✅     | commit `a2d9525`                                                             |
 | Crash recovery — drives in-doubt txns; idempotent (`XAER_NOTA`, `does not exist`) | ✅ | `transaction_recovery.h`                                                     |
 | `Session::execute_statement` auto-enlistment of remote DML through pinned 2PC connection | ✅ | `session.h`                                                                  |
-| **Fail-closed** unpinned 2PC: executor must opt in via `allows_unpinned_distributed_2pc()` | 🟦 | `remote_executor.h`, `distributed_txn.h` uncommitted (issue 01)              |
-| **Deterministic** per-phase timeouts: PostgreSQL uses `SET statement_timeout`; MySQL no longer pretends to bound XA controls | 🟦 | `distributed_txn.h` uncommitted (issue 02) |
+| **Fail-closed** unpinned 2PC: executor must opt in via `allows_unpinned_distributed_2pc()` | ✅ | `remote_executor.h`, `distributed_txn.h` (issue 01)                          |
+| **Deterministic** per-phase timeouts: PostgreSQL uses `SET statement_timeout`; MySQL no longer pretends to bound XA controls | ✅ | `distributed_txn.h` (issue 02) |
 | Distributed savepoints                                         | 📋     | spec defers; only single-backend path supports them today                    |
 | MVCC isolation                                                 | ❌     | spec non-goal (storage lives in MySQL/PostgreSQL)                            |
 
@@ -582,47 +585,42 @@ Source: `docs/issues/README.md`. Status reflects the working tree on 2026-04-17.
 
 ### P0 — correctness / production risk
 
-1. **[01] Distributed 2PC must require safe session pinning** — 🟦 in working tree.
-   *Add `allows_unpinned_distributed_2pc()` flag. Default false. Pooled executors without pinning cannot enlist.*
-9. **[09] Single-shard route by shard key misdirects for some keys** — ✅ resolved 2026-04-18.
-   *Root cause: `std::hash<int64_t>` on libstdc++ is identity, so route `= K mod num_shards`; demo data placement was range-based. Fix: replace with FNV-1a 64-bit hash and add a `RoutingStrategy` enum to `TableShardConfig` (HASH default, RANGE, LIST). The new `--shard "table:key:range:5=s1,10=s2"` syntax matches the demo's range placement. Engine is now ProxySQL-shaped — a future `PROXYSQL_RULES` strategy can join the same enum.*
+1. **[01] Distributed 2PC must require safe session pinning** — ✅ resolved 2026-04-18 (commit ebefb9f).
+   *`allows_unpinned_distributed_2pc()` flag added; defaults to false; pooled executors without pinning cannot enlist; opt-in for single-connection executors.*
+9. **[09] Single-shard route by shard key misdirects for some keys** — ✅ resolved 2026-04-18 (commit f0f2915).
+   *Root cause: `std::hash<int64_t>` on libstdc++ is identity, so route `= K mod num_shards`; demo data placement was range-based. Fix: FNV-1a 64-bit hash + `RoutingStrategy` enum on `TableShardConfig` (HASH default, RANGE, LIST). The new `--shard "table:key:range:5=s1,10=s2"` syntax matches the demo's range placement. Engine is now ProxySQL-shaped — a future `PROXYSQL_RULES` strategy can join the same enum.*
 
 ### P1 — important correctness & maintainability
 
-2. **[02] Make 2PC phase timeouts deterministic** — 🟦 in working tree.
+2. **[02] Make 2PC phase timeouts deterministic** — ✅ resolved 2026-04-18 (commit ebefb9f, bundled with issue 01).
    *PostgreSQL: `SET statement_timeout` per phase. MySQL: no per-phase SQL timeout (XA rejects `max_execution_time`); rely on connection read/write timeouts.*
-3. **[03] Extract shared backend + shard config parsing** — 🟦 in working tree.
+3. **[03] Extract shared backend + shard config parsing** — ✅ resolved 2026-04-18 (commit f0f2915, bundled with issue 09).
    *New module `tool_config_parser.{h,cpp}`. Replaces ~135 lines of duplication in each of `sqlengine`, `mysql_server`, `bench_distributed`, `engine_stress_test`, plus `tests/test_ssl_config.cpp`.*
-4. **[04] Close join execution coverage gaps** — 🟦 in working tree.
+4. **[04] Close join execution coverage gaps** — ✅ resolved 2026-04-18 (commit 07d09cb).
    *`NestedLoopJoinOperator` now executes RIGHT and FULL outer joins (with right-row match tracking) and resolves qualified column names in join conditions.*
-8. **[08] Aggregate projection schema wrong in single-shard mode** — ✅ resolved 2026-04-18.
+8. **[08] Aggregate projection schema wrong in single-shard mode** — ✅ resolved 2026-04-18 (commit ab8b7fb).
    *Two stacked bugs. (a) `make_unsharded_aggregate` returned a bare `REMOTE_SCAN` whose `build_column_names` defaulted to the source table's columns; fixed by adding `output_exprs` to the remote-scan plan node. (b) After (a), values still rendered as `?` because `RemoteScanOperator`'s heap-owned storage died with the stack-local `PlanExecutor` while the returned rows still pointed into it; fixed by adding `backing_lifetimes` to `ResultSet` so operators outlive the executor's stack frame.*
 
 ### P2 — deferred
 
-5. **[05] Tighten expression and type semantics** — 🟡 partial.
-   *Working tree has `CHAR_LENGTH` (UTF-8) and PostgreSQL bool/date/time casts. Tuples, non-literal arrays, composite field access still open — see compound-value spec/plan.*
+5. **[05] Tighten expression and type semantics** — 🟡 partial. Arrays/tuples/named-field-access landed (commit a90d147), `CHAR_LENGTH` UTF-8 + PostgreSQL string casts landed (commit 9f090e5).
+   *Still open: non-literal array semantics through the planner, decimal as int128, broader string-backed decimal semantics beyond the cast path.*
 6. **[06] MySQL `SELECT ... INTO` and recursive CTE handling** — 📋 not started.
 7. **[07] Integrate non-recursive CTE handling into `Session` query path** — 📋 not started.
 
 ---
 
-## 9. Working-tree changes (not yet committed)
+## 9. Working-tree state
 
-29 modified files, +598/-810 lines, plus untracked additions. Grouped by issue:
+Clean. All issue work that lived in the working tree has landed on `main` as separately-attributable commits (see §8 for the per-issue commit hashes). Verified end-to-end:
 
-| Issue              | Files touched                                                                                                                                                |
-| ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| **01 + 02 (2PC)**  | `include/sql_engine/distributed_txn.h`, `include/sql_engine/remote_executor.h`, `include/sql_engine/multi_remote_executor.h`, `include/sql_engine/mysql_remote_executor.h`, `include/sql_engine/pgsql_remote_executor.h`, `src/sql_engine/multi_remote_executor.cpp`, `tests/test_distributed_txn.cpp` |
-| **03 (config)**    | `include/sql_engine/tool_config_parser.h` *(new)*, `src/sql_engine/tool_config_parser.cpp` *(new)*, `Makefile`, `tools/{sqlengine,mysql_server,bench_distributed,engine_stress_test}.cpp`, `tests/test_ssl_config.cpp` |
-| **04 (joins)**     | `include/sql_engine/operators/join_op.h`, `tests/test_operators.cpp`, `tests/test_plan_executor.cpp`, `tests/test_eval_integration.cpp`                       |
-| **05 (semantics)** | `include/sql_engine/functions/cast.h`, `include/sql_engine/functions/string.h`, `src/sql_engine/function_registry.cpp`, `tests/test_cast.cpp`, `tests/test_string_funcs.cpp`, `tests/test_value.cpp`, `tests/test_expression_eval.cpp` |
-| **Docs**           | `CLAUDE.md`, `README.md`, `docs/current-state.md`, `docs/issues/`, `docs/superpowers/plans/2026-04-15-distributed-2pc-safe-pinning.md`, `docs/superpowers/plans/2026-04-16-compound-value-support.md`, `docs/superpowers/specs/2026-04-15-implementation-gap-backlog-design.md`, `AGENTS.md` |
-| **Misc**           | `include/sql_parser/parser.h`, `tests/test_classifier.cpp`, `tests/test_session.cpp`                                                                          |
-| **Stray junk**     | `tmp_apply_patch_check.txt` (contains the literal text `hello` — safe to delete)                                                                              |
-| **Untracked**      | `.claude/`, `third_party/libpg_query/` (corpus / comparison helper)                                                                                          |
+- `make test` — 1208 passed, 37 skipped (live-backend integration), 0 failed.
+- `scripts/test_sqlengine.sh all` — 34/34 (in-memory + single backend + sharded).
 
-> Verification on this branch is still pending: a `make all` run + the targeted test files for issues 01–04 should be green before splitting these into commits.
+The only untracked entries left are intentional:
+
+- `.claude/` — local Claude Code session data, not for commit.
+- `third_party/libpg_query/` — external dependency downloaded on demand by `scripts/run_benchmarks.sh` for comparison runs; not committed.
 
 ---
 

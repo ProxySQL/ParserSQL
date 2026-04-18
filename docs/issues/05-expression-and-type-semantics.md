@@ -41,9 +41,10 @@ Close the most user-visible semantic gaps first, with explicit tests per behavio
 
 ## Progress Notes
 
-- `CHAR_LENGTH` now counts UTF-8 code points, while `LENGTH` remains byte-based.
-- PostgreSQL explicit casts now accept `on` / `off` for boolean strings and support string-to-`DATE` / `TIME` / `DATETIME` / `TIMESTAMP` helper paths.
-- Array constructors, tuple standalone values, composite field access, and string-backed decimal semantics remain open.
+- `CHAR_LENGTH` now counts UTF-8 code points, while `LENGTH` remains byte-based (commit 9f090e5).
+- PostgreSQL explicit casts now accept `on` / `off` for boolean strings and support string-to-`DATE` / `TIME` / `DATETIME` / `TIMESTAMP` helper paths (commit 9f090e5).
+- Array and tuple runtime values plus composite field access landed via `TAG_ARRAY` / `TAG_TUPLE` (commit a90d147 — see `docs/superpowers/specs/2026-04-16-compound-value-support-design.md` for scope).
+- Still open: non-literal array semantics through the planner, decimal as int128, broader string-backed decimal semantics beyond the cast path.
 
 ## Verification So Far
 

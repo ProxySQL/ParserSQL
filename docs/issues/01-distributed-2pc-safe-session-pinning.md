@@ -6,7 +6,7 @@
 
 ## Status
 
-Implemented in the current working tree; not yet committed.
+Resolved 2026-04-18 (commit ebefb9f).
 
 ## Problem
 

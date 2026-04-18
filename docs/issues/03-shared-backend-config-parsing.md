@@ -6,7 +6,7 @@
 
 ## Status
 
-Implemented in the current working tree.
+Resolved 2026-04-18 (commit f0f2915 — landed alongside issue 09).
 
 ## Problem
 
