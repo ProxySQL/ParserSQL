@@ -7,7 +7,7 @@ This directory is the local working backlog for implementation gaps identified f
 ### P0
 
 1. [Distributed 2PC must require safe session pinning](01-distributed-2pc-safe-session-pinning.md) — implemented in current working tree
-9. [Single-shard route by shard key misdirects for some keys](09-shard-key-route-misdirection.md) — open; surfaced 2026-04-18 by `scripts/test_sqlengine.sh sharded`
+9. [Single-shard route by shard key misdirects for some keys](09-shard-key-route-misdirection.md) — resolved 2026-04-18 (FNV-1a hash + RoutingStrategy enum: HASH/RANGE/LIST)
 
 ### P1
 

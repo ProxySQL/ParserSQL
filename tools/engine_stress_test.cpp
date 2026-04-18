@@ -39,6 +39,7 @@
 #include "sql_engine/thread_safe_executor.h"
 #include "sql_engine/shard_map.h"
 #include "sql_engine/backend_config.h"
+#include "sql_engine/tool_config_parser.h"
 #include "sql_engine/result_set.h"
 #include "sql_engine/dml_result.h"
 #include "sql_engine/value.h"
@@ -48,140 +49,6 @@ using namespace sql_parser;
 using namespace sql_engine;
 
 using Clock = std::chrono::high_resolution_clock;
-
-// ============================================================
-// Backend URL parsing (same as sqlengine.cpp)
-// ============================================================
-
-struct ParsedBackend {
-    BackendConfig config;
-    bool ok = false;
-    std::string error;
-};
-
-static ParsedBackend parse_backend_url(const std::string& url) {
-    ParsedBackend pb;
-
-    size_t scheme_end = url.find("://");
-    if (scheme_end == std::string::npos) {
-        pb.error = "Invalid URL (no scheme): " + url;
-        return pb;
-    }
-    std::string scheme = url.substr(0, scheme_end);
-    if (scheme == "mysql") {
-        pb.config.dialect = Dialect::MySQL;
-    } else if (scheme == "pgsql" || scheme == "postgres" || scheme == "postgresql") {
-        pb.config.dialect = Dialect::PostgreSQL;
-    } else {
-        pb.error = "Unknown scheme: " + scheme;
-        return pb;
-    }
-
-    std::string rest = url.substr(scheme_end + 3);
-
-    size_t qpos = rest.find('?');
-    std::string query_part;
-    if (qpos != std::string::npos) {
-        query_part = rest.substr(qpos + 1);
-        rest = rest.substr(0, qpos);
-    }
-
-    if (!query_part.empty()) {
-        size_t name_pos = query_part.find("name=");
-        if (name_pos != std::string::npos) {
-            size_t vstart = name_pos + 5;
-            size_t vend = query_part.find('&', vstart);
-            pb.config.name = query_part.substr(vstart,
-                vend == std::string::npos ? std::string::npos : vend - vstart);
-        }
-    }
-
-    size_t at_pos = rest.find('@');
-    if (at_pos != std::string::npos) {
-        std::string userpass = rest.substr(0, at_pos);
-        rest = rest.substr(at_pos + 1);
-        size_t colon = userpass.find(':');
-        if (colon != std::string::npos) {
-            pb.config.user = userpass.substr(0, colon);
-            pb.config.password = userpass.substr(colon + 1);
-        } else {
-            pb.config.user = userpass;
-        }
-    }
-
-    size_t slash = rest.find('/');
-    std::string hostport;
-    if (slash != std::string::npos) {
-        hostport = rest.substr(0, slash);
-        pb.config.database = rest.substr(slash + 1);
-    } else {
-        hostport = rest;
-    }
-
-    size_t colon = hostport.find(':');
-    if (colon != std::string::npos) {
-        pb.config.host = hostport.substr(0, colon);
-        try {
-            pb.config.port = static_cast<uint16_t>(std::stoi(hostport.substr(colon + 1)));
-        } catch (...) {
-            pb.error = "Invalid port in: " + url;
-            return pb;
-        }
-    } else {
-        pb.config.host = hostport;
-        pb.config.port = (pb.config.dialect == Dialect::MySQL) ? 3306 : 5432;
-    }
-
-    if (pb.config.name.empty())
-        pb.config.name = pb.config.host + ":" + std::to_string(pb.config.port);
-
-    pb.ok = true;
-    return pb;
-}
-
-// ============================================================
-// Shard spec parsing
-// ============================================================
-
-struct ParsedShard {
-    TableShardConfig config;
-    bool ok = false;
-    std::string error;
-};
-
-static ParsedShard parse_shard_spec(const std::string& spec) {
-    ParsedShard ps;
-
-    size_t c1 = spec.find(':');
-    if (c1 == std::string::npos) {
-        ps.error = "Invalid shard spec: " + spec;
-        return ps;
-    }
-    size_t c2 = spec.find(':', c1 + 1);
-    if (c2 == std::string::npos) {
-        ps.error = "Invalid shard spec: " + spec;
-        return ps;
-    }
-
-    ps.config.table_name = spec.substr(0, c1);
-    ps.config.shard_key = spec.substr(c1 + 1, c2 - c1 - 1);
-    std::string shards_str = spec.substr(c2 + 1);
-
-    std::istringstream ss(shards_str);
-    std::string shard;
-    while (std::getline(ss, shard, ',')) {
-        if (!shard.empty())
-            ps.config.shards.push_back(ShardInfo{shard});
-    }
-
-    if (ps.config.shards.empty()) {
-        ps.error = "No shards specified in: " + spec;
-        return ps;
-    }
-
-    ps.ok = true;
-    return ps;
-}
 
 // ============================================================
 // Query definitions (matching Vitess stress_test)

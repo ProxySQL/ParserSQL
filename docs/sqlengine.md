@@ -55,16 +55,24 @@ pgsql://app:secret@db1:5432/orders?name=primary&ssl_mode=REQUIRED&ssl_ca=/etc/ss
 ### Shard spec syntax
 
 ```text
-TABLE:SHARD_KEY:BACKEND1,BACKEND2,...
+TABLE:SHARD_KEY:[STRATEGY:]ROUTING_BODY
 ```
 
-Backend names refer to the `name=` value from the backend URLs. A table with one backend is unsharded but pinned. Two or more backends turns on hash-based sharding by `SHARD_KEY`.
+`STRATEGY` is optional and selects a `RoutingStrategy` from `ShardMap`. Backend names refer to the `name=` value from the backend URLs. The strategy determines what `ROUTING_BODY` looks like:
 
-Example:
+| Strategy form | Body                                                  | Example                                                  |
+| ------------- | ----------------------------------------------------- | -------------------------------------------------------- |
+| (omitted)     | comma-separated backends — defaults to `HASH`         | `users:id:shard1,shard2,shard3`                          |
+| `hash:`       | comma-separated backends                              | `users:id:hash:shard1,shard2`                            |
+| `range:`      | `upper=backend,upper=backend,...` (sorted internally) | `users:id:range:5=shard1,10=shard2,MAXVALUE on last`     |
+| `list:`       | `value=backend,value=backend,...` (int or string)     | `users:id:list:1=shard1,6=shard2` or `users:region:list:us-east=a,us-west=b` |
 
-```text
---shard "users:id:shard1,shard2,shard3"
-```
+Notes:
+
+- `hash` (default) uses **FNV-1a 64-bit** modulo `num_shards`. Deterministic across compilers.
+- `range` is integer-keyed only. Values above the largest `upper` route to the last entry's backend (MySQL `LESS THAN MAXVALUE` idiom).
+- `list` accepts both int and string keys. A miss falls back to shard 0.
+- Repeated backends across `range:` or `list:` entries are interned once, so the order of distinct backends in the resulting shard list is the order of first appearance.
 
 ### Multiple flags
 
@@ -184,13 +192,13 @@ Useful smoke test that the executor and connection pool can talk to a real backe
 
 ### 5.4 Sharded query with scatter/gather
 
-Two backends, one sharded table:
+Two backends, one sharded table. Pick the routing strategy that matches how the data was loaded — for the demo set (1-5 on shard1, 6-10 on shard2) that's `range`, not `hash`:
 
 ```bash
 ./sqlengine \
   --backend "mysql://root:test@127.0.0.1:13306/testdb?name=shard1" \
   --backend "mysql://root:test@127.0.0.1:13307/testdb?name=shard2" \
-  --shard "users:id:shard1,shard2"
+  --shard "users:id:range:5=shard1,10=shard2"
 ```
 
 ```text

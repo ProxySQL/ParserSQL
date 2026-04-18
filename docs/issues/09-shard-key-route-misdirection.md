@@ -6,7 +6,7 @@
 
 ## Status
 
-Open. Surfaced by `scripts/test_sqlengine.sh sharded` on 2026-04-18.
+Resolved 2026-04-18.
 
 ## Problem
 
@@ -98,6 +98,47 @@ The "route to the wrong shard and return empty" mode must not exist.
 docker rm -f parsersql-shard1 parsersql-shard2 2>/dev/null
 ./scripts/start_sharding_demo.sh
 make build-sqlengine
-./scripts/test_sqlengine.sh sharded   # expect 16/16
+./scripts/test_sqlengine.sh sharded   # 16/16
 make test                             # full unit suite
 ```
+
+## Resolution Notes
+
+Both root causes addressed.
+
+**Hash function.** Replaced `std::hash<int64_t>` (libstdc++ identity → `K mod num_shards`) with FNV-1a 64-bit applied to all 8 bytes of the key. Deterministic across compilers, doesn't have the small-key collision pattern, regression-guarded by `ShardMapHashTest.NotIdentityFunction`.
+
+**Routing strategy.** Added `RoutingStrategy` enum to `TableShardConfig` with three values:
+
+- `HASH` (default) — FNV-1a + modulo. Backward compatible; the existing `--shard "table:key:b1,b2"` syntax keeps producing this.
+- `RANGE` — ordered `(upper_inclusive, shard_index)` entries; first match wins; values exceeding the largest bound route to the last entry's shard (matches the MySQL `PARTITION BY RANGE LESS THAN MAXVALUE` idiom). Integer-keyed only today.
+- `LIST` — explicit `value -> shard_index` map. Supports both int and string keys. Misses fall back to shard 0.
+
+**Demo aligned with routing.** `scripts/start_sharding_demo.sh` loads users 1-5 to shard1 and 6-10 to shard2; `scripts/run_sharding_demo.sh` and `scripts/test_sqlengine.sh` now declare `--shard "users:id:range:5=shard1,10=shard2"` (and the analogous `orders` line) so the routing matches the data placement. The two previously failing route assertions in `scripts/test_sqlengine.sh sharded` (`route to shard1 (Eve)`, `route returns one row`) pass without further change.
+
+**ProxySQL alignment.** The strategy enum is the deliberate seam for a future `PROXYSQL_RULES` value that delegates to ProxySQL's `mysql_query_rules` table. The existing planner code paths in `distributed_planner.h` (`literal_to_shard_index`) call through `ShardMap` unchanged, so adding a new strategy is a one-place addition rather than a cross-cutting refactor.
+
+**Shard-spec syntax extension.** `parse_shard_spec` in `src/sql_engine/tool_config_parser.cpp` accepts an optional strategy qualifier:
+
+```
+table:key:backend1,backend2                       # HASH (implicit, back-compat)
+table:key:hash:backend1,backend2                  # HASH (explicit)
+table:key:range:5=shard1,10=shard2                # RANGE
+table:key:list:1=shard1,6=shard2                  # LIST (int keys)
+table:key:list:us-east=a,us-west=b                # LIST (string keys)
+```
+
+A repeated backend in `range:` or `list:` is interned once into `cfg.shards`.
+
+## Test Coverage
+
+- `tests/test_shard_map.cpp` — 14 cases covering HASH determinism, FNV-1a divergence from identity (regression guard), RANGE matching demo placement, RANGE above-max fallback, RANGE accepts unsorted input and sorts internally, RANGE rejects spurious string lookups, LIST int + string keys, LIST miss fallback, default-strategy is HASH, out-of-range shard_index clamping, unknown table.
+- `tests/test_ssl_config.cpp` — 11 added cases for the new `--shard` syntax (HASH default, explicit hash/range/list, malformed entries, non-int range bound, empty body rejection, backend interning).
+- `scripts/test_sqlengine.sh sharded` — 16/16 with the new range routing.
+
+## Future Work
+
+- Add a `PROXYSQL_RULES` strategy that consults `mysql_query_rules`-shaped data when the engine is embedded inside ProxySQL.
+- Allow RANGE on string keys (lexicographic upper bounds) if a real use case arises.
+- Allow multiple key columns per table for composite sharding.
+- Allow a "shard not found" sentinel so unrouteable values can be made an error rather than silently routed.

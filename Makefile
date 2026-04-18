@@ -85,7 +85,8 @@ TEST_SRCS = $(TEST_DIR)/test_main.cpp \
             $(TEST_DIR)/test_datetime_funcs.cpp \
             $(TEST_DIR)/test_result_set.cpp \
             $(TEST_DIR)/test_ssl_config.cpp \
-            $(TEST_DIR)/test_star_modifiers.cpp
+            $(TEST_DIR)/test_star_modifiers.cpp \
+            $(TEST_DIR)/test_shard_map.cpp
 TEST_OBJS = $(TEST_SRCS:.cpp=.o)
 TEST_TARGET = $(PROJECT_ROOT)/run_tests
 

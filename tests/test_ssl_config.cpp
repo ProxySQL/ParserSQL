@@ -1,5 +1,6 @@
 #include <gtest/gtest.h>
 #include "sql_engine/backend_config.h"
+#include "sql_engine/tool_config_parser.h"
 
 using namespace sql_engine;
 using sql_parser::Dialect;
@@ -39,111 +40,7 @@ TEST(SSLConfigTest, PostgreSQLModeValues) {
     EXPECT_EQ(cfg.ssl_ca, "/etc/ssl/certs/ca.pem");
 }
 
-// ---------- URL query param parsing ----------
-// Mirror the parse_backend_url logic from sqlengine.cpp to test SSL param extraction.
-
-namespace {
-
-struct ParsedBackend {
-    BackendConfig config;
-    bool ok = false;
-    std::string error;
-};
-
-static ParsedBackend parse_backend_url(const std::string& url) {
-    ParsedBackend pb;
-
-    size_t scheme_end = url.find("://");
-    if (scheme_end == std::string::npos) {
-        pb.error = "Invalid URL (no scheme): " + url;
-        return pb;
-    }
-    std::string scheme = url.substr(0, scheme_end);
-    if (scheme == "mysql") {
-        pb.config.dialect = Dialect::MySQL;
-    } else if (scheme == "pgsql" || scheme == "postgres" || scheme == "postgresql") {
-        pb.config.dialect = Dialect::PostgreSQL;
-    } else {
-        pb.error = "Unknown scheme: " + scheme;
-        return pb;
-    }
-
-    std::string rest = url.substr(scheme_end + 3);
-
-    size_t qpos = rest.find('?');
-    std::string query_part;
-    if (qpos != std::string::npos) {
-        query_part = rest.substr(qpos + 1);
-        rest = rest.substr(0, qpos);
-    }
-
-    // Parse key=value query params
-    if (!query_part.empty()) {
-        size_t pos = 0;
-        while (pos < query_part.size()) {
-            size_t amp = query_part.find('&', pos);
-            std::string param = query_part.substr(pos,
-                amp == std::string::npos ? std::string::npos : amp - pos);
-            size_t eq = param.find('=');
-            if (eq != std::string::npos) {
-                std::string key = param.substr(0, eq);
-                std::string val = param.substr(eq + 1);
-                if (key == "name")          pb.config.name = val;
-                else if (key == "ssl_mode") pb.config.ssl_mode = val;
-                else if (key == "ssl_ca")   pb.config.ssl_ca = val;
-                else if (key == "ssl_cert") pb.config.ssl_cert = val;
-                else if (key == "ssl_key")  pb.config.ssl_key = val;
-            }
-            if (amp == std::string::npos) break;
-            pos = amp + 1;
-        }
-    }
-
-    // user:pass@host:port/db
-    size_t at_pos = rest.find('@');
-    if (at_pos != std::string::npos) {
-        std::string userpass = rest.substr(0, at_pos);
-        rest = rest.substr(at_pos + 1);
-        size_t colon = userpass.find(':');
-        if (colon != std::string::npos) {
-            pb.config.user = userpass.substr(0, colon);
-            pb.config.password = userpass.substr(colon + 1);
-        } else {
-            pb.config.user = userpass;
-        }
-    }
-
-    size_t slash = rest.find('/');
-    std::string hostport;
-    if (slash != std::string::npos) {
-        hostport = rest.substr(0, slash);
-        pb.config.database = rest.substr(slash + 1);
-    } else {
-        hostport = rest;
-    }
-
-    size_t colon = hostport.find(':');
-    if (colon != std::string::npos) {
-        pb.config.host = hostport.substr(0, colon);
-        try {
-            pb.config.port = static_cast<uint16_t>(std::stoi(hostport.substr(colon + 1)));
-        } catch (...) {
-            pb.error = "Invalid port in: " + url;
-            return pb;
-        }
-    } else {
-        pb.config.host = hostport;
-        pb.config.port = (pb.config.dialect == Dialect::MySQL) ? 3306 : 5432;
-    }
-
-    if (pb.config.name.empty())
-        pb.config.name = pb.config.host + ":" + std::to_string(pb.config.port);
-
-    pb.ok = true;
-    return pb;
-}
-
-} // anonymous namespace
+// ---------- Shared backend/shard parser ----------
 
 TEST(SSLConfigTest, ParseURLWithAllSSLParams) {
     auto pb = parse_backend_url(
@@ -208,4 +105,124 @@ TEST(SSLConfigTest, ParseURLWithSSLVerifyIdentity) {
     EXPECT_EQ(pb.config.ssl_ca,   "/ca.pem");
     EXPECT_EQ(pb.config.ssl_cert, "/cert.pem");
     EXPECT_EQ(pb.config.ssl_key,  "/key.pem");
+}
+
+TEST(SSLConfigTest, ParseShardSpecWithTwoShards) {
+    auto ps = parse_shard_spec("users:id:shard1,shard2");
+
+    ASSERT_TRUE(ps.ok);
+    EXPECT_EQ(ps.config.table_name, "users");
+    EXPECT_EQ(ps.config.shard_key, "id");
+    ASSERT_EQ(ps.config.shards.size(), 2u);
+    EXPECT_EQ(ps.config.shards[0].backend_name, "shard1");
+    EXPECT_EQ(ps.config.shards[1].backend_name, "shard2");
+}
+
+TEST(SSLConfigTest, ParseShardSpecRejectsMissingShardList) {
+    auto ps = parse_shard_spec("users:id:");
+
+    EXPECT_FALSE(ps.ok);
+    EXPECT_EQ(ps.error, "No shards specified in: users:id:");
+}
+
+// ---------- ParseShardSpec — routing strategies ----------
+
+TEST(SSLConfigTest, ParseShardSpecDefaultsToHash) {
+    auto ps = parse_shard_spec("users:id:shard1,shard2");
+
+    ASSERT_TRUE(ps.ok);
+    EXPECT_EQ(ps.config.strategy, RoutingStrategy::HASH);
+    EXPECT_TRUE(ps.config.ranges.empty());
+    EXPECT_TRUE(ps.config.list.empty());
+}
+
+TEST(SSLConfigTest, ParseShardSpecExplicitHash) {
+    auto ps = parse_shard_spec("users:id:hash:shard1,shard2");
+
+    ASSERT_TRUE(ps.ok);
+    EXPECT_EQ(ps.config.strategy, RoutingStrategy::HASH);
+    ASSERT_EQ(ps.config.shards.size(), 2u);
+    EXPECT_EQ(ps.config.shards[0].backend_name, "shard1");
+    EXPECT_EQ(ps.config.shards[1].backend_name, "shard2");
+}
+
+TEST(SSLConfigTest, ParseShardSpecRange) {
+    auto ps = parse_shard_spec("users:id:range:5=shard1,10=shard2");
+
+    ASSERT_TRUE(ps.ok);
+    EXPECT_EQ(ps.config.strategy, RoutingStrategy::RANGE);
+    ASSERT_EQ(ps.config.shards.size(), 2u);
+    EXPECT_EQ(ps.config.shards[0].backend_name, "shard1");
+    EXPECT_EQ(ps.config.shards[1].backend_name, "shard2");
+    ASSERT_EQ(ps.config.ranges.size(), 2u);
+    EXPECT_EQ(ps.config.ranges[0].upper_inclusive, 5);
+    EXPECT_EQ(ps.config.ranges[0].shard_index, 0u);
+    EXPECT_EQ(ps.config.ranges[1].upper_inclusive, 10);
+    EXPECT_EQ(ps.config.ranges[1].shard_index, 1u);
+}
+
+TEST(SSLConfigTest, ParseShardSpecRangeRepeatedBackendInternsOnce) {
+    // 5=a, 10=b, 15=a should produce two distinct backends in
+    // the shards vector, with index 0 reused for the third entry.
+    auto ps = parse_shard_spec("users:id:range:5=a,10=b,15=a");
+
+    ASSERT_TRUE(ps.ok);
+    ASSERT_EQ(ps.config.shards.size(), 2u);
+    EXPECT_EQ(ps.config.shards[0].backend_name, "a");
+    EXPECT_EQ(ps.config.shards[1].backend_name, "b");
+    ASSERT_EQ(ps.config.ranges.size(), 3u);
+    EXPECT_EQ(ps.config.ranges[2].shard_index, 0u);
+}
+
+TEST(SSLConfigTest, ParseShardSpecRejectsMalformedRangeEntry) {
+    auto ps = parse_shard_spec("users:id:range:nobinding");
+
+    EXPECT_FALSE(ps.ok);
+    EXPECT_NE(ps.error.find("Invalid range entry"), std::string::npos);
+}
+
+TEST(SSLConfigTest, ParseShardSpecRejectsNonIntRangeBound) {
+    auto ps = parse_shard_spec("users:id:range:abc=shard1");
+
+    EXPECT_FALSE(ps.ok);
+    EXPECT_NE(ps.error.find("integer"), std::string::npos);
+}
+
+TEST(SSLConfigTest, ParseShardSpecListInts) {
+    auto ps = parse_shard_spec("users:id:list:1=a,2=a,6=b");
+
+    ASSERT_TRUE(ps.ok);
+    EXPECT_EQ(ps.config.strategy, RoutingStrategy::LIST);
+    ASSERT_EQ(ps.config.list.size(), 3u);
+    EXPECT_TRUE(ps.config.list[0].is_int);
+    EXPECT_EQ(ps.config.list[0].int_val, 1);
+    EXPECT_EQ(ps.config.list[0].shard_index, 0u);
+    EXPECT_EQ(ps.config.list[2].int_val, 6);
+    EXPECT_EQ(ps.config.list[2].shard_index, 1u);
+}
+
+TEST(SSLConfigTest, ParseShardSpecListStrings) {
+    auto ps = parse_shard_spec("users:region:list:us-east=a,us-west=b");
+
+    ASSERT_TRUE(ps.ok);
+    EXPECT_EQ(ps.config.strategy, RoutingStrategy::LIST);
+    ASSERT_EQ(ps.config.list.size(), 2u);
+    EXPECT_FALSE(ps.config.list[0].is_int);
+    EXPECT_EQ(ps.config.list[0].str_val, "us-east");
+    EXPECT_FALSE(ps.config.list[1].is_int);
+    EXPECT_EQ(ps.config.list[1].str_val, "us-west");
+}
+
+TEST(SSLConfigTest, ParseShardSpecRejectsEmptyRange) {
+    auto ps = parse_shard_spec("users:id:range:");
+
+    EXPECT_FALSE(ps.ok);
+    EXPECT_NE(ps.error.find("at least one"), std::string::npos);
+}
+
+TEST(SSLConfigTest, ParseShardSpecRejectsEmptyList) {
+    auto ps = parse_shard_spec("users:id:list:");
+
+    EXPECT_FALSE(ps.ok);
+    EXPECT_NE(ps.error.find("at least one"), std::string::npos);
 }

@@ -37,11 +37,14 @@ run_query() {
     echo "QUERY: $desc"
     echo "SQL:   $sql"
     echo ""
+    # Range routing matches the demo's data placement:
+    #   shard1 holds users 1-5 and orders 101-105
+    #   shard2 holds users 6-10 and orders 106-110
     echo "$sql" | ./sqlengine \
         --backend "mysql://root:test@127.0.0.1:13306/testdb?name=shard1" \
         --backend "mysql://root:test@127.0.0.1:13307/testdb?name=shard2" \
-        --shard "users:id:shard1,shard2" \
-        --shard "orders:id:shard1,shard2" \
+        --shard "users:id:range:5=shard1,10=shard2" \
+        --shard "orders:id:range:105=shard1,110=shard2" \
         2>&1
     echo ""
 }

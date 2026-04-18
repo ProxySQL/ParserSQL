@@ -209,7 +209,7 @@ Legend: ✅ done · 🟡 partial · 🟦 in working tree (uncommitted) · 📋 p
 
 | Feature                                                        | Status | Where                                                                        |
 | -------------------------------------------------------------- | ------ | ---------------------------------------------------------------------------- |
-| `ShardMap` — unsharded + hash-sharded tables (int + string keys) | ✅     | `shard_map.h`                                                                |
+| `ShardMap` — unsharded tables + three routing strategies (HASH / RANGE / LIST) for sharded tables | ✅     | `shard_map.h` (FNV-1a hash; RANGE int-keyed; LIST int + string)              |
 | `RemoteExecutor` abstract interface                            | ✅     | `remote_executor.h`                                                          |
 | `MySQLRemoteExecutor` (single connection per backend)          | ✅     | `mysql_remote_executor.h`                                                    |
 | `PgSQLRemoteExecutor` (single connection per backend)          | ✅     | `pgsql_remote_executor.h`                                                    |
@@ -428,19 +428,31 @@ flowchart LR
     CPN --> BN[(MySQL/Pg backend N)]
 ```
 
-### 6.2 Distribution patterns
+### 6.2 Routing strategies
+
+`TableShardConfig::strategy` selects how a value of the shard key maps to a shard index.
+
+| Strategy | Resolution                                                                       | Key types | Out-of-range / miss              |
+| -------- | -------------------------------------------------------------------------------- | --------- | -------------------------------- |
+| `HASH`   | FNV-1a 64-bit of the key bytes, modulo `num_shards`                              | int + str | n/a (always defined)             |
+| `RANGE`  | Sorted `(upper_inclusive, shard_index)` entries; first match wins                | int only  | last entry's shard (MAXVALUE)    |
+| `LIST`   | Explicit `value -> shard_index` map                                              | int + str | shard 0                          |
+
+The `--shard` flag accepts the strategy as an optional qualifier (back-compat: `table:key:s1,s2` defaults to `HASH`). The `RoutingStrategy` enum is the seam where a future `PROXYSQL_RULES` strategy will plug in to delegate to ProxySQL's `mysql_query_rules`.
+
+### 6.3 Distribution patterns
 
 | SQL shape                                      | Rewrite                                                                 |
 | ---------------------------------------------- | ----------------------------------------------------------------------- |
 | `SELECT … FROM unsharded`                      | Single REMOTE_SCAN to the pinned backend.                               |
-| `SELECT … FROM sharded WHERE shard_key = K`    | Routed REMOTE_SCAN to the one shard.                                    |
+| `SELECT … FROM sharded WHERE shard_key = K`    | Routed REMOTE_SCAN to the one shard chosen by the configured strategy.  |
 | `SELECT … FROM sharded` (no key predicate)     | Scatter REMOTE_SCAN to every shard, gather locally.                     |
 | `SELECT col, AGG(x) … GROUP BY col`            | Two-phase: per-shard partial aggregate + local MERGE_AGGREGATE.         |
 | `SELECT … ORDER BY k LIMIT n`                  | Per-shard ORDER BY + LIMIT n; local MERGE_SORT + LIMIT.                 |
 | `SELECT … FROM sharded JOIN sharded ON …`      | Materialize one side, hash-join locally (HASH_JOIN + REMOTE_SCAN inputs). |
 | `INSERT/UPDATE/DELETE on sharded`              | Distributed DML: one REMOTE_SCAN per affected shard, in DML mode.       |
 
-### 6.3 Connection pool + pinning
+### 6.4 Connection pool + pinning
 
 ```mermaid
 flowchart TB
@@ -572,8 +584,8 @@ Source: `docs/issues/README.md`. Status reflects the working tree on 2026-04-17.
 
 1. **[01] Distributed 2PC must require safe session pinning** — 🟦 in working tree.
    *Add `allows_unpinned_distributed_2pc()` flag. Default false. Pooled executors without pinning cannot enlist.*
-9. **[09] Single-shard route by shard key misdirects for some keys** — 📋 open. Surfaced 2026-04-18 by `scripts/test_sqlengine.sh sharded`.
-   *`WHERE id = 5` against `users:id:shard1,shard2` returns empty rows; `id = 7` works. Wrong-results-without-error path. Either the router and the demo's data placement disagree, or `DistributedPlanner` ignores the shard key.*
+9. **[09] Single-shard route by shard key misdirects for some keys** — ✅ resolved 2026-04-18.
+   *Root cause: `std::hash<int64_t>` on libstdc++ is identity, so route `= K mod num_shards`; demo data placement was range-based. Fix: replace with FNV-1a 64-bit hash and add a `RoutingStrategy` enum to `TableShardConfig` (HASH default, RANGE, LIST). The new `--shard "table:key:range:5=s1,10=s2"` syntax matches the demo's range placement. Engine is now ProxySQL-shaped — a future `PROXYSQL_RULES` strategy can join the same enum.*
 
 ### P1 — important correctness & maintainability
 

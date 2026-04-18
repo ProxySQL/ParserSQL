@@ -115,10 +115,13 @@ run_single() {
 
 run_sharded() {
     local sql="$1"
+    # Range routing matches the demo data placement:
+    #   shard1: users 1-5, orders 101-105
+    #   shard2: users 6-10, orders 106-110
     echo "${sql}" | "${SQLENGINE}" --backend "${SHARD1_BACKEND}" \
                                    --backend "${SHARD2_BACKEND}" \
-                                   --shard "users:id:shard1,shard2" \
-                                   --shard "orders:id:shard1,shard2" 2>&1
+                                   --shard "users:id:range:5=shard1,10=shard2" \
+                                   --shard "orders:id:range:105=shard1,110=shard2" 2>&1
 }
 
 # ----------------------------------------------------------------------
