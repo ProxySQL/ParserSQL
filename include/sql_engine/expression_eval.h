@@ -685,8 +685,24 @@ Value evaluate_expression(const AstNode* expr,
         }
         return value_null();  // no executor or no parsed child
     }
-    case NodeType::NODE_TUPLE:             return value_null();  // Tuple as standalone value not supported
-    case NodeType::NODE_ARRAY_CONSTRUCTOR: return value_null();  // Bare array without subscript
+    case NodeType::NODE_TUPLE:
+    case NodeType::NODE_ARRAY_CONSTRUCTOR: {
+        // Evaluate each child into a compound runtime value. NODE_TUPLE
+        // produces TAG_TUPLE; NODE_ARRAY_CONSTRUCTOR produces TAG_ARRAY.
+        // Empty constructor is represented as a zero-element compound,
+        // not NULL — so downstream subscript / field access can still
+        // observe the empty container shape.
+        uint32_t count = 0;
+        for (const AstNode* c = expr->first_child; c; c = c->next_sibling) ++count;
+        Value* elems = static_cast<Value*>(arena.allocate(sizeof(Value) * (count ? count : 1)));
+        uint32_t i = 0;
+        for (const AstNode* c = expr->first_child; c; c = c->next_sibling, ++i) {
+            elems[i] = evaluate_expression<D>(c, resolve, functions, arena, subquery_exec);
+        }
+        return (expr->type == NodeType::NODE_ARRAY_CONSTRUCTOR)
+            ? value_array(arena, elems, count)
+            : value_tuple(arena, elems, count);
+    }
     case NodeType::NODE_ARRAY_SUBSCRIPT: {
         const AstNode* array_expr = expr->first_child;
         const AstNode* index_expr = array_expr ? array_expr->next_sibling : nullptr;
@@ -696,20 +712,36 @@ Value evaluate_expression(const AstNode* expr,
         if (idx.is_null()) return value_null();
         int64_t i = idx.to_int64();
 
-        if (array_expr->type == NodeType::NODE_ARRAY_CONSTRUCTOR) {
-            // 1-based indexing for PostgreSQL, 0-based for MySQL
-            int64_t pos = (D == sql_parser::Dialect::PostgreSQL) ? i - 1 : i;
-            if (pos < 0) return value_null();
-            const AstNode* child = array_expr->first_child;
-            for (int64_t c = 0; c < pos && child; ++c) {
-                child = child->next_sibling;
-            }
-            if (!child) return value_null();
-            return evaluate_expression<D>(child, resolve, functions, arena, subquery_exec);
-        }
-        return value_null();  // Non-literal arrays not yet supported
+        // Evaluate the array side (works for literal AST arrays via the
+        // case above and for resolver-returned runtime arrays alike).
+        Value arr = evaluate_expression<D>(array_expr, resolve, functions, arena, subquery_exec);
+        if (arr.tag != Value::TAG_ARRAY || !arr.compound_val) return value_null();
+
+        // 1-based indexing for PostgreSQL, 0-based for MySQL.
+        int64_t pos = (D == sql_parser::Dialect::PostgreSQL) ? i - 1 : i;
+        if (pos < 0 || static_cast<uint32_t>(pos) >= arr.compound_val->count)
+            return value_null();
+        return arr.compound_val->elements[static_cast<uint32_t>(pos)];
     }
-    case NodeType::NODE_FIELD_ACCESS:      return value_null();  // Composite field access requires composite types
+    case NodeType::NODE_FIELD_ACCESS: {
+        // (expr).field — evaluate the left side; if it yields a TAG_TUPLE
+        // with field_names, look up by case-insensitive field name match.
+        // All other shapes (unnamed tuples, non-compound values, missing
+        // names) return NULL per the conservative spec semantics.
+        const AstNode* lhs = expr->first_child;
+        if (!lhs) return value_null();
+        Value tup = evaluate_expression<D>(lhs, resolve, functions, arena, subquery_exec);
+        if (tup.tag != Value::TAG_TUPLE || !tup.compound_val ||
+            !tup.compound_val->field_names) return value_null();
+        StringRef field = expr->value();
+        if (!field.ptr || field.len == 0) return value_null();
+        for (uint32_t k = 0; k < tup.compound_val->count; ++k) {
+            if (tup.compound_val->field_names[k].equals_ci(field.ptr, field.len)) {
+                return tup.compound_val->elements[k];
+            }
+        }
+        return value_null();
+    }
 
     default:
         return value_null();  // unknown node type

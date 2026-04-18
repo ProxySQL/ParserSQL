@@ -1,8 +1,10 @@
 #include <gtest/gtest.h>
+#include "sql_parser/arena.h"
 #include "sql_engine/types.h"
 #include "sql_engine/value.h"
 
 using namespace sql_engine;
+using sql_parser::Arena;
 using sql_parser::StringRef;
 
 // --- SqlType tests ---
@@ -213,6 +215,31 @@ TEST(ValueTest, Timestamp) {
     EXPECT_EQ(v.tag, Value::TAG_TIMESTAMP);
     EXPECT_EQ(v.timestamp_val, 1705276800000000LL);
     EXPECT_TRUE(v.is_temporal());
+}
+
+TEST(ValueTest, ArrayValue) {
+    Arena arena{4096};
+    Value elems[2] = {value_int(1), value_int(2)};
+    Value v = value_array(arena, elems, 2);
+
+    EXPECT_EQ(v.tag, Value::TAG_ARRAY);
+    ASSERT_NE(v.compound_val, nullptr);
+    EXPECT_EQ(v.compound_val->count, 2u);
+    EXPECT_EQ(v.compound_val->elements[0].int_val, 1);
+    EXPECT_EQ(v.compound_val->elements[1].int_val, 2);
+}
+
+TEST(ValueTest, NamedTupleValue) {
+    Arena arena{4096};
+    Value elems[2] = {value_int(7), value_string(StringRef{"bob", 3})};
+    StringRef names[2] = {StringRef{"id", 2}, StringRef{"name", 4}};
+    Value v = value_named_tuple(arena, elems, names, 2);
+
+    EXPECT_EQ(v.tag, Value::TAG_TUPLE);
+    ASSERT_NE(v.compound_val, nullptr);
+    EXPECT_EQ(v.compound_val->count, 2u);
+    ASSERT_NE(v.compound_val->field_names, nullptr);
+    EXPECT_TRUE(v.compound_val->field_names[1].equals_ci("name", 4));
 }
 
 // TEST(ValueTest, Interval) removed along with the TAG_INTERVAL type.

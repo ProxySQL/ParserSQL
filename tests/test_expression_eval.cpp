@@ -683,20 +683,45 @@ TEST_F(ExprEvalTest, FunctionCallLength) {
 }
 
 // ===== Deferred Nodes =====
+// TEMP FIELD ACCESS ANCHOR
+// field access tests
+// inserted test block below
 
 TEST_F(ExprEvalTest, SubqueryReturnsNull) {
     AstNode* n = make_node(arena, NodeType::NODE_SUBQUERY);
     EXPECT_TRUE(eval_mysql(n).is_null());
 }
 
-TEST_F(ExprEvalTest, TupleReturnsNull) {
+TEST_F(ExprEvalTest, TupleReturnsTupleValue) {
+    // Was TupleReturnsNull until compound value support landed. Now NODE_TUPLE
+    // evaluates each child and yields a TAG_TUPLE whose elements survive in the
+    // arena, so downstream operators can inspect them.
     AstNode* n = make_node(arena, NodeType::NODE_TUPLE);
-    EXPECT_TRUE(eval_mysql(n).is_null());
+    n->add_child(leaf(NodeType::NODE_LITERAL_INT, "10"));
+    n->add_child(leaf(NodeType::NODE_LITERAL_STRING, "hello"));
+
+    auto v = eval_mysql(n);
+    EXPECT_EQ(v.tag, Value::TAG_TUPLE);
+    ASSERT_NE(v.compound_val, nullptr);
+    EXPECT_EQ(v.compound_val->count, 2u);
+    EXPECT_EQ(v.compound_val->elements[0].int_val, 10);
+    EXPECT_EQ(std::string(v.compound_val->elements[1].str_val.ptr,
+                          v.compound_val->elements[1].str_val.len), "hello");
 }
 
-TEST_F(ExprEvalTest, ArrayConstructorReturnsNull) {
+TEST_F(ExprEvalTest, ArrayConstructorReturnsArrayValue) {
+    // Was ArrayConstructorReturnsNull. NODE_ARRAY_CONSTRUCTOR now produces a
+    // TAG_ARRAY; the previous "subscript at parse time" special path is no
+    // longer necessary because the runtime array carries its own elements.
     AstNode* n = make_node(arena, NodeType::NODE_ARRAY_CONSTRUCTOR);
-    EXPECT_TRUE(eval_mysql(n).is_null());
+    n->add_child(leaf(NodeType::NODE_LITERAL_INT, "10"));
+    n->add_child(leaf(NodeType::NODE_LITERAL_INT, "20"));
+
+    auto v = eval_mysql(n);
+    EXPECT_EQ(v.tag, Value::TAG_ARRAY);
+    ASSERT_NE(v.compound_val, nullptr);
+    EXPECT_EQ(v.compound_val->count, 2u);
+    EXPECT_EQ(v.compound_val->elements[1].int_val, 20);
 }
 
 // ===== Array Subscript Evaluation =====
@@ -807,4 +832,102 @@ TEST_F(ExprEvalTest, ArraySubscriptMysql0Based) {
     auto v = eval_mysql(subscript);
     EXPECT_EQ(v.tag, Value::TAG_INT64);
     EXPECT_EQ(v.int_val, 10);
+}
+
+TEST_F(ExprEvalTest, ArraySubscriptFromResolvedRuntimeArray) {
+    resolver = [this](StringRef name) -> Value {
+        if (name.equals_ci("arr", 3)) {
+            Value elems[3] = {value_int(10), value_int(20), value_int(30)};
+            return value_array(arena, elems, 3);
+        }
+        return value_null();
+    };
+
+    AstNode* subscript = make_node(arena, NodeType::NODE_ARRAY_SUBSCRIPT);
+    subscript->add_child(leaf(NodeType::NODE_COLUMN_REF, "arr"));
+    subscript->add_child(leaf(NodeType::NODE_LITERAL_INT, "1"));
+
+    auto v = eval_pg(subscript);
+    EXPECT_EQ(v.tag, Value::TAG_INT64);
+    EXPECT_EQ(v.int_val, 10);
+}
+
+TEST_F(ExprEvalTest, NestedArraySubscriptUsesRuntimeValues) {
+    AstNode* inner1 = make_node(arena, NodeType::NODE_ARRAY_CONSTRUCTOR);
+    inner1->add_child(leaf(NodeType::NODE_LITERAL_INT, "10"));
+    inner1->add_child(leaf(NodeType::NODE_LITERAL_INT, "20"));
+
+    AstNode* inner2 = make_node(arena, NodeType::NODE_ARRAY_CONSTRUCTOR);
+    inner2->add_child(leaf(NodeType::NODE_LITERAL_INT, "30"));
+    inner2->add_child(leaf(NodeType::NODE_LITERAL_INT, "40"));
+
+    AstNode* outer = make_node(arena, NodeType::NODE_ARRAY_CONSTRUCTOR);
+    outer->add_child(inner1);
+    outer->add_child(inner2);
+
+    AstNode* first = make_node(arena, NodeType::NODE_ARRAY_SUBSCRIPT);
+    first->add_child(outer);
+    first->add_child(leaf(NodeType::NODE_LITERAL_INT, "2"));
+
+    AstNode* second = make_node(arena, NodeType::NODE_ARRAY_SUBSCRIPT);
+    second->add_child(first);
+    second->add_child(leaf(NodeType::NODE_LITERAL_INT, "1"));
+
+    auto v = eval_pg(second);
+    EXPECT_EQ(v.tag, Value::TAG_INT64);
+    EXPECT_EQ(v.int_val, 30);
+}
+
+// ===== Field access on named tuples =====
+
+TEST_F(ExprEvalTest, FieldAccessByNameReturnsField) {
+    resolver = [this](StringRef name) -> Value {
+        if (name.equals_ci("rec", 3)) {
+            Value elems[2] = {value_int(7), value_string(StringRef{"alice", 5})};
+            StringRef names[2] = {StringRef{"id", 2}, StringRef{"name", 4}};
+            return value_named_tuple(arena, elems, names, 2);
+        }
+        return value_null();
+    };
+
+    AstNode* fa = make_node(arena, NodeType::NODE_FIELD_ACCESS,
+                             StringRef{"name", 4});
+    fa->add_child(leaf(NodeType::NODE_COLUMN_REF, "rec"));
+
+    auto v = eval_mysql(fa);
+    EXPECT_EQ(v.tag, Value::TAG_STRING);
+    EXPECT_EQ(std::string(v.str_val.ptr, v.str_val.len), "alice");
+}
+
+TEST_F(ExprEvalTest, FieldAccessUnknownFieldReturnsNull) {
+    resolver = [this](StringRef name) -> Value {
+        if (name.equals_ci("rec", 3)) {
+            Value elems[1] = {value_int(7)};
+            StringRef names[1] = {StringRef{"id", 2}};
+            return value_named_tuple(arena, elems, names, 1);
+        }
+        return value_null();
+    };
+
+    AstNode* fa = make_node(arena, NodeType::NODE_FIELD_ACCESS,
+                             StringRef{"missing", 7});
+    fa->add_child(leaf(NodeType::NODE_COLUMN_REF, "rec"));
+
+    EXPECT_TRUE(eval_mysql(fa).is_null());
+}
+
+TEST_F(ExprEvalTest, FieldAccessOnUnnamedTupleReturnsNull) {
+    resolver = [this](StringRef name) -> Value {
+        if (name.equals_ci("rec", 3)) {
+            Value elems[1] = {value_int(7)};
+            return value_tuple(arena, elems, 1);  // no field_names
+        }
+        return value_null();
+    };
+
+    AstNode* fa = make_node(arena, NodeType::NODE_FIELD_ACCESS,
+                             StringRef{"id", 2});
+    fa->add_child(leaf(NodeType::NODE_COLUMN_REF, "rec"));
+
+    EXPECT_TRUE(eval_mysql(fa).is_null());
 }

@@ -2,6 +2,7 @@
 #define SQL_ENGINE_VALUE_H
 
 #include "sql_engine/types.h"
+#include "sql_parser/arena.h"
 #include "sql_parser/common.h"  // StringRef
 #include <cstdint>
 #include <cstdlib>
@@ -10,6 +11,19 @@
 namespace sql_engine {
 
 using sql_parser::StringRef;
+
+struct Value;
+
+// Arena-owned descriptor backing TAG_ARRAY and TAG_TUPLE values. The tag
+// determines the semantics:
+//   TAG_ARRAY  ordered collection addressed by subscript
+//   TAG_TUPLE  ordered collection that may optionally expose named fields
+// `field_names` is non-null only for named tuples.
+struct CompoundValueData {
+    uint32_t count;
+    Value* elements;
+    StringRef* field_names;
+};
 
 struct Value {
     enum Tag : uint8_t {
@@ -26,6 +40,8 @@ struct Value {
         TAG_DATETIME,   // microseconds since epoch (int64)
         TAG_TIMESTAMP,  // microseconds since epoch (int64)
         TAG_JSON,       // stored as StringRef
+        TAG_ARRAY,      // arena-owned CompoundValueData; subscript-addressed
+        TAG_TUPLE,      // arena-owned CompoundValueData; optional named fields
     };
     // INTERVAL was previously declared here with a months+microseconds
     // representation, but nothing produced or consumed it end-to-end:
@@ -42,17 +58,19 @@ struct Value {
         int64_t int_val;
         uint64_t uint_val;
         double double_val;
-        StringRef str_val;      // TAG_STRING, TAG_DECIMAL, TAG_BYTES, TAG_JSON
-        int32_t date_val;       // days since epoch
-        int64_t time_val;       // microseconds since midnight
-        int64_t datetime_val;   // microseconds since epoch
-        int64_t timestamp_val;  // microseconds since epoch
+        StringRef str_val;            // TAG_STRING, TAG_DECIMAL, TAG_BYTES, TAG_JSON
+        int32_t date_val;             // days since epoch
+        int64_t time_val;             // microseconds since midnight
+        int64_t datetime_val;         // microseconds since epoch
+        int64_t timestamp_val;        // microseconds since epoch
+        CompoundValueData* compound_val;  // TAG_ARRAY, TAG_TUPLE
     };
 
     bool is_null() const { return tag == TAG_NULL; }
     bool is_numeric() const { return tag >= TAG_BOOL && tag <= TAG_DECIMAL; }
     bool is_string() const { return tag == TAG_STRING; }
     bool is_temporal() const { return tag >= TAG_DATE && tag <= TAG_TIMESTAMP; }
+    bool is_compound() const { return tag == TAG_ARRAY || tag == TAG_TUPLE; }
 
     // Convert numeric value to double (for arithmetic). Returns 0.0 for non-numeric.
     double to_double() const {
@@ -176,6 +194,53 @@ inline Value value_json(StringRef s) {
     r.tag = Value::TAG_JSON;
     r.str_val = s;
     return r;
+}
+
+// Compound value constructors. Both array and tuple share the same
+// arena-owned descriptor; the tag distinguishes their semantics. The
+// elements (and field_names, when supplied) are deep-copied into the
+// arena so the caller's source storage need not outlive the Value.
+inline Value make_compound_value(sql_parser::Arena& arena,
+                                 Value::Tag tag,
+                                 const Value* elements,
+                                 const StringRef* field_names,
+                                 uint32_t count) {
+    Value* stored = static_cast<Value*>(arena.allocate(sizeof(Value) * count));
+    for (uint32_t i = 0; i < count; ++i) stored[i] = elements[i];
+
+    StringRef* stored_names = nullptr;
+    if (field_names) {
+        stored_names = static_cast<StringRef*>(arena.allocate(sizeof(StringRef) * count));
+        for (uint32_t i = 0; i < count; ++i) stored_names[i] = field_names[i];
+    }
+
+    auto* payload = static_cast<CompoundValueData*>(
+        arena.allocate(sizeof(CompoundValueData)));
+    payload->count = count;
+    payload->elements = stored;
+    payload->field_names = stored_names;
+
+    Value out{};
+    out.tag = tag;
+    out.compound_val = payload;
+    return out;
+}
+
+inline Value value_array(sql_parser::Arena& arena,
+                         const Value* elements, uint32_t count) {
+    return make_compound_value(arena, Value::TAG_ARRAY, elements, nullptr, count);
+}
+
+inline Value value_tuple(sql_parser::Arena& arena,
+                         const Value* elements, uint32_t count) {
+    return make_compound_value(arena, Value::TAG_TUPLE, elements, nullptr, count);
+}
+
+inline Value value_named_tuple(sql_parser::Arena& arena,
+                               const Value* elements,
+                               const StringRef* field_names,
+                               uint32_t count) {
+    return make_compound_value(arena, Value::TAG_TUPLE, elements, field_names, count);
 }
 
 } // namespace sql_engine
