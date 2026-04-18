@@ -211,6 +211,15 @@ auto report = recovery.recover();
 // report.recovered_commit, recovered_rollback, still_in_doubt, ...
 ```
 
+## Documentation Map
+
+- `README.md` — product overview, quick start, build, tools, and test entry points.
+- [`docs/current-state.md`](docs/current-state.md) — current implementation audit, strengths, risks, missing docs, and recommended next step.
+- `CLAUDE.md` — maintainer/agent architecture notes with file-level extension guidance.
+- `AGENTS.md` — contributor workflow, naming, and validation expectations.
+- `docs/benchmarks/` — latest benchmark reports plus reproduction instructions.
+- `docs/superpowers/specs/` and `docs/superpowers/plans/` — historical design and planning artifacts; useful for rationale, but not the source of truth for current behavior.
+
 ## Architecture
 
 ```
@@ -360,10 +369,10 @@ auto report = recovery.recover();
 | Tool | Build | Purpose |
 |---|---|---|
 | `sqlengine` | `make build-sqlengine` | Interactive SQL CLI; stdin, one-shot, or REPL; optional backends and sharding |
-| `mysql_server` | `make build-mysql-server` | MySQL wire-protocol server fronted by the ParserSQL engine |
+| `mysql_server` | `make mysql-server` | MySQL wire-protocol server fronted by the ParserSQL engine |
 | `corpus_test` | `make build-corpus-test` | Read SQL from stdin/files, parse each, report OK/PARTIAL/ERROR |
-| `engine_stress_test` | `make build-engine-stress` | Direct-API engine stress test |
-| `bench_distributed` | `make build-bench-distributed` | Distributed query benchmark + pipeline breakdown |
+| `engine_stress_test` | `make engine-stress` | Direct-API engine stress test |
+| `bench_distributed` | `make bench-distributed` | Distributed query benchmark + pipeline breakdown |
 | `run_bench` | `make bench` | Google-Benchmark micro-benchmarks |
 | `run_tests` | `make test` | 1,160 Google-Test unit tests |
 

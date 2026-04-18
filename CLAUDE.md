@@ -23,7 +23,9 @@ make bench              # Build + run benchmarks
 make bench-compare      # Run comparison vs libpg_query (requires libpg_query built)
 make build-corpus-test  # Build corpus test harness
 make build-sqlengine    # Build interactive SQL engine CLI
-make build-mysql-server # Build MySQL wire-protocol server
+make mysql-server       # Build MySQL wire-protocol server
+make engine-stress      # Build direct-API stress harness
+make bench-distributed  # Build distributed benchmark tool
 make clean              # Remove all build artifacts
 ```
 
