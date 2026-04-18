@@ -23,6 +23,7 @@ LIB_TARGET = $(PROJECT_ROOT)/libsqlparser.a
 ENGINE_SRCS = $(ENGINE_SRC_DIR)/function_registry.cpp \
               $(ENGINE_SRC_DIR)/in_memory_catalog.cpp \
               $(ENGINE_SRC_DIR)/datetime_parse.cpp \
+              $(ENGINE_SRC_DIR)/tool_config_parser.cpp \
               $(ENGINE_SRC_DIR)/mysql_remote_executor.cpp \
               $(ENGINE_SRC_DIR)/pgsql_remote_executor.cpp \
               $(ENGINE_SRC_DIR)/multi_remote_executor.cpp
@@ -119,7 +120,7 @@ ENGINE_STRESS_TARGET = engine_stress_test
 MYSQL_SERVER_SRC = $(PROJECT_ROOT)/tools/mysql_server.cpp
 MYSQL_SERVER_TARGET = mysql_server
 
-.PHONY: all lib test bench bench-compare bench-distributed build-corpus-test build-sqlengine engine-stress mysql-server clean
+.PHONY: all lib test test-sqlengine test-sqlengine-in-memory test-sqlengine-single test-sqlengine-sharded bench bench-compare bench-distributed build-corpus-test build-sqlengine engine-stress mysql-server clean
 
 build-corpus-test: $(CORPUS_TEST_TARGET)
 
@@ -150,6 +151,23 @@ $(TEST_DIR)/%.o: $(TEST_DIR)/%.cpp
 
 test: $(TEST_TARGET)
 	./$(TEST_TARGET)
+
+# Functional tests of the ./sqlengine binary itself.
+# Loud failure (exit 2) if prerequisites are missing — never silent skip.
+# Caller starts the required containers before invoking these targets:
+#   scripts/setup_single_backend.sh   (for test-sqlengine-single / test-sqlengine)
+#   scripts/start_sharding_demo.sh    (for test-sqlengine-sharded / test-sqlengine)
+test-sqlengine: $(SQLENGINE_TARGET)
+	./scripts/test_sqlengine.sh all
+
+test-sqlengine-in-memory: $(SQLENGINE_TARGET)
+	./scripts/test_sqlengine.sh in-memory
+
+test-sqlengine-single: $(SQLENGINE_TARGET)
+	./scripts/test_sqlengine.sh single
+
+test-sqlengine-sharded: $(SQLENGINE_TARGET)
+	./scripts/test_sqlengine.sh sharded
 
 $(TEST_TARGET): $(TEST_OBJS) $(GTEST_OBJ) $(LIB_TARGET) $(ENGINE_OBJS)
 	$(CXX) $(CXXFLAGS) -o $@ $(TEST_OBJS) $(GTEST_OBJ) $(ENGINE_OBJS) -L$(PROJECT_ROOT) -lsqlparser -lpthread $(MYSQL_LIBS) $(PG_LIBS)
