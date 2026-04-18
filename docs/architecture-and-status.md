@@ -572,6 +572,8 @@ Source: `docs/issues/README.md`. Status reflects the working tree on 2026-04-17.
 
 1. **[01] Distributed 2PC must require safe session pinning** — 🟦 in working tree.
    *Add `allows_unpinned_distributed_2pc()` flag. Default false. Pooled executors without pinning cannot enlist.*
+9. **[09] Single-shard route by shard key misdirects for some keys** — 📋 open. Surfaced 2026-04-18 by `scripts/test_sqlengine.sh sharded`.
+   *`WHERE id = 5` against `users:id:shard1,shard2` returns empty rows; `id = 7` works. Wrong-results-without-error path. Either the router and the demo's data placement disagree, or `DistributedPlanner` ignores the shard key.*
 
 ### P1 — important correctness & maintainability
 
@@ -581,6 +583,8 @@ Source: `docs/issues/README.md`. Status reflects the working tree on 2026-04-17.
    *New module `tool_config_parser.{h,cpp}`. Replaces ~135 lines of duplication in each of `sqlengine`, `mysql_server`, `bench_distributed`, `engine_stress_test`, plus `tests/test_ssl_config.cpp`.*
 4. **[04] Close join execution coverage gaps** — 🟦 in working tree.
    *`NestedLoopJoinOperator` now executes RIGHT and FULL outer joins (with right-row match tracking) and resolves qualified column names in join conditions.*
+8. **[08] Aggregate projection schema wrong in single-shard mode** — 📋 open. Surfaced 2026-04-18 by `scripts/test_sqlengine.sh single`.
+   *`SELECT COUNT(*)` / `SELECT SUM(salary)` against a 1-shard config show catalog table columns as headers and put the aggregate value in the wrong slot. Two-shard mode is unaffected.*
 
 ### P2 — deferred
 
