@@ -26,8 +26,16 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Install dependencies
+        run: |
+          brew install mysql-client postgresql zstd
+          echo "/opt/homebrew/opt/mysql-client/bin" >> $GITHUB_PATH
+          echo "/opt/homebrew/opt/zstd/bin" >> $GITHUB_PATH
+
       - name: Build and test
-        run: make -f Makefile clean && make -f Makefile all
+        env:
+          LIBRARY_PATH: "/opt/homebrew/lib"
+        run: make -f Makefile clean && make -f Makefile all MYSQL_CFLAGS="-I/opt/homebrew/opt/mysql-client/include"
 
   benchmark:
     runs-on: ubuntu-24.04

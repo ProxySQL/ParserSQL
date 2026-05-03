@@ -295,11 +295,12 @@ ParseResult Parser<D>::parse_set() {
     SetParser<D> set_parser(tokenizer_, arena_);
     AstNode* ast = set_parser.parse();
 
-    if (ast) {
+    if (ast && ast->first_child) {
         r.status = ParseResult::OK;
         r.ast = ast;
     } else {
         r.status = ParseResult::PARTIAL;
+        r.ast = ast;
     }
 
     scan_to_end(r);
