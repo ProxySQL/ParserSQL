@@ -26,6 +26,11 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Install dependencies
+        run: |
+          brew install mysql-client postgresql
+          echo "/opt/homebrew/opt/mysql-client/bin" >> $GITHUB_PATH
+
       - name: Build and test
         run: make -f Makefile clean && make -f Makefile all
 
