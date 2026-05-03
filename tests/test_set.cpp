@@ -654,7 +654,27 @@ TEST(MySQLSetBulk, InvalidSyntaxReturnsPartial) {
         {"SET",                        (int)ParseResult::PARTIAL},
         {"SET ;",                      (int)ParseResult::PARTIAL},
         {"SET GLOBAL",                 (int)ParseResult::PARTIAL},
+    };
+    for (const auto& tc : cases) {
+        auto r = parser.parse(tc.sql, strlen(tc.sql));
+        EXPECT_EQ((int)r.status, tc.expected_status)
+            << "SQL: " << tc.sql;
+    }
+}
+
+TEST(MySQLSetBulk, LenientAcceptsUnusualSyntax) {
+    Parser<Dialect::MySQL> parser;
+    struct { const char* sql; int expected_status; } cases[] = {
         {"SET @@@ BROKEN",             (int)ParseResult::OK},
+        {"SET NAMES DEFAULT",          (int)ParseResult::OK},
+        {"SET NAMES utf8, autocommit=1", (int)ParseResult::OK},
+        {"SET NAMES utf8 COLLATE utf8_bin, autocommit=1", (int)ParseResult::OK},
+        {"SET a=1, NAMES utf8, b=2",  (int)ParseResult::OK},
+        {"SET CHARACTER SET utf8, autocommit=1", (int)ParseResult::OK},
+        {"SET CHARSET utf8, NAMES latin1", (int)ParseResult::OK},
+        {"SET @@global.autocommit=1, @@session.sql_mode='TRADITIONAL'", (int)ParseResult::OK},
+        {"SET a=1,,b=2",              (int)ParseResult::OK},
+        {"SET NAMES utf8, broken",    (int)ParseResult::OK},
     };
     for (const auto& tc : cases) {
         auto r = parser.parse(tc.sql, strlen(tc.sql));

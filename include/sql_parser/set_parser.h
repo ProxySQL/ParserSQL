@@ -147,6 +147,10 @@ private:
             }
             return nullptr;
         }
+        if (peek.type == TokenType::TK_COMMA || peek.type == TokenType::TK_SEMICOLON
+            || peek.type == TokenType::TK_RPAREN || peek.type == TokenType::TK_EOF) {
+            return nullptr;
+        }
         return parse_variable_assignment(nullptr);
     }
 
