@@ -32,7 +32,7 @@ jobs:
           echo "/opt/homebrew/opt/mysql-client/bin" >> $GITHUB_PATH
 
       - name: Build and test
-        run: make -f Makefile clean && make -f Makefile all
+        run: make -f Makefile clean && make -f Makefile all MYSQL_CFLAGS="-I/opt/homebrew/opt/mysql-client/include"
 
   benchmark:
     runs-on: ubuntu-24.04
