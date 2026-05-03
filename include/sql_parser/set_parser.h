@@ -31,7 +31,7 @@ public:
             if (names_node) root->add_child(names_node);
             while (tok_.peek().type == TokenType::TK_COMMA) {
                 tok_.skip();
-                AstNode* next_assign = parse_variable_assignment(nullptr);
+                AstNode* next_assign = parse_comma_item();
                 if (next_assign) root->add_child(next_assign);
             }
             if (!root->first_child) return nullptr;
@@ -48,7 +48,7 @@ public:
             if (charset_node) root->add_child(charset_node);
             while (tok_.peek().type == TokenType::TK_COMMA) {
                 tok_.skip();
-                AstNode* next_assign = parse_variable_assignment(nullptr);
+                AstNode* next_assign = parse_comma_item();
                 if (next_assign) root->add_child(next_assign);
             }
             if (!root->first_child) return nullptr;
@@ -60,7 +60,7 @@ public:
             if (charset_node) root->add_child(charset_node);
             while (tok_.peek().type == TokenType::TK_COMMA) {
                 tok_.skip();
-                AstNode* next_assign = parse_variable_assignment(nullptr);
+                AstNode* next_assign = parse_comma_item();
                 if (next_assign) root->add_child(next_assign);
             }
             if (!root->first_child) return nullptr;
@@ -93,7 +93,7 @@ public:
             // Parse remaining comma-separated assignments
             while (tok_.peek().type == TokenType::TK_COMMA) {
                 tok_.skip();
-                AstNode* next_assign = parse_variable_assignment(nullptr);
+                AstNode* next_assign = parse_comma_item();
                 if (next_assign) root->add_child(next_assign);
             }
             if (!root->first_child) return nullptr;
@@ -116,7 +116,7 @@ public:
         if (assignment) root->add_child(assignment);
         while (tok_.peek().type == TokenType::TK_COMMA) {
             tok_.skip();
-            AstNode* next_assign = parse_variable_assignment(nullptr);
+            AstNode* next_assign = parse_comma_item();
             if (next_assign) root->add_child(next_assign);
         }
 
@@ -128,6 +128,27 @@ private:
     Tokenizer<D>& tok_;
     Arena& arena_;
     ExpressionParser<D> expr_parser_;
+
+    AstNode* parse_comma_item() {
+        Token peek = tok_.peek();
+        if (peek.type == TokenType::TK_NAMES) {
+            tok_.skip();
+            return parse_set_names();
+        }
+        if (peek.type == TokenType::TK_CHARSET) {
+            tok_.skip();
+            return parse_set_charset();
+        }
+        if (peek.type == TokenType::TK_CHARACTER) {
+            tok_.skip();
+            if (tok_.peek().type == TokenType::TK_SET) {
+                tok_.skip();
+                return parse_set_charset();
+            }
+            return nullptr;
+        }
+        return parse_variable_assignment(nullptr);
+    }
 
     // SET NAMES charset [COLLATE collation]
     AstNode* parse_set_names() {
