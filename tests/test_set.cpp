@@ -643,3 +643,22 @@ TEST_F(PgSQLSetTest, SetSearchPathToList) {
     EXPECT_EQ(r.status, ParseResult::OK);
     ASSERT_NE(r.ast, nullptr);
 }
+
+// ============================================================================
+// Invalid syntax should return PARTIAL, not OK (issue #36)
+// ============================================================================
+
+TEST(MySQLSetBulk, InvalidSyntaxReturnsPartial) {
+    Parser<Dialect::MySQL> parser;
+    struct { const char* sql; int expected_status; } cases[] = {
+        {"SET",                        (int)ParseResult::PARTIAL},
+        {"SET ;",                      (int)ParseResult::PARTIAL},
+        {"SET GLOBAL",                 (int)ParseResult::PARTIAL},
+        {"SET @@@ BROKEN",             (int)ParseResult::OK},
+    };
+    for (const auto& tc : cases) {
+        auto r = parser.parse(tc.sql, strlen(tc.sql));
+        EXPECT_EQ((int)r.status, tc.expected_status)
+            << "SQL: " << tc.sql;
+    }
+}

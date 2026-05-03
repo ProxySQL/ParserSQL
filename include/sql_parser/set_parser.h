@@ -29,24 +29,41 @@ public:
             tok_.skip();
             AstNode* names_node = parse_set_names();
             if (names_node) root->add_child(names_node);
+            while (tok_.peek().type == TokenType::TK_COMMA) {
+                tok_.skip();
+                AstNode* next_assign = parse_variable_assignment(nullptr);
+                if (next_assign) root->add_child(next_assign);
+            }
+            if (!root->first_child) return nullptr;
             return root;
         }
 
         // SET CHARACTER SET ... or SET CHARSET ...
         if (next.type == TokenType::TK_CHARACTER) {
             tok_.skip();
-            // Expect SET keyword
             if (tok_.peek().type == TokenType::TK_SET) {
                 tok_.skip();
             }
             AstNode* charset_node = parse_set_charset();
             if (charset_node) root->add_child(charset_node);
+            while (tok_.peek().type == TokenType::TK_COMMA) {
+                tok_.skip();
+                AstNode* next_assign = parse_variable_assignment(nullptr);
+                if (next_assign) root->add_child(next_assign);
+            }
+            if (!root->first_child) return nullptr;
             return root;
         }
         if (next.type == TokenType::TK_CHARSET) {
             tok_.skip();
             AstNode* charset_node = parse_set_charset();
             if (charset_node) root->add_child(charset_node);
+            while (tok_.peek().type == TokenType::TK_COMMA) {
+                tok_.skip();
+                AstNode* next_assign = parse_variable_assignment(nullptr);
+                if (next_assign) root->add_child(next_assign);
+            }
+            if (!root->first_child) return nullptr;
             return root;
         }
 
@@ -56,6 +73,7 @@ public:
             tok_.skip();
             AstNode* txn_node = parse_set_transaction(StringRef{});
             if (txn_node) root->add_child(txn_node);
+            if (!root->first_child) return nullptr;
             return root;
         }
 
@@ -65,6 +83,7 @@ public:
                 tok_.skip();
                 AstNode* txn_node = parse_set_transaction(scope_tok.text);
                 if (txn_node) root->add_child(txn_node);
+                if (!root->first_child) return nullptr;
                 return root;
             }
             // Not TRANSACTION — it's SET GLOBAL var = expr
@@ -77,6 +96,7 @@ public:
                 AstNode* next_assign = parse_variable_assignment(nullptr);
                 if (next_assign) root->add_child(next_assign);
             }
+            if (!root->first_child) return nullptr;
             return root;
         }
 
@@ -86,6 +106,7 @@ public:
                 Token scope_tok = tok_.next_token();
                 AstNode* assignment = parse_variable_assignment(&scope_tok);
                 if (assignment) root->add_child(assignment);
+                if (!root->first_child) return nullptr;
                 return root;
             }
         }
@@ -99,6 +120,7 @@ public:
             if (next_assign) root->add_child(next_assign);
         }
 
+        if (!root->first_child) return nullptr;
         return root;
     }
 
@@ -234,7 +256,11 @@ private:
 
         // Parse RHS expression
         AstNode* rhs = expr_parser_.parse();
-        if (rhs) assignment->add_child(rhs);
+        if (rhs) {
+            assignment->add_child(rhs);
+        } else {
+            return nullptr;
+        }
 
         return assignment;
     }

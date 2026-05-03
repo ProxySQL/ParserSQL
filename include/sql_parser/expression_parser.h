@@ -633,6 +633,7 @@ private:
             case TokenType::TK_DATA:
             case TokenType::TK_RESET:
             case TokenType::TK_KEY:
+            case TokenType::TK_ON:
             case TokenType::TK_DO:
             case TokenType::TK_NOTHING:
             case TokenType::TK_CONFLICT:
