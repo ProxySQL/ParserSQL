@@ -1027,6 +1027,54 @@ TEST(PgSQLSetP2, NumericPlaceholderStillOk) {
     EXPECT_NE(r.status, ParseResult::ERROR);
 }
 
+// PostgreSQL identifiers can contain $ after the first character (per
+// https://www.postgresql.org/docs/current/sql-syntax-lexical.html#SQL-SYNTAX-IDENTIFIERS).
+// Earlier versions of the tokenizer stopped at $, so `schema$1` parsed as
+// the identifier `schema` followed by the placeholder `$1`, which was then
+// truncated/rejected downstream.
+TEST(PgSQLSetP2, DollarInUnquotedIdentIsContinuation) {
+    Parser<Dialect::PostgreSQL> parser;
+    const char* sql = "SET search_path = schema$1";
+    auto r = parser.parse(sql, strlen(sql));
+    EXPECT_EQ(r.status, ParseResult::OK);
+    const AstNode* v = first_value(r.ast);
+    ASSERT_NE(v, nullptr);
+    EXPECT_EQ(std::string(v->value_ptr, v->value_len), "schema$1");
+}
+
+TEST(PgSQLSetP2, DollarInMiddleOfIdent) {
+    Parser<Dialect::PostgreSQL> parser;
+    const char* sql = "SET search_path = my$schema$2_name";
+    auto r = parser.parse(sql, strlen(sql));
+    EXPECT_EQ(r.status, ParseResult::OK);
+    const AstNode* v = first_value(r.ast);
+    ASSERT_NE(v, nullptr);
+    EXPECT_EQ(std::string(v->value_ptr, v->value_len), "my$schema$2_name");
+}
+
+TEST(PgSQLSetP2, DollarAtStartStillEmitsError) {
+    // `$word` (dollar followed by non-digit) is reserved and must still
+    // emit TK_ERROR. Only mid-identifier `$` becomes a continuation char.
+    Parser<Dialect::PostgreSQL> parser;
+    const char* sql = "SET search_path = $bareword";
+    auto r = parser.parse(sql, strlen(sql));
+    EXPECT_EQ(r.status, ParseResult::ERROR);
+}
+
+// MySQL still disallows $ in unquoted identifiers — the PG-only continuation
+// rule must not leak into MySQL parsing.
+TEST(MySQLSet, DollarStillBreaksUnquotedIdent) {
+    Parser<Dialect::MySQL> parser;
+    const char* sql = "SET schema$1 = 1";
+    auto r = parser.parse(sql, strlen(sql));
+    // MySQL: $ stops the identifier so the parse fails (or produces a partial
+    // result without `schema$1` as a single token).
+    const AstNode* v = first_value(r.ast);
+    if (v != nullptr) {
+        EXPECT_NE(std::string(v->value_ptr, v->value_len), "schema$1");
+    }
+}
+
 // ============================================================================
 // Post-1.0.4 audit follow-ups: PG non-GUC SET forms and value-preservation.
 // ============================================================================

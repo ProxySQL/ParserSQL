@@ -153,8 +153,17 @@ private:
         const char* start = cursor_;
         while (cursor_ < end_) {
             char c = *cursor_;
-            if ((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') ||
-                (c >= '0' && c <= '9') || c == '_') {
+            bool is_cont = (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') ||
+                           (c >= '0' && c <= '9') || c == '_';
+            // PostgreSQL allows `$` as an identifier continuation char (but
+            // not as the first char, which is enforced because $ at start
+            // is handled by the $$ / $N branches in next_token_impl()).
+            // e.g. `SET search_path = schema$1` — `schema$1` is a single
+            // identifier, not `schema` followed by the placeholder `$1`.
+            if (!is_cont && D == Dialect::PostgreSQL && c == '$' && cursor_ > start) {
+                is_cont = true;
+            }
+            if (is_cont) {
                 ++cursor_;
             } else {
                 break;
