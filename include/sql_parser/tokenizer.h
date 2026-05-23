@@ -15,7 +15,14 @@ public:
         cursor_ = input;
         end_ = input + len;
         has_peeked_ = false;
+        has_error_ = false;
     }
+
+    // True iff the tokenizer has emitted at least one TK_ERROR token since
+    // the last reset(). Lets callers distinguish "couldn't build an AST"
+    // from "the input was syntactically invalid" and surface the latter
+    // as ParseResult::ERROR rather than PARTIAL.
+    bool has_error() const { return has_error_; }
 
     Token next_token() {
         if (has_peeked_) {
@@ -53,6 +60,7 @@ private:
     const char* end_ = nullptr;
     Token peeked_;
     bool has_peeked_ = false;
+    bool has_error_ = false;
 
     uint32_t offset() const {
         return static_cast<uint32_t>(cursor_ - start_);
@@ -130,6 +138,7 @@ private:
     }
 
     Token make_token(TokenType type, const char* start, uint32_t len) {
+        if (type == TokenType::TK_ERROR) has_error_ = true;
         return Token{type, StringRef{start, len},
                      static_cast<uint32_t>(start - start_)};
     }
@@ -314,6 +323,17 @@ private:
                         ++cursor_;
                     uint32_t len = static_cast<uint32_t>(cursor_ - start);
                     return make_token(TokenType::TK_DOLLAR_NUM, start, len);
+                }
+                // $<letter|underscore>... is NOT a valid PG token at this
+                // position -- it looks like a parameter placeholder but is
+                // syntactically invalid (placeholders must be numeric, e.g.
+                // $1). Emit TK_ERROR so the caller can fail cleanly with
+                // ParseResult::ERROR instead of returning PARTIAL with a
+                // null AST and confusing downstream consumers.
+                {
+                    const char* start = cursor_;
+                    ++cursor_;  // consume $ so error offset is precise
+                    return make_token(TokenType::TK_ERROR, start, 1);
                 }
             }
         }
