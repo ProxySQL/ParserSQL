@@ -111,13 +111,66 @@ public:
             }
         }
 
+        // PostgreSQL: SET TIME ZONE <value>
+        // Per the PG docs this is an alias for SET TimeZone = <value>. The
+        // tokenizer has no dedicated TK_TIME / TK_ZONE keywords so the lookahead
+        // matches identifier text case-insensitively. <value> can be a string
+        // literal, DEFAULT, LOCAL, an interval expression, or any other
+        // expression accepted by ExpressionParser.
+        if constexpr (D == Dialect::PostgreSQL) {
+            if (next.type == TokenType::TK_IDENTIFIER && next.text.equals_ci("TIME", 4)) {
+                tok_.skip();
+                Token zone = tok_.peek();
+                if (zone.type == TokenType::TK_IDENTIFIER && zone.text.equals_ci("ZONE", 4)) {
+                    tok_.skip();
+                    AstNode* assignment = make_node(arena_, NodeType::NODE_VAR_ASSIGNMENT);
+                    AstNode* target = make_node(arena_, NodeType::NODE_VAR_TARGET);
+                    if (!assignment || !target) return nullptr;
+                    // Synthetic variable name; string literal lives in static storage.
+                    target->add_child(make_node(arena_, NodeType::NODE_IDENTIFIER,
+                        StringRef{"timezone", 8}));
+                    assignment->add_child(target);
+                    Token rhs_tok = tok_.peek();
+                    if (rhs_tok.type == TokenType::TK_DEFAULT ||
+                        rhs_tok.type == TokenType::TK_LOCAL) {
+                        tok_.skip();
+                        assignment->add_child(make_node(arena_, NodeType::NODE_IDENTIFIER, rhs_tok.text));
+                    } else {
+                        AstNode* rhs = expr_parser_.parse();
+                        if (!rhs) return nullptr;
+                        assignment->add_child(rhs);
+                    }
+                    root->add_child(assignment);
+                    return root;
+                }
+                // TIME without ZONE is not a valid PG SET form.
+                return nullptr;
+            }
+        }
+
         // SET var = expr [, var = expr, ...]
         AstNode* assignment = parse_variable_assignment(nullptr);
         if (assignment) root->add_child(assignment);
-        while (tok_.peek().type == TokenType::TK_COMMA) {
-            tok_.skip();
-            AstNode* next_assign = parse_comma_item();
-            if (next_assign) root->add_child(next_assign);
+        if constexpr (D == Dialect::PostgreSQL) {
+            // PG SET is single-variable; commas after the first value are list
+            // continuation, not new assignments (see PG docs:
+            //   SET configuration_parameter { TO | = } { value | 'value' | DEFAULT }
+            //   "Some configuration parameters take a list of values, such as
+            //    search_path and datestyle.")
+            // Each extra value is appended as another child of the same
+            // VAR_ASSIGNMENT node, alongside the first RHS expression.
+            while (assignment && tok_.peek().type == TokenType::TK_COMMA) {
+                tok_.skip();
+                AstNode* extra_val = expr_parser_.parse();
+                if (!extra_val) break;
+                assignment->add_child(extra_val);
+            }
+        } else {
+            while (tok_.peek().type == TokenType::TK_COMMA) {
+                tok_.skip();
+                AstNode* next_assign = parse_comma_item();
+                if (next_assign) root->add_child(next_assign);
+            }
         }
 
         if (!root->first_child) return nullptr;
