@@ -792,12 +792,17 @@ TEST_F(PgSQLSetTest, SetDatestyleMultiValue) {
 // Invalid syntax should return PARTIAL, not OK (issue #36)
 // ============================================================================
 
-TEST(MySQLSetBulk, InvalidSyntaxReturnsPartial) {
+TEST(MySQLSetBulk, InvalidSyntaxReturnsError) {
+    // Updated from the prior PARTIAL expectation: parse_set() now
+    // distinguishes truncated / malformed input from genuine parse
+    // failures and surfaces the former as ParseResult::ERROR. This
+    // matches the semantics consumers actually want (lock_hostgroup
+    // or hard-fail on clearly-bad SQL).
     Parser<Dialect::MySQL> parser;
     struct { const char* sql; int expected_status; } cases[] = {
-        {"SET",                        (int)ParseResult::PARTIAL},
-        {"SET ;",                      (int)ParseResult::PARTIAL},
-        {"SET GLOBAL",                 (int)ParseResult::PARTIAL},
+        {"SET",                        (int)ParseResult::ERROR},
+        {"SET ;",                      (int)ParseResult::ERROR},
+        {"SET GLOBAL",                 (int)ParseResult::ERROR},
     };
     for (const auto& tc : cases) {
         auto r = parser.parse(tc.sql, strlen(tc.sql));
@@ -1020,4 +1025,197 @@ TEST(PgSQLSetP2, NumericPlaceholderStillOk) {
     auto r = parser.parse(sql, strlen(sql));
     // Not a SET, but make sure the tokenizer hasn't regressed $N placeholders.
     EXPECT_NE(r.status, ParseResult::ERROR);
+}
+
+// ============================================================================
+// Post-1.0.4 audit follow-ups: PG non-GUC SET forms and value-preservation.
+// ============================================================================
+
+// Helper for the new NODE_SET_ROLE / NODE_SET_SESSION_AUTHORIZATION /
+// NODE_SET_CONSTRAINTS top-level children of NODE_SET_STMT.
+static const AstNode* first_set_child(const AstNode* set_stmt) {
+    return (set_stmt && set_stmt->type == NodeType::NODE_SET_STMT)
+        ? set_stmt->first_child : nullptr;
+}
+
+// ---- SET ROLE / SET LOCAL ROLE ---------------------------------------------
+TEST(PgSQLSetRole, QuotedRole) {
+    Parser<Dialect::PostgreSQL> parser;
+    const char* sql = "SET ROLE 'admin'";
+    auto r = parser.parse(sql, strlen(sql));
+    EXPECT_EQ(r.status, ParseResult::OK);
+    const AstNode* c = first_set_child(r.ast);
+    ASSERT_NE(c, nullptr);
+    EXPECT_EQ(c->type, NodeType::NODE_SET_ROLE);
+    ASSERT_NE(c->first_child, nullptr);
+    EXPECT_EQ(c->first_child->type, NodeType::NODE_LITERAL_STRING);
+    EXPECT_EQ(std::string(c->first_child->value_ptr, c->first_child->value_len), "admin");
+}
+
+TEST(PgSQLSetRole, UnquotedRole) {
+    Parser<Dialect::PostgreSQL> parser;
+    const char* sql = "SET ROLE admin";
+    auto r = parser.parse(sql, strlen(sql));
+    EXPECT_EQ(r.status, ParseResult::OK);
+    const AstNode* c = first_set_child(r.ast);
+    ASSERT_NE(c, nullptr);
+    EXPECT_EQ(c->type, NodeType::NODE_SET_ROLE);
+}
+
+TEST(PgSQLSetRole, RoleNoneIsAccepted) {
+    Parser<Dialect::PostgreSQL> parser;
+    const char* sql = "SET ROLE NONE";
+    auto r = parser.parse(sql, strlen(sql));
+    EXPECT_EQ(r.status, ParseResult::OK);
+    const AstNode* c = first_set_child(r.ast);
+    ASSERT_NE(c, nullptr);
+    EXPECT_EQ(c->type, NodeType::NODE_SET_ROLE);
+    ASSERT_NE(c->first_child, nullptr);
+    EXPECT_EQ(std::string(c->first_child->value_ptr, c->first_child->value_len), "NONE");
+}
+
+TEST(PgSQLSetRole, LocalRoleCarriesScope) {
+    Parser<Dialect::PostgreSQL> parser;
+    const char* sql = "SET LOCAL ROLE 'admin'";
+    auto r = parser.parse(sql, strlen(sql));
+    EXPECT_EQ(r.status, ParseResult::OK);
+    const AstNode* c = first_set_child(r.ast);
+    ASSERT_NE(c, nullptr);
+    EXPECT_EQ(c->type, NodeType::NODE_SET_ROLE);
+    // First child is the LOCAL scope identifier, second is the value.
+    ASSERT_NE(c->first_child, nullptr);
+    EXPECT_EQ(c->first_child->type, NodeType::NODE_IDENTIFIER);
+    EXPECT_EQ(std::string(c->first_child->value_ptr, c->first_child->value_len), "LOCAL");
+    ASSERT_NE(c->first_child->next_sibling, nullptr);
+    EXPECT_EQ(c->first_child->next_sibling->type, NodeType::NODE_LITERAL_STRING);
+}
+
+// ---- SET SESSION AUTHORIZATION ---------------------------------------------
+TEST(PgSQLSetSessionAuth, QuotedName) {
+    Parser<Dialect::PostgreSQL> parser;
+    const char* sql = "SET SESSION AUTHORIZATION 'alice'";
+    auto r = parser.parse(sql, strlen(sql));
+    EXPECT_EQ(r.status, ParseResult::OK);
+    const AstNode* c = first_set_child(r.ast);
+    ASSERT_NE(c, nullptr);
+    EXPECT_EQ(c->type, NodeType::NODE_SET_SESSION_AUTHORIZATION);
+    ASSERT_NE(c->first_child, nullptr);
+    EXPECT_EQ(c->first_child->type, NodeType::NODE_LITERAL_STRING);
+    EXPECT_EQ(std::string(c->first_child->value_ptr, c->first_child->value_len), "alice");
+}
+
+TEST(PgSQLSetSessionAuth, DefaultIsAccepted) {
+    Parser<Dialect::PostgreSQL> parser;
+    const char* sql = "SET SESSION AUTHORIZATION DEFAULT";
+    auto r = parser.parse(sql, strlen(sql));
+    EXPECT_EQ(r.status, ParseResult::OK);
+    const AstNode* c = first_set_child(r.ast);
+    ASSERT_NE(c, nullptr);
+    EXPECT_EQ(c->type, NodeType::NODE_SET_SESSION_AUTHORIZATION);
+}
+
+// ---- SET CONSTRAINTS -------------------------------------------------------
+TEST(PgSQLSetConstraints, AllDeferred) {
+    Parser<Dialect::PostgreSQL> parser;
+    const char* sql = "SET CONSTRAINTS ALL DEFERRED";
+    auto r = parser.parse(sql, strlen(sql));
+    EXPECT_EQ(r.status, ParseResult::OK);
+    const AstNode* c = first_set_child(r.ast);
+    ASSERT_NE(c, nullptr);
+    EXPECT_EQ(c->type, NodeType::NODE_SET_CONSTRAINTS);
+    ASSERT_NE(c->first_child, nullptr);
+    EXPECT_EQ(std::string(c->first_child->value_ptr, c->first_child->value_len), "ALL");
+    ASSERT_NE(c->first_child->next_sibling, nullptr);
+    EXPECT_EQ(std::string(c->first_child->next_sibling->value_ptr,
+                          c->first_child->next_sibling->value_len), "DEFERRED");
+}
+
+TEST(PgSQLSetConstraints, NamedImmediate) {
+    Parser<Dialect::PostgreSQL> parser;
+    const char* sql = "SET CONSTRAINTS my_fk IMMEDIATE";
+    auto r = parser.parse(sql, strlen(sql));
+    EXPECT_EQ(r.status, ParseResult::OK);
+    const AstNode* c = first_set_child(r.ast);
+    ASSERT_NE(c, nullptr);
+    EXPECT_EQ(c->type, NodeType::NODE_SET_CONSTRAINTS);
+}
+
+// ---- SET SESSION CHARACTERISTICS AS TRANSACTION ----------------------------
+TEST(PgSQLSetSessionCharacteristics, EmitsSetTransaction) {
+    Parser<Dialect::PostgreSQL> parser;
+    const char* sql = "SET SESSION CHARACTERISTICS AS TRANSACTION ISOLATION LEVEL SERIALIZABLE";
+    auto r = parser.parse(sql, strlen(sql));
+    EXPECT_EQ(r.status, ParseResult::OK);
+    const AstNode* c = first_set_child(r.ast);
+    ASSERT_NE(c, nullptr);
+    EXPECT_EQ(c->type, NodeType::NODE_SET_TRANSACTION);
+}
+
+// ---- Schema-qualified GUC name (PG) ----------------------------------------
+TEST(PgSQLSetSchemaQualified, PgCatalogSearchPath) {
+    Parser<Dialect::PostgreSQL> parser;
+    const char* sql = "SET pg_catalog.search_path TO public";
+    auto r = parser.parse(sql, strlen(sql));
+    EXPECT_EQ(r.status, ParseResult::OK);
+    const AstNode* id = first_target_identifier(r.ast);
+    ASSERT_NE(id, nullptr);
+    EXPECT_EQ(std::string(id->value_ptr, id->value_len), "pg_catalog.search_path");
+}
+
+TEST(PgSQLSetSchemaQualified, CustomNamespace) {
+    Parser<Dialect::PostgreSQL> parser;
+    const char* sql = "SET myapp.setting = 'value'";
+    auto r = parser.parse(sql, strlen(sql));
+    EXPECT_EQ(r.status, ParseResult::OK);
+    const AstNode* id = first_target_identifier(r.ast);
+    ASSERT_NE(id, nullptr);
+    EXPECT_EQ(std::string(id->value_ptr, id->value_len), "myapp.setting");
+}
+
+// ---- TIME ZONE INTERVAL literal preserved ----------------------------------
+TEST(PgSQLSetTimeZoneInterval, FullLiteralPreserved) {
+    Parser<Dialect::PostgreSQL> parser;
+    const char* sql = "SET TIME ZONE INTERVAL '1' HOUR";
+    auto r = parser.parse(sql, strlen(sql));
+    EXPECT_EQ(r.status, ParseResult::OK);
+    const AstNode* v = first_value(r.ast);
+    ASSERT_NE(v, nullptr);
+    EXPECT_EQ(v->type, NodeType::NODE_LITERAL_STRING);
+    EXPECT_EQ(std::string(v->value_ptr, v->value_len), "INTERVAL '1' HOUR");
+}
+
+// ---- Clearly-malformed SET surfaces ERROR ----------------------------------
+TEST(PgSQLSetErrors, EqualsSignAsTargetIsError) {
+    Parser<Dialect::PostgreSQL> parser;
+    const char* sql = "SET = 1";
+    auto r = parser.parse(sql, strlen(sql));
+    EXPECT_EQ(r.status, ParseResult::ERROR);
+}
+
+TEST(PgSQLSetErrors, EmptyRhsIsError) {
+    Parser<Dialect::PostgreSQL> parser;
+    const char* sql = "SET datestyle = ;";
+    auto r = parser.parse(sql, strlen(sql));
+    EXPECT_EQ(r.status, ParseResult::ERROR);
+}
+
+TEST(PgSQLSetErrors, TruncatedRhsIsError) {
+    Parser<Dialect::PostgreSQL> parser;
+    const char* sql = "SET search_path TO";
+    auto r = parser.parse(sql, strlen(sql));
+    EXPECT_EQ(r.status, ParseResult::ERROR);
+}
+
+TEST(PgSQLSetErrors, LeadingCommaIsError) {
+    Parser<Dialect::PostgreSQL> parser;
+    const char* sql = "SET search_path = ,public";
+    auto r = parser.parse(sql, strlen(sql));
+    EXPECT_EQ(r.status, ParseResult::ERROR);
+}
+
+TEST(MySQLSetErrors, TruncatedRhsIsError) {
+    Parser<Dialect::MySQL> parser;
+    const char* sql = "SET autocommit =";
+    auto r = parser.parse(sql, strlen(sql));
+    EXPECT_EQ(r.status, ParseResult::ERROR);
 }

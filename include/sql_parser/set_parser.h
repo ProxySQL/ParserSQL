@@ -88,6 +88,46 @@ public:
                 if (!root->first_child) return nullptr;
                 return root;
             }
+            // PostgreSQL: SET SESSION AUTHORIZATION { 'name' | name | DEFAULT }
+            // -- role-switching command, NOT a GUC assignment. Emit a
+            // dedicated NODE_SET_SESSION_AUTHORIZATION node.
+            if constexpr (D == Dialect::PostgreSQL) {
+                if (next.type == TokenType::TK_SESSION) {
+                    Token after = tok_.peek();
+                    if (after.type == TokenType::TK_IDENTIFIER &&
+                        after.text.equals_ci("AUTHORIZATION", 13)) {
+                        tok_.skip();
+                        AstNode* node = make_node(arena_,
+                            NodeType::NODE_SET_SESSION_AUTHORIZATION);
+                        if (!node) return nullptr;
+                        AstNode* val = parse_session_role_value_();
+                        if (!val) return nullptr;
+                        node->add_child(val);
+                        root->add_child(node);
+                        return root;
+                    }
+                    // SET SESSION CHARACTERISTICS AS TRANSACTION ...
+                    // -- emit as NODE_SET_TRANSACTION with SESSION scope so
+                    // consumers handle it uniformly with plain SET SESSION
+                    // TRANSACTION.
+                    if (after.type == TokenType::TK_IDENTIFIER &&
+                        after.text.equals_ci("CHARACTERISTICS", 15)) {
+                        tok_.skip();
+                        if (tok_.peek().type == TokenType::TK_AS) {
+                            tok_.skip();
+                            if (tok_.peek().type == TokenType::TK_TRANSACTION) {
+                                tok_.skip();
+                                AstNode* txn_node =
+                                    parse_set_transaction(scope_tok.text);
+                                if (txn_node) root->add_child(txn_node);
+                                if (!root->first_child) return nullptr;
+                                return root;
+                            }
+                        }
+                        return nullptr;
+                    }
+                }
+            }
             // Not TRANSACTION — it's SET GLOBAL var = expr
             // Fall through to variable assignment with scope
             AstNode* assignment = parse_variable_assignment(&scope_tok);
@@ -102,13 +142,85 @@ public:
             return root;
         }
 
-        // PostgreSQL: SET LOCAL var = expr
+        // PostgreSQL: SET LOCAL ... -- the LOCAL scope applies to whatever
+        // form follows. SET LOCAL ROLE / SET LOCAL <var> = ... etc. We peek
+        // past LOCAL to dispatch correctly; the LOCAL token itself is fed
+        // into the parsed node as scope info so downstream consumers can
+        // preserve the LOCAL semantics.
         if constexpr (D == Dialect::PostgreSQL) {
             if (next.type == TokenType::TK_LOCAL) {
                 Token scope_tok = tok_.next_token();
+                Token after = tok_.peek();
+                // SET LOCAL ROLE ...
+                if (after.type == TokenType::TK_IDENTIFIER &&
+                    after.text.equals_ci("ROLE", 4)) {
+                    tok_.skip();
+                    AstNode* node = parse_pg_set_role_value_(/*local=*/true, scope_tok);
+                    if (node) root->add_child(node);
+                    if (!root->first_child) return nullptr;
+                    return root;
+                }
+                // SET LOCAL <var> = expr -- fall to generic path with scope
                 AstNode* assignment = parse_variable_assignment(&scope_tok);
                 if (assignment) root->add_child(assignment);
                 if (!root->first_child) return nullptr;
+                return root;
+            }
+        }
+
+        // PostgreSQL: SET ROLE { <name> | 'name' | NONE | DEFAULT }
+        // This is a role-switching command, not a GUC assignment. Emit as a
+        // distinct node so consumers can forward to the backend instead of
+        // misclassifying it as an unknown variable named "ROLE".
+        if constexpr (D == Dialect::PostgreSQL) {
+            if (next.type == TokenType::TK_IDENTIFIER &&
+                next.text.equals_ci("ROLE", 4)) {
+                tok_.skip();
+                AstNode* node = parse_pg_set_role_value_(/*local=*/false, Token{});
+                if (node) root->add_child(node);
+                if (!root->first_child) return nullptr;
+                return root;
+            }
+        }
+
+        // PostgreSQL: SET CONSTRAINTS { ALL | <name>[, <name>, ...] }
+        //   { DEFERRED | IMMEDIATE }
+        // Transaction-control command, not a GUC. The first child is the
+        // target list (IDENTIFIER[ALL] or one-or-more IDENTIFIERs), the
+        // last child is the mode (IDENTIFIER[DEFERRED|IMMEDIATE]).
+        if constexpr (D == Dialect::PostgreSQL) {
+            if (next.type == TokenType::TK_IDENTIFIER &&
+                next.text.equals_ci("CONSTRAINTS", 11)) {
+                tok_.skip();
+                AstNode* node = make_node(arena_, NodeType::NODE_SET_CONSTRAINTS);
+                if (!node) return nullptr;
+                Token first = tok_.peek();
+                if (first.type == TokenType::TK_ALL) {
+                    tok_.skip();
+                    node->add_child(make_node(arena_, NodeType::NODE_IDENTIFIER,
+                        StringRef{"ALL", 3}));
+                } else {
+                    // name[, name, ...] -- read identifiers separated by commas
+                    while (true) {
+                        Token name = tok_.peek();
+                        if (name.type != TokenType::TK_IDENTIFIER) break;
+                        tok_.skip();
+                        node->add_child(make_node(arena_,
+                            NodeType::NODE_IDENTIFIER, name.text));
+                        if (tok_.peek().type != TokenType::TK_COMMA) break;
+                        tok_.skip();
+                    }
+                    if (!node->first_child) return nullptr;
+                }
+                Token mode = tok_.next_token();
+                if (mode.type != TokenType::TK_IDENTIFIER ||
+                    !(mode.text.equals_ci("DEFERRED", 8) ||
+                      mode.text.equals_ci("IMMEDIATE", 9))) {
+                    return nullptr;
+                }
+                node->add_child(make_node(arena_,
+                    NodeType::NODE_IDENTIFIER, mode.text));
+                root->add_child(node);
                 return root;
             }
         }
@@ -182,6 +294,28 @@ public:
                         rhs_tok.type == TokenType::TK_LOCAL) {
                         tok_.skip();
                         assignment->add_child(make_node(arena_, NodeType::NODE_IDENTIFIER, rhs_tok.text));
+                    } else if (rhs_tok.type == TokenType::TK_IDENTIFIER &&
+                               rhs_tok.text.equals_ci("INTERVAL", 8)) {
+                        // SET TIME ZONE INTERVAL '<value>' <UNIT> -- the
+                        // INTERVAL keyword + string + unit is a single
+                        // PG interval literal. ExpressionParser doesn't
+                        // model this so it would drop everything after
+                        // INTERVAL. Capture the source bytes spanning
+                        // the whole literal and emit a single
+                        // LITERAL_STRING value so consumers can
+                        // re-emit it intact.
+                        Token start = tok_.next_token();  // INTERVAL
+                        Token val = tok_.next_token();    // '1'
+                        Token unit = tok_.next_token();   // HOUR
+                        if (val.type != TokenType::TK_STRING ||
+                            unit.type != TokenType::TK_IDENTIFIER) {
+                            return nullptr;
+                        }
+                        const char* span_end = unit.text.ptr + unit.text.len;
+                        StringRef whole{start.text.ptr,
+                            static_cast<uint32_t>(span_end - start.text.ptr)};
+                        assignment->add_child(make_node(arena_,
+                            NodeType::NODE_LITERAL_STRING, whole));
                     } else {
                         AstNode* rhs = expr_parser_.parse();
                         if (!rhs) return nullptr;
@@ -257,6 +391,45 @@ private:
         buf[off++] = '.';
         std::memcpy(buf + off, name.text.ptr, name.text.len); off += name.text.len;
         return StringRef{buf, static_cast<uint32_t>(total)};
+    }
+
+    // Parse the value part of SET ROLE / SET LOCAL ROLE and return a
+    // NODE_SET_ROLE node carrying:
+    //   - optional first child IDENTIFIER[LOCAL] when invoked with local=true
+    //   - value child: IDENTIFIER for NONE / DEFAULT / unquoted name, or
+    //     LITERAL_STRING for the single-quoted form
+    AstNode* parse_pg_set_role_value_(bool local, const Token& scope_tok) {
+        AstNode* node = make_node(arena_, NodeType::NODE_SET_ROLE);
+        if (!node) return nullptr;
+        if (local) {
+            node->add_child(make_node(arena_, NodeType::NODE_IDENTIFIER,
+                scope_tok.text));
+        }
+        AstNode* val = parse_session_role_value_();
+        if (!val) return nullptr;
+        node->add_child(val);
+        return node;
+    }
+
+    // Parse the right-hand-side of a SET ROLE / SET SESSION AUTHORIZATION:
+    // accepts a quoted string literal, the keywords NONE / DEFAULT, or a
+    // bare identifier role name. Returns nullptr on syntactic mismatch.
+    AstNode* parse_session_role_value_() {
+        Token tok = tok_.peek();
+        if (tok.type == TokenType::TK_STRING) {
+            tok_.skip();
+            return make_node(arena_, NodeType::NODE_LITERAL_STRING, tok.text);
+        }
+        if (tok.type == TokenType::TK_DEFAULT) {
+            tok_.skip();
+            return make_node(arena_, NodeType::NODE_IDENTIFIER, tok.text);
+        }
+        if (tok.type == TokenType::TK_IDENTIFIER) {
+            tok_.skip();
+            // NONE / DEFAULT / <name> are all just identifiers here.
+            return make_node(arena_, NodeType::NODE_IDENTIFIER, tok.text);
+        }
+        return nullptr;
     }
 
     AstNode* parse_comma_item() {
@@ -398,9 +571,38 @@ private:
                     build_scoped_identifier_("@@", name)));
             }
         } else {
-            // Plain variable name
+            // Plain variable name. PostgreSQL also accepts schema-qualified
+            // GUC names like `pg_catalog.search_path` or `myapp.setting`
+            // (the standard way to set custom application parameters). Emit
+            // the combined `<schema>.<name>` as one identifier so downstream
+            // normalization sees a single canonical name.
             Token name = tok_.next_token();
-            target->add_child(make_node(arena_, NodeType::NODE_IDENTIFIER, name.text));
+            // Validate the name token actually looks like an identifier --
+            // `SET = 1` / `SET ,` / `SET ;` would otherwise stuff `=` / `,`
+            // / `;` into the IDENTIFIER node and confuse downstream code.
+            // Empty / EOF input was already rejected by parse_set() before
+            // we got here.
+            if (name.type != TokenType::TK_IDENTIFIER) {
+                tok_.flag_error();
+                return nullptr;
+            }
+            if constexpr (D == Dialect::PostgreSQL) {
+                if (tok_.peek().type == TokenType::TK_DOT) {
+                    tok_.skip();
+                    Token rhs = tok_.next_token();
+                    if (rhs.type != TokenType::TK_IDENTIFIER) {
+                        tok_.flag_error();
+                        return nullptr;
+                    }
+                    target->add_child(make_node(arena_, NodeType::NODE_IDENTIFIER,
+                        build_scoped_dotted_identifier_("", name, rhs)));
+                } else {
+                    target->add_child(make_node(arena_,
+                        NodeType::NODE_IDENTIFIER, name.text));
+                }
+            } else {
+                target->add_child(make_node(arena_, NodeType::NODE_IDENTIFIER, name.text));
+            }
         }
 
         assignment->add_child(target);
@@ -415,11 +617,16 @@ private:
             }
         }
 
-        // Parse RHS expression
+        // Parse RHS expression. If the parser couldn't produce one --
+        // typically because the input is truncated (`SET x =`), starts
+        // with a separator (`SET x = ,foo`, `SET x = ;`), or otherwise
+        // malformed -- flag a parse error so the eventual ParseResult is
+        // ERROR rather than PARTIAL with a missing-RHS AST.
         AstNode* rhs = expr_parser_.parse();
         if (rhs) {
             assignment->add_child(rhs);
         } else {
+            tok_.flag_error();
             return nullptr;
         }
 
