@@ -200,6 +200,17 @@ static const SetTestCase pgsql_set_cases[] = {
     {"SET LOCAL timezone = 'UTC'", "PG LOCAL timezone"},
     {"SET NAMES 'UTF8'", "PG NAMES"},
     {"SET search_path TO public, extensions", "PG search_path TO list"},
+    // PG SET TIME ZONE — two-keyword alias for SET TimeZone = <value>.
+    {"SET TIME ZONE 'UTC'",                  "PG SET TIME ZONE string literal"},
+    {"SET TIME ZONE DEFAULT",                "PG SET TIME ZONE DEFAULT"},
+    {"SET TIME ZONE '+05:30'",               "PG SET TIME ZONE numeric offset literal"},
+    {"SET TIME ZONE LOCAL",                  "PG SET TIME ZONE LOCAL"},
+    {"set time zone 'UTC'",                  "PG SET TIME ZONE lowercase"},
+    // PG SET multi-value list — single variable, commas are value continuation.
+    {"SET search_path TO 'a', 'b'",          "PG search_path two-value list via TO"},
+    {"SET search_path = 'a', 'b', 'c'",      "PG search_path three-value list via ="},
+    {"SET search_path TO \"$user\", public", "PG search_path with quoted identifier + plain identifier"},
+    {"SET datestyle TO 'ISO', 'mdy'",        "PG datestyle two-value list"},
 };
 
 // ============================================================================
@@ -642,6 +653,139 @@ TEST_F(PgSQLSetTest, SetSearchPathToList) {
     auto r = parser.parse(sql, strlen(sql));
     EXPECT_EQ(r.status, ParseResult::OK);
     ASSERT_NE(r.ast, nullptr);
+}
+
+// ----------------------------------------------------------------------------
+// PG SET TIME ZONE — two-keyword alias for SET TimeZone = <value>.
+// Regression coverage: before the fix, the parser treated TIME as a normal
+// identifier (variable name "time") and ZONE as the value, so the assignment
+// emitted was `time = ZONE` and the rest of the statement was discarded.
+// ----------------------------------------------------------------------------
+
+namespace {
+
+// Helper: walk to the variable-target identifier node, return its StringRef.
+inline StringRef set_var_name(const AstNode* root) {
+    if (!root || !root->first_child) return {};
+    const AstNode* assignment = root->first_child;
+    if (!assignment || !assignment->first_child) return {};
+    const AstNode* target = assignment->first_child;
+    if (!target || !target->first_child) return {};
+    return target->first_child->value();
+}
+
+// Helper: count children of a node.
+inline int child_count(const AstNode* node) {
+    int n = 0;
+    for (const AstNode* c = node->first_child; c; c = c->next_sibling) ++n;
+    return n;
+}
+
+} // namespace
+
+TEST_F(PgSQLSetTest, SetTimeZoneStringLiteral) {
+    const char* sql = "SET TIME ZONE 'UTC'";
+    auto r = parser.parse(sql, strlen(sql));
+    EXPECT_EQ(r.status, ParseResult::OK);
+    ASSERT_NE(r.ast, nullptr);
+    EXPECT_EQ(r.ast->type, NodeType::NODE_SET_STMT);
+    AstNode* assignment = r.ast->first_child;
+    ASSERT_NE(assignment, nullptr);
+    EXPECT_EQ(assignment->type, NodeType::NODE_VAR_ASSIGNMENT);
+    EXPECT_TRUE(set_var_name(r.ast).equals_ci("timezone", 8))
+        << "Expected variable name 'timezone' (PG alias for SET TIME ZONE)";
+    AstNode* target = assignment->first_child;
+    ASSERT_NE(target->next_sibling, nullptr) << "Missing RHS value";
+}
+
+TEST_F(PgSQLSetTest, SetTimeZoneDefault) {
+    const char* sql = "SET TIME ZONE DEFAULT";
+    auto r = parser.parse(sql, strlen(sql));
+    EXPECT_EQ(r.status, ParseResult::OK);
+    ASSERT_NE(r.ast, nullptr);
+    EXPECT_TRUE(set_var_name(r.ast).equals_ci("timezone", 8));
+}
+
+TEST_F(PgSQLSetTest, SetTimeZoneNumericOffset) {
+    const char* sql = "SET TIME ZONE '+05:30'";
+    auto r = parser.parse(sql, strlen(sql));
+    EXPECT_EQ(r.status, ParseResult::OK);
+    ASSERT_NE(r.ast, nullptr);
+    EXPECT_TRUE(set_var_name(r.ast).equals_ci("timezone", 8));
+}
+
+TEST_F(PgSQLSetTest, SetTimeZoneLocal) {
+    const char* sql = "SET TIME ZONE LOCAL";
+    auto r = parser.parse(sql, strlen(sql));
+    EXPECT_EQ(r.status, ParseResult::OK);
+    ASSERT_NE(r.ast, nullptr);
+    EXPECT_TRUE(set_var_name(r.ast).equals_ci("timezone", 8));
+}
+
+TEST_F(PgSQLSetTest, SetTimeZoneLowercase) {
+    const char* sql = "set time zone 'UTC'";
+    auto r = parser.parse(sql, strlen(sql));
+    EXPECT_EQ(r.status, ParseResult::OK);
+    ASSERT_NE(r.ast, nullptr);
+    EXPECT_TRUE(set_var_name(r.ast).equals_ci("timezone", 8));
+}
+
+// ----------------------------------------------------------------------------
+// PG SET multi-value list — PG SET is single-variable; commas after the
+// first value are continuation of the value list, NOT new variable
+// assignments. Per PG docs:
+//   SET configuration_parameter { TO | = } { value | 'value' | DEFAULT }
+//   "Some configuration parameters take a list of values, such as
+//    search_path and datestyle."
+// Regression coverage: before the fix, the parser treated each comma as a
+// new assignment, so the second value was tested as a new variable target
+// without `=` and silently dropped.
+// ----------------------------------------------------------------------------
+
+TEST_F(PgSQLSetTest, SetSearchPathMultiValueTo) {
+    const char* sql = "SET search_path TO 'a', 'b'";
+    auto r = parser.parse(sql, strlen(sql));
+    EXPECT_EQ(r.status, ParseResult::OK);
+    ASSERT_NE(r.ast, nullptr);
+    AstNode* assignment = r.ast->first_child;
+    ASSERT_NE(assignment, nullptr);
+    EXPECT_EQ(assignment->type, NodeType::NODE_VAR_ASSIGNMENT);
+    EXPECT_EQ(child_count(assignment), 3)
+        << "Expected target + 2 value children under the same assignment";
+    EXPECT_EQ(assignment->next_sibling, nullptr)
+        << "PG comma after first value is list continuation, not a new assignment";
+}
+
+TEST_F(PgSQLSetTest, SetSearchPathMultiValueEq) {
+    const char* sql = "SET search_path = 'a', 'b', 'c'";
+    auto r = parser.parse(sql, strlen(sql));
+    EXPECT_EQ(r.status, ParseResult::OK);
+    ASSERT_NE(r.ast, nullptr);
+    AstNode* assignment = r.ast->first_child;
+    ASSERT_NE(assignment, nullptr);
+    EXPECT_EQ(child_count(assignment), 4) << "target + 3 values";
+    EXPECT_EQ(assignment->next_sibling, nullptr);
+}
+
+TEST_F(PgSQLSetTest, SetSearchPathQuotedIdentifierAndPlain) {
+    // The customer-facing failure shape from pgsql-set_parameter_validation_test-t.
+    const char* sql = "SET search_path TO \"$user\", public";
+    auto r = parser.parse(sql, strlen(sql));
+    EXPECT_EQ(r.status, ParseResult::OK);
+    ASSERT_NE(r.ast, nullptr);
+    AstNode* assignment = r.ast->first_child;
+    ASSERT_NE(assignment, nullptr);
+    EXPECT_EQ(child_count(assignment), 3) << "target + 2 values";
+}
+
+TEST_F(PgSQLSetTest, SetDatestyleMultiValue) {
+    const char* sql = "SET datestyle TO 'ISO', 'mdy'";
+    auto r = parser.parse(sql, strlen(sql));
+    EXPECT_EQ(r.status, ParseResult::OK);
+    ASSERT_NE(r.ast, nullptr);
+    AstNode* assignment = r.ast->first_child;
+    ASSERT_NE(assignment, nullptr);
+    EXPECT_EQ(child_count(assignment), 3) << "target + 2 values";
 }
 
 // ============================================================================
