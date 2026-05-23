@@ -219,6 +219,18 @@ enum class NodeType : uint16_t {
     // Shared
     NODE_STMT_OPTIONS,         // LOW_PRIORITY, IGNORE, QUICK, DELAYED, etc.
     NODE_UPDATE_SET_ITEM,      // single col=expr pair (shared by INSERT SET and UPDATE SET)
+
+    // PG-specific non-GUC SET forms. Appended at the end of the enum to
+    // avoid renumbering existing values (some consumers use NodeType as an
+    // array index). These look syntactically like SET variable assignments
+    // but are semantically transaction/session control (not tracked GUC
+    // parameters). Emitted with their value(s) as children so consumers
+    // can either forward verbatim to the backend or apply form-specific
+    // handling, without misclassifying them as unknown GUCs named ROLE /
+    // SESSION / CONSTRAINTS.
+    NODE_SET_ROLE,                  // SET [LOCAL] ROLE <name>|NONE|DEFAULT
+    NODE_SET_SESSION_AUTHORIZATION, // SET SESSION AUTHORIZATION <name>|DEFAULT
+    NODE_SET_CONSTRAINTS,           // SET CONSTRAINTS {ALL|<name>[,...]} {DEFERRED|IMMEDIATE}
 };
 
 } // namespace sql_parser
