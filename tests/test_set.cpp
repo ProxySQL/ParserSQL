@@ -1075,6 +1075,43 @@ TEST(MySQLSet, DollarStillBreaksUnquotedIdent) {
     }
 }
 
+// An unclosed double-quote delimited identifier must fail the parse, not
+// silently swallow the rest of the input as one identifier. Without this,
+// `SET search_path = "unclosed_quote, public` parses as identifier
+// `unclosed_quote, public` (commas, spaces and all), which then passes
+// downstream validation and corrupts the stored value.
+TEST(PgSQLSetUnclosedQuote, DoubleQuoteUnterminatedIsError) {
+    Parser<Dialect::PostgreSQL> parser;
+    const char* sql = "SET search_path = \"unclosed_quote, public";
+    auto r = parser.parse(sql, strlen(sql));
+    EXPECT_EQ(r.status, ParseResult::ERROR);
+}
+
+// Same protection for MySQL backtick-delimited identifiers: an unclosed
+// backtick must error, not consume to EOF.
+TEST(MySQLSetUnclosedQuote, BacktickUnterminatedIsError) {
+    Parser<Dialect::MySQL> parser;
+    const char* sql = "SET `unclosed_ident = 1";
+    auto r = parser.parse(sql, strlen(sql));
+    EXPECT_EQ(r.status, ParseResult::ERROR);
+}
+
+// Properly-closed delimited identifiers must still parse OK -- regression
+// guard against making the new error path too aggressive.
+TEST(PgSQLSetUnclosedQuote, ClosedDoubleQuoteStillOk) {
+    Parser<Dialect::PostgreSQL> parser;
+    const char* sql = "SET search_path = \"public\"";
+    auto r = parser.parse(sql, strlen(sql));
+    EXPECT_EQ(r.status, ParseResult::OK);
+}
+
+TEST(MySQLSetUnclosedQuote, ClosedBacktickStillOk) {
+    Parser<Dialect::MySQL> parser;
+    const char* sql = "SET `wait_timeout` = 1";
+    auto r = parser.parse(sql, strlen(sql));
+    EXPECT_EQ(r.status, ParseResult::OK);
+}
+
 // ============================================================================
 // Post-1.0.4 audit follow-ups: PG non-GUC SET forms and value-preservation.
 // ============================================================================
