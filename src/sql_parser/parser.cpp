@@ -303,14 +303,15 @@ ParseResult Parser<D>::parse_set() {
         r.ast = ast;
     }
 
-    // If the parse failed to produce any assignment AND the tokenizer
-    // saw a TK_ERROR token (e.g. PG `$word` -- a malformed parameter
-    // placeholder), downgrade PARTIAL to ERROR so syntactically-invalid
-    // input is reported clearly. Don't downgrade when we have a valid
-    // AST: in that case any TK_ERROR likely came from trailing junk
-    // beyond the parsed SET (or a null sentinel byte at end-of-input),
-    // and the SET itself is well-formed.
-    if (r.status == ParseResult::PARTIAL && tokenizer_.has_error()) {
+    // Downgrade PARTIAL -> ERROR only when the parse produced NO
+    // assignments at all AND the tokenizer flagged an error. Keeps
+    // ERROR clear for top-level malformed input (`SET = 1`,
+    // `SET datestyle = ;`, bare `$word`) while leaving multi-assignment
+    // SETs that contain one malformed element alongside well-formed
+    // ones at PARTIAL -- the well-formed assignments are still in the
+    // AST and the consumer can decide what to do with them.
+    if (r.status == ParseResult::PARTIAL && tokenizer_.has_error() &&
+        (!ast || !ast->first_child)) {
         r.status = ParseResult::ERROR;
     }
 
