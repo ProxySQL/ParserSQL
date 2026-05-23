@@ -303,12 +303,32 @@ private:
             tok_.skip();  // consume dot
             Token col = tok_.next_token();
             AstNode* qname = make_node(arena_, NodeType::NODE_QUALIFIED_NAME);
-            qname->add_child(make_node(arena_, NodeType::NODE_IDENTIFIER, name_token.text));
-            qname->add_child(make_node(arena_, NodeType::NODE_IDENTIFIER, col.text));
+            AstNode* schema_node = make_node(arena_, NodeType::NODE_IDENTIFIER, name_token.text);
+            AstNode* col_node = make_node(arena_, NodeType::NODE_IDENTIFIER, col.text);
+            if (schema_node && token_was_delimited_(name_token))
+                schema_node->flags |= FLAG_IDENT_DELIMITED;
+            if (col_node && token_was_delimited_(col))
+                col_node->flags |= FLAG_IDENT_DELIMITED;
+            qname->add_child(schema_node);
+            qname->add_child(col_node);
             return qname;
         }
 
-        return make_node(arena_, NodeType::NODE_COLUMN_REF, name_token.text);
+        AstNode* col_ref = make_node(arena_, NodeType::NODE_COLUMN_REF, name_token.text);
+        if (col_ref && token_was_delimited_(name_token))
+            col_ref->flags |= FLAG_IDENT_DELIMITED;
+        return col_ref;
+    }
+
+    // True iff `t` is a TK_IDENTIFIER token whose source bytes were
+    // surrounded by backticks (MySQL) or double quotes (PostgreSQL).
+    // Uses lookback against the tokenizer's input buffer so the check is
+    // safe even when t.text starts at the very beginning of input.
+    bool token_was_delimited_(const Token& t) const {
+        if (t.type != TokenType::TK_IDENTIFIER) return false;
+        if (!t.text.ptr || t.text.ptr <= tok_.input_begin()) return false;
+        char prev = *(t.text.ptr - 1);
+        return prev == '`' || prev == '"';
     }
 
     // Infix precedence for a token type.

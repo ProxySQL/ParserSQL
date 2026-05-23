@@ -41,7 +41,10 @@ public:
         }
     }
 
-    // Expose end of input for remaining-input calculation
+    // Expose start/end of input for remaining-input calculation and for
+    // safe lookback (e.g. detecting whether an identifier token was source-
+    // delimited via a preceding backtick / double-quote byte).
+    const char* input_begin() const { return start_; }
     const char* input_end() const { return end_; }
 
 private:
