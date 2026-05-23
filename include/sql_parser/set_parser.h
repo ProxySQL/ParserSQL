@@ -113,6 +113,51 @@ public:
             }
         }
 
+        // PostgreSQL: SET SCHEMA 'name' / SET SCHEMA name
+        // Per PG docs this is a shorthand for SET search_path TO name. Emit
+        // the canonical SET search_path form so downstream consumers see a
+        // tracked-variable assignment instead of a literal "SCHEMA" target.
+        if constexpr (D == Dialect::PostgreSQL) {
+            if (next.type == TokenType::TK_SCHEMA) {
+                tok_.skip();
+                AstNode* assignment = make_node(arena_, NodeType::NODE_VAR_ASSIGNMENT);
+                AstNode* target = make_node(arena_, NodeType::NODE_VAR_TARGET);
+                if (!assignment || !target) return nullptr;
+                target->add_child(make_node(arena_, NodeType::NODE_IDENTIFIER,
+                    StringRef{"search_path", 11}));
+                assignment->add_child(target);
+                AstNode* rhs = expr_parser_.parse();
+                if (!rhs) return nullptr;
+                assignment->add_child(rhs);
+                root->add_child(assignment);
+                return root;
+            }
+        }
+
+        // PostgreSQL: SET SEED N
+        // Per PG docs this is a shorthand for SELECT setseed(N) -- it does
+        // not configure a GUC. Emit a regular VAR_ASSIGNMENT with the
+        // synthetic name "seed"; downstream consumers can decide to ignore
+        // it (no tracked state) or forward it to the backend verbatim.
+        // The previous behaviour parsed it as `VAR_TARGET[SEED]` which
+        // looks like a tracked-variable name and confused consumers.
+        if constexpr (D == Dialect::PostgreSQL) {
+            if (next.type == TokenType::TK_IDENTIFIER && next.text.equals_ci("SEED", 4)) {
+                tok_.skip();
+                AstNode* assignment = make_node(arena_, NodeType::NODE_VAR_ASSIGNMENT);
+                AstNode* target = make_node(arena_, NodeType::NODE_VAR_TARGET);
+                if (!assignment || !target) return nullptr;
+                target->add_child(make_node(arena_, NodeType::NODE_IDENTIFIER,
+                    StringRef{"seed", 4}));
+                assignment->add_child(target);
+                AstNode* rhs = expr_parser_.parse();
+                if (!rhs) return nullptr;
+                assignment->add_child(rhs);
+                root->add_child(assignment);
+                return root;
+            }
+        }
+
         // PostgreSQL: SET TIME ZONE <value>
         // Per the PG docs this is an alias for SET TimeZone = <value>. The
         // tokenizer has no dedicated TK_TIME / TK_ZONE keywords so the lookahead
