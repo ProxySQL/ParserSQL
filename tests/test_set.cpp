@@ -826,3 +826,198 @@ TEST(MySQLSetBulk, LenientAcceptsUnusualSyntax) {
             << "SQL: " << tc.sql;
     }
 }
+
+// ============================================================================
+// Coverage for the ProxySQL set_parser_algorithm=3 audit (issues P1..P6).
+// ============================================================================
+
+// Helper: walk to first VAR_ASSIGNMENT's VAR_TARGET, then to its single
+// IDENTIFIER child (single-target case). Returns nullptr if shape differs.
+static const AstNode* first_target_identifier(const AstNode* set_stmt) {
+    if (!set_stmt || set_stmt->type != NodeType::NODE_SET_STMT) return nullptr;
+    const AstNode* va = set_stmt->first_child;
+    if (!va || va->type != NodeType::NODE_VAR_ASSIGNMENT) return nullptr;
+    const AstNode* vt = va->first_child;
+    if (!vt || vt->type != NodeType::NODE_VAR_TARGET) return nullptr;
+    const AstNode* id = vt->first_child;
+    if (!id || id->type != NodeType::NODE_IDENTIFIER) return nullptr;
+    return id;
+}
+
+// Helper: get the RHS value node of the first VAR_ASSIGNMENT.
+static const AstNode* first_value(const AstNode* set_stmt) {
+    if (!set_stmt || set_stmt->type != NodeType::NODE_SET_STMT) return nullptr;
+    const AstNode* va = set_stmt->first_child;
+    if (!va || va->type != NodeType::NODE_VAR_ASSIGNMENT) return nullptr;
+    const AstNode* vt = va->first_child;
+    if (!vt) return nullptr;
+    return vt->next_sibling;
+}
+
+// ----------------------------------------------------------------------------
+// P6: MySQL SET @@`var`, SET @`var`, SET @@`scope`.`var` -- keep full name,
+// canonical form drops the backticks (matching the plain `SET `var`` path
+// which already produced IDENTIFIER [var] with no delimiters).
+// ----------------------------------------------------------------------------
+TEST(MySQLSetP6, DoubleAtBacktickedNameKeepsFullText) {
+    Parser<Dialect::MySQL> parser;
+    const char* sql = "SET @@`wait_timeout`=28801";
+    auto r = parser.parse(sql, strlen(sql));
+    EXPECT_EQ(r.status, ParseResult::OK);
+    const AstNode* id = first_target_identifier(r.ast);
+    ASSERT_NE(id, nullptr);
+    EXPECT_EQ(std::string(id->value_ptr, id->value_len), "@@wait_timeout");
+}
+
+TEST(MySQLSetP6, AtBacktickedNameKeepsFullText) {
+    Parser<Dialect::MySQL> parser;
+    const char* sql = "SET @`my_var`=1";
+    auto r = parser.parse(sql, strlen(sql));
+    EXPECT_EQ(r.status, ParseResult::OK);
+    const AstNode* id = first_target_identifier(r.ast);
+    ASSERT_NE(id, nullptr);
+    EXPECT_EQ(std::string(id->value_ptr, id->value_len), "@my_var");
+}
+
+TEST(MySQLSetP6, DoubleAtScopedBacktickedNameKeepsFullText) {
+    Parser<Dialect::MySQL> parser;
+    const char* sql = "SET @@`session`.`sql_mode`='TRADITIONAL'";
+    auto r = parser.parse(sql, strlen(sql));
+    EXPECT_EQ(r.status, ParseResult::OK);
+    const AstNode* id = first_target_identifier(r.ast);
+    ASSERT_NE(id, nullptr);
+    EXPECT_EQ(std::string(id->value_ptr, id->value_len), "@@session.sql_mode");
+}
+
+TEST(MySQLSetP6, DoubleAtScopedMixedDelimitersKeepsFullText) {
+    Parser<Dialect::MySQL> parser;
+    const char* sql = "SET @@session.`sql_mode`='TRADITIONAL'";
+    auto r = parser.parse(sql, strlen(sql));
+    EXPECT_EQ(r.status, ParseResult::OK);
+    const AstNode* id = first_target_identifier(r.ast);
+    ASSERT_NE(id, nullptr);
+    EXPECT_EQ(std::string(id->value_ptr, id->value_len), "@@session.sql_mode");
+}
+
+// ----------------------------------------------------------------------------
+// P3: PG SET SCHEMA name -- shorthand for SET search_path TO name.
+// ----------------------------------------------------------------------------
+TEST(PgSQLSetP3, SetSchemaQuotedString) {
+    Parser<Dialect::PostgreSQL> parser;
+    const char* sql = "SET SCHEMA 'public'";
+    auto r = parser.parse(sql, strlen(sql));
+    EXPECT_EQ(r.status, ParseResult::OK);
+    const AstNode* id = first_target_identifier(r.ast);
+    ASSERT_NE(id, nullptr);
+    EXPECT_EQ(std::string(id->value_ptr, id->value_len), "search_path");
+    const AstNode* v = first_value(r.ast);
+    ASSERT_NE(v, nullptr);
+    EXPECT_EQ(v->type, NodeType::NODE_LITERAL_STRING);
+    EXPECT_EQ(std::string(v->value_ptr, v->value_len), "public");
+}
+
+TEST(PgSQLSetP3, SetSchemaUnquoted) {
+    Parser<Dialect::PostgreSQL> parser;
+    const char* sql = "SET SCHEMA public";
+    auto r = parser.parse(sql, strlen(sql));
+    EXPECT_EQ(r.status, ParseResult::OK);
+    const AstNode* id = first_target_identifier(r.ast);
+    ASSERT_NE(id, nullptr);
+    EXPECT_EQ(std::string(id->value_ptr, id->value_len), "search_path");
+}
+
+// ----------------------------------------------------------------------------
+// P4: PG SET SEED N -- emit synthetic VAR_TARGET[seed] (lowercased), not
+// VAR_TARGET[SEED] which downstream consumers misclassify as an unknown GUC.
+// ----------------------------------------------------------------------------
+TEST(PgSQLSetP4, SetSeedFloat) {
+    Parser<Dialect::PostgreSQL> parser;
+    const char* sql = "SET SEED 0.5";
+    auto r = parser.parse(sql, strlen(sql));
+    EXPECT_EQ(r.status, ParseResult::OK);
+    const AstNode* id = first_target_identifier(r.ast);
+    ASSERT_NE(id, nullptr);
+    EXPECT_EQ(std::string(id->value_ptr, id->value_len), "seed");
+    const AstNode* v = first_value(r.ast);
+    ASSERT_NE(v, nullptr);
+    EXPECT_EQ(v->type, NodeType::NODE_LITERAL_FLOAT);
+}
+
+// ----------------------------------------------------------------------------
+// P1: FLAG_IDENT_DELIMITED set iff RHS identifier was source-delimited.
+// ----------------------------------------------------------------------------
+TEST(PgSQLSetP1, DoubleQuotedRhsIdentifierIsFlagged) {
+    Parser<Dialect::PostgreSQL> parser;
+    const char* sql = "SET search_path = \"public\"";
+    auto r = parser.parse(sql, strlen(sql));
+    EXPECT_EQ(r.status, ParseResult::OK);
+    const AstNode* v = first_value(r.ast);
+    ASSERT_NE(v, nullptr);
+    EXPECT_EQ(v->type, NodeType::NODE_COLUMN_REF);
+    EXPECT_TRUE(v->flags & FLAG_IDENT_DELIMITED) << "DELIMITED flag should be set";
+    EXPECT_EQ(std::string(v->value_ptr, v->value_len), "public");
+}
+
+TEST(PgSQLSetP1, UnquotedRhsIdentifierIsNotFlagged) {
+    Parser<Dialect::PostgreSQL> parser;
+    const char* sql = "SET search_path = public";
+    auto r = parser.parse(sql, strlen(sql));
+    EXPECT_EQ(r.status, ParseResult::OK);
+    const AstNode* v = first_value(r.ast);
+    ASSERT_NE(v, nullptr);
+    EXPECT_EQ(v->type, NodeType::NODE_COLUMN_REF);
+    EXPECT_FALSE(v->flags & FLAG_IDENT_DELIMITED);
+}
+
+TEST(MySQLSetP1, BackticksOnRhsIdentifierAreFlagged) {
+    Parser<Dialect::MySQL> parser;
+    const char* sql = "SET sql_mode = `STRICT_ALL_TABLES`";
+    auto r = parser.parse(sql, strlen(sql));
+    EXPECT_EQ(r.status, ParseResult::OK);
+    const AstNode* v = first_value(r.ast);
+    ASSERT_NE(v, nullptr);
+    EXPECT_EQ(v->type, NodeType::NODE_COLUMN_REF);
+    EXPECT_TRUE(v->flags & FLAG_IDENT_DELIMITED);
+}
+
+// ----------------------------------------------------------------------------
+// P2: bare PG $word in SET value position must be ERROR, not PARTIAL.
+// Quoted forms `'$user'` and `"$user"` remain valid.
+// ----------------------------------------------------------------------------
+TEST(PgSQLSetP2, BareDollarWordIsError) {
+    Parser<Dialect::PostgreSQL> parser;
+    const char* sql = "SET search_path = $user";
+    auto r = parser.parse(sql, strlen(sql));
+    EXPECT_EQ(r.status, ParseResult::ERROR);
+}
+
+TEST(PgSQLSetP2, SingleQuotedDollarUserStillOk) {
+    Parser<Dialect::PostgreSQL> parser;
+    const char* sql = "SET search_path = '$user'";
+    auto r = parser.parse(sql, strlen(sql));
+    EXPECT_EQ(r.status, ParseResult::OK);
+    const AstNode* v = first_value(r.ast);
+    ASSERT_NE(v, nullptr);
+    EXPECT_EQ(v->type, NodeType::NODE_LITERAL_STRING);
+    EXPECT_EQ(std::string(v->value_ptr, v->value_len), "$user");
+}
+
+TEST(PgSQLSetP2, DoubleQuotedDollarUserStillOkAndFlagged) {
+    Parser<Dialect::PostgreSQL> parser;
+    const char* sql = "SET search_path = \"$user\"";
+    auto r = parser.parse(sql, strlen(sql));
+    EXPECT_EQ(r.status, ParseResult::OK);
+    const AstNode* v = first_value(r.ast);
+    ASSERT_NE(v, nullptr);
+    EXPECT_EQ(v->type, NodeType::NODE_COLUMN_REF);
+    EXPECT_TRUE(v->flags & FLAG_IDENT_DELIMITED);
+    EXPECT_EQ(std::string(v->value_ptr, v->value_len), "$user");
+}
+
+TEST(PgSQLSetP2, NumericPlaceholderStillOk) {
+    Parser<Dialect::PostgreSQL> parser;
+    const char* sql = "SELECT * FROM t WHERE c = $1";
+    auto r = parser.parse(sql, strlen(sql));
+    // Not a SET, but make sure the tokenizer hasn't regressed $N placeholders.
+    EXPECT_NE(r.status, ParseResult::ERROR);
+}
