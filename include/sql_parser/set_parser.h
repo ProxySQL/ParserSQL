@@ -8,6 +8,8 @@
 #include "sql_parser/arena.h"
 #include "sql_parser/expression_parser.h"
 
+#include <cstring>
+
 namespace sql_parser {
 
 template <Dialect D>
@@ -182,6 +184,36 @@ private:
     Arena& arena_;
     ExpressionParser<D> expr_parser_;
 
+    // Build "<prefix><name_content>" in the arena, dropping any
+    // backtick/double-quote delimiters that surrounded `name` in source.
+    // Used for assembling @@var / @var so the canonical AST name matches
+    // both `@@var` and ``@@`var``` forms.
+    StringRef build_scoped_identifier_(const char* prefix, const Token& name) {
+        size_t prefix_len = std::strlen(prefix);
+        size_t total = prefix_len + name.text.len;
+        char* buf = static_cast<char*>(arena_.allocate(total));
+        if (!buf) return StringRef{nullptr, 0};
+        std::memcpy(buf, prefix, prefix_len);
+        std::memcpy(buf + prefix_len, name.text.ptr, name.text.len);
+        return StringRef{buf, static_cast<uint32_t>(total)};
+    }
+
+    // Same as build_scoped_identifier_ but for the dotted form
+    // "<prefix><scope>.<name>" (e.g. @@session.sql_mode).
+    StringRef build_scoped_dotted_identifier_(const char* prefix,
+        const Token& scope, const Token& name) {
+        size_t prefix_len = std::strlen(prefix);
+        size_t total = prefix_len + scope.text.len + 1 + name.text.len;
+        char* buf = static_cast<char*>(arena_.allocate(total));
+        if (!buf) return StringRef{nullptr, 0};
+        size_t off = 0;
+        std::memcpy(buf + off, prefix, prefix_len); off += prefix_len;
+        std::memcpy(buf + off, scope.text.ptr, scope.text.len); off += scope.text.len;
+        buf[off++] = '.';
+        std::memcpy(buf + off, name.text.ptr, name.text.len); off += name.text.len;
+        return StringRef{buf, static_cast<uint32_t>(total)};
+    }
+
     AstNode* parse_comma_item() {
         Token peek = tok_.peek();
         if (peek.type == TokenType::TK_NAMES) {
@@ -294,26 +326,32 @@ private:
 
         Token var = tok_.peek();
         if (var.type == TokenType::TK_AT) {
-            // User variable @name
+            // User variable @name. The name may be backtick/double-quoted;
+            // in that case the source bytes between `@` and the name include
+            // the opening delimiter (and the closing delimiter sits one past
+            // name.text.len), so a naive StringRef-from-source produces
+            // `@name` -- missing the closing delimiter. Build the canonical
+            // `@name` form in the arena instead, dropping the delimiters.
             tok_.skip();
             Token name = tok_.next_token();
-            StringRef full{var.text.ptr,
-                static_cast<uint32_t>((name.text.ptr + name.text.len) - var.text.ptr)};
-            target->add_child(make_node(arena_, NodeType::NODE_IDENTIFIER, full));
+            target->add_child(make_node(arena_, NodeType::NODE_IDENTIFIER,
+                build_scoped_identifier_("@", name)));
         } else if (var.type == TokenType::TK_DOUBLE_AT) {
-            // System variable @@[scope.]name
+            // System variable @@[scope.]name -- same delimiter handling
+            // concern as the @name branch above. Allocate `@@name` (or
+            // `@@scope.name`) in the arena to drop any backtick/double-quote
+            // delimiters from the canonical form.
             tok_.skip();
             Token name = tok_.next_token();
-            StringRef full{var.text.ptr,
-                static_cast<uint32_t>((name.text.ptr + name.text.len) - var.text.ptr)};
-            // Check for @@scope.name
             if (tok_.peek().type == TokenType::TK_DOT) {
                 tok_.skip();
                 Token actual_name = tok_.next_token();
-                full = StringRef{var.text.ptr,
-                    static_cast<uint32_t>((actual_name.text.ptr + actual_name.text.len) - var.text.ptr)};
+                target->add_child(make_node(arena_, NodeType::NODE_IDENTIFIER,
+                    build_scoped_dotted_identifier_("@@", name, actual_name)));
+            } else {
+                target->add_child(make_node(arena_, NodeType::NODE_IDENTIFIER,
+                    build_scoped_identifier_("@@", name)));
             }
-            target->add_child(make_node(arena_, NodeType::NODE_IDENTIFIER, full));
         } else {
             // Plain variable name
             Token name = tok_.next_token();
