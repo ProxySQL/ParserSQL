@@ -59,6 +59,13 @@ inline int ci_cmp(const char* a, uint32_t alen, const char* b, uint8_t blen) {
 // -- Flags for NODE_SET_OPERATION --
 static constexpr uint16_t FLAG_SET_OP_ALL = 0x01;
 
+// -- Flags for NODE_IDENTIFIER / NODE_COLUMN_REF --
+// Set when the identifier was source-delimited (backtick `name` for MySQL,
+// double-quoted "name" for PostgreSQL). Allows downstream consumers to
+// distinguish PG's case-sensitive `"Name"` from case-insensitive `Name`,
+// which matters for SHOW search_path / SHOW <var> canonical re-emission.
+static constexpr uint16_t FLAG_IDENT_DELIMITED = 0x01;
+
 // -- Statement type (always set, even for PARTIAL/ERROR) --
 
 enum class StmtType : uint8_t {

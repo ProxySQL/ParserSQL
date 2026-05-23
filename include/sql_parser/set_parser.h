@@ -8,6 +8,8 @@
 #include "sql_parser/arena.h"
 #include "sql_parser/expression_parser.h"
 
+#include <cstring>
+
 namespace sql_parser {
 
 template <Dialect D>
@@ -111,6 +113,51 @@ public:
             }
         }
 
+        // PostgreSQL: SET SCHEMA 'name' / SET SCHEMA name
+        // Per PG docs this is a shorthand for SET search_path TO name. Emit
+        // the canonical SET search_path form so downstream consumers see a
+        // tracked-variable assignment instead of a literal "SCHEMA" target.
+        if constexpr (D == Dialect::PostgreSQL) {
+            if (next.type == TokenType::TK_SCHEMA) {
+                tok_.skip();
+                AstNode* assignment = make_node(arena_, NodeType::NODE_VAR_ASSIGNMENT);
+                AstNode* target = make_node(arena_, NodeType::NODE_VAR_TARGET);
+                if (!assignment || !target) return nullptr;
+                target->add_child(make_node(arena_, NodeType::NODE_IDENTIFIER,
+                    StringRef{"search_path", 11}));
+                assignment->add_child(target);
+                AstNode* rhs = expr_parser_.parse();
+                if (!rhs) return nullptr;
+                assignment->add_child(rhs);
+                root->add_child(assignment);
+                return root;
+            }
+        }
+
+        // PostgreSQL: SET SEED N
+        // Per PG docs this is a shorthand for SELECT setseed(N) -- it does
+        // not configure a GUC. Emit a regular VAR_ASSIGNMENT with the
+        // synthetic name "seed"; downstream consumers can decide to ignore
+        // it (no tracked state) or forward it to the backend verbatim.
+        // The previous behaviour parsed it as `VAR_TARGET[SEED]` which
+        // looks like a tracked-variable name and confused consumers.
+        if constexpr (D == Dialect::PostgreSQL) {
+            if (next.type == TokenType::TK_IDENTIFIER && next.text.equals_ci("SEED", 4)) {
+                tok_.skip();
+                AstNode* assignment = make_node(arena_, NodeType::NODE_VAR_ASSIGNMENT);
+                AstNode* target = make_node(arena_, NodeType::NODE_VAR_TARGET);
+                if (!assignment || !target) return nullptr;
+                target->add_child(make_node(arena_, NodeType::NODE_IDENTIFIER,
+                    StringRef{"seed", 4}));
+                assignment->add_child(target);
+                AstNode* rhs = expr_parser_.parse();
+                if (!rhs) return nullptr;
+                assignment->add_child(rhs);
+                root->add_child(assignment);
+                return root;
+            }
+        }
+
         // PostgreSQL: SET TIME ZONE <value>
         // Per the PG docs this is an alias for SET TimeZone = <value>. The
         // tokenizer has no dedicated TK_TIME / TK_ZONE keywords so the lookahead
@@ -181,6 +228,36 @@ private:
     Tokenizer<D>& tok_;
     Arena& arena_;
     ExpressionParser<D> expr_parser_;
+
+    // Build "<prefix><name_content>" in the arena, dropping any
+    // backtick/double-quote delimiters that surrounded `name` in source.
+    // Used for assembling @@var / @var so the canonical AST name matches
+    // both `@@var` and ``@@`var``` forms.
+    StringRef build_scoped_identifier_(const char* prefix, const Token& name) {
+        size_t prefix_len = std::strlen(prefix);
+        size_t total = prefix_len + name.text.len;
+        char* buf = static_cast<char*>(arena_.allocate(total));
+        if (!buf) return StringRef{nullptr, 0};
+        std::memcpy(buf, prefix, prefix_len);
+        std::memcpy(buf + prefix_len, name.text.ptr, name.text.len);
+        return StringRef{buf, static_cast<uint32_t>(total)};
+    }
+
+    // Same as build_scoped_identifier_ but for the dotted form
+    // "<prefix><scope>.<name>" (e.g. @@session.sql_mode).
+    StringRef build_scoped_dotted_identifier_(const char* prefix,
+        const Token& scope, const Token& name) {
+        size_t prefix_len = std::strlen(prefix);
+        size_t total = prefix_len + scope.text.len + 1 + name.text.len;
+        char* buf = static_cast<char*>(arena_.allocate(total));
+        if (!buf) return StringRef{nullptr, 0};
+        size_t off = 0;
+        std::memcpy(buf + off, prefix, prefix_len); off += prefix_len;
+        std::memcpy(buf + off, scope.text.ptr, scope.text.len); off += scope.text.len;
+        buf[off++] = '.';
+        std::memcpy(buf + off, name.text.ptr, name.text.len); off += name.text.len;
+        return StringRef{buf, static_cast<uint32_t>(total)};
+    }
 
     AstNode* parse_comma_item() {
         Token peek = tok_.peek();
@@ -294,26 +371,32 @@ private:
 
         Token var = tok_.peek();
         if (var.type == TokenType::TK_AT) {
-            // User variable @name
+            // User variable @name. The name may be backtick/double-quoted;
+            // in that case the source bytes between `@` and the name include
+            // the opening delimiter (and the closing delimiter sits one past
+            // name.text.len), so a naive StringRef-from-source produces
+            // `@name` -- missing the closing delimiter. Build the canonical
+            // `@name` form in the arena instead, dropping the delimiters.
             tok_.skip();
             Token name = tok_.next_token();
-            StringRef full{var.text.ptr,
-                static_cast<uint32_t>((name.text.ptr + name.text.len) - var.text.ptr)};
-            target->add_child(make_node(arena_, NodeType::NODE_IDENTIFIER, full));
+            target->add_child(make_node(arena_, NodeType::NODE_IDENTIFIER,
+                build_scoped_identifier_("@", name)));
         } else if (var.type == TokenType::TK_DOUBLE_AT) {
-            // System variable @@[scope.]name
+            // System variable @@[scope.]name -- same delimiter handling
+            // concern as the @name branch above. Allocate `@@name` (or
+            // `@@scope.name`) in the arena to drop any backtick/double-quote
+            // delimiters from the canonical form.
             tok_.skip();
             Token name = tok_.next_token();
-            StringRef full{var.text.ptr,
-                static_cast<uint32_t>((name.text.ptr + name.text.len) - var.text.ptr)};
-            // Check for @@scope.name
             if (tok_.peek().type == TokenType::TK_DOT) {
                 tok_.skip();
                 Token actual_name = tok_.next_token();
-                full = StringRef{var.text.ptr,
-                    static_cast<uint32_t>((actual_name.text.ptr + actual_name.text.len) - var.text.ptr)};
+                target->add_child(make_node(arena_, NodeType::NODE_IDENTIFIER,
+                    build_scoped_dotted_identifier_("@@", name, actual_name)));
+            } else {
+                target->add_child(make_node(arena_, NodeType::NODE_IDENTIFIER,
+                    build_scoped_identifier_("@@", name)));
             }
-            target->add_child(make_node(arena_, NodeType::NODE_IDENTIFIER, full));
         } else {
             // Plain variable name
             Token name = tok_.next_token();
