@@ -294,6 +294,28 @@ public:
                         rhs_tok.type == TokenType::TK_LOCAL) {
                         tok_.skip();
                         assignment->add_child(make_node(arena_, NodeType::NODE_IDENTIFIER, rhs_tok.text));
+                    } else if (rhs_tok.type == TokenType::TK_IDENTIFIER &&
+                               rhs_tok.text.equals_ci("INTERVAL", 8)) {
+                        // SET TIME ZONE INTERVAL '<value>' <UNIT> -- the
+                        // INTERVAL keyword + string + unit is a single
+                        // PG interval literal. ExpressionParser doesn't
+                        // model this so it would drop everything after
+                        // INTERVAL. Capture the source bytes spanning
+                        // the whole literal and emit a single
+                        // LITERAL_STRING value so consumers can
+                        // re-emit it intact.
+                        Token start = tok_.next_token();  // INTERVAL
+                        Token val = tok_.next_token();    // '1'
+                        Token unit = tok_.next_token();   // HOUR
+                        if (val.type != TokenType::TK_STRING ||
+                            unit.type != TokenType::TK_IDENTIFIER) {
+                            return nullptr;
+                        }
+                        const char* span_end = unit.text.ptr + unit.text.len;
+                        StringRef whole{start.text.ptr,
+                            static_cast<uint32_t>(span_end - start.text.ptr)};
+                        assignment->add_child(make_node(arena_,
+                            NodeType::NODE_LITERAL_STRING, whole));
                     } else {
                         AstNode* rhs = expr_parser_.parse();
                         if (!rhs) return nullptr;
@@ -549,9 +571,38 @@ private:
                     build_scoped_identifier_("@@", name)));
             }
         } else {
-            // Plain variable name
+            // Plain variable name. PostgreSQL also accepts schema-qualified
+            // GUC names like `pg_catalog.search_path` or `myapp.setting`
+            // (the standard way to set custom application parameters). Emit
+            // the combined `<schema>.<name>` as one identifier so downstream
+            // normalization sees a single canonical name.
             Token name = tok_.next_token();
-            target->add_child(make_node(arena_, NodeType::NODE_IDENTIFIER, name.text));
+            // Validate the name token actually looks like an identifier --
+            // `SET = 1` / `SET ,` / `SET ;` would otherwise stuff `=` / `,`
+            // / `;` into the IDENTIFIER node and confuse downstream code.
+            // Empty / EOF input was already rejected by parse_set() before
+            // we got here.
+            if (name.type != TokenType::TK_IDENTIFIER) {
+                tok_.flag_error();
+                return nullptr;
+            }
+            if constexpr (D == Dialect::PostgreSQL) {
+                if (tok_.peek().type == TokenType::TK_DOT) {
+                    tok_.skip();
+                    Token rhs = tok_.next_token();
+                    if (rhs.type != TokenType::TK_IDENTIFIER) {
+                        tok_.flag_error();
+                        return nullptr;
+                    }
+                    target->add_child(make_node(arena_, NodeType::NODE_IDENTIFIER,
+                        build_scoped_dotted_identifier_("", name, rhs)));
+                } else {
+                    target->add_child(make_node(arena_,
+                        NodeType::NODE_IDENTIFIER, name.text));
+                }
+            } else {
+                target->add_child(make_node(arena_, NodeType::NODE_IDENTIFIER, name.text));
+            }
         }
 
         assignment->add_child(target);
@@ -566,11 +617,16 @@ private:
             }
         }
 
-        // Parse RHS expression
+        // Parse RHS expression. If the parser couldn't produce one --
+        // typically because the input is truncated (`SET x =`), starts
+        // with a separator (`SET x = ,foo`, `SET x = ;`), or otherwise
+        // malformed -- flag a parse error so the eventual ParseResult is
+        // ERROR rather than PARTIAL with a missing-RHS AST.
         AstNode* rhs = expr_parser_.parse();
         if (rhs) {
             assignment->add_child(rhs);
         } else {
+            tok_.flag_error();
             return nullptr;
         }
 

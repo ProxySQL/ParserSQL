@@ -24,6 +24,12 @@ public:
     // as ParseResult::ERROR rather than PARTIAL.
     bool has_error() const { return has_error_; }
 
+    // Hook for parser-level (non-tokenizer) errors -- when the parser
+    // detects clearly invalid input (e.g. `SET = X`, `SET x = ;`,
+    // `SET x = ,foo`) it can flag the error so the eventual ParseResult
+    // is ERROR rather than PARTIAL with a null AST.
+    void flag_error() { has_error_ = true; }
+
     Token next_token() {
         if (has_peeked_) {
             has_peeked_ = false;

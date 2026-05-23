@@ -792,12 +792,17 @@ TEST_F(PgSQLSetTest, SetDatestyleMultiValue) {
 // Invalid syntax should return PARTIAL, not OK (issue #36)
 // ============================================================================
 
-TEST(MySQLSetBulk, InvalidSyntaxReturnsPartial) {
+TEST(MySQLSetBulk, InvalidSyntaxReturnsError) {
+    // Updated from the prior PARTIAL expectation: parse_set() now
+    // distinguishes truncated / malformed input from genuine parse
+    // failures and surfaces the former as ParseResult::ERROR. This
+    // matches the semantics consumers actually want (lock_hostgroup
+    // or hard-fail on clearly-bad SQL).
     Parser<Dialect::MySQL> parser;
     struct { const char* sql; int expected_status; } cases[] = {
-        {"SET",                        (int)ParseResult::PARTIAL},
-        {"SET ;",                      (int)ParseResult::PARTIAL},
-        {"SET GLOBAL",                 (int)ParseResult::PARTIAL},
+        {"SET",                        (int)ParseResult::ERROR},
+        {"SET ;",                      (int)ParseResult::ERROR},
+        {"SET GLOBAL",                 (int)ParseResult::ERROR},
     };
     for (const auto& tc : cases) {
         auto r = parser.parse(tc.sql, strlen(tc.sql));
