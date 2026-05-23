@@ -225,22 +225,39 @@ private:
     }
 
     // MySQL: backtick-quoted identifier
+    // Unclosed backticks emit TK_ERROR so the parser can fail cleanly with
+    // ParseResult::ERROR -- otherwise the tokenizer would silently swallow
+    // the rest of the input as one giant identifier (e.g. `SET x = `foo`
+    // would become identifier `foo` followed by an unclosed-backtick scan
+    // that consumes everything to EOF as another identifier).
     Token scan_backtick_identifier() {
+        const char* open_pos = cursor_;
         ++cursor_;  // skip opening backtick
         const char* content_start = cursor_;
         while (cursor_ < end_ && *cursor_ != '`') ++cursor_;
+        if (cursor_ >= end_) {
+            return make_token(TokenType::TK_ERROR, open_pos, 1);
+        }
         uint32_t len = static_cast<uint32_t>(cursor_ - content_start);
-        if (cursor_ < end_) ++cursor_;  // skip closing backtick
+        ++cursor_;  // skip closing backtick
         return make_token(TokenType::TK_IDENTIFIER, content_start, len);
     }
 
     // PostgreSQL: double-quoted identifier
+    // Unclosed `"` emits TK_ERROR -- same rationale as scan_backtick_identifier
+    // above. `SET search_path = "unclosed_quote, public` would otherwise be
+    // treated as identifier `unclosed_quote, public` (commas, spaces and all),
+    // pass validation, and corrupt search_path with garbage.
     Token scan_double_quoted_identifier() {
+        const char* open_pos = cursor_;
         ++cursor_;  // skip opening quote
         const char* content_start = cursor_;
         while (cursor_ < end_ && *cursor_ != '"') ++cursor_;
+        if (cursor_ >= end_) {
+            return make_token(TokenType::TK_ERROR, open_pos, 1);
+        }
         uint32_t len = static_cast<uint32_t>(cursor_ - content_start);
-        if (cursor_ < end_) ++cursor_;  // skip closing quote
+        ++cursor_;  // skip closing quote
         return make_token(TokenType::TK_IDENTIFIER, content_start, len);
     }
 
