@@ -1,4 +1,4 @@
-CXX = g++
+CXX ?= g++
 CXXFLAGS = -std=c++17 -Wall -Wextra -g -O2
 CPPFLAGS = -I./include -I./third_party/googletest/googletest/include
 
