@@ -31,6 +31,9 @@
 *.out
 *.app
 
+# Local git worktrees
+.worktrees/
+
 # Build artifacts
 libsqlparser.a
 sqlengine
