@@ -53,7 +53,7 @@ Normal comparison runs use committed pin metadata and do not silently advance br
 For every SQL file under `test/sql/postgres_regress/`:
 
 1. Read the complete file.
-2. Split it with `pg_query_split_with_parser()`, preserving source file, byte offset, and statement length.
+2. Split it with `pg_query_split_with_parser()`, preserving source file, byte offset, and statement length. If intentional negative tests or psql-only content make parser splitting reject the complete file, fall back to `pg_query_split_with_scanner()` and validate every resulting candidate independently.
 3. Parse each statement independently through `libpg_query` protobuf output.
 4. Exclude statements rejected by the oracle, psql-only input, and empty fragments from parity totals.
 5. Store accepted statements in a deterministic JSON Lines inventory.
