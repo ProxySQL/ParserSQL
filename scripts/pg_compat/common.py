@@ -4,6 +4,7 @@ import os
 import re
 import tempfile
 from pathlib import Path
+from urllib.parse import urlsplit
 
 
 REQUIRED_ROLES = ("previous", "target")
@@ -14,6 +15,41 @@ REQUIRED_VERSION_FIELDS = (
     "pg_version_num",
     "postgres_sha256",
 )
+COMMIT_PATTERN = re.compile(r"^[0-9a-f]{40}$")
+PG_VERSION_PATTERN = re.compile(r"^[0-9]+(?:\.[0-9]+)+$")
+SHA256_PATTERN = re.compile(r"^[0-9a-f]{64}$")
+
+
+def _require_nonempty_string(value, name):
+    if not isinstance(value, str) or not value.strip():
+        raise ValueError(f"{name} must be a non-empty string")
+
+
+def _validate_version_pin(version, role):
+    prefix = f"versions.{role}"
+    for field in REQUIRED_VERSION_FIELDS:
+        if field not in version:
+            raise ValueError(f"missing required pin: {prefix}.{field}")
+
+    _require_nonempty_string(version["branch"], f"{prefix}.branch")
+    _require_nonempty_string(version["pg_version"], f"{prefix}.pg_version")
+
+    if not isinstance(version["commit"], str) or not COMMIT_PATTERN.fullmatch(
+        version["commit"]
+    ):
+        raise ValueError(f"{prefix}.commit must be 40 lowercase hexadecimal characters")
+    if not PG_VERSION_PATTERN.fullmatch(version["pg_version"]):
+        raise ValueError(f"{prefix}.pg_version must use numeric dotted components")
+    if isinstance(version["pg_version_num"], bool) or not isinstance(
+        version["pg_version_num"], int
+    ):
+        raise ValueError(f"{prefix}.pg_version_num must be an integer")
+    if not isinstance(
+        version["postgres_sha256"], str
+    ) or not SHA256_PATTERN.fullmatch(version["postgres_sha256"]):
+        raise ValueError(
+            f"{prefix}.postgres_sha256 must be 64 lowercase hexadecimal characters"
+        )
 
 
 def load_pins(path):
@@ -23,6 +59,10 @@ def load_pins(path):
 
     if not isinstance(pins, dict) or "libpg_query_url" not in pins:
         raise ValueError("missing required pin: libpg_query_url")
+    _require_nonempty_string(pins["libpg_query_url"], "libpg_query_url")
+    parsed_url = urlsplit(pins["libpg_query_url"])
+    if not parsed_url.scheme or not parsed_url.netloc:
+        raise ValueError("libpg_query_url must be a non-empty absolute URL")
 
     versions = pins.get("versions")
     if not isinstance(versions, dict):
@@ -32,9 +72,7 @@ def load_pins(path):
         version = versions.get(role)
         if not isinstance(version, dict):
             raise ValueError(f"missing required pin: versions.{role}")
-        for field in REQUIRED_VERSION_FIELDS:
-            if field not in version:
-                raise ValueError(f"missing required pin: versions.{role}.{field}")
+        _validate_version_pin(version, role)
 
     return pins
 

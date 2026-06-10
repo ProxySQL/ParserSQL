@@ -5,6 +5,9 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 PINS="${PG_COMPAT_PINS:-${ROOT}/tests/pg_compat/upstream_pins.json}"
 CACHE="${PG_COMPAT_CACHE:-/tmp/parsersql-pg-compat}"
 WITH_POSTGRES_SOURCE=0
+LOCK_DIR="${CACHE}/.pg_compat.lock"
+LOCK_OWNER="$$-${RANDOM}-${RANDOM}"
+LOCK_HELD=0
 
 usage() {
     echo "Usage: $0 [--with-postgres-source]" >&2
@@ -24,6 +27,32 @@ fi
 
 cd "$ROOT"
 
+release_lock() {
+    if [[ "$LOCK_HELD" -ne 1 || ! -d "$LOCK_DIR" ]]; then
+        return
+    fi
+    if [[ -f "$LOCK_DIR/owner" ]] && [[ "$(cat "$LOCK_DIR/owner")" == "$LOCK_OWNER" ]]; then
+        rm -f "$LOCK_DIR/owner"
+        rmdir "$LOCK_DIR" 2>/dev/null || true
+    fi
+    LOCK_HELD=0
+}
+
+acquire_lock() {
+    mkdir -p "$CACHE"
+    if ! mkdir "$LOCK_DIR" 2>/dev/null; then
+        echo "PostgreSQL compatibility cache is locked: ${CACHE}" >&2
+        exit 1
+    fi
+    printf '%s\n' "$LOCK_OWNER" > "$LOCK_DIR/owner"
+    LOCK_HELD=1
+}
+
+trap release_lock EXIT
+trap 'exit 129' HUP
+trap 'exit 130' INT
+trap 'exit 143' TERM
+
 LIBPG_QUERY_URL="$(
     python3 - "$PINS" <<'PY'
 import sys
@@ -33,6 +62,8 @@ from scripts.pg_compat.common import load_pins
 print(load_pins(sys.argv[1])["libpg_query_url"])
 PY
 )"
+
+acquire_lock
 
 pin_values() {
     local role="$1"
@@ -142,19 +173,27 @@ fetch_postgres_source() {
     local actual_sha256
 
     mkdir -p "$postgres_root"
+    if [[ -f "$archive" ]]; then
+        actual_sha256="$(sha256_file "$archive")"
+        if [[ "$actual_sha256" != "$expected_sha256" ]]; then
+            echo "Removing invalid cached archive ${archive}: expected ${expected_sha256}, got ${actual_sha256}" >&2
+            rm -f "$archive"
+        fi
+    fi
+
     if [[ ! -f "$archive" ]]; then
         download_tmp="$(mktemp "${postgres_root}/.postgresql-${pg_version}.download.XXXXXX")"
         if ! curl --fail --location --retry 3 --output "$download_tmp" "$archive_url"; then
             rm -f "$download_tmp"
             return 1
         fi
+        actual_sha256="$(sha256_file "$download_tmp")"
+        if [[ "$actual_sha256" != "$expected_sha256" ]]; then
+            echo "SHA-256 mismatch for downloaded ${archive}: expected ${expected_sha256}, got ${actual_sha256}" >&2
+            rm -f "$download_tmp"
+            return 1
+        fi
         mv "$download_tmp" "$archive"
-    fi
-
-    actual_sha256="$(sha256_file "$archive")"
-    if [[ "$actual_sha256" != "$expected_sha256" ]]; then
-        echo "SHA-256 mismatch for ${archive}: expected ${expected_sha256}, got ${actual_sha256}" >&2
-        exit 1
     fi
 
     if [[ ! -d "$source_dir" ]]; then
