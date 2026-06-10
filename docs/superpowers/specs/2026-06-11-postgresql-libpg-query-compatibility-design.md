@@ -15,7 +15,7 @@ The system must provide two views:
 - a full backlog of syntax gaps against `18-latest`
 - a focused release delta showing syntax introduced or changed from `17-latest` to `18-latest`
 
-Only ParserSQL `ParseResult::OK` counts as full support. `PARTIAL` remains useful for ProxySQL classification and routing, but it does not count as parser parity.
+Only a successful deep parse with a non-null AST counts as full support. ParserSQL deliberately returns `ParseResult::OK` for Tier-2 lightweight extractors that classify and scan statements without validating their complete grammar. Those results remain useful for ProxySQL routing but do not count as parser parity. `PARTIAL` also remains useful for classification but does not count as full support.
 
 ## Chosen Approach
 
@@ -124,17 +124,19 @@ Add a C++ tool that links ParserSQL and the pinned `libpg_query` build. For each
 1. Obtains the expected top-level statement type from `libpg_query` protobuf output.
 2. Parses the complete statement with `Parser<Dialect::PostgreSQL>`.
 3. Checks ParserSQL status.
-4. Checks that no meaningful SQL remains unconsumed.
-5. Maps the PostgreSQL protobuf node type to ParserSQL `StmtType` and checks classification.
-6. Emits one structured result record.
+4. Checks whether ParserSQL produced a non-null AST, distinguishing a deep parse from Tier-2 classification.
+5. Checks that no meaningful SQL remains unconsumed.
+6. Maps the PostgreSQL protobuf node type to ParserSQL `StmtType` and checks classification.
+7. Emits one structured result record.
 
-Version one validates syntax acceptance and top-level classification. It does not compare AST structures because PostgreSQL's typed parse tree and ParserSQL's compact AST intentionally have different shapes.
+Version one validates deep syntax acceptance, Tier-2 classification coverage, and top-level classification. It does not compare AST structures because PostgreSQL's typed parse tree and ParserSQL's compact AST intentionally have different shapes.
 
 ## Result Contract
 
 Every oracle-accepted statement receives exactly one compatibility result:
 
-- `SUPPORTED`: ParserSQL returns `OK`, consumes the complete statement, and reports the expected top-level statement type.
+- `DEEP_SUPPORTED`: ParserSQL returns `OK`, produces a non-null AST, consumes the complete statement, and reports the expected top-level statement type.
+- `CLASSIFIED_ONLY`: ParserSQL returns `OK`, produces no AST, consumes the complete statement, and reports the expected top-level statement type.
 - `PARTIAL`: ParserSQL returns `PARTIAL`.
 - `ERROR`: ParserSQL returns `ERROR`.
 - `TRAILING_INPUT`: ParserSQL returns `OK` but leaves non-whitespace, non-semicolon input.
@@ -145,7 +147,7 @@ Extraction diagnostics use:
 - `ORACLE_REJECTED`: candidate statement rejected by `libpg_query`; excluded from parity totals.
 - `UNWITNESSED_FEATURE`: structural syntax signal with no accepted SQL witness; excluded from parity totals but displayed prominently.
 
-Only `SUPPORTED` counts as full PostgreSQL compatibility.
+Only `DEEP_SUPPORTED` counts as full PostgreSQL compatibility. `CLASSIFIED_ONLY` is shown separately as useful ProxySQL routing coverage.
 
 ## Statement-Type Mapping
 
@@ -182,7 +184,7 @@ The Markdown report includes:
 
 Stable statement and feature IDs allow baseline comparison even if report ordering changes.
 
-`expected_results.jsonl` records the expected result for every deduplicated full-suite statement. It is compact baseline metadata, not a second copy of the upstream SQL corpus. `ci_cases.jsonl` includes SQL text for all reviewed witnesses, all known gaps, all PG17-to-PG18 delta cases, and a representative supported case for each mapped top-level statement type. This allows ordinary CI to run without fetching the full upstream regression suite.
+`expected_results.jsonl` records the expected result for every deduplicated full-suite statement. It is compact baseline metadata, not a second copy of the upstream SQL corpus. `ci_cases.jsonl` includes SQL text for all reviewed witnesses, all known gaps, all PG17-to-PG18 delta cases, and representative `DEEP_SUPPORTED` and `CLASSIFIED_ONLY` cases for each mapped top-level statement type where those levels exist. This allows ordinary CI to run without fetching the full upstream regression suite.
 
 ## CI Policy
 
@@ -190,13 +192,19 @@ Ordinary pull-request CI runs a deterministic compatibility subset against commi
 
 It fails when:
 
-- a previously `SUPPORTED` statement becomes unsupported
+- a previously `DEEP_SUPPORTED` statement becomes anything else
+- a previously `CLASSIFIED_ONLY` statement becomes `PARTIAL`, `ERROR`, `TRAILING_INPUT`, or `TYPE_MISMATCH`
 - a new gap appears without an approved baseline update
 - ParserSQL leaves trailing input or misclassifies a previously supported statement
 - a protobuf statement node lacks an explicit mapping
 - a reviewed witness is rejected by `libpg_query`
 
-For a case whose committed result is not `SUPPORTED`, the same result remains an accepted known gap and `SUPPORTED` is an accepted improvement. Any other result transition fails pending review and baseline regeneration. This deliberately treats transitions such as `ERROR` to `PARTIAL` as reviewable changes rather than assigning a questionable global severity ordering to orthogonal failure types.
+Accepted improvements are:
+
+- any result to `DEEP_SUPPORTED`
+- `PARTIAL`, `ERROR`, `TRAILING_INPUT`, or `TYPE_MISMATCH` to `CLASSIFIED_ONLY`
+
+For any other case, the committed result must remain unchanged. Different unsupported outcomes are orthogonal diagnostics rather than a global severity ordering, so transitions such as `ERROR` to `PARTIAL` require review and baseline regeneration.
 
 Existing committed gaps do not make every CI run fail.
 
@@ -270,7 +278,7 @@ Add focused tests for:
 - grammar, keyword, parse-node, and protobuf structural diff extraction
 - witness metadata validation
 - protobuf node to ParserSQL `StmtType` mapping
-- all five ParserSQL compatibility outcomes
+- all six ParserSQL compatibility outcomes
 - baseline regression and improvement detection
 - report generation from fixed fixture results
 
@@ -284,7 +292,7 @@ Included:
 - latest stable `libpg_query` compatibility, initially `18-latest`
 - full target-version backlog
 - previous-to-current major release delta
-- syntax acceptance, complete consumption, and top-level statement classification
+- deep syntax acceptance, Tier-2 classification coverage, complete consumption, and top-level statement classification
 - structural alerts for grammar changes without witnesses
 
 Explicitly deferred:
@@ -300,9 +308,10 @@ Explicitly deferred:
 
 The design is successful when one command can reproducibly answer:
 
-1. Which `libpg_query` PG18 statements ParserSQL fully supports.
-2. Which accepted statements return `PARTIAL`, `ERROR`, trailing input, or a type mismatch.
-3. Which gaps are part of the full PG18 backlog.
-4. Which gaps are associated with the PG17-to-PG18 release delta.
-5. Which structural PostgreSQL syntax changes still lack an executable witness.
-6. Whether a ParserSQL change introduced a new PostgreSQL compatibility regression.
+1. Which `libpg_query` PG18 statements ParserSQL deeply parses into an AST.
+2. Which accepted statements are only classified by Tier-2 extractors.
+3. Which accepted statements return `PARTIAL`, `ERROR`, trailing input, or a type mismatch.
+4. Which gaps are part of the full PG18 backlog.
+5. Which gaps are associated with the PG17-to-PG18 release delta.
+6. Which structural PostgreSQL syntax changes still lack an executable witness.
+7. Whether a ParserSQL change introduced a new PostgreSQL compatibility regression.
