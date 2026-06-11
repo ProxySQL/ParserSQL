@@ -232,6 +232,19 @@ class BuildInventoryTest(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, r"row 0.*field.*1.*string"):
             build_inventory([row])
 
+    def test_rejects_non_utf8_top_level_field_names_with_context(self):
+        row = accepted_row()
+        row["\ud800"] = "invalid key"
+
+        with self.assertRaises(ValueError) as raised:
+            build_inventory([row])
+
+        message = str(raised.exception)
+        self.assertIn("row 0", message)
+        self.assertIn("field name", message)
+        self.assertIn("\\ud800", message)
+        self.assertIn("UTF-8", message)
+
     def test_rejects_non_finite_and_non_utf8_metadata(self):
         invalid_metadata = (
             (float("nan"), "JSON"),
@@ -466,6 +479,50 @@ class ExtractStatementsCliTest(unittest.TestCase):
             self.assertIn("distinct files", result.stderr)
             self.assertEqual(input_path.read_text(encoding="utf-8"), "not JSON\n")
             self.assertFalse(shared_output_path.exists())
+
+    def test_rejects_nonexistent_output_names_differing_only_by_case(self):
+        with tempfile.TemporaryDirectory() as directory:
+            directory = Path(directory)
+            input_path = directory / "raw.jsonl"
+            inventory_path = directory / "Inventory.jsonl"
+            diagnostics_path = directory / "inventory.jsonl"
+            input_path.write_text("", encoding="utf-8")
+
+            result = self.run_cli(
+                "--input",
+                input_path,
+                "--inventory",
+                inventory_path,
+                "--diagnostics",
+                diagnostics_path,
+            )
+
+            self.assertNotEqual(result.returncode, 0)
+            self.assertIn("distinct files", result.stderr)
+            self.assertFalse(inventory_path.exists())
+            self.assertFalse(diagnostics_path.exists())
+
+    def test_rejects_nonexistent_output_names_with_equivalent_unicode(self):
+        with tempfile.TemporaryDirectory() as directory:
+            directory = Path(directory)
+            input_path = directory / "raw.jsonl"
+            inventory_path = directory / "caf\u00e9.jsonl"
+            diagnostics_path = directory / "cafe\u0301.jsonl"
+            input_path.write_text("", encoding="utf-8")
+
+            result = self.run_cli(
+                "--input",
+                input_path,
+                "--inventory",
+                inventory_path,
+                "--diagnostics",
+                diagnostics_path,
+            )
+
+            self.assertNotEqual(result.returncode, 0)
+            self.assertIn("distinct files", result.stderr)
+            self.assertFalse(inventory_path.exists())
+            self.assertFalse(diagnostics_path.exists())
 
     @unittest.skipUnless(hasattr(os, "symlink"), "symlinks are unavailable")
     def test_rejects_existing_symlink_path_aliases(self):

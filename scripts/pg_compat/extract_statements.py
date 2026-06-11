@@ -5,6 +5,7 @@ import copy
 import json
 import os
 from pathlib import Path
+import unicodedata
 
 if __package__:
     from .common import atomic_write_text, read_jsonl, statement_id
@@ -43,6 +44,13 @@ def _validate_row_object(row, row_index):
             raise ValueError(
                 f"row {row_index}: field name {field!r} must be a string"
             )
+        try:
+            field.encode("utf-8")
+        except UnicodeError as error:
+            raise ValueError(
+                f"row {row_index}: field name {field!r} is not UTF-8 "
+                f"encodable: {error}"
+            ) from error
 
 
 def _validate_required_fields(row, row_index, required_fields):
@@ -273,6 +281,30 @@ def _validate_distinct_paths(input_path, inventory_path, diagnostics_path):
                     aliases = os.path.samefile(left_path, right_path)
                 except OSError:
                     aliases = False
+
+            if not aliases:
+                left_parent = left_resolved.parent
+                right_parent = right_resolved.parent
+                same_parent = left_parent == right_parent
+                if not same_parent:
+                    try:
+                        same_parent = os.path.samefile(
+                            left_parent,
+                            right_parent,
+                        )
+                    except OSError:
+                        same_parent = False
+
+                left_name = unicodedata.normalize(
+                    "NFC",
+                    left_resolved.name,
+                ).casefold()
+                right_name = unicodedata.normalize(
+                    "NFC",
+                    right_resolved.name,
+                ).casefold()
+                aliases = same_parent and left_name == right_name
+
             if aliases:
                 raise ValueError(
                     f"{left_option} and {right_option} must identify distinct files"
