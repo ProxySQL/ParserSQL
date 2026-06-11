@@ -13,6 +13,7 @@ LOCK_RECLAIM_DIR=
 LOCK_RECLAIM_FILE=
 LOCK_HELD=0
 FILE_CONTENT=
+ACTIVE_CHILD_PID=
 
 usage() {
     echo "Usage: $0 [--with-postgres-source]" >&2
@@ -166,10 +167,51 @@ acquire_lock() {
     exit 1
 }
 
+handle_signal() {
+    local signal_name="$1"
+    local exit_status="$2"
+    local child_pid="$ACTIVE_CHILD_PID"
+
+    trap - HUP INT TERM
+    ACTIVE_CHILD_PID=
+    if [[ -n "$child_pid" ]]; then
+        if ! kill "-${signal_name}" -- "-${child_pid}" 2>/dev/null; then
+            kill "-${signal_name}" "$child_pid" 2>/dev/null || true
+        fi
+        wait "$child_pid" 2>/dev/null || true
+    fi
+    exit "$exit_status"
+}
+
+run_interruptible() {
+    local child_pid
+    local child_status
+
+    python3 -c '
+import os
+import signal
+import sys
+
+os.setsid()
+for signal_number in (signal.SIGHUP, signal.SIGINT, signal.SIGTERM):
+    signal.signal(signal_number, signal.SIG_DFL)
+os.execvp(sys.argv[1], sys.argv[1:])
+' "$@" &
+    child_pid=$!
+    ACTIVE_CHILD_PID="$child_pid"
+    if wait "$child_pid"; then
+        child_status=0
+    else
+        child_status=$?
+    fi
+    ACTIVE_CHILD_PID=
+    return "$child_status"
+}
+
 trap release_lock EXIT
-trap 'exit 129' HUP
-trap 'exit 130' INT
-trap 'exit 143' TERM
+trap 'handle_signal HUP 129' HUP
+trap 'handle_signal INT 130' INT
+trap 'handle_signal TERM 143' TERM
 
 LIBPG_QUERY_URL="$(
     python3 - "$PINS" <<'PY'
@@ -248,13 +290,13 @@ fetch_libpg_query() {
             echo "Cache path exists but is not a Git checkout: ${checkout}" >&2
             exit 1
         fi
-        git clone --no-checkout "$LIBPG_QUERY_URL" "$checkout"
+        run_interruptible git clone --no-checkout "$LIBPG_QUERY_URL" "$checkout"
     fi
 
-    git -C "$checkout" remote set-url origin "$LIBPG_QUERY_URL"
+    run_interruptible git -C "$checkout" remote set-url origin "$LIBPG_QUERY_URL"
     echo "Fetching libpg_query ${role}: ${branch} at ${commit}"
-    git -C "$checkout" fetch --force --no-tags origin "$commit"
-    git -C "$checkout" checkout --detach --force "$commit"
+    run_interruptible git -C "$checkout" fetch --force --no-tags origin "$commit"
+    run_interruptible git -C "$checkout" checkout --detach --force "$commit"
 
     actual_head="$(git -C "$checkout" rev-parse HEAD)"
     if [[ "$actual_head" != "$commit" ]]; then
@@ -301,7 +343,7 @@ fetch_postgres_source() {
 
     if [[ ! -f "$archive" ]]; then
         download_tmp="$(mktemp "${postgres_root}/.postgresql-${pg_version}.download.XXXXXX")"
-        if ! curl --fail --location --retry 3 --output "$download_tmp" "$archive_url"; then
+        if ! run_interruptible curl --fail --location --retry 3 --output "$download_tmp" "$archive_url"; then
             rm -f "$download_tmp"
             return 1
         fi
@@ -316,7 +358,7 @@ fetch_postgres_source() {
 
     if [[ ! -d "$source_dir" ]]; then
         extract_tmp="$(mktemp -d "${postgres_root}/.postgresql-${pg_version}.extract.XXXXXX")"
-        if ! tar -xjf "$archive" -C "$extract_tmp"; then
+        if ! run_interruptible tar -xjf "$archive" -C "$extract_tmp"; then
             rm -rf "$extract_tmp"
             return 1
         fi

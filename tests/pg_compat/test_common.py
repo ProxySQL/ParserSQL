@@ -236,7 +236,15 @@ if [[ "$1" == "clone" ]]; then
         printf 'PG_VERSION = 18.4\\nPG_VERSION_NUM = 180004\\n' > "$checkout/Makefile"
     fi
     if [[ "${STUB_BLOCK_STARTED:-}" != "" && "$(basename "$checkout")" == "previous" ]]; then
+        if [[ "${STUB_BLOCK_PID:-}" != "" ]]; then
+            printf '%s\n' "$$" > "$STUB_BLOCK_PID"
+        fi
         touch "$STUB_BLOCK_STARTED"
+        if [[ "${STUB_BLOCK_FOREVER:-}" != "" ]]; then
+            while true; do
+                sleep 60
+            done
+        fi
         while [[ ! -e "$STUB_BLOCK_RELEASE" ]]; do
             sleep 0.02
         done
@@ -334,6 +342,19 @@ printf 'extracted\\n' > "$destination/$name/marker"
         if owner is not None:
             (lock_dir / "owner").write_text(owner, encoding="utf-8")
         return lock_dir
+
+    def kill_process_safely(self, pid):
+        try:
+            process_group = os.getpgid(pid)
+        except ProcessLookupError:
+            return
+        try:
+            if process_group == pid:
+                os.killpg(process_group, signal.SIGKILL)
+            else:
+                os.kill(pid, signal.SIGKILL)
+        except ProcessLookupError:
+            pass
 
     def test_bad_download_is_not_published_and_poisoned_cache_recovers(self):
         good_content = b"good archive"
@@ -484,9 +505,10 @@ printf 'extracted\\n' > "$destination/$name/marker"
                 directory, valid_pins()
             )
             started = root / "started"
-            release = root / "release"
+            child_pid_path = root / "child-pid"
             environment["STUB_BLOCK_STARTED"] = str(started)
-            environment["STUB_BLOCK_RELEASE"] = str(release)
+            environment["STUB_BLOCK_PID"] = str(child_pid_path)
+            environment["STUB_BLOCK_FOREVER"] = "1"
 
             process = subprocess.Popen(
                 [str(FETCH_SCRIPT)],
@@ -495,24 +517,42 @@ printf 'extracted\\n' > "$destination/$name/marker"
                 text=True,
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
+                start_new_session=True,
             )
-            deadline = time.monotonic() + 5
-            while not started.exists() and time.monotonic() < deadline:
-                time.sleep(0.02)
-            self.assertTrue(started.exists(), "fetch did not reach locked operation")
+            child_pid = None
+            try:
+                deadline = time.monotonic() + 5
+                while (
+                    (not started.exists() or not child_pid_path.exists())
+                    and time.monotonic() < deadline
+                ):
+                    time.sleep(0.02)
+                self.assertTrue(
+                    started.exists(), "fetch did not reach locked operation"
+                )
+                self.assertTrue(
+                    child_pid_path.exists(), "blocked child did not record its PID"
+                )
+                child_pid = int(
+                    child_pid_path.read_text(encoding="utf-8").strip()
+                )
 
-            os.kill(process.pid, signal.SIGTERM)
-            release.touch()
-            process.communicate(timeout=5)
+                os.kill(process.pid, signal.SIGTERM)
+                try:
+                    process.communicate(timeout=2)
+                except subprocess.TimeoutExpired:
+                    self.fail("terminated fetch did not exit promptly")
 
-            self.assertNotEqual(process.returncode, 0)
-            self.assertFalse((cache / ".pg_compat.lock").exists())
-
-            retry_environment = environment.copy()
-            retry_environment.pop("STUB_BLOCK_STARTED")
-            retry_environment.pop("STUB_BLOCK_RELEASE")
-            retry = self.run_fetch(retry_environment)
-            self.assertEqual(retry.returncode, 0, retry.stderr)
+                self.assertEqual(process.returncode, 143)
+                with self.assertRaises(ProcessLookupError):
+                    os.kill(child_pid, 0)
+                self.assertFalse((cache / ".pg_compat.lock").exists())
+            finally:
+                if process.poll() is None:
+                    self.kill_process_safely(process.pid)
+                    process.communicate(timeout=5)
+                if child_pid is not None:
+                    self.kill_process_safely(child_pid)
 
 
 if __name__ == "__main__":
