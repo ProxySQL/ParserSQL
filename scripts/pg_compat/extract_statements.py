@@ -258,6 +258,13 @@ def _jsonl_text(rows):
     return text
 
 
+def _portable_path_key(path):
+    return tuple(
+        unicodedata.normalize("NFC", component).casefold()
+        for component in path.parts
+    )
+
+
 def _validate_distinct_paths(input_path, inventory_path, diagnostics_path):
     named_paths = (
         ("--input", Path(input_path)),
@@ -283,27 +290,9 @@ def _validate_distinct_paths(input_path, inventory_path, diagnostics_path):
                     aliases = False
 
             if not aliases:
-                left_parent = left_resolved.parent
-                right_parent = right_resolved.parent
-                same_parent = left_parent == right_parent
-                if not same_parent:
-                    try:
-                        same_parent = os.path.samefile(
-                            left_parent,
-                            right_parent,
-                        )
-                    except OSError:
-                        same_parent = False
-
-                left_name = unicodedata.normalize(
-                    "NFC",
-                    left_resolved.name,
-                ).casefold()
-                right_name = unicodedata.normalize(
-                    "NFC",
-                    right_resolved.name,
-                ).casefold()
-                aliases = same_parent and left_name == right_name
+                aliases = _portable_path_key(
+                    left_resolved
+                ) == _portable_path_key(right_resolved)
 
             if aliases:
                 raise ValueError(

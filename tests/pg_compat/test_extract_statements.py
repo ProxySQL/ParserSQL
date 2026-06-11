@@ -524,6 +524,50 @@ class ExtractStatementsCliTest(unittest.TestCase):
             self.assertFalse(inventory_path.exists())
             self.assertFalse(diagnostics_path.exists())
 
+    def test_rejects_nonexistent_parent_names_differing_only_by_case(self):
+        with tempfile.TemporaryDirectory() as directory:
+            directory = Path(directory)
+            input_path = directory / "raw.jsonl"
+            inventory_path = directory / "Reports" / "output.jsonl"
+            diagnostics_path = directory / "reports" / "output.jsonl"
+            input_path.write_text("", encoding="utf-8")
+
+            result = self.run_cli(
+                "--input",
+                input_path,
+                "--inventory",
+                inventory_path,
+                "--diagnostics",
+                diagnostics_path,
+            )
+
+            self.assertNotEqual(result.returncode, 0)
+            self.assertIn("distinct files", result.stderr)
+            self.assertFalse(inventory_path.parent.exists())
+            self.assertFalse(diagnostics_path.parent.exists())
+
+    def test_rejects_nonexistent_parent_names_with_equivalent_unicode(self):
+        with tempfile.TemporaryDirectory() as directory:
+            directory = Path(directory)
+            input_path = directory / "raw.jsonl"
+            inventory_path = directory / "caf\u00e9" / "output.jsonl"
+            diagnostics_path = directory / "cafe\u0301" / "output.jsonl"
+            input_path.write_text("", encoding="utf-8")
+
+            result = self.run_cli(
+                "--input",
+                input_path,
+                "--inventory",
+                inventory_path,
+                "--diagnostics",
+                diagnostics_path,
+            )
+
+            self.assertNotEqual(result.returncode, 0)
+            self.assertIn("distinct files", result.stderr)
+            self.assertFalse(inventory_path.parent.exists())
+            self.assertFalse(diagnostics_path.parent.exists())
+
     @unittest.skipUnless(hasattr(os, "symlink"), "symlinks are unavailable")
     def test_rejects_existing_symlink_path_aliases(self):
         with tempfile.TemporaryDirectory() as directory:
