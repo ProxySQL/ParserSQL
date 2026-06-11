@@ -43,6 +43,27 @@ struct Candidate {
     std::string sql;
 };
 
+class PgQueryLifecycle {
+public:
+    PgQueryLifecycle() = default;
+
+    ~PgQueryLifecycle() {
+        if (initialized_) {
+            pg_query_exit();
+        }
+    }
+
+    PgQueryLifecycle(const PgQueryLifecycle&) = delete;
+    PgQueryLifecycle& operator=(const PgQueryLifecycle&) = delete;
+
+    void mark_initialized() {
+        initialized_ = true;
+    }
+
+private:
+    bool initialized_ = false;
+};
+
 class SplitResultOwner {
 public:
     explicit SplitResultOwner(PgQuerySplitResult result)
@@ -352,8 +373,11 @@ std::vector<Candidate> extract_candidates(
     return candidates;
 }
 
-std::vector<Candidate> split_candidates(std::string_view input) {
+std::vector<Candidate> split_candidates(
+    std::string_view input,
+    PgQueryLifecycle& lifecycle) {
     std::string owned_input(input);
+    lifecycle.mark_initialized();
     SplitResultOwner parser_split(
         pg_query_split_with_parser(owned_input.c_str()));
     if (parser_split.get().error == nullptr) {
@@ -597,9 +621,10 @@ void emit_accepted(const Options& options,
     std::cout << "}\n";
 }
 
-void run(const Options& options) {
+void run(const Options& options, PgQueryLifecycle& lifecycle) {
     const std::string input = read_input(options.input);
-    const std::vector<Candidate> candidates = split_candidates(input);
+    const std::vector<Candidate> candidates =
+        split_candidates(input, lifecycle);
     sql_parser::Parser<sql_parser::Dialect::PostgreSQL> parser;
 
     for (const Candidate& candidate : candidates) {
@@ -660,18 +685,16 @@ void run(const Options& options) {
 } // namespace
 
 int main(int argc, char** argv) {
+    PgQueryLifecycle lifecycle;
     try {
         const Options options = parse_options(argc, argv);
-        run(options);
-        pg_query_exit();
+        run(options, lifecycle);
         return 0;
     } catch (const UsageError&) {
         std::cerr << USAGE;
-        pg_query_exit();
         return 2;
     } catch (const std::exception& error) {
         std::cerr << "infrastructure error: " << error.what() << '\n';
-        pg_query_exit();
         return 1;
     }
 }
