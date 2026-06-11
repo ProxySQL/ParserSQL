@@ -1,5 +1,8 @@
 import copy
+from contextlib import redirect_stderr
+import io
 import json
+import os
 from pathlib import Path
 import subprocess
 import sys
@@ -8,7 +11,11 @@ import unittest
 from unittest import mock
 
 from scripts.pg_compat.common import statement_id
-from scripts.pg_compat.extract_statements import build_inventory, partition_rows
+from scripts.pg_compat.extract_statements import (
+    build_inventory,
+    main,
+    partition_rows,
+)
 
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -40,11 +47,12 @@ def accepted_row(
 
 class PartitionRowsTest(unittest.TestCase):
     def test_partitions_oracle_rejections_without_mutating_input(self):
-        accepted = accepted_row()
+        accepted = accepted_row(metadata={"tags": ["accepted"]})
         rejected = accepted_row(
             source_file="bad.sql",
             result="ORACLE_REJECTED",
             oracle_error="syntax error",
+            metadata={"tags": ["rejected"]},
         )
         rows = [accepted, rejected]
         original = copy.deepcopy(rows)
@@ -53,7 +61,30 @@ class PartitionRowsTest(unittest.TestCase):
 
         self.assertEqual(accepted_rows, [accepted])
         self.assertEqual(diagnostics, [rejected])
+        accepted_rows[0]["metadata"]["tags"].append("changed")
+        diagnostics[0]["metadata"]["tags"].append("changed")
         self.assertEqual(rows, original)
+
+    def test_validates_diagnostic_result_and_common_metadata(self):
+        self.assertEqual(
+            partition_rows([{"result": "ORACLE_REJECTED"}]),
+            ([], [{"result": "ORACLE_REJECTED"}]),
+        )
+        invalid_rows = (
+            ({"result": 1}, "result"),
+            ({"result": "UNKNOWN"}, "result"),
+            ({"result": "ORACLE_REJECTED", "source_file": 1}, "source_file"),
+            ({"result": "ORACLE_REJECTED", "sql": 1}, "sql"),
+            ({"result": "ORACLE_REJECTED", "oracle_error": 1}, "oracle_error"),
+            ({"result": "ORACLE_REJECTED", "offset": True}, "offset"),
+            ({"result": "ORACLE_REJECTED", "offset": -1}, "offset"),
+            ({"result": "ORACLE_REJECTED", "line": 0}, "line"),
+        )
+
+        for row, field in invalid_rows:
+            with self.subTest(row=row):
+                with self.assertRaisesRegex(ValueError, rf"row 0.*field.*{field}"):
+                    partition_rows([row])
 
 
 class BuildInventoryTest(unittest.TestCase):
@@ -160,6 +191,69 @@ class BuildInventoryTest(unittest.TestCase):
                     rf"row 0.*missing required field.*{field}",
                 ):
                     build_inventory([row])
+
+    def test_validates_accepted_field_types_and_ranges(self):
+        invalid_values = {
+            "result": (1, "UNKNOWN"),
+            "normalized_sql": (1,),
+            "oracle_node": (1,),
+            "source_file": (1,),
+            "sql": (1,),
+            "offset": ("2", True, 1.5, -1),
+            "line": ("1", True, 1.5, 0),
+            "branch": (1,),
+            "commit": (1,),
+        }
+
+        for field, values in invalid_values.items():
+            for value in values:
+                with self.subTest(field=field, value=value):
+                    row = accepted_row()
+                    row[field] = value
+                    with self.assertRaisesRegex(
+                        ValueError,
+                        rf"row 0.*field.*{field}",
+                    ):
+                        build_inventory([row])
+
+    def test_rejects_mixed_invalid_occurrence_offsets_cleanly(self):
+        rows = [
+            accepted_row(source_file="a.sql", offset=1),
+            accepted_row(source_file="b.sql", offset="2"),
+        ]
+
+        with self.assertRaisesRegex(ValueError, r"row 1.*field.*offset"):
+            build_inventory(rows)
+
+    def test_rejects_non_string_row_keys_with_context(self):
+        row = accepted_row()
+        row[1] = "invalid key"
+
+        with self.assertRaisesRegex(ValueError, r"row 0.*field.*1.*string"):
+            build_inventory([row])
+
+    def test_rejects_non_finite_and_non_utf8_metadata(self):
+        invalid_metadata = (
+            (float("nan"), "JSON"),
+            ("\ud800", "UTF-8"),
+        )
+
+        for value, message in invalid_metadata:
+            with self.subTest(message=message):
+                row = accepted_row(metadata={"value": value})
+                with self.assertRaisesRegex(
+                    ValueError,
+                    rf"row 0.*field.*metadata.*{message}",
+                ):
+                    build_inventory([row])
+
+    def test_inventory_deep_copies_nested_metadata(self):
+        row = accepted_row(metadata={"tags": ["original"]})
+
+        inventory = build_inventory([row])
+        inventory[0]["metadata"]["tags"].append("changed")
+
+        self.assertEqual(row["metadata"], {"tags": ["original"]})
 
     def test_detects_statement_id_collision(self):
         rows = [
@@ -305,6 +399,123 @@ class ExtractStatementsCliTest(unittest.TestCase):
                 diagnostics_path.read_text(encoding="utf-8"),
                 "old diagnostics\n",
             )
+
+    def test_strict_json_failures_are_clean_and_do_not_publish(self):
+        invalid_rows = (
+            accepted_row(metadata={"value": float("nan")}),
+            accepted_row(metadata={"value": "\ud800"}),
+        )
+
+        with tempfile.TemporaryDirectory() as directory:
+            directory = Path(directory)
+            input_path = directory / "raw.jsonl"
+            inventory_path = directory / "inventory.jsonl"
+            diagnostics_path = directory / "diagnostics.jsonl"
+
+            for invalid_row in invalid_rows:
+                with self.subTest(invalid_row=repr(invalid_row)):
+                    input_path.write_text(
+                        json.dumps(invalid_row, ensure_ascii=True) + "\n",
+                        encoding="utf-8",
+                    )
+                    inventory_path.write_text("old inventory\n", encoding="utf-8")
+                    diagnostics_path.write_text(
+                        "old diagnostics\n",
+                        encoding="utf-8",
+                    )
+
+                    result = self.run_cli(
+                        "--input",
+                        input_path,
+                        "--inventory",
+                        inventory_path,
+                        "--diagnostics",
+                        diagnostics_path,
+                    )
+
+                    self.assertNotEqual(result.returncode, 0)
+                    self.assertIn("row 0", result.stderr)
+                    self.assertIn("metadata", result.stderr)
+                    self.assertNotIn("Traceback", result.stderr)
+                    self.assertEqual(
+                        inventory_path.read_text(encoding="utf-8"),
+                        "old inventory\n",
+                    )
+                    self.assertEqual(
+                        diagnostics_path.read_text(encoding="utf-8"),
+                        "old diagnostics\n",
+                    )
+
+    def test_rejects_same_path_aliases_before_reading_or_writing(self):
+        with tempfile.TemporaryDirectory() as directory:
+            directory = Path(directory)
+            input_path = directory / "raw.jsonl"
+            shared_output_path = directory / "shared.jsonl"
+            input_path.write_text("not JSON\n", encoding="utf-8")
+
+            result = self.run_cli(
+                "--input",
+                input_path,
+                "--inventory",
+                shared_output_path,
+                "--diagnostics",
+                shared_output_path,
+            )
+
+            self.assertNotEqual(result.returncode, 0)
+            self.assertIn("distinct files", result.stderr)
+            self.assertEqual(input_path.read_text(encoding="utf-8"), "not JSON\n")
+            self.assertFalse(shared_output_path.exists())
+
+    @unittest.skipUnless(hasattr(os, "symlink"), "symlinks are unavailable")
+    def test_rejects_existing_symlink_path_aliases(self):
+        with tempfile.TemporaryDirectory() as directory:
+            directory = Path(directory)
+            input_path = directory / "raw.jsonl"
+            inventory_path = directory / "inventory.jsonl"
+            diagnostics_path = directory / "diagnostics.jsonl"
+            input_path.write_text("", encoding="utf-8")
+            inventory_path.symlink_to(input_path)
+
+            result = self.run_cli(
+                "--input",
+                input_path,
+                "--inventory",
+                inventory_path,
+                "--diagnostics",
+                diagnostics_path,
+            )
+
+            self.assertNotEqual(result.returncode, 0)
+            self.assertIn("distinct files", result.stderr)
+            self.assertFalse(diagnostics_path.exists())
+
+    def test_atomic_publication_errors_are_reported_without_traceback(self):
+        with tempfile.TemporaryDirectory() as directory:
+            directory = Path(directory)
+            input_path = directory / "raw.jsonl"
+            input_path.write_text("", encoding="utf-8")
+            stderr = io.StringIO()
+
+            with mock.patch(
+                "scripts.pg_compat.extract_statements.atomic_write_text",
+                side_effect=OSError("disk full"),
+            ):
+                with redirect_stderr(stderr), self.assertRaises(SystemExit) as raised:
+                    main(
+                        [
+                            "--input",
+                            str(input_path),
+                            "--inventory",
+                            str(directory / "inventory.jsonl"),
+                            "--diagnostics",
+                            str(directory / "diagnostics.jsonl"),
+                        ]
+                    )
+
+            self.assertEqual(raised.exception.code, 1)
+            self.assertIn("disk full", stderr.getvalue())
+            self.assertNotIn("Traceback", stderr.getvalue())
 
     def test_argparse_rejects_missing_and_unknown_options(self):
         with tempfile.TemporaryDirectory() as directory:
