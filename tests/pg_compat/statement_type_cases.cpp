@@ -222,7 +222,7 @@ void test_grant_and_revoke_mappings() {
 }
 
 void test_oracle_node_names() {
-    const NameCase cases[] = {
+    constexpr NameCase cases[] = {
         {PG_QUERY__NODE__NODE_SELECT_STMT, "PG_QUERY__NODE__NODE_SELECT_STMT"},
         {PG_QUERY__NODE__NODE_INSERT_STMT, "PG_QUERY__NODE__NODE_INSERT_STMT"},
         {PG_QUERY__NODE__NODE_UPDATE_STMT, "PG_QUERY__NODE__NODE_UPDATE_STMT"},
@@ -270,6 +270,10 @@ void test_oracle_node_names() {
         {PG_QUERY__NODE__NODE_GRANT_STMT, "PG_QUERY__NODE__NODE_GRANT_STMT"},
         {PG_QUERY__NODE__NODE_GRANT_ROLE_STMT, "PG_QUERY__NODE__NODE_GRANT_ROLE_STMT"},
     };
+
+    constexpr std::size_t case_count = sizeof(cases) / sizeof(cases[0]);
+    static_assert(case_count == 46);
+    assert(case_count == pg_compat::reviewed_node_case_count());
 
     for (const auto& test_case : cases) {
         const char* actual = pg_compat::oracle_node_name(test_case.node_case);

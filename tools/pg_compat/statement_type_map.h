@@ -5,6 +5,8 @@
 
 #include "protobuf/pg_query.pb-c.h"
 
+#include <cstddef>
+
 namespace pg_compat {
 
 enum class MappingKind {
@@ -20,6 +22,7 @@ struct StatementTypeMapping {
 
 StatementTypeMapping expected_stmt_type(const PgQuery__Node& node);
 const char* oracle_node_name(PgQuery__Node__NodeCase node_case);
+std::size_t reviewed_node_case_count();
 const char* stmt_type_name(sql_parser::StmtType type);
 
 } // namespace pg_compat
