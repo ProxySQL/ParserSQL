@@ -322,3 +322,33 @@ class ExtractStatementsCliTest(unittest.TestCase):
 
         self.assertNotEqual(missing.returncode, 0)
         self.assertNotEqual(unknown.returncode, 0)
+
+    def test_argparse_rejects_abbreviated_long_options(self):
+        with tempfile.TemporaryDirectory() as directory:
+            directory = Path(directory)
+            input_path = directory / "raw.jsonl"
+            inventory_path = directory / "inventory.jsonl"
+            diagnostics_path = directory / "diagnostics.jsonl"
+            input_path.write_text("", encoding="utf-8")
+            option_cases = (
+                ("--inp", "--inventory", "--diagnostics"),
+                ("--input", "--invent", "--diagnostics"),
+                ("--input", "--inventory", "--diag"),
+            )
+
+            for input_option, inventory_option, diagnostics_option in option_cases:
+                with self.subTest(
+                    input_option=input_option,
+                    inventory_option=inventory_option,
+                    diagnostics_option=diagnostics_option,
+                ):
+                    result = self.run_cli(
+                        input_option,
+                        input_path,
+                        inventory_option,
+                        inventory_path,
+                        diagnostics_option,
+                        diagnostics_path,
+                    )
+
+                    self.assertNotEqual(result.returncode, 0)

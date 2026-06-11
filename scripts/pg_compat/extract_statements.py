@@ -127,7 +127,7 @@ def _jsonl_text(rows):
 
 
 def _argument_parser():
-    parser = argparse.ArgumentParser()
+    parser = argparse.ArgumentParser(allow_abbrev=False)
     parser.add_argument("--input", required=True)
     parser.add_argument("--inventory", required=True)
     parser.add_argument("--diagnostics", required=True)
