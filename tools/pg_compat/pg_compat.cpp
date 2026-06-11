@@ -5,11 +5,13 @@
 #include "pg_query.h"
 #include "protobuf/pg_query.pb-c.h"
 
+#include <algorithm>
 #include <cstdint>
 #include <fstream>
 #include <iostream>
 #include <iterator>
 #include <memory>
+#include <sstream>
 #include <stdexcept>
 #include <string>
 #include <string_view>
@@ -41,6 +43,34 @@ struct Candidate {
     std::size_t line = 1;
     std::string splitter;
     std::string sql;
+};
+
+struct ScanAnalysis {
+    std::string normalized_sql;
+    std::string scanner_error;
+    std::size_t leading_code_offset = 0;
+    bool has_code_token = false;
+};
+
+class LineIndex {
+public:
+    explicit LineIndex(std::string_view input) {
+        for (std::size_t i = 0; i < input.size(); ++i) {
+            if (input[i] == '\n') {
+                newline_offsets_.push_back(i);
+            }
+        }
+    }
+
+    std::size_t line_for_offset(std::size_t offset) const {
+        return 1 + static_cast<std::size_t>(std::upper_bound(
+            newline_offsets_.begin(),
+            newline_offsets_.end(),
+            offset) - newline_offsets_.begin());
+    }
+
+private:
+    std::vector<std::size_t> newline_offsets_;
 };
 
 class PgQueryLifecycle {
@@ -194,6 +224,26 @@ Options parse_options(int argc, char** argv) {
     return options;
 }
 
+std::size_t valid_utf8_sequence_length(std::string_view input,
+                                       std::size_t offset);
+
+void validate_utf8(std::string_view input) {
+    for (std::size_t i = 0; i < input.size();) {
+        const unsigned char value = static_cast<unsigned char>(input[i]);
+        if (value < 0x80) {
+            ++i;
+            continue;
+        }
+
+        const std::size_t length = valid_utf8_sequence_length(input, i);
+        if (length == 0) {
+            throw std::runtime_error(
+                "invalid UTF-8 at byte offset " + std::to_string(i));
+        }
+        i += length;
+    }
+}
+
 std::string read_input(const std::string& path) {
     std::ifstream input(path, std::ios::binary);
     if (!input) {
@@ -213,6 +263,7 @@ std::string read_input(const std::string& path) {
             "input contains a NUL byte at offset " +
             std::to_string(nul_offset));
     }
+    validate_utf8(contents);
     return contents;
 }
 
@@ -314,20 +365,6 @@ std::string oracle_error_message(const PgQueryError* error) {
     return error->message;
 }
 
-std::size_t line_for_offset(std::string_view input, std::size_t offset) {
-    if (offset > input.size()) {
-        throw std::runtime_error("statement offset exceeds input size");
-    }
-
-    std::size_t line = 1;
-    for (std::size_t i = 0; i < offset; ++i) {
-        if (input[i] == '\n') {
-            ++line;
-        }
-    }
-    return line;
-}
-
 std::vector<Candidate> extract_candidates(
     std::string_view input,
     const PgQuerySplitResult& split,
@@ -365,7 +402,7 @@ std::vector<Candidate> extract_candidates(
 
         candidates.push_back({
             offset,
-            line_for_offset(input, offset),
+            1,
             splitter,
             std::string(input.substr(offset, length)),
         });
@@ -399,13 +436,34 @@ std::vector<Candidate> split_candidates(
     return extract_candidates(input, scanner_split.get(), "scanner");
 }
 
-std::string normalize_sql(std::string_view sql) {
+std::size_t first_non_whitespace_offset(std::string_view sql) {
+    for (std::size_t i = 0; i < sql.size(); ++i) {
+        const char c = sql[i];
+        if (c != ' ' && c != '\t' && c != '\n' &&
+            c != '\r' && c != '\f' && c != '\v') {
+            return i;
+        }
+    }
+    // Empty/trivia-only candidates use the raw splitter offset.
+    return 0;
+}
+
+bool is_comment_token(PgQuery__Token token) {
+    return token == PG_QUERY__TOKEN__SQL_COMMENT ||
+        token == PG_QUERY__TOKEN__C_COMMENT;
+}
+
+ScanAnalysis analyze_sql(std::string_view sql) {
+    ScanAnalysis analysis;
+    // Scanner failures and comment-only candidates fall back to the first
+    // non-whitespace byte, or the raw splitter offset for all-whitespace SQL.
+    analysis.leading_code_offset = first_non_whitespace_offset(sql);
+
     std::string owned_sql(sql);
     ScanResultOwner raw(pg_query_scan(owned_sql.c_str()));
     if (raw.get().error != nullptr) {
-        throw std::runtime_error(
-            "oracle scanner rejected candidate: " +
-            oracle_error_message(raw.get().error));
+        analysis.scanner_error = oracle_error_message(raw.get().error);
+        return analysis;
     }
     if (raw.get().pbuf.len > 0 && raw.get().pbuf.data == nullptr) {
         throw std::runtime_error("oracle scanner returned an empty buffer");
@@ -422,10 +480,10 @@ std::string normalize_sql(std::string_view sql) {
         throw std::runtime_error("oracle scanner returned no token array");
     }
 
-    std::string normalized;
     for (std::size_t i = 0; i < scan->n_tokens; ++i) {
         const PgQuery__ScanToken* token = scan->tokens[i];
-        if (token == nullptr || token->start < 0 || token->end < token->start) {
+        if (token == nullptr || token->start < 0 ||
+            token->end < token->start) {
             throw std::runtime_error("oracle scanner returned an invalid token");
         }
 
@@ -434,6 +492,17 @@ std::string normalize_sql(std::string_view sql) {
         if (start > sql.size() || end > sql.size()) {
             throw std::runtime_error(
                 "oracle scanner token range is out of bounds");
+        }
+        if (start == end) {
+            throw std::runtime_error(
+                "oracle scanner returned a zero-length token");
+        }
+        if (is_comment_token(token->token)) {
+            continue;
+        }
+        if (!analysis.has_code_token) {
+            analysis.leading_code_offset = start;
+            analysis.has_code_token = true;
         }
 
         std::string text(sql.substr(start, end - start));
@@ -444,12 +513,12 @@ std::string normalize_sql(std::string_view sql) {
                 }
             }
         }
-        if (!normalized.empty()) {
-            normalized.push_back(' ');
+        if (!analysis.normalized_sql.empty()) {
+            analysis.normalized_sql.push_back(' ');
         }
-        normalized += text;
+        analysis.normalized_sql += text;
     }
-    return normalized;
+    return analysis;
 }
 
 bool has_meaningful_remaining(sql_parser::StringRef remaining) {
@@ -515,16 +584,16 @@ CompatibilityResult classify(
     const sql_parser::ParseResult& parsed,
     const StatementTypeMapping& mapping,
     std::string_view oracle_node) {
+    if (mapping.kind == MappingKind::Unmapped) {
+        throw std::runtime_error(
+            "unmapped PostgreSQL top-level node: " +
+            std::string(oracle_node));
+    }
     if (parsed.status == sql_parser::ParseResult::ERROR) {
         return CompatibilityResult::Error;
     }
     if (parsed.status == sql_parser::ParseResult::PARTIAL) {
         return CompatibilityResult::Partial;
-    }
-    if (mapping.kind == MappingKind::Unmapped) {
-        throw std::runtime_error(
-            "unmapped PostgreSQL top-level node: " +
-            std::string(oracle_node));
     }
     if (mapping.kind == MappingKind::NoEquivalent ||
         parsed.stmt_type != mapping.type) {
@@ -538,102 +607,142 @@ CompatibilityResult classify(
         : CompatibilityResult::ClassifiedOnly;
 }
 
-void emit_string_field(const char* name,
-                       std::string_view value,
+void append_string_field(std::ostream& output,
+                         const char* name,
+                         std::string_view value,
+                         bool& first) {
+    if (!first) {
+        output << ',';
+    }
+    first = false;
+    output << '"' << name << "\":\"" << json_escape(value) << '"';
+}
+
+void append_size_field(std::ostream& output,
+                       const char* name,
+                       std::size_t value,
                        bool& first) {
     if (!first) {
-        std::cout << ',';
+        output << ',';
     }
     first = false;
-    std::cout << '"' << name << "\":\"" << json_escape(value) << '"';
+    output << '"' << name << "\":" << value;
 }
 
-void emit_size_field(const char* name, std::size_t value, bool& first) {
+void append_bool_field(std::ostream& output,
+                       const char* name,
+                       bool value,
+                       bool& first) {
     if (!first) {
-        std::cout << ',';
+        output << ',';
     }
     first = false;
-    std::cout << '"' << name << "\":" << value;
+    output << '"' << name << "\":" << (value ? "true" : "false");
 }
 
-void emit_bool_field(const char* name, bool value, bool& first) {
-    if (!first) {
-        std::cout << ',';
+void write_record(std::string_view record) {
+    std::cout.write(record.data(), static_cast<std::streamsize>(record.size()));
+    std::cout.put('\n');
+    std::cout.flush();
+    if (!std::cout) {
+        throw std::runtime_error("failed to write JSON record to stdout");
     }
-    first = false;
-    std::cout << '"' << name << "\":" << (value ? "true" : "false");
 }
 
-void emit_oracle_rejected(const Options& options,
-                          const Candidate& candidate,
-                          std::string_view message) {
+void finalize_stdout() {
+    std::cout.flush();
+    if (!std::cout) {
+        throw std::runtime_error("failed to flush JSON output");
+    }
+}
+
+std::string build_oracle_rejected(const Options& options,
+                                  const Candidate& candidate,
+                                  std::string_view message) {
+    std::ostringstream output;
     bool first = true;
-    std::cout << '{';
-    emit_string_field("source_file", options.input, first);
-    emit_size_field("offset", candidate.offset, first);
-    emit_size_field("line", candidate.line, first);
-    emit_string_field("splitter", candidate.splitter, first);
-    emit_string_field("sql", candidate.sql, first);
-    emit_string_field(
+    output << '{';
+    append_string_field(output, "source_file", options.input, first);
+    append_size_field(output, "offset", candidate.offset, first);
+    append_size_field(output, "line", candidate.line, first);
+    append_string_field(output, "splitter", candidate.splitter, first);
+    append_string_field(output, "sql", candidate.sql, first);
+    append_string_field(
+        output,
         "result",
         pg_compat::result_name(CompatibilityResult::OracleRejected),
         first);
-    emit_string_field("branch", options.branch, first);
-    emit_string_field("commit", options.commit, first);
-    emit_string_field("oracle_error", message, first);
-    std::cout << "}\n";
+    append_string_field(output, "branch", options.branch, first);
+    append_string_field(output, "commit", options.commit, first);
+    append_string_field(output, "oracle_error", message, first);
+    output << '}';
+    return output.str();
 }
 
-void emit_accepted(const Options& options,
-                   const Candidate& candidate,
-                   std::string_view normalized,
-                   std::string_view oracle_node,
-                   const StatementTypeMapping& mapping,
-                   const sql_parser::ParseResult& parsed,
-                   std::string_view remaining,
-                   CompatibilityResult result) {
+std::string build_accepted(const Options& options,
+                           const Candidate& candidate,
+                           std::string_view normalized,
+                           std::string_view oracle_node,
+                           const StatementTypeMapping& mapping,
+                           const sql_parser::ParseResult& parsed,
+                           std::string_view remaining,
+                           CompatibilityResult result) {
+    std::ostringstream output;
     bool first = true;
-    std::cout << '{';
-    emit_string_field("source_file", options.input, first);
-    emit_size_field("offset", candidate.offset, first);
-    emit_size_field("line", candidate.line, first);
-    emit_string_field("splitter", candidate.splitter, first);
-    emit_string_field("sql", candidate.sql, first);
-    emit_string_field("normalized_sql", normalized, first);
-    emit_string_field("oracle_node", oracle_node, first);
-    emit_string_field(
+    output << '{';
+    append_string_field(output, "source_file", options.input, first);
+    append_size_field(output, "offset", candidate.offset, first);
+    append_size_field(output, "line", candidate.line, first);
+    append_string_field(output, "splitter", candidate.splitter, first);
+    append_string_field(output, "sql", candidate.sql, first);
+    append_string_field(output, "normalized_sql", normalized, first);
+    append_string_field(output, "oracle_node", oracle_node, first);
+    append_string_field(
+        output,
         "expected_stmt_type",
         pg_compat::stmt_type_name(mapping.type),
         first);
-    emit_string_field(
+    append_string_field(
+        output,
         "parser_status",
         parser_status_name(parsed.status),
         first);
-    emit_string_field(
+    append_string_field(
+        output,
         "parser_stmt_type",
         pg_compat::stmt_type_name(parsed.stmt_type),
         first);
-    emit_bool_field("has_ast", parsed.ast != nullptr, first);
-    emit_string_field("remaining", remaining, first);
-    emit_string_field("result", pg_compat::result_name(result), first);
-    emit_string_field("branch", options.branch, first);
-    emit_string_field("commit", options.commit, first);
-    std::cout << "}\n";
+    append_bool_field(output, "has_ast", parsed.ast != nullptr, first);
+    append_string_field(output, "remaining", remaining, first);
+    append_string_field(
+        output,
+        "result",
+        pg_compat::result_name(result),
+        first);
+    append_string_field(output, "branch", options.branch, first);
+    append_string_field(output, "commit", options.commit, first);
+    output << '}';
+    return output.str();
 }
 
 void run(const Options& options, PgQueryLifecycle& lifecycle) {
     const std::string input = read_input(options.input);
-    const std::vector<Candidate> candidates =
+    std::vector<Candidate> candidates =
         split_candidates(input, lifecycle);
+    const LineIndex line_index(input);
     sql_parser::Parser<sql_parser::Dialect::PostgreSQL> parser;
 
-    for (const Candidate& candidate : candidates) {
+    for (Candidate& candidate : candidates) {
+        const ScanAnalysis scan = analyze_sql(candidate.sql);
+        candidate.line = line_index.line_for_offset(
+            candidate.offset + scan.leading_code_offset);
+
         ParseResultOwner raw(pg_query_parse_protobuf(candidate.sql.c_str()));
         if (raw.get().error != nullptr) {
-            emit_oracle_rejected(
+            write_record(build_oracle_rejected(
                 options,
                 candidate,
-                oracle_error_message(raw.get().error));
+                oracle_error_message(raw.get().error)));
             continue;
         }
         if (raw.get().parse_tree.len > 0 &&
@@ -662,22 +771,30 @@ void run(const Options& options, PgQueryLifecycle& lifecycle) {
             pg_compat::oracle_node_name(root.node_case);
         const std::string node_case_name =
             generated_node_case_name(root.node_case);
-        const std::string normalized = normalize_sql(candidate.sql);
+        if (mapping.kind == MappingKind::Unmapped) {
+            throw std::runtime_error(
+                "unmapped PostgreSQL top-level node: " + node_case_name);
+        }
+        if (!scan.scanner_error.empty()) {
+            throw std::runtime_error(
+                "oracle scanner rejected candidate: " +
+                scan.scanner_error);
+        }
 
         const sql_parser::ParseResult parsed =
             parser.parse(candidate.sql.data(), candidate.sql.size());
         const std::string remaining = copy_remaining(parsed.remaining);
         const CompatibilityResult result =
             classify(parsed, mapping, node_case_name);
-        emit_accepted(
+        write_record(build_accepted(
             options,
             candidate,
-            normalized,
+            scan.normalized_sql,
             oracle_node,
             mapping,
             parsed,
             remaining,
-            result);
+            result));
         parser.reset();
     }
 }
@@ -689,6 +806,7 @@ int main(int argc, char** argv) {
     try {
         const Options options = parse_options(argc, argv);
         run(options, lifecycle);
+        finalize_stdout();
         return 0;
     } catch (const UsageError&) {
         std::cerr << USAGE;
