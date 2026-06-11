@@ -6,8 +6,13 @@ PINS="${PG_COMPAT_PINS:-${ROOT}/tests/pg_compat/upstream_pins.json}"
 CACHE="${PG_COMPAT_CACHE:-/tmp/parsersql-pg-compat}"
 WITH_POSTGRES_SOURCE=0
 LOCK_DIR="${CACHE}/.pg_compat.lock"
-LOCK_OWNER="$$-${RANDOM}-${RANDOM}"
+LOCK_OWNER_PATTERN=$'^([1-9][0-9]*)\t([A-Za-z0-9][A-Za-z0-9._-]*)\n$'
+LOCK_OWNER_RECORD=
+LOCK_OWNER_TMP=
+LOCK_RECLAIM_DIR=
+LOCK_RECLAIM_FILE=
 LOCK_HELD=0
+FILE_CONTENT=
 
 usage() {
     echo "Usage: $0 [--with-postgres-source]" >&2
@@ -27,25 +32,138 @@ fi
 
 cd "$ROOT"
 
-release_lock() {
-    if [[ "$LOCK_HELD" -ne 1 || ! -d "$LOCK_DIR" ]]; then
+read_file_exact() {
+    local path="$1"
+
+    if [[ ! -f "$path" ]]; then
+        return 1
+    fi
+    FILE_CONTENT="$(cat "$path"; printf '\034')" || return 1
+    FILE_CONTENT="${FILE_CONTENT%$'\034'}"
+}
+
+restore_reclaim_owner() {
+    if [[ -z "$LOCK_RECLAIM_FILE" || ! -f "$LOCK_RECLAIM_FILE" ]]; then
+        if [[ -n "$LOCK_RECLAIM_DIR" ]]; then
+            rmdir "$LOCK_RECLAIM_DIR" 2>/dev/null || true
+            LOCK_RECLAIM_DIR=
+            LOCK_RECLAIM_FILE=
+        fi
         return
     fi
-    if [[ -f "$LOCK_DIR/owner" ]] && [[ "$(cat "$LOCK_DIR/owner")" == "$LOCK_OWNER" ]]; then
-        rm -f "$LOCK_DIR/owner"
-        rmdir "$LOCK_DIR" 2>/dev/null || true
+    if [[ -d "$LOCK_DIR" && ! -e "$LOCK_DIR/owner" ]]; then
+        if ln "$LOCK_RECLAIM_FILE" "$LOCK_DIR/owner" 2>/dev/null; then
+            rm -f "$LOCK_RECLAIM_FILE"
+            rmdir "$LOCK_RECLAIM_DIR" 2>/dev/null || true
+            LOCK_RECLAIM_DIR=
+            LOCK_RECLAIM_FILE=
+        fi
+        return
+    fi
+    rm -f "$LOCK_RECLAIM_FILE"
+    rmdir "$LOCK_RECLAIM_DIR" 2>/dev/null || true
+    LOCK_RECLAIM_DIR=
+    LOCK_RECLAIM_FILE=
+}
+
+release_lock() {
+    restore_reclaim_owner
+    if [[ "$LOCK_HELD" -eq 1 && -d "$LOCK_DIR" ]]; then
+        if [[ ! -e "$LOCK_DIR/owner" ]]; then
+            rmdir "$LOCK_DIR" 2>/dev/null || true
+        elif read_file_exact "$LOCK_DIR/owner" &&
+            [[ "$FILE_CONTENT" == "$LOCK_OWNER_RECORD" ]]; then
+            rm -f "$LOCK_DIR/owner"
+            rmdir "$LOCK_DIR" 2>/dev/null || true
+        fi
+    fi
+    if [[ -n "$LOCK_OWNER_TMP" ]]; then
+        rm -f "$LOCK_OWNER_TMP"
+        LOCK_OWNER_TMP=
     fi
     LOCK_HELD=0
 }
 
-acquire_lock() {
-    mkdir -p "$CACHE"
-    if ! mkdir "$LOCK_DIR" 2>/dev/null; then
-        echo "PostgreSQL compatibility cache is locked: ${CACHE}" >&2
+reclaim_stale_lock() {
+    local initial_owner
+    local owner_pid
+    local reclaim_dir
+
+    if ! read_file_exact "$LOCK_DIR/owner"; then
+        return 1
+    fi
+    initial_owner="$FILE_CONTENT"
+    if [[ ! "$initial_owner" =~ $LOCK_OWNER_PATTERN ]]; then
+        return 1
+    fi
+    owner_pid="${BASH_REMATCH[1]}"
+    if kill -0 "$owner_pid" 2>/dev/null; then
+        return 1
+    fi
+    if ! read_file_exact "$LOCK_DIR/owner" ||
+        [[ "$FILE_CONTENT" != "$initial_owner" ]]; then
+        return 1
+    fi
+
+    if ! reclaim_dir="$(mktemp -d "${CACHE}/.pg_compat.reclaim.XXXXXX")"; then
+        return 1
+    fi
+    LOCK_RECLAIM_DIR="$reclaim_dir"
+    LOCK_RECLAIM_FILE="${LOCK_RECLAIM_DIR}/owner"
+    if ! mv "$LOCK_DIR/owner" "$LOCK_RECLAIM_FILE" 2>/dev/null; then
+        rmdir "$LOCK_RECLAIM_DIR" 2>/dev/null || true
+        LOCK_RECLAIM_DIR=
+        LOCK_RECLAIM_FILE=
+        return 1
+    fi
+    if ! read_file_exact "$LOCK_RECLAIM_FILE" ||
+        [[ "$FILE_CONTENT" != "$initial_owner" ]]; then
+        restore_reclaim_owner
+        return 1
+    fi
+    if ! rmdir "$LOCK_DIR" 2>/dev/null; then
+        restore_reclaim_owner
+        return 1
+    fi
+
+    rm -f "$LOCK_RECLAIM_FILE"
+    rmdir "$LOCK_RECLAIM_DIR" 2>/dev/null || true
+    LOCK_RECLAIM_DIR=
+    LOCK_RECLAIM_FILE=
+}
+
+publish_lock() {
+    if ! mv "$LOCK_OWNER_TMP" "$LOCK_DIR/owner"; then
+        echo "Unable to publish PostgreSQL compatibility cache lock owner" >&2
         exit 1
     fi
-    printf '%s\n' "$LOCK_OWNER" > "$LOCK_DIR/owner"
-    LOCK_HELD=1
+    LOCK_OWNER_TMP=
+}
+
+acquire_lock() {
+    local lock_token
+
+    mkdir -p "$CACHE"
+    LOCK_OWNER_TMP="$(mktemp "${CACHE}/.pg_compat.owner.XXXXXX")"
+    lock_token="${LOCK_OWNER_TMP##*.pg_compat.owner.}"
+    LOCK_OWNER_RECORD="$$"$'\t'"${lock_token}"$'\n'
+    printf '%s' "$LOCK_OWNER_RECORD" > "$LOCK_OWNER_TMP"
+
+    if mkdir "$LOCK_DIR" 2>/dev/null; then
+        LOCK_HELD=1
+        publish_lock
+        return
+    fi
+    if reclaim_stale_lock && mkdir "$LOCK_DIR" 2>/dev/null; then
+        LOCK_HELD=1
+        publish_lock
+        return
+    fi
+
+    rm -f "$LOCK_OWNER_TMP"
+    LOCK_OWNER_TMP=
+    echo "PostgreSQL compatibility cache is locked: ${CACHE}" >&2
+    exit 1
 }
 
 trap release_lock EXIT

@@ -18,6 +18,7 @@ REQUIRED_VERSION_FIELDS = (
 COMMIT_PATTERN = re.compile(r"^[0-9a-f]{40}$")
 PG_VERSION_PATTERN = re.compile(r"^[0-9]+(?:\.[0-9]+)+$")
 SHA256_PATTERN = re.compile(r"^[0-9a-f]{64}$")
+ASCII_CONTROL_PATTERN = re.compile(r"[\x00-\x1f\x7f]")
 
 
 def _require_nonempty_string(value, name):
@@ -33,6 +34,8 @@ def _validate_version_pin(version, role):
 
     _require_nonempty_string(version["branch"], f"{prefix}.branch")
     _require_nonempty_string(version["pg_version"], f"{prefix}.pg_version")
+    if ASCII_CONTROL_PATTERN.search(version["branch"]):
+        raise ValueError(f"{prefix}.branch must not contain ASCII control characters")
 
     if not isinstance(version["commit"], str) or not COMMIT_PATTERN.fullmatch(
         version["commit"]

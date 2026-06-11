@@ -128,6 +128,24 @@ class LoadPinsTest(unittest.TestCase):
                     ):
                         load_pins(path)
 
+    def test_rejects_ascii_control_characters_in_branch(self):
+        with tempfile.TemporaryDirectory() as directory:
+            for codepoint in (*range(0x20), 0x7F):
+                with self.subTest(codepoint=codepoint):
+                    pins = valid_pins()
+                    pins["versions"]["previous"]["branch"] = (
+                        f"17-{chr(codepoint)}latest"
+                    )
+                    path = self.write_pins(
+                        Path(directory) / str(codepoint), pins
+                    )
+
+                    with self.assertRaisesRegex(
+                        ValueError,
+                        r"versions\.previous\.branch.*ASCII control",
+                    ):
+                        load_pins(path)
+
 
 class ParseMakefileVersionTest(unittest.TestCase):
     def test_parses_pg_version_and_numeric_version(self):
@@ -310,6 +328,13 @@ printf 'extracted\\n' > "$destination/$name/marker"
             timeout=timeout,
         )
 
+    def create_lock(self, cache, owner=None):
+        lock_dir = cache / ".pg_compat.lock"
+        lock_dir.mkdir(parents=True)
+        if owner is not None:
+            (lock_dir / "owner").write_text(owner, encoding="utf-8")
+        return lock_dir
+
     def test_bad_download_is_not_published_and_poisoned_cache_recovers(self):
         good_content = b"good archive"
         expected_hash = hashlib.sha256(good_content).hexdigest()
@@ -391,6 +416,67 @@ printf 'extracted\\n' > "$destination/$name/marker"
                 ["previous", "target"],
             )
             self.assertFalse((cache / ".pg_compat.lock").exists())
+
+    def test_valid_dead_pid_lock_is_recovered(self):
+        with tempfile.TemporaryDirectory() as directory:
+            _, cache, _, environment = self.create_harness(
+                directory, valid_pins()
+            )
+            dead_process = subprocess.Popen(["true"])
+            dead_process.wait(timeout=5)
+            self.create_lock(cache, f"{dead_process.pid}\tstale-token\n")
+
+            result = self.run_fetch(environment)
+
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertFalse((cache / ".pg_compat.lock").exists())
+
+    def test_live_pid_lock_is_rejected_without_reclamation(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root, cache, _, environment = self.create_harness(
+                directory, valid_pins()
+            )
+            owner = f"{os.getpid()}\tlive-token\n"
+            lock_dir = self.create_lock(cache, owner)
+            git_called = root / "git-called"
+            environment["STUB_GIT_CALLED"] = str(git_called)
+
+            result = self.run_fetch(environment)
+
+            self.assertNotEqual(result.returncode, 0)
+            self.assertIn("cache is locked", result.stderr)
+            self.assertEqual(
+                (lock_dir / "owner").read_text(encoding="utf-8"), owner
+            )
+            self.assertFalse(git_called.exists())
+
+    def test_malformed_or_missing_owner_lock_is_rejected_without_reclamation(self):
+        cases = (None, "not-a-valid-owner\n")
+        with tempfile.TemporaryDirectory() as directory:
+            for index, owner in enumerate(cases):
+                with self.subTest(owner=owner):
+                    harness_root = Path(directory) / str(index)
+                    harness_root.mkdir()
+                    root, cache, _, environment = self.create_harness(
+                        harness_root, valid_pins()
+                    )
+                    lock_dir = self.create_lock(cache, owner)
+                    git_called = root / "git-called"
+                    environment["STUB_GIT_CALLED"] = str(git_called)
+
+                    result = self.run_fetch(environment)
+
+                    self.assertNotEqual(result.returncode, 0)
+                    self.assertIn("cache is locked", result.stderr)
+                    self.assertTrue(lock_dir.is_dir())
+                    if owner is None:
+                        self.assertFalse((lock_dir / "owner").exists())
+                    else:
+                        self.assertEqual(
+                            (lock_dir / "owner").read_text(encoding="utf-8"),
+                            owner,
+                        )
+                    self.assertFalse(git_called.exists())
 
     def test_terminated_fetch_releases_lock_without_continuing(self):
         with tempfile.TemporaryDirectory() as directory:
