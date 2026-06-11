@@ -30,7 +30,7 @@ inline const char* result_name(CompatibilityResult result) {
     case CompatibilityResult::OracleRejected:
         return "ORACLE_REJECTED";
     }
-    return "UNKNOWN";
+    return "ERROR";
 }
 
 } // namespace pg_compat

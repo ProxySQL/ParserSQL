@@ -2,38 +2,60 @@
 
 namespace pg_compat {
 
+#define PG_COMPAT_SIMPLE_STATEMENT_TYPE_MAPPINGS(X) \
+    X(PG_QUERY__NODE__NODE_SELECT_STMT, Equivalent, SELECT) \
+    X(PG_QUERY__NODE__NODE_INSERT_STMT, Equivalent, INSERT) \
+    X(PG_QUERY__NODE__NODE_UPDATE_STMT, Equivalent, UPDATE) \
+    X(PG_QUERY__NODE__NODE_DELETE_STMT, Equivalent, DELETE_STMT) \
+    X(PG_QUERY__NODE__NODE_VARIABLE_SET_STMT, Equivalent, SET) \
+    X(PG_QUERY__NODE__NODE_VARIABLE_SHOW_STMT, Equivalent, SHOW) \
+    X(PG_QUERY__NODE__NODE_PREPARE_STMT, Equivalent, PREPARE) \
+    X(PG_QUERY__NODE__NODE_EXECUTE_STMT, Equivalent, EXECUTE) \
+    X(PG_QUERY__NODE__NODE_DEALLOCATE_STMT, Equivalent, DEALLOCATE) \
+    X(PG_QUERY__NODE__NODE_EXPLAIN_STMT, Equivalent, EXPLAIN) \
+    X(PG_QUERY__NODE__NODE_CALL_STMT, Equivalent, CALL) \
+    X(PG_QUERY__NODE__NODE_DO_STMT, Equivalent, DO_STMT) \
+    X(PG_QUERY__NODE__NODE_TRUNCATE_STMT, Equivalent, TRUNCATE) \
+    X(PG_QUERY__NODE__NODE_LOCK_STMT, Equivalent, LOCK) \
+    X(PG_QUERY__NODE__NODE_CREATE_STMT, Equivalent, CREATE) \
+    X(PG_QUERY__NODE__NODE_CREATE_SCHEMA_STMT, Equivalent, CREATE) \
+    X(PG_QUERY__NODE__NODE_CREATE_TABLE_AS_STMT, Equivalent, CREATE) \
+    X(PG_QUERY__NODE__NODE_INDEX_STMT, Equivalent, CREATE) \
+    X(PG_QUERY__NODE__NODE_CREATE_FUNCTION_STMT, Equivalent, CREATE) \
+    X(PG_QUERY__NODE__NODE_CREATE_ROLE_STMT, Equivalent, CREATE) \
+    X(PG_QUERY__NODE__NODE_CREATE_SEQ_STMT, Equivalent, CREATE) \
+    X(PG_QUERY__NODE__NODE_CREATE_DOMAIN_STMT, Equivalent, CREATE) \
+    X(PG_QUERY__NODE__NODE_CREATE_ENUM_STMT, Equivalent, CREATE) \
+    X(PG_QUERY__NODE__NODE_CREATE_RANGE_STMT, Equivalent, CREATE) \
+    X(PG_QUERY__NODE__NODE_CREATEDB_STMT, Equivalent, CREATE) \
+    X(PG_QUERY__NODE__NODE_ALTER_TABLE_STMT, Equivalent, ALTER) \
+    X(PG_QUERY__NODE__NODE_ALTER_FUNCTION_STMT, Equivalent, ALTER) \
+    X(PG_QUERY__NODE__NODE_ALTER_ROLE_STMT, Equivalent, ALTER) \
+    X(PG_QUERY__NODE__NODE_ALTER_SEQ_STMT, Equivalent, ALTER) \
+    X(PG_QUERY__NODE__NODE_ALTER_DOMAIN_STMT, Equivalent, ALTER) \
+    X(PG_QUERY__NODE__NODE_ALTER_ENUM_STMT, Equivalent, ALTER) \
+    X(PG_QUERY__NODE__NODE_ALTER_DATABASE_STMT, Equivalent, ALTER) \
+    X(PG_QUERY__NODE__NODE_RENAME_STMT, Equivalent, ALTER) \
+    X(PG_QUERY__NODE__NODE_DROP_STMT, Equivalent, DROP) \
+    X(PG_QUERY__NODE__NODE_DROPDB_STMT, Equivalent, DROP) \
+    X(PG_QUERY__NODE__NODE_DROP_ROLE_STMT, Equivalent, DROP) \
+    X(PG_QUERY__NODE__NODE_DROP_TABLE_SPACE_STMT, Equivalent, DROP) \
+    X(PG_QUERY__NODE__NODE_COPY_STMT, NoEquivalent, UNKNOWN) \
+    X(PG_QUERY__NODE__NODE_MERGE_STMT, NoEquivalent, UNKNOWN) \
+    X(PG_QUERY__NODE__NODE_VACUUM_STMT, NoEquivalent, UNKNOWN) \
+    X(PG_QUERY__NODE__NODE_NOTIFY_STMT, NoEquivalent, UNKNOWN) \
+    X(PG_QUERY__NODE__NODE_LISTEN_STMT, NoEquivalent, UNKNOWN) \
+    X(PG_QUERY__NODE__NODE_UNLISTEN_STMT, NoEquivalent, UNKNOWN)
+
 StatementTypeMapping expected_stmt_type(const PgQuery__Node& node) {
     using sql_parser::StmtType;
 
     switch (node.node_case) {
-    case PG_QUERY__NODE__NODE_SELECT_STMT:
-        return {MappingKind::Equivalent, StmtType::SELECT};
-    case PG_QUERY__NODE__NODE_INSERT_STMT:
-        return {MappingKind::Equivalent, StmtType::INSERT};
-    case PG_QUERY__NODE__NODE_UPDATE_STMT:
-        return {MappingKind::Equivalent, StmtType::UPDATE};
-    case PG_QUERY__NODE__NODE_DELETE_STMT:
-        return {MappingKind::Equivalent, StmtType::DELETE_STMT};
-    case PG_QUERY__NODE__NODE_VARIABLE_SET_STMT:
-        return {MappingKind::Equivalent, StmtType::SET};
-    case PG_QUERY__NODE__NODE_VARIABLE_SHOW_STMT:
-        return {MappingKind::Equivalent, StmtType::SHOW};
-    case PG_QUERY__NODE__NODE_PREPARE_STMT:
-        return {MappingKind::Equivalent, StmtType::PREPARE};
-    case PG_QUERY__NODE__NODE_EXECUTE_STMT:
-        return {MappingKind::Equivalent, StmtType::EXECUTE};
-    case PG_QUERY__NODE__NODE_DEALLOCATE_STMT:
-        return {MappingKind::Equivalent, StmtType::DEALLOCATE};
-    case PG_QUERY__NODE__NODE_EXPLAIN_STMT:
-        return {MappingKind::Equivalent, StmtType::EXPLAIN};
-    case PG_QUERY__NODE__NODE_CALL_STMT:
-        return {MappingKind::Equivalent, StmtType::CALL};
-    case PG_QUERY__NODE__NODE_DO_STMT:
-        return {MappingKind::Equivalent, StmtType::DO_STMT};
-    case PG_QUERY__NODE__NODE_TRUNCATE_STMT:
-        return {MappingKind::Equivalent, StmtType::TRUNCATE};
-    case PG_QUERY__NODE__NODE_LOCK_STMT:
-        return {MappingKind::Equivalent, StmtType::LOCK};
+#define PG_COMPAT_MAPPING_CASE(node_case, mapping_kind, stmt_type) \
+    case node_case: \
+        return {MappingKind::mapping_kind, StmtType::stmt_type};
+    PG_COMPAT_SIMPLE_STATEMENT_TYPE_MAPPINGS(PG_COMPAT_MAPPING_CASE)
+#undef PG_COMPAT_MAPPING_CASE
     case PG_QUERY__NODE__NODE_TRANSACTION_STMT:
         if (node.transaction_stmt == nullptr) {
             return {};
@@ -58,32 +80,6 @@ StatementTypeMapping expected_stmt_type(const PgQuery__Node& node) {
         default:
             return {};
         }
-    case PG_QUERY__NODE__NODE_CREATE_STMT:
-    case PG_QUERY__NODE__NODE_CREATE_SCHEMA_STMT:
-    case PG_QUERY__NODE__NODE_CREATE_TABLE_AS_STMT:
-    case PG_QUERY__NODE__NODE_INDEX_STMT:
-    case PG_QUERY__NODE__NODE_CREATE_FUNCTION_STMT:
-    case PG_QUERY__NODE__NODE_CREATE_ROLE_STMT:
-    case PG_QUERY__NODE__NODE_CREATE_SEQ_STMT:
-    case PG_QUERY__NODE__NODE_CREATE_DOMAIN_STMT:
-    case PG_QUERY__NODE__NODE_CREATE_ENUM_STMT:
-    case PG_QUERY__NODE__NODE_CREATE_RANGE_STMT:
-    case PG_QUERY__NODE__NODE_CREATEDB_STMT:
-        return {MappingKind::Equivalent, StmtType::CREATE};
-    case PG_QUERY__NODE__NODE_ALTER_TABLE_STMT:
-    case PG_QUERY__NODE__NODE_ALTER_FUNCTION_STMT:
-    case PG_QUERY__NODE__NODE_ALTER_ROLE_STMT:
-    case PG_QUERY__NODE__NODE_ALTER_SEQ_STMT:
-    case PG_QUERY__NODE__NODE_ALTER_DOMAIN_STMT:
-    case PG_QUERY__NODE__NODE_ALTER_ENUM_STMT:
-    case PG_QUERY__NODE__NODE_ALTER_DATABASE_STMT:
-    case PG_QUERY__NODE__NODE_RENAME_STMT:
-        return {MappingKind::Equivalent, StmtType::ALTER};
-    case PG_QUERY__NODE__NODE_DROP_STMT:
-    case PG_QUERY__NODE__NODE_DROPDB_STMT:
-    case PG_QUERY__NODE__NODE_DROP_ROLE_STMT:
-    case PG_QUERY__NODE__NODE_DROP_TABLE_SPACE_STMT:
-        return {MappingKind::Equivalent, StmtType::DROP};
     case PG_QUERY__NODE__NODE_GRANT_STMT:
         if (node.grant_stmt == nullptr) {
             return {};
@@ -100,13 +96,6 @@ StatementTypeMapping expected_stmt_type(const PgQuery__Node& node) {
             MappingKind::Equivalent,
             node.grant_role_stmt->is_grant ? StmtType::GRANT : StmtType::REVOKE,
         };
-    case PG_QUERY__NODE__NODE_COPY_STMT:
-    case PG_QUERY__NODE__NODE_MERGE_STMT:
-    case PG_QUERY__NODE__NODE_VACUUM_STMT:
-    case PG_QUERY__NODE__NODE_NOTIFY_STMT:
-    case PG_QUERY__NODE__NODE_LISTEN_STMT:
-    case PG_QUERY__NODE__NODE_UNLISTEN_STMT:
-        return {MappingKind::NoEquivalent, StmtType::UNKNOWN};
     default:
         return {};
     }
@@ -114,98 +103,17 @@ StatementTypeMapping expected_stmt_type(const PgQuery__Node& node) {
 
 const char* oracle_node_name(PgQuery__Node__NodeCase node_case) {
     switch (node_case) {
-    case PG_QUERY__NODE__NODE_SELECT_STMT:
-        return "PG_QUERY__NODE__NODE_SELECT_STMT";
-    case PG_QUERY__NODE__NODE_INSERT_STMT:
-        return "PG_QUERY__NODE__NODE_INSERT_STMT";
-    case PG_QUERY__NODE__NODE_UPDATE_STMT:
-        return "PG_QUERY__NODE__NODE_UPDATE_STMT";
-    case PG_QUERY__NODE__NODE_DELETE_STMT:
-        return "PG_QUERY__NODE__NODE_DELETE_STMT";
-    case PG_QUERY__NODE__NODE_VARIABLE_SET_STMT:
-        return "PG_QUERY__NODE__NODE_VARIABLE_SET_STMT";
-    case PG_QUERY__NODE__NODE_VARIABLE_SHOW_STMT:
-        return "PG_QUERY__NODE__NODE_VARIABLE_SHOW_STMT";
-    case PG_QUERY__NODE__NODE_PREPARE_STMT:
-        return "PG_QUERY__NODE__NODE_PREPARE_STMT";
-    case PG_QUERY__NODE__NODE_EXECUTE_STMT:
-        return "PG_QUERY__NODE__NODE_EXECUTE_STMT";
-    case PG_QUERY__NODE__NODE_DEALLOCATE_STMT:
-        return "PG_QUERY__NODE__NODE_DEALLOCATE_STMT";
-    case PG_QUERY__NODE__NODE_EXPLAIN_STMT:
-        return "PG_QUERY__NODE__NODE_EXPLAIN_STMT";
-    case PG_QUERY__NODE__NODE_CALL_STMT:
-        return "PG_QUERY__NODE__NODE_CALL_STMT";
-    case PG_QUERY__NODE__NODE_DO_STMT:
-        return "PG_QUERY__NODE__NODE_DO_STMT";
-    case PG_QUERY__NODE__NODE_TRUNCATE_STMT:
-        return "PG_QUERY__NODE__NODE_TRUNCATE_STMT";
-    case PG_QUERY__NODE__NODE_LOCK_STMT:
-        return "PG_QUERY__NODE__NODE_LOCK_STMT";
+#define PG_COMPAT_NODE_NAME_CASE(node_case, mapping_kind, stmt_type) \
+    case node_case: \
+        return #node_case;
+    PG_COMPAT_SIMPLE_STATEMENT_TYPE_MAPPINGS(PG_COMPAT_NODE_NAME_CASE)
+#undef PG_COMPAT_NODE_NAME_CASE
     case PG_QUERY__NODE__NODE_TRANSACTION_STMT:
         return "PG_QUERY__NODE__NODE_TRANSACTION_STMT";
-    case PG_QUERY__NODE__NODE_CREATE_STMT:
-        return "PG_QUERY__NODE__NODE_CREATE_STMT";
-    case PG_QUERY__NODE__NODE_CREATE_SCHEMA_STMT:
-        return "PG_QUERY__NODE__NODE_CREATE_SCHEMA_STMT";
-    case PG_QUERY__NODE__NODE_CREATE_TABLE_AS_STMT:
-        return "PG_QUERY__NODE__NODE_CREATE_TABLE_AS_STMT";
-    case PG_QUERY__NODE__NODE_INDEX_STMT:
-        return "PG_QUERY__NODE__NODE_INDEX_STMT";
-    case PG_QUERY__NODE__NODE_CREATE_FUNCTION_STMT:
-        return "PG_QUERY__NODE__NODE_CREATE_FUNCTION_STMT";
-    case PG_QUERY__NODE__NODE_CREATE_ROLE_STMT:
-        return "PG_QUERY__NODE__NODE_CREATE_ROLE_STMT";
-    case PG_QUERY__NODE__NODE_CREATE_SEQ_STMT:
-        return "PG_QUERY__NODE__NODE_CREATE_SEQ_STMT";
-    case PG_QUERY__NODE__NODE_CREATE_DOMAIN_STMT:
-        return "PG_QUERY__NODE__NODE_CREATE_DOMAIN_STMT";
-    case PG_QUERY__NODE__NODE_CREATE_ENUM_STMT:
-        return "PG_QUERY__NODE__NODE_CREATE_ENUM_STMT";
-    case PG_QUERY__NODE__NODE_CREATE_RANGE_STMT:
-        return "PG_QUERY__NODE__NODE_CREATE_RANGE_STMT";
-    case PG_QUERY__NODE__NODE_CREATEDB_STMT:
-        return "PG_QUERY__NODE__NODE_CREATEDB_STMT";
-    case PG_QUERY__NODE__NODE_ALTER_TABLE_STMT:
-        return "PG_QUERY__NODE__NODE_ALTER_TABLE_STMT";
-    case PG_QUERY__NODE__NODE_ALTER_FUNCTION_STMT:
-        return "PG_QUERY__NODE__NODE_ALTER_FUNCTION_STMT";
-    case PG_QUERY__NODE__NODE_ALTER_ROLE_STMT:
-        return "PG_QUERY__NODE__NODE_ALTER_ROLE_STMT";
-    case PG_QUERY__NODE__NODE_ALTER_SEQ_STMT:
-        return "PG_QUERY__NODE__NODE_ALTER_SEQ_STMT";
-    case PG_QUERY__NODE__NODE_ALTER_DOMAIN_STMT:
-        return "PG_QUERY__NODE__NODE_ALTER_DOMAIN_STMT";
-    case PG_QUERY__NODE__NODE_ALTER_ENUM_STMT:
-        return "PG_QUERY__NODE__NODE_ALTER_ENUM_STMT";
-    case PG_QUERY__NODE__NODE_ALTER_DATABASE_STMT:
-        return "PG_QUERY__NODE__NODE_ALTER_DATABASE_STMT";
-    case PG_QUERY__NODE__NODE_RENAME_STMT:
-        return "PG_QUERY__NODE__NODE_RENAME_STMT";
-    case PG_QUERY__NODE__NODE_DROP_STMT:
-        return "PG_QUERY__NODE__NODE_DROP_STMT";
-    case PG_QUERY__NODE__NODE_DROPDB_STMT:
-        return "PG_QUERY__NODE__NODE_DROPDB_STMT";
-    case PG_QUERY__NODE__NODE_DROP_ROLE_STMT:
-        return "PG_QUERY__NODE__NODE_DROP_ROLE_STMT";
-    case PG_QUERY__NODE__NODE_DROP_TABLE_SPACE_STMT:
-        return "PG_QUERY__NODE__NODE_DROP_TABLE_SPACE_STMT";
     case PG_QUERY__NODE__NODE_GRANT_STMT:
         return "PG_QUERY__NODE__NODE_GRANT_STMT";
     case PG_QUERY__NODE__NODE_GRANT_ROLE_STMT:
         return "PG_QUERY__NODE__NODE_GRANT_ROLE_STMT";
-    case PG_QUERY__NODE__NODE_COPY_STMT:
-        return "PG_QUERY__NODE__NODE_COPY_STMT";
-    case PG_QUERY__NODE__NODE_MERGE_STMT:
-        return "PG_QUERY__NODE__NODE_MERGE_STMT";
-    case PG_QUERY__NODE__NODE_VACUUM_STMT:
-        return "PG_QUERY__NODE__NODE_VACUUM_STMT";
-    case PG_QUERY__NODE__NODE_NOTIFY_STMT:
-        return "PG_QUERY__NODE__NODE_NOTIFY_STMT";
-    case PG_QUERY__NODE__NODE_LISTEN_STMT:
-        return "PG_QUERY__NODE__NODE_LISTEN_STMT";
-    case PG_QUERY__NODE__NODE_UNLISTEN_STMT:
-        return "PG_QUERY__NODE__NODE_UNLISTEN_STMT";
     default:
         return "UNMAPPED_NODE_CASE";
     }
@@ -214,6 +122,11 @@ const char* oracle_node_name(PgQuery__Node__NodeCase node_case) {
 const char* stmt_type_name(sql_parser::StmtType type) {
     using sql_parser::StmtType;
 
+    // Missing enum cases are errors so StmtType additions cannot drift silently.
+#if defined(__clang__) || defined(__GNUC__)
+#pragma GCC diagnostic push
+#pragma GCC diagnostic error "-Wswitch"
+#endif
     switch (type) {
     case StmtType::UNKNOWN:
         return "UNKNOWN";
@@ -278,7 +191,12 @@ const char* stmt_type_name(sql_parser::StmtType type) {
     case StmtType::DO_STMT:
         return "DO";
     }
+#if defined(__clang__) || defined(__GNUC__)
+#pragma GCC diagnostic pop
+#endif
     return "OTHER";
 }
+
+#undef PG_COMPAT_SIMPLE_STATEMENT_TYPE_MAPPINGS
 
 } // namespace pg_compat

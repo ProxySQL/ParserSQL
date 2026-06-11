@@ -54,6 +54,10 @@ void test_result_names() {
     for (const auto& test_case : cases) {
         assert(std::strcmp(pg_compat::result_name(test_case.result), test_case.name) == 0);
     }
+
+    assert(std::strcmp(
+        pg_compat::result_name(static_cast<CompatibilityResult>(999)),
+        "ERROR") == 0);
 }
 
 void test_default_and_simple_mappings() {
