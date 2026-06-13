@@ -1,0 +1,4 @@
+message SelectStmt {
+  repeated Node target_list = 1;
+  bool distinct = 2;
+}
