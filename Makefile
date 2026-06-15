@@ -7,6 +7,7 @@ MYSQL_CFLAGS = $(shell mysql_config --cflags 2>/dev/null)
 MYSQL_LIBS = $(shell mysql_config --libs 2>/dev/null)
 PG_CFLAGS = -I$(shell pg_config --includedir 2>/dev/null || echo /usr/include/postgresql)
 PG_LIBS = -L$(shell pg_config --libdir 2>/dev/null || echo /usr/lib/x86_64-linux-gnu) -lpq
+PG_COMPAT_CACHE ?= /tmp/parsersql-pg-compat
 
 PROJECT_ROOT = .
 SRC_DIR = $(PROJECT_ROOT)/src/sql_parser
@@ -121,11 +122,25 @@ ENGINE_STRESS_TARGET = engine_stress_test
 MYSQL_SERVER_SRC = $(PROJECT_ROOT)/tools/mysql_server.cpp
 MYSQL_SERVER_TARGET = mysql_server
 
-.PHONY: all lib test test-sqlengine test-sqlengine-in-memory test-sqlengine-single test-sqlengine-sharded bench bench-compare bench-distributed build-corpus-test build-sqlengine engine-stress mysql-server clean
+.PHONY: all lib test test-sqlengine test-sqlengine-in-memory test-sqlengine-single test-sqlengine-sharded bench bench-compare bench-distributed build-corpus-test build-sqlengine build-pg-compat pg-compat pg-compat-refresh test-pg-compat engine-stress mysql-server clean
 
 build-corpus-test: $(CORPUS_TEST_TARGET)
 
 build-sqlengine: $(SQLENGINE_TARGET)
+
+build-pg-compat: lib
+	PG_COMPAT_CACHE=$(PG_COMPAT_CACHE) ./scripts/pg_compat/fetch_libpg_query.sh
+	python3 ./scripts/pg_compat/run_compat.py build --cache $(PG_COMPAT_CACHE)
+
+test-pg-compat: build-pg-compat
+	PG_COMPAT_RUNNER=$(PG_COMPAT_CACHE)/bin/pg_compat-18 python3 -m unittest discover -s tests/pg_compat -p 'test_*.py' -v
+	python3 ./scripts/pg_compat/run_compat.py test --cache $(PG_COMPAT_CACHE)
+
+pg-compat: build-pg-compat
+	python3 ./scripts/pg_compat/run_compat.py full --cache $(PG_COMPAT_CACHE)
+
+pg-compat-refresh: build-pg-compat
+	python3 ./scripts/pg_compat/run_compat.py refresh --cache $(PG_COMPAT_CACHE)
 
 all: lib test
 
