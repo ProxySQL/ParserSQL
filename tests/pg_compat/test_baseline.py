@@ -2,6 +2,7 @@ import copy
 import itertools
 import json
 from pathlib import Path
+import stat
 import tempfile
 import unittest
 
@@ -9,7 +10,9 @@ from scripts.pg_compat.baseline import (
     RESULTS,
     build_ci_cases,
     evaluate_baseline,
+    load_reviewed_witnesses,
     transition_allowed,
+    validate_witnesses,
     write_ci_cases,
 )
 
@@ -245,6 +248,181 @@ class CiCaseSelectionTest(unittest.TestCase):
         self.assertEqual([row["id"] for row in rows], ["a", "b"])
         self.assertEqual(rows[1]["sql"], "SELECT 'first line'\nFROM broken")
         self.assertEqual(rows[1]["expected_result"], "ERROR")
+
+
+class WitnessValidationTest(unittest.TestCase):
+    def oracle_row(
+        self,
+        sql,
+        *,
+        oracle_node="PG_QUERY__NODE__NODE_SELECT_STMT",
+        result="DEEP_SUPPORTED",
+    ):
+        return {
+            "id": f"oracle-{len(sql)}",
+            "branch": "18-latest",
+            "commit": "deadbeef",
+            "line": 1,
+            "normalized_sql": " ".join(sql.split()),
+            "offset": 0,
+            "oracle_node": oracle_node,
+            "result": result,
+            "source_file": "witnesses.sql",
+            "sql": sql,
+        }
+
+    def metadata(
+        self,
+        witness_id,
+        *,
+        first_postgresql_major=16,
+        expected_oracle_node="PG_QUERY__NODE__NODE_SELECT_STMT",
+        structural_feature_ids=None,
+    ):
+        if structural_feature_ids is None:
+            structural_feature_ids = ["feature-id"]
+        return {
+            "id": witness_id,
+            "first_postgresql_major": first_postgresql_major,
+            "expected_oracle_node": expected_oracle_node,
+            "structural_feature_ids": structural_feature_ids,
+            "note": "test witness",
+        }
+
+    def test_validates_and_combines_witness_metadata_with_oracle_rows(self):
+        sql_rows = [
+            self.oracle_row("SELECT json_object('a' VALUE 1)"),
+            self.oracle_row(
+                "MERGE INTO target USING source ON true",
+                oracle_node="PG_QUERY__NODE__NODE_MERGE_STMT",
+                result="CLASSIFIED_ONLY",
+            ),
+        ]
+        metadata = [
+            self.metadata(
+                "pg-json-object-constructor",
+                structural_feature_ids=[],
+            ),
+            self.metadata(
+                "pg-merge-statement",
+                first_postgresql_major=15,
+                expected_oracle_node="PG_QUERY__NODE__NODE_MERGE_STMT",
+            ),
+        ]
+
+        result = validate_witnesses(sql_rows, metadata, target_major=18)
+
+        self.assertEqual(
+            [row["id"] for row in result["witnesses"]],
+            ["pg-json-object-constructor", "pg-merge-statement"],
+        )
+        self.assertEqual(
+            result["witnesses"][0]["sql"],
+            "SELECT json_object('a' VALUE 1)",
+        )
+        self.assertEqual(
+            result["unlinked_witnesses"],
+            ["pg-json-object-constructor"],
+        )
+        self.assertEqual(
+            result["witnesses"][1]["structural_feature_ids"],
+            ["feature-id"],
+        )
+
+    def test_rejects_invalid_witness_metadata(self):
+        oracle_rows = [self.oracle_row("SELECT 1")]
+        cases = [
+            (
+                [
+                    self.oracle_row("SELECT 1"),
+                    self.oracle_row("SELECT 2"),
+                ],
+                [self.metadata("dup"), self.metadata("dup")],
+                "duplicate witness ID",
+            ),
+            (
+                oracle_rows,
+                [],
+                "metadata count.*1 parsed SQL statement",
+            ),
+            (
+                oracle_rows,
+                [self.metadata("future", first_postgresql_major=19)],
+                "first_postgresql_major",
+            ),
+            (
+                oracle_rows,
+                [{k: v for k, v in self.metadata("missing").items()
+                  if k != "structural_feature_ids"}],
+                "structural_feature_ids",
+            ),
+            (
+                oracle_rows,
+                [self.metadata(
+                    "wrong-node",
+                    expected_oracle_node="PG_QUERY__NODE__NODE_INSERT_STMT",
+                )],
+                "oracle node differs",
+            ),
+        ]
+
+        for rows, metadata, pattern in cases:
+            with self.subTest(pattern=pattern):
+                with self.assertRaisesRegex(ValueError, pattern):
+                    validate_witnesses(rows, metadata, target_major=18)
+
+    def test_rejects_oracle_rejected_witness_rows(self):
+        with self.assertRaisesRegex(ValueError, "oracle accepted"):
+            validate_witnesses(
+                [self.oracle_row("SELECT FROM", result="ORACLE_REJECTED")],
+                [self.metadata("bad")],
+                target_major=18,
+            )
+
+    def test_loads_witnesses_through_runner(self):
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            temporary = Path(temporary_directory)
+            sql_path = temporary / "witnesses.sql"
+            metadata_path = temporary / "witnesses.json"
+            runner_path = temporary / "runner.py"
+            sql_path.write_text("SELECT 1;\n", encoding="utf-8")
+            metadata_path.write_text(
+                json.dumps([self.metadata("select-one")]),
+                encoding="utf-8",
+            )
+            runner_path.write_text(
+                "#!/usr/bin/env python3\n"
+                "import json\n"
+                "import sys\n"
+                "input_path = sys.argv[sys.argv.index('--input') + 1]\n"
+                "sql = open(input_path, encoding='utf-8').read().strip()[:-1]\n"
+                "print(json.dumps({\n"
+                "  'id': 'oracle',\n"
+                "  'oracle_node': 'PG_QUERY__NODE__NODE_SELECT_STMT',\n"
+                "  'result': 'DEEP_SUPPORTED',\n"
+                "  'sql': sql,\n"
+                "  'normalized_sql': sql,\n"
+                "  'source_file': input_path,\n"
+                "  'offset': 0,\n"
+                "  'line': 1\n"
+                "}))\n",
+                encoding="utf-8",
+            )
+            runner_path.chmod(
+                runner_path.stat().st_mode | stat.S_IXUSR
+            )
+
+            result = load_reviewed_witnesses(
+                sql_path,
+                metadata_path,
+                runner_path,
+                target_major=18,
+                branch="18-latest",
+                commit="deadbeef",
+            )
+
+        self.assertEqual(result["witnesses"][0]["id"], "select-one")
+        self.assertEqual(result["witnesses"][0]["sql"], "SELECT 1")
 
 
 if __name__ == "__main__":

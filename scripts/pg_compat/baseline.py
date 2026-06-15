@@ -2,6 +2,8 @@
 
 import copy
 import json
+import subprocess
+from pathlib import Path
 
 if __package__:
     from .common import atomic_write_text
@@ -183,6 +185,195 @@ def build_ci_cases(inventory_rows, release_delta_rows, witness_rows):
             add_case(validated[label][record_id])
 
     return [selected[record_id] for record_id in sorted(selected)]
+
+
+def _read_json_array(path, label):
+    path = Path(path)
+    with path.open(encoding="utf-8") as input_file:
+        value = json.load(input_file)
+    if not isinstance(value, list):
+        raise ValueError(f"{label} must contain a JSON array")
+    return value
+
+
+def parse_witnesses_with_runner(
+    sql_path,
+    runner_path,
+    *,
+    branch,
+    commit,
+    timeout_seconds=30,
+):
+    result = subprocess.run(
+        [
+            str(runner_path),
+            "--input",
+            str(sql_path),
+            "--branch",
+            branch,
+            "--commit",
+            commit,
+        ],
+        capture_output=True,
+        text=True,
+        timeout=timeout_seconds,
+        check=False,
+    )
+    if result.returncode != 0:
+        raise RuntimeError(
+            "witness runner failed: "
+            f"{result.stderr.strip() or result.stdout.strip()}"
+        )
+
+    rows = []
+    for line_number, line in enumerate(result.stdout.splitlines(), start=1):
+        if not line.strip():
+            continue
+        try:
+            rows.append(json.loads(line))
+        except json.JSONDecodeError as error:
+            raise ValueError(
+                f"witness runner stdout line {line_number}: invalid JSON: "
+                f"{error.msg}"
+            ) from error
+    return rows
+
+
+def _validate_metadata_row(row, index, target_major):
+    if not isinstance(row, dict):
+        raise ValueError(f"witness metadata row {index}: expected a JSON object")
+
+    witness_id = row.get("id")
+    if not isinstance(witness_id, str) or not witness_id:
+        raise ValueError(
+            f"witness metadata row {index}: field 'id' must be a "
+            "non-empty string"
+        )
+
+    first_major = row.get("first_postgresql_major")
+    if (
+        isinstance(first_major, bool)
+        or not isinstance(first_major, int)
+        or first_major < 1
+        or first_major > target_major
+    ):
+        raise ValueError(
+            f"witness metadata row {index}: field 'first_postgresql_major' "
+            f"must be an integer from 1 to {target_major}"
+        )
+
+    expected_node = row.get("expected_oracle_node")
+    if not isinstance(expected_node, str) or not expected_node:
+        raise ValueError(
+            f"witness metadata row {index}: field 'expected_oracle_node' "
+            "must be a non-empty string"
+        )
+
+    feature_ids = row.get("structural_feature_ids")
+    if not isinstance(feature_ids, list):
+        raise ValueError(
+            f"witness metadata row {index}: field 'structural_feature_ids' "
+            "must be a list"
+        )
+    for feature_index, feature_id in enumerate(feature_ids):
+        if not isinstance(feature_id, str) or not feature_id:
+            raise ValueError(
+                f"witness metadata row {index}: structural_feature_ids"
+                f"[{feature_index}] must be a non-empty string"
+            )
+
+    note = row.get("note")
+    if note is not None and not isinstance(note, str):
+        raise ValueError(
+            f"witness metadata row {index}: field 'note' must be a string"
+        )
+
+
+def _validate_oracle_witness_row(row, index):
+    if not isinstance(row, dict):
+        raise ValueError(f"witness oracle row {index}: expected a JSON object")
+    for field in ("oracle_node", "result", "sql"):
+        value = row.get(field)
+        if not isinstance(value, str) or not value:
+            raise ValueError(
+                f"witness oracle row {index}: field {field!r} must be a "
+                "non-empty string"
+            )
+    if row["result"] == "ORACLE_REJECTED":
+        raise ValueError(
+            f"witness oracle row {index}: statement must be oracle accepted"
+        )
+
+
+def validate_witnesses(oracle_rows, metadata_rows, *, target_major):
+    if isinstance(target_major, bool) or not isinstance(target_major, int):
+        raise ValueError("target_major must be an integer")
+    if target_major < 1:
+        raise ValueError("target_major must be positive")
+
+    if len(oracle_rows) != len(metadata_rows):
+        raise ValueError(
+            f"witness metadata count {len(metadata_rows)} does not match "
+            f"{len(oracle_rows)} parsed SQL statement(s)"
+        )
+
+    witnesses = []
+    unlinked_witnesses = []
+    seen_ids = set()
+    for index, (oracle_row, metadata_row) in enumerate(
+        zip(oracle_rows, metadata_rows)
+    ):
+        _validate_oracle_witness_row(oracle_row, index)
+        _validate_metadata_row(metadata_row, index, target_major)
+
+        witness_id = metadata_row["id"]
+        if witness_id in seen_ids:
+            raise ValueError(f"duplicate witness ID {witness_id!r}")
+        seen_ids.add(witness_id)
+
+        expected_node = metadata_row["expected_oracle_node"]
+        actual_node = oracle_row["oracle_node"]
+        if actual_node != expected_node:
+            raise ValueError(
+                f"witness {witness_id!r}: oracle node differs from "
+                f"expected {expected_node!r}: {actual_node!r}"
+            )
+
+        witness = copy.deepcopy(oracle_row)
+        witness.update(copy.deepcopy(metadata_row))
+        witness["oracle_node"] = actual_node
+        witness["result"] = oracle_row["result"]
+        witnesses.append(witness)
+        if not witness["structural_feature_ids"]:
+            unlinked_witnesses.append(witness_id)
+
+    return {
+        "witnesses": witnesses,
+        "unlinked_witnesses": sorted(unlinked_witnesses),
+    }
+
+
+def load_reviewed_witnesses(
+    sql_path,
+    metadata_path,
+    runner_path,
+    *,
+    target_major,
+    branch,
+    commit,
+):
+    oracle_rows = parse_witnesses_with_runner(
+        sql_path,
+        runner_path,
+        branch=branch,
+        commit=commit,
+    )
+    metadata_rows = _read_json_array(metadata_path, "witness metadata")
+    return validate_witnesses(
+        oracle_rows,
+        metadata_rows,
+        target_major=target_major,
+    )
 
 
 def write_ci_cases(path, cases):

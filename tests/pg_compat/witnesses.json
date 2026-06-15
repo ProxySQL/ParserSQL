@@ -1,0 +1,16 @@
+[
+  {
+    "id": "pg-json-object-constructor",
+    "first_postgresql_major": 16,
+    "expected_oracle_node": "PG_QUERY__NODE__NODE_SELECT_STMT",
+    "structural_feature_ids": [],
+    "note": "Exercises SQL/JSON constructor syntax through a SELECT."
+  },
+  {
+    "id": "pg-merge-statement",
+    "first_postgresql_major": 15,
+    "expected_oracle_node": "PG_QUERY__NODE__NODE_MERGE_STMT",
+    "structural_feature_ids": [],
+    "note": "Known PostgreSQL statement with no ParserSQL StmtType equivalent."
+  }
+]
