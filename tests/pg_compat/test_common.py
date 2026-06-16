@@ -546,6 +546,17 @@ printf 'extracted\\n' > "$destination/$name/marker"
                 self.assertEqual(process.returncode, 143)
                 with self.assertRaises(ProcessLookupError):
                     os.kill(child_pid, 0)
+
+                # Some CI shells leave the directory entry behind after a
+                # signal interrupts a foreground wait. The next fetch must
+                # still prove the stale owner is recoverable and does not
+                # block future work.
+                recovery_environment = environment.copy()
+                recovery_environment.pop("STUB_BLOCK_STARTED")
+                recovery_environment.pop("STUB_BLOCK_PID")
+                recovery_environment.pop("STUB_BLOCK_FOREVER")
+                recovered = self.run_fetch(recovery_environment, timeout=5)
+                self.assertEqual(recovered.returncode, 0, recovered.stderr)
                 self.assertFalse((cache / ".pg_compat.lock").exists())
             finally:
                 if process.poll() is None:
