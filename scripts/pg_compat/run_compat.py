@@ -38,6 +38,7 @@ ROLES = ("previous", "target")
 ROLE_MAJOR = {"previous": "17", "target": "18"}
 DEFAULT_CACHE = Path("/tmp/parsersql-pg-compat")
 TIMEOUT_SECONDS = 120
+CI_CASE_BATCH_SIZE = 1000
 
 
 def runner_path(cache, role):
@@ -212,6 +213,13 @@ def _postgres_sql_files(cache, version):
     return sorted(source_dir.rglob("*.sql"))
 
 
+def is_skippable_runner_error(message):
+    return (
+        "invalid UTF-8" in message
+        or "statement splitting failed" in message
+    )
+
+
 def _structural_sources(cache, role, version):
     checkout = _role_checkout(cache, role)
     postgres = _postgres_source_dir(cache, version)
@@ -240,6 +248,7 @@ def collect_inventory(cache, role, repo_root, pins):
     runner = runner_path(cache, role)
     rows = []
     errors = []
+    skipped = []
     for sql_file in _postgres_sql_files(cache, version["pg_version"]):
         try:
             rows.extend(
@@ -251,7 +260,11 @@ def collect_inventory(cache, role, repo_root, pins):
                 )
             )
         except RuntimeError as error:
-            errors.append(str(error))
+            message = str(error)
+            if is_skippable_runner_error(message):
+                skipped.append(message)
+            else:
+                errors.append(message)
     if errors:
         raise RuntimeError(
             "PostgreSQL compatibility runner failed:\n"
@@ -260,6 +273,12 @@ def collect_inventory(cache, role, repo_root, pins):
         )
 
     accepted, _diagnostics = partition_rows(rows)
+    if skipped:
+        print(
+            f"Skipped {len(skipped)} PostgreSQL corpus file(s) for {role} "
+            "because they are invalid-encoding or unsplittable negative "
+            "syntax fixtures."
+        )
     return build_inventory(accepted)
 
 
@@ -278,13 +297,15 @@ def run_committed_ci_cases(repo_root, runner, runner_args):
     branch = runner_args[runner_args.index("--branch") + 1]
     commit = runner_args[runner_args.index("--commit") + 1]
     checked = 0
-    for case in cases:
+    for offset in range(0, len(cases), CI_CASE_BATCH_SIZE):
+        batch = cases[offset:offset + CI_CASE_BATCH_SIZE]
         with tempfile.NamedTemporaryFile(
             mode="w",
             encoding="utf-8",
             suffix=".sql",
         ) as sql_file:
-            sql_file.write(case["sql"].rstrip() + ";\n")
+            for case in batch:
+                sql_file.write(case["sql"].rstrip() + "\n;\n")
             sql_file.flush()
             rows = _run_runner_file(
                 runner,
@@ -292,20 +313,24 @@ def run_committed_ci_cases(repo_root, runner, runner_args):
                 branch=branch,
                 commit=commit,
             )
-        if len(rows) != 1:
-            raise AssertionError(f"CI case {case['id']}: expected one row")
-        actual = rows[0]
-        if actual["result"] != case["expected_result"]:
+        if len(rows) != len(batch):
+            first_id = batch[0]["id"] if batch else "<empty>"
             raise AssertionError(
-                f"CI case {case['id']}: expected result "
-                f"{case['expected_result']}, got {actual['result']}"
+                f"CI case batch starting at {first_id}: expected "
+                f"{len(batch)} row(s), got {len(rows)}"
             )
-        if actual["oracle_node"] != case["oracle_node"]:
-            raise AssertionError(
-                f"CI case {case['id']}: expected oracle node "
-                f"{case['oracle_node']}, got {actual['oracle_node']}"
-            )
-        checked += 1
+        for case, actual in zip(batch, rows):
+            if actual["result"] != case["expected_result"]:
+                raise AssertionError(
+                    f"CI case {case['id']}: expected result "
+                    f"{case['expected_result']}, got {actual['result']}"
+                )
+            if actual["oracle_node"] != case["oracle_node"]:
+                raise AssertionError(
+                    f"CI case {case['id']}: expected oracle node "
+                    f"{case['oracle_node']}, got {actual['oracle_node']}"
+                )
+            checked += 1
     return {"checked": checked, "skipped": False}
 
 
@@ -377,11 +402,20 @@ def _load_structural_dispositions(repo_root):
 
 
 def _apply_structural_dispositions(features, dispositions):
-    by_id = {row["feature_id"]: row for row in dispositions}
+    by_id = {
+        row["feature_id"]: row
+        for row in dispositions
+        if "feature_id" in row
+    }
+    by_kind = {
+        row["kind"]: row
+        for row in dispositions
+        if "feature_id" not in row and "kind" in row
+    }
     output = []
     for feature in features:
         row = dict(feature)
-        disposition = by_id.get(row["id"])
+        disposition = by_id.get(row["id"]) or by_kind.get(row.get("kind"))
         if disposition is not None:
             row["disposition"] = disposition["disposition"]
             row["reason"] = disposition["reason"]

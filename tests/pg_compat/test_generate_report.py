@@ -72,6 +72,8 @@ class GenerateReportTest(unittest.TestCase):
                 "symbol": "Node.merge_stmt",
                 "target": "MergeStmt merge_stmt",
                 "result": "UNWITNESSED_FEATURE",
+                "disposition": "internal_non_syntax",
+                "reason": "Protobuf-only field; tracked through grammar witnesses.",
             },
             {
                 "id": "feature-1",
@@ -132,6 +134,8 @@ class GenerateReportTest(unittest.TestCase):
             "CLASSIFIED_ONLY",
             "PG17 to PG18 Release Delta",
             "Unwitnessed Structural Features",
+            "Reviewed Structural Dispositions",
+            "internal_non_syntax",
             "Reproduction",
             "Generated: 2026-06-16T12:00:00Z",
             "ParserSQL commit: `abcdef123456`",

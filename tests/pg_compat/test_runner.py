@@ -206,15 +206,16 @@ class RunnerTest(unittest.TestCase):
             ["SELECT 1", "SELECT 2"],
         )
 
-    def test_unmapped_node_is_infrastructure_failure(self):
+    def test_no_equivalent_node_is_classified_not_infrastructure_failure(self):
         result = self.run_sql("LOAD 'foo';\n")
 
-        self.assertNotEqual(result.returncode, 0)
-        self.assertEqual(result.stdout, b"")
-        self.assertIn(
-            "PG_QUERY__NODE__NODE_LOAD_STMT",
-            result.stderr.decode(),
-        )
+        self.assertEqual(result.returncode, 0, result.stderr.decode())
+        rows = self.json_rows(result)
+        self.assertEqual(len(rows), 1)
+        self.assertEqual(rows[0]["oracle_node"], "PG_QUERY__NODE__NODE_LOAD_STMT")
+        self.assertEqual(rows[0]["expected_stmt_type"], "UNKNOWN")
+        self.assertEqual(rows[0]["parser_stmt_type"], "LOAD_DATA")
+        self.assertEqual(rows[0]["result"], "PARTIAL")
 
     def test_comments_do_not_affect_normalization(self):
         result = self.run_sql(

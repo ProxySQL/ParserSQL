@@ -122,7 +122,10 @@ def _structural_rows(structural_features, links, *, only_unwitnessed):
     ):
         feature_id = feature.get("id", "")
         witness_ids = links.get(feature_id, [])
+        has_disposition = bool(feature.get("disposition"))
         if only_unwitnessed and witness_ids:
+            continue
+        if only_unwitnessed and has_disposition:
             continue
         if not only_unwitnessed and not witness_ids:
             continue
@@ -133,6 +136,31 @@ def _structural_rows(structural_features, links, *, only_unwitnessed):
                 feature.get("symbol", ""),
                 ", ".join(witness_ids) if witness_ids else "-",
                 feature.get("target", ""),
+            ]
+        )
+    return rows
+
+
+def _structural_disposition_rows(structural_features):
+    rows = []
+    for feature in sorted(
+        structural_features,
+        key=lambda row: (
+            str(row.get("kind", "")),
+            str(row.get("symbol", "")),
+            str(row.get("id", "")),
+        ),
+    ):
+        disposition = feature.get("disposition")
+        if not disposition:
+            continue
+        rows.append(
+            [
+                feature.get("id", ""),
+                feature.get("kind", ""),
+                feature.get("symbol", ""),
+                disposition,
+                feature.get("reason", ""),
             ]
         )
     return rows
@@ -264,6 +292,19 @@ def generate_report(
         _table(
             ["Feature ID", "Kind", "Symbol", "Witnesses", "Target"],
             _structural_rows(structural_features, links, only_unwitnessed=False),
+        )
+    )
+    lines.extend(
+        [
+            "",
+            "## Reviewed Structural Dispositions",
+            "",
+        ]
+    )
+    lines.extend(
+        _table(
+            ["Feature ID", "Kind", "Symbol", "Disposition", "Reason"],
+            _structural_disposition_rows(structural_features),
         )
     )
     lines.extend(
