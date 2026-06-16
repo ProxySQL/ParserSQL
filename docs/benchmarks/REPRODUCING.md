@@ -9,7 +9,7 @@ Step-by-step instructions to reproduce all comparison benchmarks from scratch on
 ```bash
 # Required tools
 sudo apt-get update
-sudo apt-get install -y build-essential git curl
+sudo apt-get install -y build-essential git curl tar bzip2
 
 # Rust (for sqlparser-rs benchmark)
 curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
@@ -19,6 +19,9 @@ source ~/.cargo/env
 g++ --version    # need GCC 8+ (C++17 support)
 cargo --version  # need Rust 1.70+
 git --version
+curl --version
+tar --version
+python3 --version
 ```
 
 ---
@@ -73,6 +76,44 @@ ls -la third_party/libpg_query/libpg_query.a
 **What libpg_query is:** This is PostgreSQL's actual parser (Bison-generated), extracted from the PostgreSQL source code by pganalyze. It compiles PostgreSQL's parser, lexer, memory management, and node types into a standalone library. The `pg_query_parse()` function takes a SQL string and returns a JSON-serialized parse tree. The `pg_query_raw_parse()` function (internal API) returns the raw AST without JSON serialization.
 
 **Optimization flags:** libpg_query builds with `-O3 -g` by default (see its Makefile: `CFLAGS_OPT_LEVEL = -O3`). The `-g` flag adds debug symbols but does not affect runtime performance. Both ParserSQL and libpg_query are compiled at `-O3` — this is a fair comparison.
+
+---
+
+## PostgreSQL Compatibility Harness
+
+The PostgreSQL compatibility harness uses pinned `libpg_query` builds as the syntax oracle. It compares ParserSQL against PostgreSQL 17 and PostgreSQL 18 regression SQL, writes a committed PostgreSQL 18 baseline, and reports the PG17-to-PG18 syntax delta in `docs/compatibility/postgresql-18.md`.
+
+Required external tools:
+
+```text
+git
+curl
+tar with bzip2 support
+python3
+C/C++ compiler
+make
+```
+
+`PG_COMPAT_CACHE` controls where external sources and built oracle runners are cached. It defaults to `/tmp/parsersql-pg-compat`.
+
+```bash
+# Fast deterministic gate: unit tests plus committed CI cases
+make test-pg-compat
+
+# Full pinned PG17/PG18 comparison against committed expected_results.jsonl
+make pg-compat
+
+# Refresh committed artifacts after intentionally updating pins or mappings
+make pg-compat-refresh
+```
+
+The harness result model distinguishes parser depth from statement routing:
+
+- `DEEP_SUPPORTED` means ParserSQL accepted the SQL with the expected statement type and a full AST.
+- `CLASSIFIED_ONLY` means ParserSQL recognized the top-level statement class, but did not reach full parser parity for that SQL.
+- `PARTIAL`, `ERROR`, `TRAILING_INPUT`, and `TYPE_MISMATCH` are committed baseline outcomes that must not regress silently.
+
+The refresh target updates `tests/pg_compat/expected_results.jsonl`, `tests/pg_compat/ci_cases.jsonl`, and `docs/compatibility/postgresql-18.md`.
 
 ---
 

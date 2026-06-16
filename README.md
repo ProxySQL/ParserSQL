@@ -64,6 +64,26 @@ make build-sqlengine    # Interactive SQL CLI
 make build-corpus-test  # Corpus validation harness
 ```
 
+### PostgreSQL compatibility harness
+
+ParserSQL uses `libpg_query` as the PostgreSQL syntax oracle for compatibility checks. The harness pins `libpg_query` `17-latest` and `18-latest`, extracts accepted PostgreSQL regression statements, and compares ParserSQL behavior against the committed PostgreSQL 18 baseline in [`docs/compatibility/postgresql-18.md`](docs/compatibility/postgresql-18.md).
+
+Compatibility results separate full parser parity from classification coverage:
+
+- `DEEP_SUPPORTED` means ParserSQL accepted the statement with the expected statement type and a full AST.
+- `CLASSIFIED_ONLY` means ParserSQL recognized the top-level statement class, but did not produce full deep parser parity for that SQL.
+- `PARTIAL`, `ERROR`, `TRAILING_INPUT`, and `TYPE_MISMATCH` are tracked separately in the committed baseline.
+
+The report includes the full PostgreSQL 18 backlog, the PG17-to-PG18 release delta, statement routing coverage, and reviewed structural grammar/keyword changes.
+
+```bash
+make test-pg-compat     # Build the pinned oracle runner, run harness unit tests, and replay committed CI cases
+make pg-compat          # Run the full pinned PG17/PG18 comparison against the committed baseline
+make pg-compat-refresh  # Regenerate expected_results.jsonl, ci_cases.jsonl, and docs/compatibility/postgresql-18.md
+```
+
+`PG_COMPAT_CACHE` controls where external `libpg_query` and PostgreSQL source checkouts are cached. It defaults to `/tmp/parsersql-pg-compat`.
+
 ### Interactive CLI (`sqlengine`)
 
 ```bash
