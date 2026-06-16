@@ -180,6 +180,7 @@ handle_signal() {
         fi
         wait "$child_pid" 2>/dev/null || true
     fi
+    release_lock
     exit "$exit_status"
 }
 
