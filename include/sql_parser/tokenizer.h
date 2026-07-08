@@ -374,6 +374,8 @@ private:
         if (cursor_ + 1 < end_) {
             char c2 = peek_char(1);
 
+            if (c == '<' && c2 == '<') { auto s = cursor_; cursor_ += 2; return make_token(TokenType::TK_SHIFT_LEFT, s, 2); }
+            if (c == '>' && c2 == '>') { auto s = cursor_; cursor_ += 2; return make_token(TokenType::TK_SHIFT_RIGHT, s, 2); }
             if (c == '<' && c2 == '=') { auto s = cursor_; cursor_ += 2; return make_token(TokenType::TK_LESS_EQUAL, s, 2); }
             if (c == '>' && c2 == '=') { auto s = cursor_; cursor_ += 2; return make_token(TokenType::TK_GREATER_EQUAL, s, 2); }
             if (c == '!' && c2 == '=') { auto s = cursor_; cursor_ += 2; return make_token(TokenType::TK_NOT_EQUAL, s, 2); }

@@ -18,6 +18,10 @@ public:
     SetParser(Tokenizer<D>& tokenizer, Arena& arena)
         : tok_(tokenizer), arena_(arena), expr_parser_(tokenizer, arena) {}
 
+    void set_subquery_callback(SubqueryParseCallback<D> cb) {
+        expr_parser_.set_subquery_callback(cb);
+    }
+
     // Parse a SET statement (SET keyword already consumed by classifier).
     // Returns the root NODE_SET_STMT node, or nullptr on failure.
     AstNode* parse() {
@@ -79,7 +83,7 @@ public:
             return root;
         }
 
-        if (next.type == TokenType::TK_GLOBAL || next.type == TokenType::TK_SESSION) {
+        if (is_set_assignment_scope_(next)) {
             Token scope_tok = tok_.next_token();
             if (tok_.peek().type == TokenType::TK_TRANSACTION) {
                 tok_.skip();
@@ -434,6 +438,10 @@ private:
 
     AstNode* parse_comma_item() {
         Token peek = tok_.peek();
+        if (is_set_assignment_scope_(peek)) {
+            Token scope_tok = tok_.next_token();
+            return parse_variable_assignment(&scope_tok);
+        }
         if (peek.type == TokenType::TK_NAMES) {
             tok_.skip();
             return parse_set_names();
@@ -529,7 +537,7 @@ private:
     }
 
     // Parse a single variable assignment: [scope] target = expr
-    // scope_token is non-null if GLOBAL/SESSION/LOCAL was already consumed
+    // scope_token is non-null if a SET-assignment scope was already consumed.
     AstNode* parse_variable_assignment(const Token* scope_token) {
         AstNode* assignment = make_node(arena_, NodeType::NODE_VAR_ASSIGNMENT);
         if (!assignment) return nullptr;
@@ -552,8 +560,15 @@ private:
             // `@name` form in the arena instead, dropping the delimiters.
             tok_.skip();
             Token name = tok_.next_token();
-            target->add_child(make_node(arena_, NodeType::NODE_IDENTIFIER,
-                build_scoped_identifier_("@", name)));
+            if (tok_.peek().type == TokenType::TK_DOT) {
+                tok_.skip();
+                Token actual_name = tok_.next_token();
+                target->add_child(make_node(arena_, NodeType::NODE_IDENTIFIER,
+                    build_scoped_dotted_identifier_("@", name, actual_name)));
+            } else {
+                target->add_child(make_node(arena_, NodeType::NODE_IDENTIFIER,
+                    build_scoped_identifier_("@", name)));
+            }
         } else if (var.type == TokenType::TK_DOUBLE_AT) {
             // System variable @@[scope.]name -- same delimiter handling
             // concern as the @name branch above. Allocate `@@name` (or
@@ -631,6 +646,19 @@ private:
         }
 
         return assignment;
+    }
+
+    static bool is_set_assignment_scope_(const Token& tok) {
+        if (tok.type == TokenType::TK_GLOBAL || tok.type == TokenType::TK_SESSION) {
+            return true;
+        }
+        if constexpr (D == Dialect::MySQL) {
+            return tok.type == TokenType::TK_LOCAL ||
+                   tok.type == TokenType::TK_PERSIST ||
+                   (tok.type == TokenType::TK_IDENTIFIER &&
+                    tok.text.equals_ci("PERSIST_ONLY", 12));
+        }
+        return false;
     }
 };
 
