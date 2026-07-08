@@ -1,6 +1,7 @@
 #include <gtest/gtest.h>
 #include "sql_parser/parser.h"
 #include <cstring>
+#include <string>
 
 using namespace sql_parser;
 
@@ -336,6 +337,11 @@ protected:
         for (const AstNode* c = node->first_child; c; c = c->next_sibling) ++n;
         return n;
     }
+
+    std::string value(const AstNode* node) {
+        if (!node || !node->value_ptr) return {};
+        return std::string(node->value_ptr, node->value_len);
+    }
 };
 
 TEST_F(MySQLSetTest, SetSimpleVariable) {
@@ -374,6 +380,51 @@ TEST_F(MySQLSetTest, SetGlobalVariable) {
     EXPECT_EQ(target->type, NodeType::NODE_VAR_TARGET);
 }
 
+TEST_F(MySQLSetTest, SetPersistScopeVariable) {
+    const char* sql = "SET PERSIST max_allowed_packet = 1073741824";
+    auto r = parser.parse(sql, strlen(sql));
+    EXPECT_EQ(r.status, ParseResult::OK);
+    ASSERT_NE(r.ast, nullptr);
+    ASSERT_NE(r.ast->first_child, nullptr);
+
+    AstNode* target = r.ast->first_child->first_child;
+    ASSERT_NE(target, nullptr);
+    ASSERT_NE(target->first_child, nullptr);
+    EXPECT_EQ(value(target->first_child), "PERSIST");
+    ASSERT_NE(target->first_child->next_sibling, nullptr);
+    EXPECT_EQ(value(target->first_child->next_sibling), "max_allowed_packet");
+}
+
+TEST_F(MySQLSetTest, SetPersistOnlyScopeVariable) {
+    const char* sql = "SET PERSIST_ONLY sql_mode = 'STRICT_TRANS_TABLES'";
+    auto r = parser.parse(sql, strlen(sql));
+    EXPECT_EQ(r.status, ParseResult::OK);
+    ASSERT_NE(r.ast, nullptr);
+    ASSERT_NE(r.ast->first_child, nullptr);
+
+    AstNode* target = r.ast->first_child->first_child;
+    ASSERT_NE(target, nullptr);
+    ASSERT_NE(target->first_child, nullptr);
+    EXPECT_EQ(value(target->first_child), "PERSIST_ONLY");
+    ASSERT_NE(target->first_child->next_sibling, nullptr);
+    EXPECT_EQ(value(target->first_child->next_sibling), "sql_mode");
+}
+
+TEST_F(MySQLSetTest, SetLocalScopeVariable) {
+    const char* sql = "SET LOCAL wait_timeout = 10";
+    auto r = parser.parse(sql, strlen(sql));
+    EXPECT_EQ(r.status, ParseResult::OK);
+    ASSERT_NE(r.ast, nullptr);
+    ASSERT_NE(r.ast->first_child, nullptr);
+
+    AstNode* target = r.ast->first_child->first_child;
+    ASSERT_NE(target, nullptr);
+    ASSERT_NE(target->first_child, nullptr);
+    EXPECT_EQ(value(target->first_child), "LOCAL");
+    ASSERT_NE(target->first_child->next_sibling, nullptr);
+    EXPECT_EQ(value(target->first_child->next_sibling), "wait_timeout");
+}
+
 TEST_F(MySQLSetTest, SetSessionVariable) {
     auto r = parser.parse("SET SESSION wait_timeout = 600", 30);
     EXPECT_EQ(r.status, ParseResult::OK);
@@ -390,6 +441,36 @@ TEST_F(MySQLSetTest, SetUserVariable) {
     auto r = parser.parse("SET @my_var = 42", 16);
     EXPECT_EQ(r.status, ParseResult::OK);
     ASSERT_NE(r.ast, nullptr);
+}
+
+TEST_F(MySQLSetTest, SetDottedUserVariable) {
+    const char* sql = "SET @user.var := 7";
+    auto r = parser.parse(sql, strlen(sql));
+    EXPECT_EQ(r.status, ParseResult::OK);
+    ASSERT_NE(r.ast, nullptr);
+    ASSERT_NE(r.ast->first_child, nullptr);
+
+    AstNode* target = r.ast->first_child->first_child;
+    ASSERT_NE(target, nullptr);
+    ASSERT_NE(target->first_child, nullptr);
+    EXPECT_EQ(value(target->first_child), "@user.var");
+}
+
+TEST_F(MySQLSetTest, SetScopedCommaItemAfterUserVariable) {
+    const char* sql = "SET @'mix' := 1, LOCAL wait_timeout := 20";
+    auto r = parser.parse(sql, strlen(sql));
+    EXPECT_EQ(r.status, ParseResult::OK);
+    ASSERT_NE(r.ast, nullptr);
+    EXPECT_EQ(child_count(r.ast), 2);
+
+    AstNode* second_assignment = r.ast->first_child->next_sibling;
+    ASSERT_NE(second_assignment, nullptr);
+    AstNode* target = second_assignment->first_child;
+    ASSERT_NE(target, nullptr);
+    ASSERT_NE(target->first_child, nullptr);
+    EXPECT_EQ(value(target->first_child), "LOCAL");
+    ASSERT_NE(target->first_child->next_sibling, nullptr);
+    EXPECT_EQ(value(target->first_child->next_sibling), "wait_timeout");
 }
 
 TEST_F(MySQLSetTest, SetNames) {

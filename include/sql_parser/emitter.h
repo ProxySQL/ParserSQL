@@ -122,7 +122,7 @@ private:
             case NodeType::NODE_ARRAY_CONSTRUCTOR: emit_array_constructor(node); break;
             case NodeType::NODE_ARRAY_SUBSCRIPT: emit_array_subscript(node); break;
             case NodeType::NODE_FIELD_ACCESS:    emit_field_access(node); break;
-            case NodeType::NODE_SUBQUERY:        emit_value(node); break;
+            case NodeType::NODE_SUBQUERY:        emit_subquery(node); break;
 
             // ---- Leaf nodes (emit value directly) ----
             case NodeType::NODE_PLACEHOLDER:
@@ -1061,10 +1061,28 @@ private:
     }
 
     void emit_unary_op(const AstNode* node) {
+        const AstNode* child = node->first_child;
+        if (is_not_operator(node) && child) {
+            if (child->type == NodeType::NODE_IN_LIST) {
+                emit_not_in_list(child);
+                return;
+            }
+            if (child->type == NodeType::NODE_BETWEEN) {
+                emit_not_between(child);
+                return;
+            }
+            if (child->type == NodeType::NODE_BINARY_OP &&
+                (child->value().equals_ci("LIKE", 4) ||
+                 child->value().equals_ci("REGEXP", 6))) {
+                emit_not_binary_op(child);
+                return;
+            }
+        }
+
         emit_value(node);
         // Add space for keyword operators like NOT, no space for - or +
         if (node->value_len > 1) sb_.append_char(' ');
-        if (node->first_child) emit_node(node->first_child);
+        if (child) emit_node(child);
     }
 
     void emit_function_call(const AstNode* node) {
@@ -1102,19 +1120,88 @@ private:
 
     void emit_in_list(const AstNode* node) {
         const AstNode* expr = node->first_child;
+        const AstNode* first_val = expr ? expr->next_sibling : nullptr;
         if (expr) emit_node(expr);
+        if (first_val && first_val->type == NodeType::NODE_SUBQUERY &&
+            !first_val->next_sibling) {
+            sb_.append(" IN ");
+            emit_node(first_val);
+            return;
+        }
         sb_.append(" IN (");
         if (mode_ == EmitMode::DIGEST) {
             sb_.append_char('?');
         } else {
             bool first = true;
-            for (const AstNode* val = expr ? expr->next_sibling : nullptr; val; val = val->next_sibling) {
+            for (const AstNode* val = first_val; val; val = val->next_sibling) {
                 if (!first) sb_.append(", ");
                 first = false;
                 emit_node(val);
             }
         }
         sb_.append_char(')');
+    }
+
+    void emit_subquery(const AstNode* node) {
+        if (node->flags == 1) {
+            sb_.append("EXISTS ");
+        }
+        sb_.append_char('(');
+        if (node->first_child) {
+            emit_node(node->first_child);
+        } else {
+            emit_value(node);
+        }
+        sb_.append_char(')');
+    }
+
+    bool is_not_operator(const AstNode* node) const {
+        return node && node->value().equals_ci("NOT", 3);
+    }
+
+    void emit_not_in_list(const AstNode* node) {
+        const AstNode* expr = node->first_child;
+        const AstNode* first_val = expr ? expr->next_sibling : nullptr;
+        if (expr) emit_node(expr);
+        if (first_val && first_val->type == NodeType::NODE_SUBQUERY &&
+            !first_val->next_sibling) {
+            sb_.append(" NOT IN ");
+            emit_node(first_val);
+            return;
+        }
+        sb_.append(" NOT IN (");
+        if (mode_ == EmitMode::DIGEST) {
+            sb_.append_char('?');
+        } else {
+            bool first = true;
+            for (const AstNode* val = first_val; val; val = val->next_sibling) {
+                if (!first) sb_.append(", ");
+                first = false;
+                emit_node(val);
+            }
+        }
+        sb_.append_char(')');
+    }
+
+    void emit_not_between(const AstNode* node) {
+        const AstNode* expr = node->first_child;
+        const AstNode* low = expr ? expr->next_sibling : nullptr;
+        const AstNode* high = low ? low->next_sibling : nullptr;
+        if (expr) emit_node(expr);
+        sb_.append(" NOT BETWEEN ");
+        if (low) emit_node(low);
+        sb_.append(" AND ");
+        if (high) emit_node(high);
+    }
+
+    void emit_not_binary_op(const AstNode* node) {
+        const AstNode* left = node->first_child;
+        const AstNode* right = left ? left->next_sibling : nullptr;
+        if (left) emit_node(left);
+        sb_.append(" NOT ");
+        emit_value(node);
+        sb_.append_char(' ');
+        if (right) emit_node(right);
     }
 
     void emit_case_when(const AstNode* node) {

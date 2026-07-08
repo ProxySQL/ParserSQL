@@ -62,6 +62,21 @@ TEST_F(MySQLEmitterTest, SetSessionVariable) {
     EXPECT_EQ(out, "SET SESSION wait_timeout = 600");
 }
 
+TEST_F(MySQLEmitterTest, SetPersistVariable) {
+    std::string out = round_trip("SET PERSIST max_allowed_packet = 1073741824");
+    EXPECT_EQ(out, "SET PERSIST max_allowed_packet = 1073741824");
+}
+
+TEST_F(MySQLEmitterTest, SetPersistOnlyVariable) {
+    std::string out = round_trip("SET PERSIST_ONLY sql_mode = 'STRICT_TRANS_TABLES'");
+    EXPECT_EQ(out, "SET PERSIST_ONLY sql_mode = 'STRICT_TRANS_TABLES'");
+}
+
+TEST_F(MySQLEmitterTest, SetLocalVariable) {
+    std::string out = round_trip("SET LOCAL wait_timeout = 10");
+    EXPECT_EQ(out, "SET LOCAL wait_timeout = 10");
+}
+
 TEST_F(MySQLEmitterTest, SetDoubleAtVariable) {
     std::string out = round_trip("SET @@session.wait_timeout = 600");
     EXPECT_EQ(out, "SET @@session.wait_timeout = 600");
@@ -70,6 +85,16 @@ TEST_F(MySQLEmitterTest, SetDoubleAtVariable) {
 TEST_F(MySQLEmitterTest, SetUserVariable) {
     std::string out = round_trip("SET @my_var = 42");
     EXPECT_EQ(out, "SET @my_var = 42");
+}
+
+TEST_F(MySQLEmitterTest, SetDottedUserVariable) {
+    std::string out = round_trip("SET @user.var = 7");
+    EXPECT_EQ(out, "SET @user.var = 7");
+}
+
+TEST_F(MySQLEmitterTest, SetScopedCommaItemAfterUserVariable) {
+    std::string out = round_trip("SET @'mix' := 1, LOCAL wait_timeout := 20");
+    EXPECT_EQ(out, "SET @mix = 1, LOCAL wait_timeout = 20");
 }
 
 TEST_F(MySQLEmitterTest, SetTransaction) {
@@ -88,6 +113,56 @@ TEST_F(MySQLEmitterTest, SetTransactionIsolation) {
 TEST_F(MySQLEmitterTest, SetFunctionRHS) {
     std::string out = round_trip("SET sql_mode = CONCAT(@@sql_mode, ',STRICT_TRANS_TABLES')");
     EXPECT_EQ(out, "SET sql_mode = CONCAT(@@sql_mode, ',STRICT_TRANS_TABLES')");
+}
+
+TEST_F(MySQLEmitterTest, SetRhsMysqlExpressionOperatorsRoundTrip) {
+    struct Case {
+        const char* sql;
+        const char* description;
+    };
+
+    const Case cases[] = {
+        {"SET @generic_var = TRUE XOR FALSE", "xor"},
+        {"SET @generic_var = 5 | 2", "bit or"},
+        {"SET @generic_var = 5 & 2", "bit and"},
+        {"SET @generic_var = 5 << 1", "shift left"},
+        {"SET @generic_var = 10 >> 1", "shift right"},
+        {"SET @generic_var = 5 ^ 2", "bit xor"},
+        {"SET @generic_var = 10 DIV 3", "div"},
+        {"SET @generic_var = 10 MOD 3", "mod"},
+        {"SET @generic_var = 'abcde' REGEXP '^a.c'", "regexp"},
+        {"SET @generic_var = 'xyz123' NOT REGEXP '[0-9]$'", "not regexp"},
+        {"SET @generic_var = 'b' MEMBER OF ('[\"a\", \"b\", \"c\"]')", "member of"},
+        {"SET @generic_var = 'knight' SOUNDS LIKE 'night'", "sounds like"},
+        {"SET @generic_var = NOW() + INTERVAL 1 DAY", "plus interval"},
+        {"SET @generic_var = '2025-12-25' - INTERVAL 2 MONTH", "minus interval"},
+    };
+
+    for (const auto& tc : cases) {
+        std::string out = round_trip(tc.sql);
+        EXPECT_EQ(out, std::string(tc.sql))
+            << "Round-trip mismatch: " << tc.description;
+    }
+}
+
+TEST_F(MySQLEmitterTest, SetRhsSubqueryExpressionsRoundTrip) {
+    struct Case {
+        const char* sql;
+        const char* description;
+    };
+
+    const Case cases[] = {
+        {"SET @generic_var = current_user_id IN (SELECT user_id FROM course_enrollments WHERE course_id = 789)", "in subquery"},
+        {"SET @generic_var = my_value > ALL (SELECT limit_value FROM active_limits WHERE group_id = 'A')", "all subquery"},
+        {"SET @generic_var = 'PROD123' NOT IN (SELECT product_sku FROM discontinued_products WHERE reason_code = 'OBSOLETE')", "not in subquery"},
+        {"SET @generic_var = (SELECT SUM(amount) FROM sales WHERE sale_date = CURDATE())", "scalar subquery"},
+    };
+
+    for (const auto& tc : cases) {
+        std::string out = round_trip(tc.sql);
+        EXPECT_EQ(out, std::string(tc.sql))
+            << "Round-trip mismatch: " << tc.description;
+    }
 }
 
 // ========== SELECT round-trips ==========

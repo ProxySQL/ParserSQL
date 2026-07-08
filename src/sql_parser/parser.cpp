@@ -293,6 +293,7 @@ ParseResult Parser<D>::parse_set() {
     r.stmt_type = StmtType::SET;
 
     SetParser<D> set_parser(tokenizer_, arena_);
+    set_parser.set_subquery_callback(&parse_subquery_select<D>);
     AstNode* ast = set_parser.parse();
 
     if (ast && ast->first_child) {
