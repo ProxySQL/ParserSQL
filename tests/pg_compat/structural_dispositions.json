@@ -1,0 +1,12 @@
+[
+  {
+    "kind": "parse_node",
+    "disposition": "internal_non_syntax",
+    "reason": "PostgreSQL parse-node struct/schema delta; SQL exposure is reviewed through grammar, keyword, and committed baseline witnesses."
+  },
+  {
+    "kind": "protobuf",
+    "disposition": "internal_non_syntax",
+    "reason": "libpg_query protobuf/API schema delta; ParserSQL compatibility is evaluated through SQL acceptance and statement-type classification, not protobuf field parity."
+  }
+]

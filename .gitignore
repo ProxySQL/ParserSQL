@@ -31,6 +31,9 @@
 *.out
 *.app
 
+# Local git worktrees
+.worktrees/
+
 # Build artifacts
 libsqlparser.a
 sqlengine
@@ -39,4 +42,6 @@ run_tests_debug
 corpus_test
 run_bench
 run_bench_compare
+pg_compat_17
+pg_compat_18
 bench/sqlparser_rs_bench/target/
