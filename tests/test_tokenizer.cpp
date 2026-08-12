@@ -213,6 +213,19 @@ TEST_F(MySQLTokenizerTest, UnterminatedBlockCommentIsAnError) {
     EXPECT_TRUE(tok.has_error());
 }
 
+TEST_F(MySQLTokenizerTest, MariaDBExecutableCommentsExposeUserVariables) {
+    const char* cases[] = {
+        "/*M!100100 SET @x=1 */",
+        "/*M! SET @x=1 */",
+    };
+    for (const char* sql : cases) {
+        SCOPED_TRACE(sql);
+        tok.reset(sql, strlen(sql));
+        while (tok.next_token().type != TokenType::TK_EOF) {}
+        EXPECT_TRUE(tok.has_user_variables());
+    }
+}
+
 TEST_F(MySQLTokenizerTest, Placeholder) {
     const char* sql = "?";
     tok.reset(sql, strlen(sql));

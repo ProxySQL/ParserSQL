@@ -160,7 +160,9 @@ private:
                     }
                 } else {
                     // MySQL: no nesting
-                    const bool executable = cursor_ < end_ && *cursor_ == '!';
+                    const bool executable = cursor_ < end_ &&
+                        (*cursor_ == '!' ||
+                         (cursor_ + 1 < end_ && cursor_[0] == 'M' && cursor_[1] == '!'));
                     bool has_user_variable_marker = false;
                     bool closed = false;
                     while (cursor_ < end_) {
@@ -176,9 +178,9 @@ private:
                         flag_fatal_error_at(StringRef{comment_start,
                             static_cast<uint32_t>(end_ - comment_start)});
                     }
-                    // Versioned comments execute as SQL on MySQL. Until their
-                    // contents are parsed exactly, preserve any possible user
-                    // variable use and force conservative classification.
+                    // MySQL and MariaDB executable comments run as SQL. Until
+                    // their contents are parsed exactly, preserve any possible
+                    // user variable use and force conservative classification.
                     if (executable && has_user_variable_marker) {
                         has_user_variables_ = true;
                         flag_fatal_error_at(StringRef{comment_start,

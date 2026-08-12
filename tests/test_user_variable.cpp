@@ -63,6 +63,10 @@ TEST(MySQLUserVariableUsage, HandlesMySQLCommentBoundariesConservatively) {
     EXPECT_EQ(classify("SELECT 1--@x"), UserVariableUsage::READ_ONLY);
     EXPECT_EQ(classify("/*!40101 SET @x=1 */"),
               UserVariableUsage::UNSAFE_OR_UNKNOWN);
+    EXPECT_EQ(classify("/*M!100100 SET @x=1 */"),
+              UserVariableUsage::UNSAFE_OR_UNKNOWN);
+    EXPECT_EQ(classify("/*M! SET @x=1 */"),
+              UserVariableUsage::UNSAFE_OR_UNKNOWN);
     EXPECT_EQ(classify("SELECT @x /* unterminated"),
               UserVariableUsage::UNSAFE_OR_UNKNOWN);
     EXPECT_EQ(classify("SET @x=1 /* unterminated"),
