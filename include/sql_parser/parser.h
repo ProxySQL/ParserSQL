@@ -7,6 +7,7 @@
 #include "sql_parser/ast.h"
 #include "sql_parser/parse_result.h"
 #include "sql_parser/stmt_cache.h"
+#include "sql_parser/user_variable.h"
 
 namespace sql_parser {
 

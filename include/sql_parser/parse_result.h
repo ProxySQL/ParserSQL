@@ -39,6 +39,8 @@ struct ParseResult {
     AstNode* ast = nullptr;
     ErrorInfo error;
     StringRef remaining;
+    bool full_input = false;
+    bool has_user_variables = false;
 
     StringRef table_name;
     StringRef schema_name;

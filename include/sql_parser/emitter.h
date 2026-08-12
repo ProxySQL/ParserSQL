@@ -123,6 +123,8 @@ private:
             case NodeType::NODE_ARRAY_SUBSCRIPT: emit_array_subscript(node); break;
             case NodeType::NODE_FIELD_ACCESS:    emit_field_access(node); break;
             case NodeType::NODE_SUBQUERY:        emit_subquery(node); break;
+            case NodeType::NODE_EXPRESSION:      emit_parenthesized_expression(node); break;
+            case NodeType::NODE_USER_VARIABLE:   emit_user_variable(node); break;
 
             // ---- Leaf nodes (emit value directly) ----
             case NodeType::NODE_PLACEHOLDER:
@@ -131,6 +133,8 @@ private:
             // ---- Leaf nodes (emit value directly) ----
             case NodeType::NODE_LITERAL_INT:
             case NodeType::NODE_LITERAL_FLOAT:
+            case NodeType::NODE_LITERAL_HEX:
+            case NodeType::NODE_LITERAL_BIT:
                 if (mode_ == EmitMode::DIGEST) { sb_.append_char('?'); break; }
                 emit_value(node); break;
             case NodeType::NODE_LITERAL_NULL:
@@ -150,6 +154,17 @@ private:
 
     void emit_value(const AstNode* node) {
         sb_.append(node->value_ptr, node->value_len);
+    }
+
+    void emit_user_variable(const AstNode* node) {
+        sb_.append_char('@');
+        emit_value(node);
+    }
+
+    void emit_parenthesized_expression(const AstNode* node) {
+        sb_.append_char('(');
+        if (node->first_child) emit_node(node->first_child);
+        sb_.append_char(')');
     }
 
     void emit_string_literal(const AstNode* node) {

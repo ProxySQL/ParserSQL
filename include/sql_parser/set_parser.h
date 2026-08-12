@@ -352,9 +352,14 @@ public:
             }
         } else {
             while (tok_.peek().type == TokenType::TK_COMMA) {
-                tok_.skip();
+                Token comma = tok_.next_token();
                 AstNode* next_assign = parse_comma_item();
-                if (next_assign) root->add_child(next_assign);
+                if (next_assign) {
+                    root->add_child(next_assign);
+                } else {
+                    tok_.flag_error_at(comma.source);
+                    break;
+                }
             }
         }
 
@@ -551,7 +556,17 @@ private:
         }
 
         Token var = tok_.peek();
-        if (var.type == TokenType::TK_AT) {
+        bool user_variable_target = false;
+        if (var.type == TokenType::TK_USER_VARIABLE) {
+            user_variable_target = true;
+            tok_.skip();
+            AstNode* variable = make_mysql_user_variable_node(arena_, var);
+            if (!variable) {
+                tok_.flag_error_at(var.source);
+                return nullptr;
+            }
+            target->add_child(variable);
+        } else if (var.type == TokenType::TK_AT) {
             // User variable @name. The name may be backtick/double-quoted;
             // in that case the source bytes between `@` and the name include
             // the opening delimiter (and the closing delimiter sits one past
@@ -624,12 +639,19 @@ private:
 
         // Expect = or := (MySQL) or TO (PostgreSQL)
         Token eq = tok_.peek();
+        bool has_assignment_operator = false;
         if (eq.type == TokenType::TK_EQUAL || eq.type == TokenType::TK_COLON_EQUAL) {
             tok_.skip();
+            has_assignment_operator = true;
         } else if constexpr (D == Dialect::PostgreSQL) {
             if (eq.type == TokenType::TK_TO) {
                 tok_.skip();
+                has_assignment_operator = true;
             }
+        }
+        if (user_variable_target && !has_assignment_operator) {
+            tok_.flag_error_at(eq.source);
+            return nullptr;
         }
 
         // Parse RHS expression. If the parser couldn't produce one --

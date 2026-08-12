@@ -42,6 +42,7 @@ TEST_SRCS = $(TEST_DIR)/test_main.cpp \
             $(TEST_DIR)/test_classifier.cpp \
             $(TEST_DIR)/test_expression.cpp \
             $(TEST_DIR)/test_set.cpp \
+            $(TEST_DIR)/test_user_variable.cpp \
             $(TEST_DIR)/test_select.cpp \
             $(TEST_DIR)/test_emitter.cpp \
             $(TEST_DIR)/test_stmt_cache.cpp \
