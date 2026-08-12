@@ -940,6 +940,7 @@ void Parser<D>::scan_to_end(ParseResult& result) {
     if (first.type == TokenType::TK_EOF) {
         StringRef error_source = tokenizer_.error_source();
         if (!error_source.empty()) {
+            if (tokenizer_.has_fatal_error()) result.status = ParseResult::ERROR;
             result.remaining = StringRef{error_source.ptr,
                 static_cast<uint32_t>(tokenizer_.input_end() - error_source.ptr)};
         } else {
@@ -951,6 +952,13 @@ void Parser<D>::scan_to_end(ParseResult& result) {
     if (first.type == TokenType::TK_SEMICOLON) {
         Token next = tokenizer_.next_token();
         if (next.type == TokenType::TK_EOF) {
+            StringRef error_source = tokenizer_.error_source();
+            if (tokenizer_.has_fatal_error() && !error_source.empty()) {
+                result.status = ParseResult::ERROR;
+                result.remaining = StringRef{error_source.ptr,
+                    static_cast<uint32_t>(tokenizer_.input_end() - error_source.ptr)};
+                return;
+            }
             result.full_input = true;
             return;
         }

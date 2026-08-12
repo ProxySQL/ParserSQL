@@ -157,6 +157,19 @@ private:
     }
 
     void emit_user_variable(const AstNode* node) {
+        if (mode_ == EmitMode::DIGEST) {
+            StringRef source = node->source();
+            if (source.len >= 2 &&
+                (source.ptr[1] == '\'' || source.ptr[1] == '"' || source.ptr[1] == '`')) {
+                sb_.append("@?", 2);
+                return;
+            }
+        }
+        StringRef source = node->source();
+        if (!source.empty()) {
+            sb_.append(source.ptr, source.len);
+            return;
+        }
         sb_.append_char('@');
         emit_value(node);
     }

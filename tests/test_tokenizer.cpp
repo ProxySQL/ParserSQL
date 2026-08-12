@@ -181,6 +181,38 @@ TEST_F(MySQLTokenizerTest, MalformedLosslessTokensAreErrors) {
     }
 }
 
+TEST_F(MySQLTokenizerTest, DoubleDashRequiresFollowingWhitespaceOrControl) {
+    const char* sql = "SELECT 1--@x";
+    tok.reset(sql, strlen(sql));
+    EXPECT_EQ(tok.next_token().type, TokenType::TK_SELECT);
+    EXPECT_EQ(tok.next_token().type, TokenType::TK_INTEGER);
+    EXPECT_EQ(tok.next_token().type, TokenType::TK_MINUS);
+    EXPECT_EQ(tok.next_token().type, TokenType::TK_MINUS);
+    EXPECT_EQ(tok.next_token().type, TokenType::TK_USER_VARIABLE);
+    EXPECT_TRUE(tok.has_user_variables());
+
+    sql = "SELECT 1-- @x\n";
+    tok.reset(sql, strlen(sql));
+    EXPECT_EQ(tok.next_token().type, TokenType::TK_SELECT);
+    EXPECT_EQ(tok.next_token().type, TokenType::TK_INTEGER);
+    EXPECT_EQ(tok.next_token().type, TokenType::TK_EOF);
+    EXPECT_FALSE(tok.has_user_variables());
+
+    const char control_sql[] = "SELECT 1--\x7f@x\n";
+    tok.reset(control_sql, sizeof(control_sql) - 1);
+    EXPECT_EQ(tok.next_token().type, TokenType::TK_SELECT);
+    EXPECT_EQ(tok.next_token().type, TokenType::TK_INTEGER);
+    EXPECT_EQ(tok.next_token().type, TokenType::TK_EOF);
+    EXPECT_FALSE(tok.has_user_variables());
+}
+
+TEST_F(MySQLTokenizerTest, UnterminatedBlockCommentIsAnError) {
+    const char* sql = "SELECT @x /* unterminated";
+    tok.reset(sql, strlen(sql));
+    while (tok.next_token().type != TokenType::TK_EOF) {}
+    EXPECT_TRUE(tok.has_error());
+}
+
 TEST_F(MySQLTokenizerTest, Placeholder) {
     const char* sql = "?";
     tok.reset(sql, strlen(sql));

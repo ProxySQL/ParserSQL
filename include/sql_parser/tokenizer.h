@@ -16,7 +16,10 @@ public:
         end_ = input + len;
         has_peeked_ = false;
         has_error_ = false;
+        has_fatal_error_ = false;
         has_user_variables_ = false;
+        paren_depth_ = 0;
+        first_open_paren_ = nullptr;
         error_source_ = {};
     }
 
@@ -25,6 +28,7 @@ public:
     // from "the input was syntactically invalid" and surface the latter
     // as ParseResult::ERROR rather than PARTIAL.
     bool has_error() const { return has_error_; }
+    bool has_fatal_error() const { return has_fatal_error_; }
     bool has_user_variables() const { return has_user_variables_; }
     StringRef error_source() const { return error_source_; }
 
@@ -36,6 +40,10 @@ public:
     void flag_error_at(StringRef source) {
         has_error_ = true;
         if (error_source_.empty()) error_source_ = source;
+    }
+    void flag_fatal_error_at(StringRef source) {
+        has_fatal_error_ = true;
+        flag_error_at(source);
     }
 
     Token next_token() {
@@ -75,7 +83,10 @@ private:
     Token peeked_;
     bool has_peeked_ = false;
     bool has_error_ = false;
+    bool has_fatal_error_ = false;
     bool has_user_variables_ = false;
+    uint32_t paren_depth_ = 0;
+    const char* first_open_paren_ = nullptr;
     StringRef error_source_;
 
     uint32_t offset() const {
@@ -103,8 +114,14 @@ private:
                 continue;
             }
 
-            // -- line comment (MySQL requires space after --, PgSQL doesn't but we handle both)
-            if (c == '-' && peek_char(1) == '-') {
+            // PostgreSQL accepts any `--` line comment. MySQL requires the
+            // second dash to be followed by whitespace or a control byte.
+            const bool dash_comment = c == '-' && peek_char(1) == '-' &&
+                (D == Dialect::PostgreSQL ||
+                 (cursor_ + 2 < end_ &&
+                  (static_cast<unsigned char>(peek_char(2)) <= 0x20 ||
+                   static_cast<unsigned char>(peek_char(2)) == 0x7f)));
+            if (dash_comment) {
                 cursor_ += 2;
                 while (cursor_ < end_ && *cursor_ != '\n') ++cursor_;
                 continue;
@@ -121,6 +138,7 @@ private:
 
             // /* block comment */
             if (c == '/' && peek_char(1) == '*') {
+                const char* comment_start = cursor_;
                 cursor_ += 2;
                 if constexpr (D == Dialect::PostgreSQL) {
                     // PostgreSQL supports nested block comments
@@ -136,14 +154,35 @@ private:
                             ++cursor_;
                         }
                     }
+                    if (depth != 0) {
+                        flag_fatal_error_at(StringRef{comment_start,
+                            static_cast<uint32_t>(end_ - comment_start)});
+                    }
                 } else {
                     // MySQL: no nesting
+                    const bool executable = cursor_ < end_ && *cursor_ == '!';
+                    bool has_user_variable_marker = false;
+                    bool closed = false;
                     while (cursor_ < end_) {
                         if (*cursor_ == '*' && peek_char(1) == '/') {
                             cursor_ += 2;
+                            closed = true;
                             break;
                         }
+                        if (*cursor_ == '@') has_user_variable_marker = true;
                         ++cursor_;
+                    }
+                    if (!closed) {
+                        flag_fatal_error_at(StringRef{comment_start,
+                            static_cast<uint32_t>(end_ - comment_start)});
+                    }
+                    // Versioned comments execute as SQL on MySQL. Until their
+                    // contents are parsed exactly, preserve any possible user
+                    // variable use and force conservative classification.
+                    if (executable && has_user_variable_marker) {
+                        has_user_variables_ = true;
+                        flag_fatal_error_at(StringRef{comment_start,
+                            static_cast<uint32_t>(cursor_ - comment_start)});
                     }
                 }
                 continue;
@@ -162,6 +201,15 @@ private:
         if (type == TokenType::TK_ERROR) {
             has_error_ = true;
             if (error_source_.empty()) error_source_ = StringRef{source_start, source_len};
+        }
+        if (type == TokenType::TK_LPAREN) {
+            if (paren_depth_ == 0) first_open_paren_ = source_start;
+            ++paren_depth_;
+        } else if (type == TokenType::TK_RPAREN && paren_depth_ > 0) {
+            if (--paren_depth_ == 0) first_open_paren_ = nullptr;
+        } else if (type == TokenType::TK_EOF && paren_depth_ > 0) {
+            flag_fatal_error_at(StringRef{first_open_paren_,
+                static_cast<uint32_t>(end_ - first_open_paren_)});
         }
         if (type == TokenType::TK_USER_VARIABLE) has_user_variables_ = true;
         return Token{type, StringRef{text_start, text_len},

@@ -58,3 +58,21 @@ TEST(MySQLUserVariableUsage, RejectsMalformedAndIncompleteParses) {
         EXPECT_EQ(classify(sql), UserVariableUsage::UNSAFE_OR_UNKNOWN);
     }
 }
+
+TEST(MySQLUserVariableUsage, HandlesMySQLCommentBoundariesConservatively) {
+    EXPECT_EQ(classify("SELECT 1--@x"), UserVariableUsage::READ_ONLY);
+    EXPECT_EQ(classify("/*!40101 SET @x=1 */"),
+              UserVariableUsage::UNSAFE_OR_UNKNOWN);
+    EXPECT_EQ(classify("SELECT @x /* unterminated"),
+              UserVariableUsage::UNSAFE_OR_UNKNOWN);
+    EXPECT_EQ(classify("SET @x=1 /* unterminated"),
+              UserVariableUsage::UNSAFE_OR_UNKNOWN);
+}
+
+TEST(MySQLUserVariableUsage, UnterminatedBlockCommentIsNotFullInput) {
+    Parser<Dialect::MySQL> parser;
+    const char* sql = "SET @x=1 /* unterminated";
+    ParseResult result = parser.parse(sql, std::strlen(sql));
+    EXPECT_EQ(result.status, ParseResult::ERROR);
+    EXPECT_FALSE(result.full_input);
+}

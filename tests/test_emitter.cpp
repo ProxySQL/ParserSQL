@@ -92,9 +92,14 @@ TEST_F(MySQLEmitterTest, SetDottedUserVariable) {
     EXPECT_EQ(out, "SET @user.var = 7");
 }
 
+TEST_F(MySQLEmitterTest, QuotedUserVariableRetainsExactReplaySpelling) {
+    EXPECT_EQ(round_trip("SELECT @'a-b'"), "SELECT @'a-b'");
+    EXPECT_EQ(round_trip("SET @`a``b` = 1"), "SET @`a``b` = 1");
+}
+
 TEST_F(MySQLEmitterTest, SetScopedCommaItemAfterUserVariable) {
     std::string out = round_trip("SET @'mix' := 1, LOCAL wait_timeout := 20");
-    EXPECT_EQ(out, "SET @mix = 1, LOCAL wait_timeout = 20");
+    EXPECT_EQ(out, "SET @'mix' = 1, LOCAL wait_timeout = 20");
 }
 
 TEST_F(MySQLEmitterTest, SetTransaction) {

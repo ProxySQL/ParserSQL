@@ -53,6 +53,17 @@ TEST(MySQLSetCompleteness, OnlyEofOrOneTrailingSemicolonIsFullInput) {
     }
 }
 
+TEST(MySQLSetCompleteness, MissingClosingParenthesisIsAnError) {
+    Parser<Dialect::MySQL> parser;
+    const char* cases[] = {"SET @x=(1;", "SET @x=(1,2", "SET @x=(1"};
+    for (const char* sql : cases) {
+        SCOPED_TRACE(sql);
+        ParseResult r = parser.parse(sql, strlen(sql));
+        EXPECT_EQ(r.status, ParseResult::ERROR);
+        EXPECT_FALSE(r.full_input);
+    }
+}
+
 // ============================================================================
 // Data-driven test infrastructure
 // ============================================================================
