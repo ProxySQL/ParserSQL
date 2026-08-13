@@ -154,6 +154,20 @@ TEST_F(MySQLDigestTest, SetVariableDigest) {
     EXPECT_EQ(d1.hash, d2.hash);
 }
 
+TEST_F(MySQLDigestTest, QuotedUserVariablesNormalizeSafelyAndConsistently) {
+    const char* plain_sql = "SELECT @plain";
+    EXPECT_EQ(normalized(plain_sql), "SELECT @plain");
+    EXPECT_EQ(normalized_token(plain_sql), "SELECT @plain");
+
+    const char* select_sql = "SELECT @'a-b'";
+    EXPECT_EQ(normalized(select_sql), "SELECT @?");
+    EXPECT_EQ(normalized_token(select_sql), "SELECT @?");
+
+    const char* set_sql = "SET @`a``b` = 1";
+    EXPECT_EQ(normalized(set_sql), "SET @? = ?");
+    EXPECT_EQ(normalized_token(set_sql), "SET @? = ?");
+}
+
 // ========== NULL and boolean literals ==========
 
 TEST_F(MySQLDigestTest, NullPreserved) {

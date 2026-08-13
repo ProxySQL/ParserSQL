@@ -127,11 +127,18 @@ enum class TokenType : uint16_t {
     // CTE tokens
     TK_WITH,
     TK_RECURSIVE,
+
+    // MySQL lossless user-variable/literal tokens. Keep appended so existing
+    // enum values remain stable for consumers that index by TokenType.
+    TK_USER_VARIABLE,
+    TK_HEX_LITERAL,
+    TK_BIT_LITERAL,
 };
 
 struct Token {
     TokenType type = TokenType::TK_EOF;
     StringRef text;
+    StringRef source;
     uint32_t offset = 0;
 };
 

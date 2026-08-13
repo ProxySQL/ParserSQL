@@ -102,16 +102,128 @@ TEST_F(MySQLTokenizerTest, AtVariables) {
     tok.reset(sql, strlen(sql));
 
     Token t = tok.next_token();
-    EXPECT_EQ(t.type, TokenType::TK_AT);
-
-    t = tok.next_token();
-    EXPECT_EQ(t.type, TokenType::TK_IDENTIFIER);
+    EXPECT_EQ(t.type, TokenType::TK_USER_VARIABLE);
+    EXPECT_EQ(std::string(t.source.ptr, t.source.len), "@myvar");
 
     t = tok.next_token();
     EXPECT_EQ(t.type, TokenType::TK_DOUBLE_AT);
 
     t = tok.next_token();
     EXPECT_EQ(t.type, TokenType::TK_IDENTIFIER);
+}
+
+TEST_F(MySQLTokenizerTest, LosslessLiteralTokens) {
+    struct LiteralCase {
+        const char* sql;
+        TokenType type;
+        const char* text;
+    };
+    const LiteralCase cases[] = {
+        {"1", TokenType::TK_INTEGER, "1"},
+        {"1.25", TokenType::TK_FLOAT, "1.25"},
+        {".25", TokenType::TK_FLOAT, ".25"},
+        {"1.", TokenType::TK_FLOAT, "1."},
+        {"1e3", TokenType::TK_FLOAT, "1e3"},
+        {"1.2E-3", TokenType::TK_FLOAT, "1.2E-3"},
+        {"0xCAFE", TokenType::TK_HEX_LITERAL, "0xCAFE"},
+        {"X'CAFE'", TokenType::TK_HEX_LITERAL, "X'CAFE'"},
+        {"0b101", TokenType::TK_BIT_LITERAL, "0b101"},
+        {"B'101'", TokenType::TK_BIT_LITERAL, "B'101'"},
+        {"'a''b'", TokenType::TK_STRING, "a''b"},
+        {"\"a\\\"b\"", TokenType::TK_STRING, "a\\\"b"},
+        {"NULL", TokenType::TK_NULL, "NULL"},
+    };
+
+    for (const auto& tc : cases) {
+        SCOPED_TRACE(tc.sql);
+        tok.reset(tc.sql, strlen(tc.sql));
+        Token t = tok.next_token();
+        EXPECT_EQ(t.type, tc.type);
+        EXPECT_EQ(std::string(t.text.ptr, t.text.len), tc.text);
+        EXPECT_EQ(std::string(t.source.ptr, t.source.len), tc.sql);
+        EXPECT_EQ(tok.next_token().type, TokenType::TK_EOF);
+    }
+}
+
+TEST_F(MySQLTokenizerTest, UserVariableIsOneLosslessToken) {
+    const char* cases[] = {
+        "@plain", "@with.dot", "@with$dollar", "@'quoted-name'",
+        "@\"quoted-name\"", "@`quoted-name`", "@'a''b'", "@`a``b`",
+        "@'back\\\\slash'",
+    };
+
+    for (const char* sql : cases) {
+        SCOPED_TRACE(sql);
+        tok.reset(sql, strlen(sql));
+        Token t = tok.next_token();
+        EXPECT_EQ(t.type, TokenType::TK_USER_VARIABLE);
+        EXPECT_EQ(std::string(t.source.ptr, t.source.len), sql);
+        EXPECT_EQ(tok.next_token().type, TokenType::TK_EOF);
+    }
+
+    tok.reset("@@session.sql_mode", strlen("@@session.sql_mode"));
+    EXPECT_EQ(tok.next_token().type, TokenType::TK_DOUBLE_AT);
+}
+
+TEST_F(MySQLTokenizerTest, MalformedLosslessTokensAreErrors) {
+    const char* cases[] = {
+        "0x", "0xGG", "0xCAFG", "0b", "0b2", "0b102",
+        "X'", "X'GG'", "X'CAFE", "B'", "B'2'", "B'101",
+        "1e", "1e+", "1.2E-", "'unterminated", "\"unterminated",
+        "@'unterminated", "@\"unterminated", "@`unterminated",
+    };
+
+    for (const char* sql : cases) {
+        SCOPED_TRACE(sql);
+        tok.reset(sql, strlen(sql));
+        EXPECT_EQ(tok.next_token().type, TokenType::TK_ERROR);
+        EXPECT_TRUE(tok.has_error());
+    }
+}
+
+TEST_F(MySQLTokenizerTest, DoubleDashRequiresFollowingWhitespaceOrControl) {
+    const char* sql = "SELECT 1--@x";
+    tok.reset(sql, strlen(sql));
+    EXPECT_EQ(tok.next_token().type, TokenType::TK_SELECT);
+    EXPECT_EQ(tok.next_token().type, TokenType::TK_INTEGER);
+    EXPECT_EQ(tok.next_token().type, TokenType::TK_MINUS);
+    EXPECT_EQ(tok.next_token().type, TokenType::TK_MINUS);
+    EXPECT_EQ(tok.next_token().type, TokenType::TK_USER_VARIABLE);
+    EXPECT_TRUE(tok.has_user_variables());
+
+    sql = "SELECT 1-- @x\n";
+    tok.reset(sql, strlen(sql));
+    EXPECT_EQ(tok.next_token().type, TokenType::TK_SELECT);
+    EXPECT_EQ(tok.next_token().type, TokenType::TK_INTEGER);
+    EXPECT_EQ(tok.next_token().type, TokenType::TK_EOF);
+    EXPECT_FALSE(tok.has_user_variables());
+
+    const char control_sql[] = "SELECT 1--\x7f@x\n";
+    tok.reset(control_sql, sizeof(control_sql) - 1);
+    EXPECT_EQ(tok.next_token().type, TokenType::TK_SELECT);
+    EXPECT_EQ(tok.next_token().type, TokenType::TK_INTEGER);
+    EXPECT_EQ(tok.next_token().type, TokenType::TK_EOF);
+    EXPECT_FALSE(tok.has_user_variables());
+}
+
+TEST_F(MySQLTokenizerTest, UnterminatedBlockCommentIsAnError) {
+    const char* sql = "SELECT @x /* unterminated";
+    tok.reset(sql, strlen(sql));
+    while (tok.next_token().type != TokenType::TK_EOF) {}
+    EXPECT_TRUE(tok.has_error());
+}
+
+TEST_F(MySQLTokenizerTest, MariaDBExecutableCommentsExposeUserVariables) {
+    const char* cases[] = {
+        "/*M!100100 SET @x=1 */",
+        "/*M! SET @x=1 */",
+    };
+    for (const char* sql : cases) {
+        SCOPED_TRACE(sql);
+        tok.reset(sql, strlen(sql));
+        while (tok.next_token().type != TokenType::TK_EOF) {}
+        EXPECT_TRUE(tok.has_user_variables());
+    }
 }
 
 TEST_F(MySQLTokenizerTest, Placeholder) {

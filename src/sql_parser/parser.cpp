@@ -23,8 +23,17 @@ void Parser<D>::reset() {
 template <Dialect D>
 ParseResult Parser<D>::parse(const char* sql, size_t len) {
     arena_.reset();
+    bool has_user_variables = false;
+    if constexpr (D == Dialect::MySQL) {
+        Tokenizer<D> detector;
+        detector.reset(sql, len);
+        while (detector.next_token().type != TokenType::TK_EOF) {}
+        has_user_variables = detector.has_user_variables();
+    }
     tokenizer_.reset(sql, len);
-    return classify_and_dispatch();
+    ParseResult result = classify_and_dispatch();
+    result.has_user_variables = has_user_variables || tokenizer_.has_user_variables();
+    return result;
 }
 
 template <Dialect D>
@@ -927,21 +936,39 @@ Token Parser<D>::read_table_name(StringRef& schema_out) {
 
 template <Dialect D>
 void Parser<D>::scan_to_end(ParseResult& result) {
-    while (true) {
-        Token t = tokenizer_.next_token();
-        if (t.type == TokenType::TK_EOF) break;
-        if (t.type == TokenType::TK_SEMICOLON) {
-            Token next = tokenizer_.peek();
-            if (next.type != TokenType::TK_EOF) {
-                const char* remaining_start = next.text.ptr;
-                const char* input_end = tokenizer_.input_end();
-                result.remaining = StringRef{
-                    remaining_start,
-                    static_cast<uint32_t>(input_end - remaining_start)
-                };
-            }
-            break;
+    Token first = tokenizer_.next_token();
+    if (first.type == TokenType::TK_EOF) {
+        StringRef error_source = tokenizer_.error_source();
+        if (!error_source.empty()) {
+            if (tokenizer_.has_fatal_error()) result.status = ParseResult::ERROR;
+            result.remaining = StringRef{error_source.ptr,
+                static_cast<uint32_t>(tokenizer_.input_end() - error_source.ptr)};
+        } else {
+            result.full_input = true;
         }
+        return;
+    }
+
+    if (first.type == TokenType::TK_SEMICOLON) {
+        Token next = tokenizer_.next_token();
+        if (next.type == TokenType::TK_EOF) {
+            StringRef error_source = tokenizer_.error_source();
+            if (tokenizer_.has_fatal_error() && !error_source.empty()) {
+                result.status = ParseResult::ERROR;
+                result.remaining = StringRef{error_source.ptr,
+                    static_cast<uint32_t>(tokenizer_.input_end() - error_source.ptr)};
+                return;
+            }
+            result.full_input = true;
+            return;
+        }
+        first = next;
+    }
+
+    const char* remaining_start = first.source.ptr ? first.source.ptr : first.text.ptr;
+    if (remaining_start) {
+        result.remaining = StringRef{remaining_start,
+            static_cast<uint32_t>(tokenizer_.input_end() - remaining_start)};
     }
 }
 
@@ -1292,6 +1319,90 @@ ParseResult Parser<D>::parse_with() {
 
     scan_to_end(r);
     return r;
+}
+
+namespace {
+
+bool is_forbidden_user_variable_context(NodeType type) {
+    switch (type) {
+        case NodeType::NODE_FUNCTION_CALL:
+        case NodeType::NODE_CALL_STMT:
+        case NodeType::NODE_DO_STMT:
+        case NodeType::NODE_PLACEHOLDER:
+        case NodeType::NODE_SUBQUERY:
+            return true;
+        default:
+            return false;
+    }
+}
+
+bool is_allowed_read_ancestor(NodeType type) {
+    switch (type) {
+        case NodeType::NODE_SELECT_STMT:
+        case NodeType::NODE_SELECT_ITEM_LIST:
+        case NodeType::NODE_SELECT_ITEM:
+        case NodeType::NODE_WHERE_CLAUSE:
+        case NodeType::NODE_GROUP_BY_CLAUSE:
+        case NodeType::NODE_HAVING_CLAUSE:
+        case NodeType::NODE_ORDER_BY_CLAUSE:
+        case NodeType::NODE_ORDER_BY_ITEM:
+        case NodeType::NODE_LIMIT_CLAUSE:
+        case NodeType::NODE_EXPRESSION:
+        case NodeType::NODE_BINARY_OP:
+        case NodeType::NODE_UNARY_OP:
+        case NodeType::NODE_IS_NULL:
+        case NodeType::NODE_IS_NOT_NULL:
+        case NodeType::NODE_BETWEEN:
+        case NodeType::NODE_IN_LIST:
+            return true;
+        default:
+            return false;
+    }
+}
+
+struct UsageWalk {
+    bool found = false;
+    bool unsafe = false;
+};
+
+void walk_user_variable_usage(const AstNode* node, bool path_is_read_safe,
+                              bool write_context, UsageWalk& walk) {
+    if (!node || walk.unsafe) return;
+    if (is_forbidden_user_variable_context(node->type)) {
+        walk.unsafe = true;
+        return;
+    }
+
+    bool child_write_context = write_context ||
+        node->type == NodeType::NODE_VAR_TARGET ||
+        node->type == NodeType::NODE_INTO_CLAUSE;
+
+    if (node->type == NodeType::NODE_USER_VARIABLE) {
+        walk.found = true;
+        if (write_context || !path_is_read_safe) walk.unsafe = true;
+        return;
+    }
+
+    bool child_path_is_read_safe = path_is_read_safe &&
+        is_allowed_read_ancestor(node->type);
+    for (const AstNode* child = node->first_child; child; child = child->next_sibling) {
+        walk_user_variable_usage(child, child_path_is_read_safe,
+                                 child_write_context, walk);
+    }
+}
+
+} // namespace
+
+UserVariableUsage classify_mysql_user_variable_usage(const ParseResult& result) {
+    if (!result.has_user_variables) return UserVariableUsage::NO_USER_VARIABLE;
+    if (result.status != ParseResult::OK || !result.full_input || !result.ast) {
+        return UserVariableUsage::UNSAFE_OR_UNKNOWN;
+    }
+
+    UsageWalk walk;
+    walk_user_variable_usage(result.ast, true, false, walk);
+    if (walk.unsafe || !walk.found) return UserVariableUsage::UNSAFE_OR_UNKNOWN;
+    return UserVariableUsage::READ_ONLY;
 }
 
 // ---- Explicit template instantiations ----

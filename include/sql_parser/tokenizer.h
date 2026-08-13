@@ -16,6 +16,11 @@ public:
         end_ = input + len;
         has_peeked_ = false;
         has_error_ = false;
+        has_fatal_error_ = false;
+        has_user_variables_ = false;
+        paren_depth_ = 0;
+        first_open_paren_ = nullptr;
+        error_source_ = {};
     }
 
     // True iff the tokenizer has emitted at least one TK_ERROR token since
@@ -23,12 +28,23 @@ public:
     // from "the input was syntactically invalid" and surface the latter
     // as ParseResult::ERROR rather than PARTIAL.
     bool has_error() const { return has_error_; }
+    bool has_fatal_error() const { return has_fatal_error_; }
+    bool has_user_variables() const { return has_user_variables_; }
+    StringRef error_source() const { return error_source_; }
 
     // Hook for parser-level (non-tokenizer) errors -- when the parser
     // detects clearly invalid input (e.g. `SET = X`, `SET x = ;`,
     // `SET x = ,foo`) it can flag the error so the eventual ParseResult
     // is ERROR rather than PARTIAL with a null AST.
     void flag_error() { has_error_ = true; }
+    void flag_error_at(StringRef source) {
+        has_error_ = true;
+        if (error_source_.empty()) error_source_ = source;
+    }
+    void flag_fatal_error_at(StringRef source) {
+        has_fatal_error_ = true;
+        flag_error_at(source);
+    }
 
     Token next_token() {
         if (has_peeked_) {
@@ -67,6 +83,11 @@ private:
     Token peeked_;
     bool has_peeked_ = false;
     bool has_error_ = false;
+    bool has_fatal_error_ = false;
+    bool has_user_variables_ = false;
+    uint32_t paren_depth_ = 0;
+    const char* first_open_paren_ = nullptr;
+    StringRef error_source_;
 
     uint32_t offset() const {
         return static_cast<uint32_t>(cursor_ - start_);
@@ -93,8 +114,14 @@ private:
                 continue;
             }
 
-            // -- line comment (MySQL requires space after --, PgSQL doesn't but we handle both)
-            if (c == '-' && peek_char(1) == '-') {
+            // PostgreSQL accepts any `--` line comment. MySQL requires the
+            // second dash to be followed by whitespace or a control byte.
+            const bool dash_comment = c == '-' && peek_char(1) == '-' &&
+                (D == Dialect::PostgreSQL ||
+                 (cursor_ + 2 < end_ &&
+                  (static_cast<unsigned char>(peek_char(2)) <= 0x20 ||
+                   static_cast<unsigned char>(peek_char(2)) == 0x7f)));
+            if (dash_comment) {
                 cursor_ += 2;
                 while (cursor_ < end_ && *cursor_ != '\n') ++cursor_;
                 continue;
@@ -111,6 +138,7 @@ private:
 
             // /* block comment */
             if (c == '/' && peek_char(1) == '*') {
+                const char* comment_start = cursor_;
                 cursor_ += 2;
                 if constexpr (D == Dialect::PostgreSQL) {
                     // PostgreSQL supports nested block comments
@@ -126,14 +154,37 @@ private:
                             ++cursor_;
                         }
                     }
+                    if (depth != 0) {
+                        flag_fatal_error_at(StringRef{comment_start,
+                            static_cast<uint32_t>(end_ - comment_start)});
+                    }
                 } else {
                     // MySQL: no nesting
+                    const bool executable = cursor_ < end_ &&
+                        (*cursor_ == '!' ||
+                         (cursor_ + 1 < end_ && cursor_[0] == 'M' && cursor_[1] == '!'));
+                    bool has_user_variable_marker = false;
+                    bool closed = false;
                     while (cursor_ < end_) {
                         if (*cursor_ == '*' && peek_char(1) == '/') {
                             cursor_ += 2;
+                            closed = true;
                             break;
                         }
+                        if (*cursor_ == '@') has_user_variable_marker = true;
                         ++cursor_;
+                    }
+                    if (!closed) {
+                        flag_fatal_error_at(StringRef{comment_start,
+                            static_cast<uint32_t>(end_ - comment_start)});
+                    }
+                    // MySQL and MariaDB executable comments run as SQL. Until
+                    // their contents are parsed exactly, preserve any possible
+                    // user variable use and force conservative classification.
+                    if (executable && has_user_variable_marker) {
+                        has_user_variables_ = true;
+                        flag_fatal_error_at(StringRef{comment_start,
+                            static_cast<uint32_t>(cursor_ - comment_start)});
                     }
                 }
                 continue;
@@ -143,10 +194,29 @@ private:
         }
     }
 
-    Token make_token(TokenType type, const char* start, uint32_t len) {
-        if (type == TokenType::TK_ERROR) has_error_ = true;
-        return Token{type, StringRef{start, len},
-                     static_cast<uint32_t>(start - start_)};
+    Token make_token(TokenType type, const char* text_start, uint32_t text_len,
+                     const char* source_start = nullptr, uint32_t source_len = 0) {
+        if (!source_start) {
+            source_start = text_start;
+            source_len = text_len;
+        }
+        if (type == TokenType::TK_ERROR) {
+            has_error_ = true;
+            if (error_source_.empty()) error_source_ = StringRef{source_start, source_len};
+        }
+        if (type == TokenType::TK_LPAREN) {
+            if (paren_depth_ == 0) first_open_paren_ = source_start;
+            ++paren_depth_;
+        } else if (type == TokenType::TK_RPAREN && paren_depth_ > 0) {
+            if (--paren_depth_ == 0) first_open_paren_ = nullptr;
+        } else if (type == TokenType::TK_EOF && paren_depth_ > 0) {
+            flag_fatal_error_at(StringRef{first_open_paren_,
+                static_cast<uint32_t>(end_ - first_open_paren_)});
+        }
+        if (type == TokenType::TK_USER_VARIABLE) has_user_variables_ = true;
+        return Token{type, StringRef{text_start, text_len},
+                     StringRef{source_start, source_len},
+                     static_cast<uint32_t>(source_start - start_)};
     }
 
     Token scan_identifier_or_keyword() {
@@ -184,23 +254,78 @@ private:
     Token scan_number() {
         const char* start = cursor_;
         bool has_dot = false;
-        while (cursor_ < end_) {
-            char c = *cursor_;
-            if (c >= '0' && c <= '9') {
-                ++cursor_;
-            } else if (c == '.' && !has_dot) {
-                has_dot = true;
-                ++cursor_;
-            } else {
-                break;
+        while (cursor_ < end_ && *cursor_ >= '0' && *cursor_ <= '9') ++cursor_;
+        if (cursor_ < end_ && *cursor_ == '.') {
+            has_dot = true;
+            ++cursor_;
+            while (cursor_ < end_ && *cursor_ >= '0' && *cursor_ <= '9') ++cursor_;
+        }
+        bool has_exponent = false;
+        if (cursor_ < end_ && (*cursor_ == 'e' || *cursor_ == 'E')) {
+            has_exponent = true;
+            ++cursor_;
+            if (cursor_ < end_ && (*cursor_ == '+' || *cursor_ == '-')) ++cursor_;
+            const char* exponent_digits = cursor_;
+            while (cursor_ < end_ && *cursor_ >= '0' && *cursor_ <= '9') ++cursor_;
+            if (cursor_ == exponent_digits) {
+                return make_token(TokenType::TK_ERROR, start,
+                    static_cast<uint32_t>(cursor_ - start));
             }
         }
         uint32_t len = static_cast<uint32_t>(cursor_ - start);
-        return make_token(has_dot ? TokenType::TK_FLOAT : TokenType::TK_INTEGER,
+        return make_token(has_dot || has_exponent ? TokenType::TK_FLOAT : TokenType::TK_INTEGER,
+                          start, len);
+    }
+
+    static bool is_hex_digit(char c) {
+        return (c >= '0' && c <= '9') || (c >= 'a' && c <= 'f') ||
+               (c >= 'A' && c <= 'F');
+    }
+
+    static bool is_token_word_char(char c) {
+        return (c >= '0' && c <= '9') || (c >= 'a' && c <= 'z') ||
+               (c >= 'A' && c <= 'Z') || c == '_' || c == '$';
+    }
+
+    Token scan_prefixed_base_literal(bool hex) {
+        const char* start = cursor_;
+        cursor_ += 2;
+        const char* digits = cursor_;
+        while (cursor_ < end_ && (hex ? is_hex_digit(*cursor_) : (*cursor_ == '0' || *cursor_ == '1'))) {
+            ++cursor_;
+        }
+        bool invalid = cursor_ == digits;
+        if (cursor_ < end_ && is_token_word_char(*cursor_)) {
+            invalid = true;
+            while (cursor_ < end_ && is_token_word_char(*cursor_)) ++cursor_;
+        }
+        uint32_t len = static_cast<uint32_t>(cursor_ - start);
+        return make_token(invalid ? TokenType::TK_ERROR :
+                          (hex ? TokenType::TK_HEX_LITERAL : TokenType::TK_BIT_LITERAL),
+                          start, len);
+    }
+
+    Token scan_quoted_base_literal(bool hex) {
+        const char* start = cursor_;
+        cursor_ += 2; // prefix and opening quote
+        bool invalid = false;
+        while (cursor_ < end_ && *cursor_ != '\'') {
+            if (hex ? !is_hex_digit(*cursor_) : (*cursor_ != '0' && *cursor_ != '1')) invalid = true;
+            ++cursor_;
+        }
+        if (cursor_ >= end_) {
+            return make_token(TokenType::TK_ERROR, start,
+                              static_cast<uint32_t>(cursor_ - start));
+        }
+        ++cursor_;
+        uint32_t len = static_cast<uint32_t>(cursor_ - start);
+        return make_token(invalid ? TokenType::TK_ERROR :
+                          (hex ? TokenType::TK_HEX_LITERAL : TokenType::TK_BIT_LITERAL),
                           start, len);
     }
 
     Token scan_single_quoted_string() {
+        const char* source_start = cursor_;
         ++cursor_;  // skip opening quote
         const char* content_start = cursor_;
         while (cursor_ < end_) {
@@ -220,8 +345,91 @@ private:
             }
         }
         uint32_t len = static_cast<uint32_t>(cursor_ - content_start);
-        if (cursor_ < end_) ++cursor_;  // skip closing quote
-        return make_token(TokenType::TK_STRING, content_start, len);
+        if (cursor_ >= end_) {
+            return make_token(TokenType::TK_ERROR, source_start,
+                              static_cast<uint32_t>(cursor_ - source_start));
+        }
+        ++cursor_;  // skip closing quote
+        return make_token(TokenType::TK_STRING, content_start, len, source_start,
+                          static_cast<uint32_t>(cursor_ - source_start));
+    }
+
+    Token scan_double_quoted_string() {
+        const char* source_start = cursor_;
+        ++cursor_;
+        const char* content_start = cursor_;
+        while (cursor_ < end_) {
+            if (*cursor_ == '"') {
+                if (cursor_ + 1 < end_ && cursor_[1] == '"') {
+                    cursor_ += 2;
+                    continue;
+                }
+                break;
+            }
+            if (*cursor_ == '\\') {
+                ++cursor_;
+                if (cursor_ < end_) ++cursor_;
+            } else {
+                ++cursor_;
+            }
+        }
+        uint32_t len = static_cast<uint32_t>(cursor_ - content_start);
+        if (cursor_ >= end_) {
+            return make_token(TokenType::TK_ERROR, source_start,
+                              static_cast<uint32_t>(cursor_ - source_start));
+        }
+        ++cursor_;
+        return make_token(TokenType::TK_STRING, content_start, len, source_start,
+                          static_cast<uint32_t>(cursor_ - source_start));
+    }
+
+    Token scan_mysql_user_variable() {
+        has_user_variables_ = true;
+        const char* source_start = cursor_;
+        ++cursor_; // @
+        if (cursor_ >= end_) return make_token(TokenType::TK_AT, source_start, 1);
+
+        char delimiter = *cursor_;
+        if (delimiter == '\'' || delimiter == '"' || delimiter == '`') {
+            ++cursor_;
+            const char* content_start = cursor_;
+            while (cursor_ < end_) {
+                if (*cursor_ == delimiter) {
+                    if (cursor_ + 1 < end_ && cursor_[1] == delimiter) {
+                        cursor_ += 2;
+                        continue;
+                    }
+                    uint32_t text_len = static_cast<uint32_t>(cursor_ - content_start);
+                    ++cursor_;
+                    return make_token(TokenType::TK_USER_VARIABLE, content_start, text_len,
+                                      source_start,
+                                      static_cast<uint32_t>(cursor_ - source_start));
+                }
+                if (*cursor_ == '\\') {
+                    ++cursor_;
+                    if (cursor_ < end_) ++cursor_;
+                } else {
+                    ++cursor_;
+                }
+            }
+            return make_token(TokenType::TK_ERROR, source_start,
+                              static_cast<uint32_t>(cursor_ - source_start));
+        }
+
+        const char* name_start = cursor_;
+        while (cursor_ < end_) {
+            char c = *cursor_;
+            if ((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') ||
+                (c >= '0' && c <= '9') || c == '.' || c == '_' || c == '$') {
+                ++cursor_;
+            } else {
+                break;
+            }
+        }
+        if (cursor_ == name_start) return make_token(TokenType::TK_AT, source_start, 1);
+        return make_token(TokenType::TK_USER_VARIABLE, name_start,
+                          static_cast<uint32_t>(cursor_ - name_start), source_start,
+                          static_cast<uint32_t>(cursor_ - source_start));
     }
 
     // MySQL: backtick-quoted identifier
@@ -240,7 +448,8 @@ private:
         }
         uint32_t len = static_cast<uint32_t>(cursor_ - content_start);
         ++cursor_;  // skip closing backtick
-        return make_token(TokenType::TK_IDENTIFIER, content_start, len);
+        return make_token(TokenType::TK_IDENTIFIER, content_start, len, open_pos,
+                          static_cast<uint32_t>(cursor_ - open_pos));
     }
 
     // PostgreSQL: double-quoted identifier
@@ -258,7 +467,8 @@ private:
         }
         uint32_t len = static_cast<uint32_t>(cursor_ - content_start);
         ++cursor_;  // skip closing quote
-        return make_token(TokenType::TK_IDENTIFIER, content_start, len);
+        return make_token(TokenType::TK_IDENTIFIER, content_start, len, open_pos,
+                          static_cast<uint32_t>(cursor_ - open_pos));
     }
 
     // PostgreSQL: $$...$$ dollar-quoted string
@@ -288,6 +498,21 @@ private:
 
         char c = *cursor_;
 
+        if constexpr (D == Dialect::MySQL) {
+            if ((c == 'x' || c == 'X') && peek_char(1) == '\'') {
+                return scan_quoted_base_literal(true);
+            }
+            if ((c == 'b' || c == 'B') && peek_char(1) == '\'') {
+                return scan_quoted_base_literal(false);
+            }
+            if (c == '0' && (peek_char(1) == 'x' || peek_char(1) == 'X')) {
+                return scan_prefixed_base_literal(true);
+            }
+            if (c == '0' && (peek_char(1) == 'b' || peek_char(1) == 'B')) {
+                return scan_prefixed_base_literal(false);
+            }
+        }
+
         // Identifiers and keywords
         if ((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || c == '_') {
             return scan_identifier_or_keyword();
@@ -310,16 +535,7 @@ private:
         // MySQL: double-quoted strings; PostgreSQL: double-quoted identifiers
         if (c == '"') {
             if constexpr (D == Dialect::MySQL) {
-                // In MySQL, double quotes are strings (unless ANSI_QUOTES mode)
-                ++cursor_;
-                const char* content_start = cursor_;
-                while (cursor_ < end_ && *cursor_ != '"') {
-                    if (*cursor_ == '\\') { ++cursor_; if (cursor_ < end_) ++cursor_; }
-                    else ++cursor_;
-                }
-                uint32_t len = static_cast<uint32_t>(cursor_ - content_start);
-                if (cursor_ < end_) ++cursor_;
-                return make_token(TokenType::TK_STRING, content_start, len);
+                return scan_double_quoted_string();
             } else {
                 return scan_double_quoted_identifier();
             }
@@ -337,9 +553,13 @@ private:
                 cursor_ += 2;
                 return make_token(TokenType::TK_DOUBLE_AT, s, 2);
             }
-            const char* s = cursor_;
-            ++cursor_;
-            return make_token(TokenType::TK_AT, s, 1);
+            if constexpr (D == Dialect::MySQL) {
+                return scan_mysql_user_variable();
+            } else {
+                const char* s = cursor_;
+                ++cursor_;
+                return make_token(TokenType::TK_AT, s, 1);
+            }
         }
 
         // $ — PostgreSQL: $N placeholder or $$string$$

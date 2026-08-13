@@ -6,6 +6,7 @@
 #include "sql_parser/tokenizer.h"
 #include "sql_parser/ast.h"
 #include "sql_parser/arena.h"
+#include "sql_parser/user_variable.h"
 
 namespace sql_parser {
 
@@ -99,19 +100,27 @@ private:
         switch (t.type) {
             case TokenType::TK_INTEGER: {
                 tok_.skip();
-                return make_node(arena_, NodeType::NODE_LITERAL_INT, t.text);
+                return make_node_from_token(arena_, NodeType::NODE_LITERAL_INT, t);
             }
             case TokenType::TK_FLOAT: {
                 tok_.skip();
-                return make_node(arena_, NodeType::NODE_LITERAL_FLOAT, t.text);
+                return make_node_from_token(arena_, NodeType::NODE_LITERAL_FLOAT, t);
+            }
+            case TokenType::TK_HEX_LITERAL: {
+                tok_.skip();
+                return make_node_from_token(arena_, NodeType::NODE_LITERAL_HEX, t);
+            }
+            case TokenType::TK_BIT_LITERAL: {
+                tok_.skip();
+                return make_node_from_token(arena_, NodeType::NODE_LITERAL_BIT, t);
             }
             case TokenType::TK_STRING: {
                 tok_.skip();
-                return make_node(arena_, NodeType::NODE_LITERAL_STRING, t.text);
+                return make_node_from_token(arena_, NodeType::NODE_LITERAL_STRING, t);
             }
             case TokenType::TK_NULL: {
                 tok_.skip();
-                return make_node(arena_, NodeType::NODE_LITERAL_NULL, t.text);
+                return make_node_from_token(arena_, NodeType::NODE_LITERAL_NULL, t);
             }
             case TokenType::TK_TRUE:
             case TokenType::TK_FALSE: {
@@ -150,6 +159,10 @@ private:
                     static_cast<uint32_t>((name.text.ptr + name.text.len) - t.text.ptr)};
                 return make_node(arena_, NodeType::NODE_COLUMN_REF, full);
             }
+            case TokenType::TK_USER_VARIABLE: {
+                tok_.skip();
+                return make_mysql_user_variable_node(arena_, t);
+            }
             case TokenType::TK_DOUBLE_AT: {
                 // System variable: @@name or @@scope.name
                 tok_.skip();
@@ -174,19 +187,26 @@ private:
                 AstNode* operand = parse(Precedence::UNARY);
                 if (!operand) return nullptr;
                 AstNode* node = make_node(arena_, NodeType::NODE_UNARY_OP, t.text);
+                set_span_through_node_(node, t.source, operand);
                 node->add_child(operand);
                 return node;
             }
             case TokenType::TK_PLUS: {
                 // Unary plus
                 tok_.skip();
-                return parse(Precedence::UNARY);
+                AstNode* operand = parse(Precedence::UNARY);
+                if (!operand) return nullptr;
+                AstNode* node = make_node(arena_, NodeType::NODE_UNARY_OP, t.text);
+                set_span_through_node_(node, t.source, operand);
+                node->add_child(operand);
+                return node;
             }
             case TokenType::TK_NOT: {
                 tok_.skip();
                 AstNode* operand = parse(Precedence::NOT);
                 if (!operand) return nullptr;
                 AstNode* node = make_node(arena_, NodeType::NODE_UNARY_OP, t.text);
+                set_span_through_node_(node, t.source, operand);
                 node->add_child(operand);
                 return node;
             }
@@ -266,7 +286,12 @@ private:
                     return parse_postfix(tuple);
                 }
                 if (tok_.peek().type == TokenType::TK_RPAREN) {
-                    tok_.skip();
+                    Token close = tok_.next_token();
+                    AstNode* wrapper = make_node(arena_, NodeType::NODE_EXPRESSION);
+                    wrapper->set_source(StringRef{t.source.ptr,
+                        static_cast<uint32_t>(close.source.ptr + close.source.len - t.source.ptr)});
+                    wrapper->add_child(expr);
+                    return parse_postfix(wrapper);
                 }
                 // Check for postfix: (expr).field or (expr)[index]
                 return parse_postfix(expr);
@@ -287,11 +312,39 @@ private:
         }
     }
 
+    static void set_span_through_node_(AstNode* node, StringRef start,
+                                       const AstNode* end_node) {
+        if (!node || !start.ptr || !end_node) return;
+        StringRef end = end_node->source();
+        if (end.empty()) end = end_node->value();
+        if (!end.ptr || end.ptr < start.ptr) return;
+        node->set_source(StringRef{start.ptr,
+            static_cast<uint32_t>(end.ptr + end.len - start.ptr)});
+    }
+
     AstNode* parse_identifier_or_function(const Token& name_token) {
         // Check for function call: name(
         if (tok_.peek().type == TokenType::TK_LPAREN) {
             tok_.skip();  // consume (
             AstNode* func = make_node(arena_, NodeType::NODE_FUNCTION_CALL, name_token.text);
+            // CAST uses `CAST(expr AS type)` rather than a comma-separated
+            // argument list. Model it as a function call so consumers can
+            // reject or handle the expression without leaving valid input
+            // unconsumed.
+            if (name_token.text.equals_ci("CAST", 4)) {
+                AstNode* arg = parse();
+                if (!arg || tok_.peek().type != TokenType::TK_AS) return func;
+                func->add_child(arg);
+                tok_.skip();
+                Token type = tok_.next_token();
+                if (type.type == TokenType::TK_EOF ||
+                    type.type == TokenType::TK_RPAREN) {
+                    return func;
+                }
+                func->add_child(make_node(arena_, NodeType::NODE_IDENTIFIER, type.text));
+                if (tok_.peek().type == TokenType::TK_RPAREN) tok_.skip();
+                return func;
+            }
             // Parse argument list
             if (tok_.peek().type != TokenType::TK_RPAREN) {
                 while (true) {

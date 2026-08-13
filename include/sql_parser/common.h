@@ -231,6 +231,12 @@ enum class NodeType : uint16_t {
     NODE_SET_ROLE,                  // SET [LOCAL] ROLE <name>|NONE|DEFAULT
     NODE_SET_SESSION_AUTHORIZATION, // SET SESSION AUTHORIZATION <name>|DEFAULT
     NODE_SET_CONSTRAINTS,           // SET CONSTRAINTS {ALL|<name>[,...]} {DEFERRED|IMMEDIATE}
+
+    // MySQL lossless user-variable/literal nodes. Keep appended so existing
+    // enum values remain stable for consumers that index by NodeType.
+    NODE_USER_VARIABLE,
+    NODE_LITERAL_HEX,
+    NODE_LITERAL_BIT,
 };
 
 } // namespace sql_parser
