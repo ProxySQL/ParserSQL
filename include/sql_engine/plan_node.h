@@ -101,7 +101,7 @@ struct PlanNode {
         struct {
             const char* backend_name;
             const char* remote_sql;
-            uint16_t remote_sql_len;
+            uint32_t remote_sql_len;
             const TableInfo* table;       // expected result schema (for SELECT *)
             // Optional projection expressions used to derive result column
             // names when the remote SQL is not a passthrough SELECT *. When

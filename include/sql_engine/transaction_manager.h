@@ -2,6 +2,7 @@
 #define SQL_ENGINE_TRANSACTION_MANAGER_H
 
 #include "sql_engine/dml_result.h"
+#include "sql_engine/result_set.h"
 #include "sql_parser/common.h"
 
 namespace sql_engine {
@@ -40,6 +41,13 @@ public:
         r.error_message = "route_dml not supported by this transaction manager";
         return r;
     }
+
+    virtual ResultSet route_query(const char* /*backend_name*/,
+                                  sql_parser::StringRef /*sql*/) {
+        return {};
+    }
+
+    virtual bool route_query_supported() const { return false; }
 };
 
 } // namespace sql_engine

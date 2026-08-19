@@ -18,6 +18,7 @@
 #include <cstring>
 #include <iomanip>
 #include <unistd.h>
+#include <memory>
 
 #include "sql_parser/parser.h"
 #include "sql_parser/common.h"
@@ -25,6 +26,8 @@
 #include "sql_engine/in_memory_catalog.h"
 #include "sql_engine/data_source.h"
 #include "sql_engine/local_txn.h"
+#include "sql_engine/distributed_txn.h"
+#include "sql_engine/durable_txn_log.h"
 #include "sql_engine/multi_remote_executor.h"
 #include "sql_engine/thread_safe_executor.h"
 #include "sql_engine/shard_map.h"
@@ -226,6 +229,7 @@ static void print_usage(const char* prog) {
               << "Options:\n"
               << "  --backend URL    Add a backend (mysql://... or pgsql://...)\n"
               << "  --shard SPEC     Add shard config (table:key:shard1,shard2)\n"
+              << "  --txn-log PATH   Durable 2PC WAL (backend mode only)\n"
               << "  --help           Show this help\n"
               << "\n"
               << "In-memory mode (no --backend): evaluates expressions locally.\n"
@@ -239,6 +243,7 @@ static void print_usage(const char* prog) {
 int main(int argc, char* argv[]) {
     std::vector<BackendConfig> backends;
     std::vector<TableShardConfig> shards;
+    std::string txn_log_path;
 
     // Parse command-line args
     for (int i = 1; i < argc; ++i) {
@@ -254,6 +259,9 @@ int main(int argc, char* argv[]) {
                 return 1;
             }
             backends.push_back(std::move(pb.config));
+        } else if (arg == "--txn-log" && i + 1 < argc) {
+            ++i;
+            txn_log_path = argv[i];
         } else if (arg == "--shard" && i + 1 < argc) {
             ++i;
             auto ps = parse_shard_spec(argv[i]);
@@ -274,7 +282,10 @@ int main(int argc, char* argv[]) {
 
     // Set up arena for transaction manager
     Arena txn_arena{65536, 1048576};
-    LocalTransactionManager txn_mgr(txn_arena);
+    LocalTransactionManager local_txn(txn_arena);
+    std::unique_ptr<DistributedTransactionManager> dtxn;
+    DurableTransactionLog txn_log;
+    TransactionManager* txn_mgr = &local_txn;
 
     // Set up shard map
     ShardMap shard_map;
@@ -344,8 +355,20 @@ int main(int argc, char* argv[]) {
         }
     }
 
-    // Create session
-    Session<Dialect::MySQL> session(catalog, txn_mgr);
+    if (remote_exec) {
+        dtxn.reset(new DistributedTransactionManager(
+            *remote_exec, DistributedTransactionManager::BackendDialect::MYSQL));
+        if (!txn_log_path.empty()) {
+            if (!txn_log.open(txn_log_path)) {
+                std::cerr << "Error: cannot open txn log " << txn_log_path << std::endl;
+                return 1;
+            }
+            dtxn->set_durable_log(&txn_log);
+        }
+        txn_mgr = dtxn.get();
+    }
+
+    Session<Dialect::MySQL> session(catalog, *txn_mgr);
     if (remote_exec) {
         session.set_remote_executor(remote_exec);
         session.set_parallel_open(true);  // thread-safe executor enables parallel shard I/O

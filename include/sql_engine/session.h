@@ -13,6 +13,7 @@
 #include "sql_engine/result_set.h"
 #include "sql_engine/dml_result.h"
 #include "sql_engine/mutable_data_source.h"
+#include "sql_engine/remote_executor.h"
 #include "sql_parser/parser.h"
 #include "sql_parser/common.h"
 
@@ -24,6 +25,44 @@
 #include <memory>
 
 namespace sql_engine {
+
+class TxnRoutingExecutor : public RemoteExecutor {
+public:
+    void bind(RemoteExecutor* inner, TransactionManager* txn) {
+        inner_ = inner;
+        txn_ = txn;
+    }
+
+    ResultSet execute(const char* backend_name, sql_parser::StringRef sql) override {
+        if (txn_ && txn_->in_transaction() && txn_->is_distributed() &&
+            txn_->route_query_supported()) {
+            return txn_->route_query(backend_name, sql);
+        }
+        return inner_ ? inner_->execute(backend_name, sql) : ResultSet{};
+    }
+
+    DmlResult execute_dml(const char* backend_name, sql_parser::StringRef sql) override {
+        if (txn_ && txn_->in_transaction() && txn_->is_distributed()) {
+            return txn_->route_dml(backend_name, sql);
+        }
+        if (inner_) return inner_->execute_dml(backend_name, sql);
+        DmlResult r;
+        r.error_message = "no remote executor";
+        return r;
+    }
+
+    bool allows_unpinned_distributed_2pc() const override {
+        return inner_ && inner_->allows_unpinned_distributed_2pc();
+    }
+
+    std::unique_ptr<RemoteSession> checkout_session(const char* backend_name) override {
+        return inner_ ? inner_->checkout_session(backend_name) : nullptr;
+    }
+
+private:
+    RemoteExecutor* inner_ = nullptr;
+    TransactionManager* txn_ = nullptr;
+};
 
 // Session<D> is the high-level API that ties together parsing, planning,
 // optimization, execution, and transaction management.
@@ -306,6 +345,7 @@ private:
     FunctionRegistry<D> functions_;
     Optimizer<D> optimizer_;
     RemoteExecutor* remote_executor_ = nullptr;
+    TxnRoutingExecutor routing_exec_;
     const ShardMap* shard_map_ = nullptr;
     bool parallel_open_enabled_ = false;
     std::unordered_map<std::string, DataSource*> sources_;
@@ -377,8 +417,10 @@ private:
             executor.add_data_source(kv.first.c_str(), kv.second);
         for (auto& kv : mutable_sources_)
             executor.add_mutable_data_source(kv.first.c_str(), kv.second);
-        if (remote_executor_)
-            executor.set_remote_executor(remote_executor_);
+        if (remote_executor_) {
+            routing_exec_.bind(remote_executor_, &txn_mgr_);
+            executor.set_remote_executor(&routing_exec_);
+        }
         if (parallel_open_enabled_) {
             executor.set_parallel_open(true);
             if (pool_)

@@ -25,6 +25,7 @@
 #include "sql_parser/common.h"
 #include "sql_parser/arena.h"
 #include <cstring>
+#include <cstdlib>
 #include <vector>
 
 namespace sql_engine {
@@ -114,6 +115,55 @@ private:
             if (item->first_child && is_window_function(item->first_child)) return true;
         }
         return false;
+    }
+
+    static const sql_parser::AstNode* select_item_expr(const sql_parser::AstNode* item) {
+        return item ? item->first_child : nullptr;
+    }
+
+    static sql_parser::StringRef select_item_alias(const sql_parser::AstNode* item) {
+        if (!item) return {};
+        for (const sql_parser::AstNode* c = item->first_child; c; c = c->next_sibling) {
+            if (c->type == sql_parser::NodeType::NODE_ALIAS) return c->value();
+        }
+        return {};
+    }
+
+    static const sql_parser::AstNode* resolve_order_key(
+            const sql_parser::AstNode* key, const sql_parser::AstNode* select_items) {
+        if (!key || !select_items) return key;
+        uint16_t n = count_children(select_items);
+        if (n == 0) return key;
+
+        if (key->type == sql_parser::NodeType::NODE_LITERAL_INT) {
+            sql_parser::StringRef sv = key->value();
+            if (!sv.ptr || sv.len == 0) return key;
+            int64_t pos = std::strtoll(sv.ptr, nullptr, 10);
+            if (pos < 1 || pos > static_cast<int64_t>(n)) return key;
+            uint16_t idx = 0;
+            for (const sql_parser::AstNode* item = select_items->first_child; item;
+                 item = item->next_sibling, ++idx) {
+                if (idx + 1 == static_cast<uint16_t>(pos)) {
+                    const sql_parser::AstNode* expr = select_item_expr(item);
+                    return expr ? expr : key;
+                }
+            }
+            return key;
+        }
+
+        if (key->type == sql_parser::NodeType::NODE_COLUMN_REF ||
+            key->type == sql_parser::NodeType::NODE_IDENTIFIER) {
+            sql_parser::StringRef name = key->value();
+            for (const sql_parser::AstNode* item = select_items->first_child; item;
+                 item = item->next_sibling) {
+                sql_parser::StringRef alias = select_item_alias(item);
+                if (alias.ptr && alias.equals_ci(name.ptr, name.len)) {
+                    const sql_parser::AstNode* expr = select_item_expr(item);
+                    return expr ? expr : key;
+                }
+            }
+        }
+        return key;
     }
 
     // Check if an expression (or any descendant) contains an aggregate function call.
@@ -279,10 +329,12 @@ private:
                 arena_.allocate(sizeof(sql_parser::AstNode*) * cnt));
             auto* dirs = static_cast<uint8_t*>(arena_.allocate(cnt));
 
+            const sql_parser::AstNode* select_items =
+                find_child(select_ast, sql_parser::NodeType::NODE_SELECT_ITEM_LIST);
+
             uint16_t idx = 0;
             for (const sql_parser::AstNode* item = order_by->first_child; item; item = item->next_sibling) {
-                // First child is the key expression
-                keys[idx] = item->first_child;
+                keys[idx] = resolve_order_key(item->first_child, select_items);
                 // Check for DESC direction (second child with "DESC" value)
                 dirs[idx] = 0; // ASC by default
                 const sql_parser::AstNode* dir_node = find_child(item, sql_parser::NodeType::NODE_IDENTIFIER);
