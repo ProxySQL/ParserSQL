@@ -1,24 +1,66 @@
-# Repository Guidelines
+# Agent notes
 
-## Project Structure & Module Organization
-Core parser headers live in `include/sql_parser/` and parser implementations in `src/sql_parser/`. SQL engine, remote execution, and transaction interfaces live in `include/sql_engine/` with implementations in `src/sql_engine/`. Tests are in `tests/`, mostly as focused `test_<area>.cpp` files plus `corpus_test.cpp` for large parser corpora. Developer tools live in `tools/`, automation scripts in `scripts/`, benchmark reports in `docs/benchmarks/`, and vendored dependencies in `third_party/`.
+Trust the `Makefile` over prose. Extension recipes live in `CLAUDE.md`. `docs/superpowers/` is historical, not current behavior.
 
-## Build, Test, and Development Commands
-Use the `Makefile` as the source of truth:
+## Layout
 
-- `make all` builds `libsqlparser.a` and runs the full GoogleTest suite.
-- `make test` rebuilds `run_tests` and executes all tests locally.
-- `make lib` builds just the static library.
-- `make build-sqlengine` builds the interactive CLI as `./sqlengine`.
-- `make build-corpus-test` builds `./corpus_test` for external SQL corpus validation.
-- `make bench` runs the benchmark binary; use it for parser or executor performance changes.
-- `make clean` removes generated objects and binaries.
+- Parser: header-only templates in `include/sql_parser/` except `src/sql_parser/{arena,parser}.cpp`
+- Engine: headers in `include/sql_engine/` (`operators/`, `functions/`, `rules/`); compiled files are the explicit `ENGINE_SRCS` list
+- High-level API: `Session<D>` (`include/sql_engine/session.h`) — parse → plan → optimize → distribute → execute
+- Production remote path: `ThreadSafeMultiRemoteExecutor`, not the single-connection executors
+- All shard routing (SELECT prune and DML) goes through `ShardMap`. Do not add a private hash in the planner.
+- Backend URL / shard-spec parsing: `tool_config_parser` — do not add another copy in tools
+- Do not edit `third_party/`
 
-## Coding Style & Naming Conventions
-This repository is C++17 with warnings enabled via `-Wall -Wextra`. Match the existing style: 4-space indentation, opening braces on the same line, and concise comments only where the code is not obvious. Use `PascalCase` for types, `snake_case` for functions and methods, `UPPER_SNAKE_CASE` for include guards and macros, and keep file names module-oriented such as `parser.cpp`, `distributed_txn.h`, and `test_select.cpp`. There is no repo-wide formatter config outside vendored code, so follow surrounding files closely.
+## Commands
 
-## Testing Guidelines
-Tests use GoogleTest through `tests/test_main.cpp`. Add coverage in the nearest existing `test_<feature>.cpp`, or create a new file with that pattern if the area is new. Prefer small, focused `TEST` or `TEST_F` cases that mirror the production module name. Run `make test` before opening a PR; for grammar or dialect work, also run `make build-corpus-test`.
+```bash
+make all                 # libsqlparser.a + full GoogleTest suite
+make lib
+make test                # rebuild ./run_tests and run it
+./run_tests --gtest_filter='*WindowFunc*'
+make build-sqlengine     # ./sqlengine
+make build-corpus-test   # ./corpus_test
+make mysql-server engine-stress bench-distributed
+make bench               # -O2; release+corpus report: bash scripts/run_benchmarks.sh report.md
+make test-pg-compat      # committed PG18 gate (needs PG_COMPAT_CACHE / libpg_query)
+```
 
-## Commit & Pull Request Guidelines
-Recent history uses short conventional prefixes such as `feat:`, `fix:`, `test:`, `docs:`, and `chore:`. Keep commit titles imperative and specific, for example `feat: add UTC normalization for PgSQL timestamps`. PRs should target `main`, explain parser/engine behavior changes, list the commands you ran, and link related issues. Include benchmark or corpus-test notes when performance or SQL coverage changes. Do not commit generated `.o` files, binaries, or benchmark artifacts.
+New `tests/test_*.cpp` must be appended to `TEST_SRCS`. New `src/sql_engine/*.cpp` must be appended to `ENGINE_SRCS`. Otherwise they never build.
+
+No repo formatter. C++17, `-Wall -Wextra`. Match neighboring files. Includes: `"sql_parser/..."`, `"sql_engine/..."`.
+
+macOS needs client libs: `brew install mysql-client postgresql zstd`, then
+`LIBRARY_PATH=/opt/homebrew/lib make all MYSQL_CFLAGS="-I/opt/homebrew/opt/mysql-client/include"`.
+Tests and tools link libmysqlclient + libpq even when no live backend is used.
+
+## Parser gotchas
+
+- Dialect is compile-time: `Parser<Dialect::MySQL>` / `Parser<Dialect::PostgreSQL>`. One `Parser` per thread (non-copyable).
+- `parse(sql, len)` takes an explicit length. `StringRef` views the input — keep the SQL buffer alive until you are done with the AST.
+- `parser.reset()` rewinds the arena; AST and emitter output are invalid after reset.
+- Keyword lookup is a hash table from `keywords_mysql.h` / `keywords_pgsql.h`. Keep those arrays alphabetically sorted. New keywords also need `token.h`, and usually `is_keyword_as_identifier()` in `expression_parser.h` plus `is_alias_start()` in `table_ref_parser.h`.
+- Classifier switch: `classify_and_dispatch()` in `src/sql_parser/parser.cpp`.
+- Status is `OK` / `PARTIAL` / `ERROR`. `PARTIAL` can still have a usable AST (e.g. multi-assign SET with one bad element). Do not treat PARTIAL as a hard failure without checking the AST.
+
+## Tests
+
+Default gate: `make test`. Add coverage in the nearest `tests/test_<area>.cpp`.
+
+Live-backend tests `GTEST_SKIP` when unreachable:
+- MySQL `127.0.0.1:13306` root/test/testdb — `scripts/start_test_backends.sh`
+- PostgreSQL `127.0.0.1:15432` postgres/test/testdb — same script
+- `test_single_backend_txn.cpp` / `test_distributed_txn.cpp` skip unless `MYSQL_TEST_HOST` is set
+
+`scripts/start_test_backends.sh` and `scripts/start_sharding_demo.sh` both bind **13306** — do not run them together.
+
+`make test-sqlengine` drives `./sqlengine` and **fails loudly** (exit 2) if containers are missing. Start them first:
+- in-memory: no backend
+- single: `scripts/setup_single_backend.sh` (port 13308)
+- sharded: `scripts/start_sharding_demo.sh` (13306 + 13307)
+
+Corpus is not in-tree. `./corpus_test <mysql|pgsql> [files...]`. Full download: `scripts/run_benchmarks.sh`. CI runs `make all` plus a corpus subset. For grammar/dialect work, also build `corpus_test`.
+
+## Commits / PRs
+
+Conventional prefixes (`feat:`, `fix:`, `test:`, `docs:`, `chore:`, `build:`). PRs target `main`. Do not commit `*.o`, `libsqlparser.a`, `run_tests`, `sqlengine`, `corpus_test`, `run_bench*`, or benchmark artifacts.

@@ -224,7 +224,10 @@ public:
                                       remote_executor_, &functions_);
             PlanNode* dist_plan = dp.distribute_dml(plan);
 
-            if (dist_plan && dist_plan->type == PlanNodeType::REMOTE_SCAN) {
+            if (dp.last_error()) {
+                result.success = false;
+                result.error_message = dp.last_error();
+            } else if (dist_plan && dist_plan->type == PlanNodeType::REMOTE_SCAN) {
                 // Single-shard DML
                 sql_parser::StringRef sql_ref{dist_plan->remote_scan.remote_sql,
                                               dist_plan->remote_scan.remote_sql_len};
