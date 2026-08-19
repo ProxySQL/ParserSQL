@@ -8,6 +8,7 @@
 #include "sql_parser/arena.h"
 
 #include <vector>
+#include <algorithm>
 #include <string>
 #include <unordered_map>
 #include <cstring>

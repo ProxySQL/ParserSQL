@@ -1,0 +1,156 @@
+[
+  {
+    "id": "pg-json-object-constructor",
+    "first_postgresql_major": 16,
+    "expected_oracle_node": "PG_QUERY__NODE__NODE_SELECT_STMT",
+    "structural_feature_ids": [],
+    "note": "Exercises SQL/JSON constructor syntax through a SELECT."
+  },
+  {
+    "id": "pg-merge-statement",
+    "first_postgresql_major": 15,
+    "expected_oracle_node": "PG_QUERY__NODE__NODE_MERGE_STMT",
+    "structural_feature_ids": [],
+    "note": "Known PostgreSQL statement with no ParserSQL StmtType equivalent."
+  },
+  {
+    "id": "pg18-generated-virtual-column",
+    "first_postgresql_major": 18,
+    "expected_oracle_node": "PG_QUERY__NODE__NODE_CREATE_STMT",
+    "structural_feature_ids": [
+      "b466094b002b05c919a15d79",
+      "b09308923b41199e3a197992",
+      "0648d7d39a6fe4b392a7217f",
+      "55186d44ad6079d980e5bae7",
+      "3698ad9c3fa74365b6a1cb62",
+      "dedf6c20b02f9ef477c748ba"
+    ],
+    "note": "Exercises PostgreSQL 18 generated virtual column syntax and the new VIRTUAL keyword."
+  },
+  {
+    "id": "pg18-not-enforced-constraint",
+    "first_postgresql_major": 18,
+    "expected_oracle_node": "PG_QUERY__NODE__NODE_CREATE_STMT",
+    "structural_feature_ids": [
+      "b499271507628d5fc9180006",
+      "8f28ab5b7f253e5486eb6996",
+      "0999b592516fab5490e07e8b",
+      "eb7d604137142f87b5eb592a",
+      "7f71b003d82e6afc30d4bc84",
+      "866bc626afa15d0f801f0e45",
+      "c32ffdf92b576f9a143f459d"
+    ],
+    "note": "Exercises PostgreSQL 18 NOT ENFORCED constraint attributes and ENFORCED keyword handling."
+  },
+  {
+    "id": "pg18-not-null-no-inherit",
+    "first_postgresql_major": 18,
+    "expected_oracle_node": "PG_QUERY__NODE__NODE_CREATE_STMT",
+    "structural_feature_ids": [
+      "0712f1ff020d542c7a16c41e",
+      "cff4eceea125b72afbf135dc"
+    ],
+    "note": "Exercises PostgreSQL 18 table-level NOT NULL constraint syntax with NO INHERIT."
+  },
+  {
+    "id": "pg18-temporal-primary-without-overlaps",
+    "first_postgresql_major": 18,
+    "expected_oracle_node": "PG_QUERY__NODE__NODE_CREATE_STMT",
+    "structural_feature_ids": [
+      "cc5655928112efa3ad1b3188",
+      "4a4b0264e55ef3dd08ae1185"
+    ],
+    "note": "Exercises PostgreSQL 18 PRIMARY KEY WITHOUT OVERLAPS syntax."
+  },
+  {
+    "id": "pg18-temporal-unique-without-overlaps",
+    "first_postgresql_major": 18,
+    "expected_oracle_node": "PG_QUERY__NODE__NODE_CREATE_STMT",
+    "structural_feature_ids": [
+      "f15017359b8bb14751bee3c6",
+      "4a4b0264e55ef3dd08ae1185"
+    ],
+    "note": "Exercises PostgreSQL 18 UNIQUE WITHOUT OVERLAPS syntax."
+  },
+  {
+    "id": "pg18-temporal-period-foreign-key",
+    "first_postgresql_major": 18,
+    "expected_oracle_node": "PG_QUERY__NODE__NODE_CREATE_STMT",
+    "structural_feature_ids": [
+      "6682e8cd239c980698e5ab9f",
+      "9c7843cafcc7f54bb94155fb",
+      "27543b82ca2de3b2708b3195",
+      "d7e6796087489ab7badc6981",
+      "3a3f31a247ca4b3bd5dc0a3d",
+      "29fb0b93477794c486080982"
+    ],
+    "note": "Exercises PostgreSQL 18 temporal FOREIGN KEY PERIOD syntax."
+  },
+  {
+    "id": "pg18-returning-with-old-new",
+    "first_postgresql_major": 18,
+    "expected_oracle_node": "PG_QUERY__NODE__NODE_INSERT_STMT",
+    "structural_feature_ids": [
+      "02b4ffdba64aae3d517a2261",
+      "0a011280798d8db0c0aa4811",
+      "d9da398439833074986db5f6",
+      "82923f27c91d78b6fba786c1",
+      "f892419cc7d2aef5ee9d7185",
+      "33639818ce9f0d1b273f2930",
+      "a9d3eedf2c9f68210872e534"
+    ],
+    "note": "Exercises PostgreSQL 18 RETURNING WITH OLD/NEW alias syntax."
+  },
+  {
+    "id": "pg18-in-expression-list-location",
+    "first_postgresql_major": 18,
+    "expected_oracle_node": "PG_QUERY__NODE__NODE_SELECT_STMT",
+    "structural_feature_ids": [
+      "3ec56fa8decf947ffff9ede5",
+      "2d29c7732f6beca9c6c6c5d5",
+      "64289baa78763e18bc529af0",
+      "cc4203ef010ad54c0377ee00"
+    ],
+    "note": "Exercises IN/NOT IN expression productions whose PG18 source diff adds list location tracking."
+  },
+  {
+    "id": "pg18-alter-constraint-inherit",
+    "first_postgresql_major": 18,
+    "expected_oracle_node": "PG_QUERY__NODE__NODE_ALTER_TABLE_STMT",
+    "structural_feature_ids": [
+      "db0aec71e3007c85e06dd235"
+    ],
+    "note": "Exercises ALTER CONSTRAINT ... INHERIT."
+  },
+  {
+    "id": "pg18-default-privileges-large-objects",
+    "first_postgresql_major": 18,
+    "expected_oracle_node": "PG_QUERY__NODE__NODE_ALTER_DEFAULT_PRIVILEGES_STMT",
+    "structural_feature_ids": [
+      "5e4328cba03c27d09f1e22ef",
+      "3f91bb45e5a2e4ddaede7637",
+      "7f6e0f0f0e6e545ed8ea04fa",
+      "e20313c1347cb56a8c0cfe67"
+    ],
+    "note": "Exercises ALTER DEFAULT PRIVILEGES ON LARGE OBJECTS and the OBJECTS keyword."
+  },
+  {
+    "id": "pg18-opclass-purpose",
+    "first_postgresql_major": 18,
+    "expected_oracle_node": "PG_QUERY__NODE__NODE_CREATE_OP_CLASS_STMT",
+    "structural_feature_ids": [
+      "8d4e03bc74c8f52a6be41a0e",
+      "a5c04aacedc53c836a221622"
+    ],
+    "note": "Exercises opclass item purpose annotations."
+  },
+  {
+    "id": "pg18-vacuum-relation-columns",
+    "first_postgresql_major": 18,
+    "expected_oracle_node": "PG_QUERY__NODE__NODE_VACUUM_STMT",
+    "structural_feature_ids": [
+      "3849310c06eae89b49acf7cf"
+    ],
+    "note": "Exercises VACUUM relation column-list syntax."
+  }
+]

@@ -5,9 +5,12 @@ on:
     branches: [main]
   pull_request:
     branches: [main]
+  schedule:
+    - cron: '17 3 * * 1'
 
 jobs:
   build-and-test:
+    if: github.event_name != 'schedule'
     strategy:
       matrix:
         os: [ubuntu-22.04, ubuntu-24.04]
@@ -22,6 +25,7 @@ jobs:
         run: make -f Makefile clean && make -f Makefile all
 
   macos:
+    if: github.event_name != 'schedule'
     runs-on: macos-latest
     steps:
       - uses: actions/checkout@v4
@@ -38,6 +42,7 @@ jobs:
         run: make -f Makefile clean && make -f Makefile all MYSQL_CFLAGS="-I/opt/homebrew/opt/mysql-client/include"
 
   benchmark:
+    if: github.event_name != 'schedule'
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
@@ -58,6 +63,7 @@ jobs:
           path: benchmark_results.json
 
   corpus-test:
+    if: github.event_name != 'schedule'
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
@@ -96,3 +102,43 @@ jobs:
           grep -ohP '"((?:SELECT|INSERT|UPDATE|DELETE|SET|CREATE|ALTER|DROP|EXPLAIN|WITH)[^"]*)"' \
               /tmp/sqlparser-rs/tests/sqlparser_postgres.rs 2>/dev/null | \
               sed 's/^"//' | sed 's/"$//' | sed 's/\\"/"/g' | ./corpus_test pgsql
+
+  pg-compat:
+    if: github.event_name != 'schedule'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    env:
+      PG_COMPAT_CACHE: /tmp/parsersql-pg-compat
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Cache PostgreSQL compatibility sources
+        uses: actions/cache@v4
+        with:
+          path: /tmp/parsersql-pg-compat
+          key: pg-compat-${{ runner.os }}-${{ hashFiles('tests/pg_compat/upstream_pins.json') }}
+          restore-keys: |
+            pg-compat-${{ runner.os }}-
+
+      - name: Test PostgreSQL compatibility gate
+        run: make -f Makefile test-pg-compat
+
+  pg-compat-full:
+    if: github.event_name == 'schedule'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    env:
+      PG_COMPAT_CACHE: /tmp/parsersql-pg-compat
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Cache PostgreSQL compatibility sources
+        uses: actions/cache@v4
+        with:
+          path: /tmp/parsersql-pg-compat
+          key: pg-compat-${{ runner.os }}-${{ hashFiles('tests/pg_compat/upstream_pins.json') }}
+          restore-keys: |
+            pg-compat-${{ runner.os }}-
+
+      - name: Validate full PostgreSQL compatibility baseline
+        run: make -f Makefile pg-compat

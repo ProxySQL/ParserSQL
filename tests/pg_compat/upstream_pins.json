@@ -1,0 +1,19 @@
+{
+    "libpg_query_url": "https://github.com/pganalyze/libpg_query.git",
+    "versions": {
+        "previous": {
+            "branch": "17-latest",
+            "commit": "815abf77660ca3c38511e3f5af7777b31764c1d5",
+            "pg_version": "17.7",
+            "pg_version_num": 170007,
+            "postgres_sha256": "ef9e343302eccd33112f1b2f0247be493cb5768313adeb558b02de8797a2e9b5"
+        },
+        "target": {
+            "branch": "18-latest",
+            "commit": "9ab9951b7021adcc6d25d261d5016ca0b83726b8",
+            "pg_version": "18.4",
+            "pg_version_num": 180004,
+            "postgres_sha256": "81a81ec695fb0c7901407defaa1d2f7973617154cf27ba74e3a7ab8e64436094"
+        }
+    }
+}
