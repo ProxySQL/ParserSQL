@@ -206,6 +206,13 @@ private:
                 return result;
             }
 
+            case PlanNodeType::DERIVED_SCAN: {
+                PlanNode* result = make_plan_node(arena_, PlanNodeType::DERIVED_SCAN);
+                result->derived_scan = node->derived_scan;
+                result->derived_scan.inner_plan = distribute(node->derived_scan.inner_plan);
+                return result;
+            }
+
             case PlanNodeType::SET_OP: {
                 PlanNode* result = make_plan_node(arena_, PlanNodeType::SET_OP);
                 result->set_op = node->set_op;
@@ -292,6 +299,9 @@ private:
             for (uint16_t i = 0; i < node->merge_sort.child_count; ++i) {
                 if (contains_type(node->merge_sort.children[i], type)) return true;
             }
+        }
+        if (node->type == PlanNodeType::DERIVED_SCAN) {
+            return contains_type(node->derived_scan.inner_plan, type);
         }
         return false;
     }
@@ -545,7 +555,7 @@ private:
         std::memcpy(bn, backend, blen + 1);
         node->remote_scan.backend_name = bn;
         node->remote_scan.remote_sql = sql.ptr;
-        node->remote_scan.remote_sql_len = static_cast<uint16_t>(sql.len);
+        node->remote_scan.remote_sql_len = sql.len;
         node->remote_scan.table = table;
         // Caller is responsible for setting output_exprs when the remote SQL
         // is not a passthrough SELECT *. make_plan_node() already zero-fills
@@ -782,15 +792,53 @@ private:
     }
 
     // Case 4: Distributed sort + limit
+    PlanNode* local_sort(PlanNode* sort_node) {
+        PlanNode* result = make_plan_node(arena_, PlanNodeType::SORT);
+        result->sort = sort_node->sort;
+        result->left = distribute_node(sort_node->left);
+        return result;
+    }
+
+    int sort_key_table_ordinal(const sql_parser::AstNode* key, const TableInfo* table) const {
+        if (!key || !table) return -1;
+        if (key->type == sql_parser::NodeType::NODE_LITERAL_INT) {
+            sql_parser::StringRef sv = key->value();
+            if (!sv.ptr || sv.len == 0) return -1;
+            int64_t n = std::strtoll(sv.ptr, nullptr, 10);
+            if (n < 1 || n > static_cast<int64_t>(table->column_count)) return -1;
+            return static_cast<int>(n - 1);
+        }
+        sql_parser::StringRef col_name;
+        if (key->type == sql_parser::NodeType::NODE_COLUMN_REF ||
+            key->type == sql_parser::NodeType::NODE_IDENTIFIER) {
+            col_name = key->value();
+        } else if (key->type == sql_parser::NodeType::NODE_QUALIFIED_NAME) {
+            const sql_parser::AstNode* c = key->first_child;
+            if (c && c->next_sibling) col_name = c->next_sibling->value();
+            else if (c) col_name = c->value();
+        } else {
+            return -1;
+        }
+        if (!col_name.ptr) return -1;
+        const ColumnInfo* col = catalog_.get_column(table, col_name);
+        if (!col) return -1;
+        return static_cast<int>(col->ordinal);
+    }
+
+    bool all_sort_keys_are_table_columns(const PlanNode* sort_node, const TableInfo* table) const {
+        if (!sort_node || !table) return false;
+        for (uint16_t i = 0; i < sort_node->sort.count; ++i) {
+            if (sort_key_table_ordinal(sort_node->sort.keys[i], table) < 0) return false;
+        }
+        return true;
+    }
+
     PlanNode* distribute_sort(PlanNode* sort_node) {
         if (contains_type(sort_node->left, PlanNodeType::WINDOW) ||
             contains_type(sort_node->left, PlanNodeType::DERIVED_SCAN) ||
             contains_type(sort_node->left, PlanNodeType::AGGREGATE) ||
             contains_type(sort_node->left, PlanNodeType::MERGE_AGGREGATE)) {
-            PlanNode* result = make_plan_node(arena_, PlanNodeType::SORT);
-            result->sort = sort_node->sort;
-            result->left = distribute_node(sort_node->left);
-            return result;
+            return local_sort(sort_node);
         }
 
         ScanContext ctx = extract_scan_context(sort_node->left);
@@ -807,6 +855,10 @@ private:
             result->sort = sort_node->sort;
             result->left = distribute_node(sort_node->left);
             return result;
+        }
+
+        if (!all_sort_keys_are_table_columns(sort_node, table)) {
+            return local_sort(sort_node);
         }
 
         if (!shards_.is_sharded(table->table_name)) {
@@ -875,8 +927,12 @@ private:
                 const TableInfo* table = ctx.scan->scan.table;
                 if (shards_.has_table(table->table_name) &&
                     shards_.is_sharded(table->table_name)) {
-                    // Case 4: Sharded sort + limit
-                    // Each shard: ORDER BY + LIMIT, MergeSort, then outer Limit
+                    if (!all_sort_keys_are_table_columns(sort_node, table)) {
+                        PlanNode* result = make_plan_node(arena_, PlanNodeType::LIMIT);
+                        result->limit = limit_node->limit;
+                        result->left = distribute_node(limit_node->left);
+                        return result;
+                    }
                     int64_t remote_limit = limit_node->limit.count + limit_node->limit.offset;
 
                     PlanNode* merge = make_sharded_merge_sort(

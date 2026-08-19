@@ -147,6 +147,16 @@ TEST_F(PlanExecutorTest, SelectDistinctDept) {
     EXPECT_EQ(depts.size(), 2u);
 }
 
+TEST_F(PlanExecutorTest, OrderByAliasAndPosition) {
+    auto by_alias = run_query("SELECT name AS n, age AS a FROM users ORDER BY a DESC");
+    ASSERT_EQ(by_alias.row_count(), 5u);
+    EXPECT_EQ(by_alias.rows[0].get(1).int_val, 35);
+
+    auto by_pos = run_query("SELECT name, age FROM users ORDER BY 2 DESC");
+    ASSERT_EQ(by_pos.row_count(), 5u);
+    EXPECT_EQ(by_pos.rows[0].get(1).int_val, 35);
+}
+
 TEST_F(PlanExecutorTest, CountDistinctDept) {
     parser.reset();
     const char* sql = "SELECT COUNT(DISTINCT dept) FROM users";

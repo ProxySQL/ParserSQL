@@ -56,6 +56,7 @@
 #include <string>
 #include <vector>
 #include <memory>
+#include <cstdlib>
 
 namespace sql_engine {
 
@@ -1170,12 +1171,21 @@ private:
 
     uint16_t resolve_column_index(const sql_parser::AstNode* key, const TableInfo* table) {
         if (!key || !table) return 0;
+        if (key->type == sql_parser::NodeType::NODE_LITERAL_INT) {
+            sql_parser::StringRef sv = key->value();
+            if (!sv.ptr || sv.len == 0) return 0;
+            int64_t n = std::strtoll(sv.ptr, nullptr, 10);
+            if (n < 1) return 0;
+            if (n > static_cast<int64_t>(table->column_count)) {
+                return static_cast<uint16_t>(table->column_count - 1);
+            }
+            return static_cast<uint16_t>(n - 1);
+        }
         sql_parser::StringRef col_name;
         if (key->type == sql_parser::NodeType::NODE_COLUMN_REF ||
             key->type == sql_parser::NodeType::NODE_IDENTIFIER) {
             col_name = key->value();
         } else if (key->type == sql_parser::NodeType::NODE_QUALIFIED_NAME) {
-            // table.column -- get the column part
             const sql_parser::AstNode* c = key->first_child;
             if (c && c->next_sibling) col_name = c->next_sibling->value();
             else if (c) col_name = c->value();
