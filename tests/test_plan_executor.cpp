@@ -147,6 +147,26 @@ TEST_F(PlanExecutorTest, SelectDistinctDept) {
     EXPECT_EQ(depts.size(), 2u);
 }
 
+TEST_F(PlanExecutorTest, CountDistinctDept) {
+    parser.reset();
+    const char* sql = "SELECT COUNT(DISTINCT dept) FROM users";
+    auto r = parser.parse(sql, std::strlen(sql));
+    ASSERT_EQ(r.status, ParseResult::OK);
+    PlanBuilder<Dialect::MySQL> builder(catalog, parser.arena());
+    PlanNode* plan = builder.build(r.ast);
+    ASSERT_NE(plan, nullptr);
+    ASSERT_EQ(plan->type, PlanNodeType::PROJECT);
+    ASSERT_GE(plan->project.count, 1u);
+    EXPECT_EQ(plan->project.exprs[0]->type, NodeType::NODE_FUNCTION_CALL);
+    EXPECT_NE(static_cast<unsigned>(plan->project.exprs[0]->flags & FLAG_FUNC_DISTINCT), 0u);
+
+    PlanExecutor<Dialect::MySQL> executor(functions, catalog, parser.arena());
+    executor.add_data_source("users", users_source);
+    auto rs = executor.execute(plan);
+    ASSERT_EQ(rs.row_count(), 1u);
+    EXPECT_EQ(rs.rows[0].get(0).int_val, 2);
+}
+
 // SELECT name FROM users WHERE name LIKE 'A%' → LIKE filter
 TEST_F(PlanExecutorTest, SelectWithLike) {
     auto rs = run_query("SELECT name FROM users WHERE name LIKE 'A%'");

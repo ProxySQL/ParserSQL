@@ -1116,6 +1116,7 @@ private:
     void emit_function_call(const AstNode* node) {
         emit_value(node);
         sb_.append_char('(');
+        if (node->flags & FLAG_FUNC_DISTINCT) sb_.append("DISTINCT ");
         bool first = true;
         for (const AstNode* arg = node->first_child; arg; arg = arg->next_sibling) {
             if (!first) sb_.append(", ");

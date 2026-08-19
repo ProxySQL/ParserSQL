@@ -12,6 +12,8 @@
 #include <string>
 #include <cstring>
 #include <cmath>
+#include <unordered_set>
+#include "sql_parser/common.h"
 
 namespace sql_engine {
 
@@ -131,6 +133,8 @@ private:
         Value max_val{};
         bool has_value = false;
         bool count_star = false; // COUNT(*)
+        bool distinct = false;
+        std::unordered_set<std::string> seen;
     };
 
     struct GroupState {
@@ -186,9 +190,9 @@ private:
 
         if (expr->type == sql_parser::NodeType::NODE_FUNCTION_CALL) {
             sql_parser::StringRef name = expr->value();
+            state.distinct = (expr->flags & sql_parser::FLAG_FUNC_DISTINCT) != 0;
             if (name.equals_ci("COUNT", 5)) {
                 state.type = AggType::COUNT;
-                // Check for COUNT(*)
                 const sql_parser::AstNode* arg = expr->first_child;
                 if (arg && arg->type == sql_parser::NodeType::NODE_ASTERISK) {
                     state.count_star = true;
@@ -203,6 +207,14 @@ private:
         state.type = AggType::EXPR;
     }
 
+    static bool note_distinct(AggState& state, const sql_parser::AstNode* expr,
+                             const Value& v) {
+        bool distinct = state.distinct ||
+            (expr && (expr->flags & sql_parser::FLAG_FUNC_DISTINCT));
+        if (!distinct) return true;
+        return state.seen.insert(value_to_string(v)).second;
+    }
+
     void update_agg(AggState& state, const sql_parser::AstNode* expr,
                     const std::function<Value(sql_parser::StringRef)>& resolver) {
         switch (state.type) {
@@ -210,10 +222,9 @@ private:
                 if (state.count_star) {
                     state.count++;
                 } else {
-                    // COUNT(expr) - count non-null values
                     const sql_parser::AstNode* arg = expr->first_child;
                     Value v = evaluate_expression<D>(arg, resolver, functions_, arena_);
-                    if (!v.is_null()) state.count++;
+                    if (!v.is_null() && note_distinct(state, expr, v)) state.count++;
                 }
                 break;
             }
@@ -221,7 +232,7 @@ private:
             case AggType::AVG: {
                 const sql_parser::AstNode* arg = expr->first_child;
                 Value v = evaluate_expression<D>(arg, resolver, functions_, arena_);
-                if (!v.is_null()) {
+                if (!v.is_null() && note_distinct(state, expr, v)) {
                     state.sum += v.to_double();
                     state.count++;
                     state.has_value = true;
@@ -231,7 +242,7 @@ private:
             case AggType::MIN: {
                 const sql_parser::AstNode* arg = expr->first_child;
                 Value v = evaluate_expression<D>(arg, resolver, functions_, arena_);
-                if (!v.is_null()) {
+                if (!v.is_null() && note_distinct(state, expr, v)) {
                     if (!state.has_value || compare_values(v, state.min_val) < 0) {
                         state.min_val = v;
                         state.has_value = true;
@@ -242,7 +253,7 @@ private:
             case AggType::MAX: {
                 const sql_parser::AstNode* arg = expr->first_child;
                 Value v = evaluate_expression<D>(arg, resolver, functions_, arena_);
-                if (!v.is_null()) {
+                if (!v.is_null() && note_distinct(state, expr, v)) {
                     if (!state.has_value || compare_values(v, state.max_val) > 0) {
                         state.max_val = v;
                         state.has_value = true;

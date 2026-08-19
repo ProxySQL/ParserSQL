@@ -66,6 +66,10 @@ static constexpr uint16_t FLAG_SET_OP_ALL = 0x01;
 // which matters for SHOW search_path / SHOW <var> canonical re-emission.
 static constexpr uint16_t FLAG_IDENT_DELIMITED = 0x01;
 
+// -- Flags for NODE_FUNCTION_CALL --
+// Set when the call was written as FN(DISTINCT ...).
+static constexpr uint16_t FLAG_FUNC_DISTINCT = 0x01;
+
 // -- Statement type (always set, even for PARTIAL/ERROR) --
 
 enum class StmtType : uint8_t {

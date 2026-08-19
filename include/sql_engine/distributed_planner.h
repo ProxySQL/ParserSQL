@@ -141,28 +141,38 @@ private:
             }
 
             case PlanNodeType::PROJECT: {
-                // Check for PROJECT -> [SORT ->] [FILTER ->] AGGREGATE pattern
-                // For aggregate queries, we want to handle the whole thing in distribute_aggregate
+                // PROJECT -> [SORT ->] [FILTER(HAVING) ->] AGGREGATE
+                PlanNode* sort_node = nullptr;
+                PlanNode* having_node = nullptr;
                 PlanNode* agg_child = node->left;
-                if (agg_child && agg_child->type == PlanNodeType::SORT)
+                if (agg_child && agg_child->type == PlanNodeType::SORT) {
+                    sort_node = agg_child;
                     agg_child = agg_child->left;
-                if (agg_child && agg_child->type == PlanNodeType::FILTER)
+                }
+                if (agg_child && agg_child->type == PlanNodeType::FILTER) {
+                    having_node = agg_child;
                     agg_child = agg_child->left;
+                }
                 if (agg_child && agg_child->type == PlanNodeType::AGGREGATE) {
-                    // Extract aggregate info from the PROJECT select list
                     push_agg_exprs_from_project(node, agg_child);
                     PlanNode* dist_agg = distribute_aggregate(agg_child);
-                    if (dist_agg && dist_agg->type == PlanNodeType::MERGE_AGGREGATE) {
-                        // Re-add FILTER (HAVING) if present
-                        if (node->left && node->left->type == PlanNodeType::FILTER) {
+                    if (dist_agg && (dist_agg->type == PlanNodeType::MERGE_AGGREGATE ||
+                                     dist_agg->type == PlanNodeType::AGGREGATE)) {
+                        PlanNode* top = dist_agg;
+                        if (having_node) {
                             PlanNode* having = make_plan_node(arena_, PlanNodeType::FILTER);
-                            having->filter.expr = node->left->filter.expr;
-                            having->left = dist_agg;
-                            return having;
+                            having->filter.expr = having_node->filter.expr;
+                            having->left = top;
+                            top = having;
                         }
-                        return dist_agg;
+                        if (sort_node) {
+                            PlanNode* sort = make_plan_node(arena_, PlanNodeType::SORT);
+                            sort->sort = sort_node->sort;
+                            sort->left = top;
+                            top = sort;
+                        }
+                        return top;
                     }
-                    // For unsharded, the remote already computes everything
                     return dist_agg;
                 }
 
@@ -188,6 +198,13 @@ private:
 
             case PlanNodeType::JOIN:
                 return distribute_join(node);
+
+            case PlanNodeType::WINDOW: {
+                PlanNode* result = make_plan_node(arena_, PlanNodeType::WINDOW);
+                result->window = node->window;
+                result->left = distribute_node(node->left);
+                return result;
+            }
 
             case PlanNodeType::SET_OP: {
                 PlanNode* result = make_plan_node(arena_, PlanNodeType::SET_OP);
@@ -259,6 +276,24 @@ private:
         }
         ctx = extract_scan_context(node->left);
         return ctx;
+    }
+
+    static bool contains_type(const PlanNode* node, PlanNodeType type) {
+        if (!node) return false;
+        if (node->type == type) return true;
+        if (contains_type(node->left, type)) return true;
+        if (contains_type(node->right, type)) return true;
+        if (node->type == PlanNodeType::MERGE_AGGREGATE) {
+            for (uint16_t i = 0; i < node->merge_aggregate.child_count; ++i) {
+                if (contains_type(node->merge_aggregate.children[i], type)) return true;
+            }
+        }
+        if (node->type == PlanNodeType::MERGE_SORT) {
+            for (uint16_t i = 0; i < node->merge_sort.child_count; ++i) {
+                if (contains_type(node->merge_sort.children[i], type)) return true;
+            }
+        }
+        return false;
     }
 
     // Case 1 & 2: Distribute a scan (possibly with filter pushed down)
@@ -548,8 +583,14 @@ private:
 
         const TableInfo* table = ctx.scan->scan.table;
         if (!shards_.has_table(table->table_name) || !shards_.is_sharded(table->table_name)) {
-            // Unsharded -- push the whole thing to remote
             return make_unsharded_aggregate(agg_node, ctx, table);
+        }
+
+        if (!all_aggregates_two_phase(agg_node)) {
+            PlanNode* result = make_plan_node(arena_, PlanNodeType::AGGREGATE);
+            result->aggregate = agg_node->aggregate;
+            result->left = distribute_node(agg_node->left);
+            return result;
         }
 
         // Sharded aggregate: each shard computes partial aggregates.
@@ -661,6 +702,24 @@ private:
         return make_remote_scan_with_outputs(backend, sql, table, projs);
     }
 
+    static bool is_two_phase_aggregate(const sql_parser::AstNode* expr) {
+        if (!expr || expr->type != sql_parser::NodeType::NODE_FUNCTION_CALL) return false;
+        if (expr->flags & sql_parser::FLAG_FUNC_DISTINCT) return false;
+        sql_parser::StringRef name = expr->value();
+        return name.equals_ci("COUNT", 5) || name.equals_ci("SUM", 3) ||
+               name.equals_ci("AVG", 3) || name.equals_ci("MIN", 3) ||
+               name.equals_ci("MAX", 3);
+    }
+
+    bool all_aggregates_two_phase(const PlanNode* agg_node) const {
+        if (!agg_node) return false;
+        if (agg_node->aggregate.agg_count == 0) return true;
+        for (uint16_t i = 0; i < agg_node->aggregate.agg_count; ++i) {
+            if (!is_two_phase_aggregate(agg_node->aggregate.agg_exprs[i])) return false;
+        }
+        return true;
+    }
+
     void decompose_aggregate(const sql_parser::AstNode* expr,
                               std::vector<const sql_parser::AstNode*>& projs,
                               std::vector<uint8_t>& merge_ops) {
@@ -673,11 +732,9 @@ private:
         sql_parser::StringRef name = expr->value();
 
         if (name.equals_ci("COUNT", 5)) {
-            // Remote: COUNT(*) or COUNT(col), Local: SUM of counts
             projs.push_back(expr);
             merge_ops.push_back(static_cast<uint8_t>(MergeOp::SUM_OF_COUNTS));
         } else if (name.equals_ci("SUM", 3)) {
-            // Remote: SUM(col), Local: SUM of sums
             projs.push_back(expr);
             merge_ops.push_back(static_cast<uint8_t>(MergeOp::SUM_OF_SUMS));
         } else if (name.equals_ci("AVG", 3)) {
@@ -726,7 +783,16 @@ private:
 
     // Case 4: Distributed sort + limit
     PlanNode* distribute_sort(PlanNode* sort_node) {
-        // Check if the child is a scan (possibly through filter) on a sharded table
+        if (contains_type(sort_node->left, PlanNodeType::WINDOW) ||
+            contains_type(sort_node->left, PlanNodeType::DERIVED_SCAN) ||
+            contains_type(sort_node->left, PlanNodeType::AGGREGATE) ||
+            contains_type(sort_node->left, PlanNodeType::MERGE_AGGREGATE)) {
+            PlanNode* result = make_plan_node(arena_, PlanNodeType::SORT);
+            result->sort = sort_node->sort;
+            result->left = distribute_node(sort_node->left);
+            return result;
+        }
+
         ScanContext ctx = extract_scan_context(sort_node->left);
         if (!ctx.scan || !ctx.scan->scan.table) {
             PlanNode* result = make_plan_node(arena_, PlanNodeType::SORT);
@@ -795,6 +861,15 @@ private:
         // Check if child is Sort on sharded table
         if (limit_node->left && limit_node->left->type == PlanNodeType::SORT) {
             PlanNode* sort_node = limit_node->left;
+            if (contains_type(sort_node->left, PlanNodeType::WINDOW) ||
+                contains_type(sort_node->left, PlanNodeType::DERIVED_SCAN) ||
+                contains_type(sort_node->left, PlanNodeType::AGGREGATE) ||
+                contains_type(sort_node->left, PlanNodeType::MERGE_AGGREGATE)) {
+                PlanNode* result = make_plan_node(arena_, PlanNodeType::LIMIT);
+                result->limit = limit_node->limit;
+                result->left = distribute_node(limit_node->left);
+                return result;
+            }
             ScanContext ctx = extract_scan_context(sort_node->left);
             if (ctx.scan && ctx.scan->scan.table) {
                 const TableInfo* table = ctx.scan->scan.table;
@@ -839,7 +914,16 @@ private:
             }
         }
 
-        // Check if child is scan on sharded/unsharded table (limit without sort)
+        if (contains_type(limit_node->left, PlanNodeType::WINDOW) ||
+            contains_type(limit_node->left, PlanNodeType::DERIVED_SCAN) ||
+            contains_type(limit_node->left, PlanNodeType::AGGREGATE) ||
+            contains_type(limit_node->left, PlanNodeType::MERGE_AGGREGATE)) {
+            PlanNode* result = make_plan_node(arena_, PlanNodeType::LIMIT);
+            result->limit = limit_node->limit;
+            result->left = distribute_node(limit_node->left);
+            return result;
+        }
+
         ScanContext ctx = extract_scan_context(limit_node->left);
         if (ctx.scan && ctx.scan->scan.table) {
             const TableInfo* table = ctx.scan->scan.table;
