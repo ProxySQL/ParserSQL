@@ -1061,3 +1061,41 @@ TEST_F(DistributedPlannerTest, RemoteSqlLenIsNotTruncated) {
         EXPECT_EQ(rs->remote_scan.remote_sql_len, remote.size());
     }
 }
+
+TEST_F(DistributedPlannerTest, HavingCountCorrectness) {
+    const char* sql = "SELECT dept, COUNT(*) FROM users GROUP BY dept HAVING COUNT(*) > 4";
+    auto local_rs = execute_local(sql);
+    auto dist_rs = execute_distributed(sql);
+    EXPECT_EQ(local_rs.row_count(), 2u);
+    EXPECT_TRUE(compare_results_unordered(local_rs, dist_rs));
+}
+
+TEST_F(DistributedPlannerTest, ColocatedJoinPushedToShards) {
+    shard_map.add_table(TableShardConfig{
+        "orders", "user_id",
+        {ShardInfo{"shard_1"}, ShardInfo{"shard_2"}, ShardInfo{"shard_3"}}
+    });
+
+    Parser<Dialect::MySQL> parser;
+    const char* sql = "SELECT * FROM users JOIN orders ON users.id = orders.user_id";
+    auto pr = parser.parse(sql, std::strlen(sql));
+    ASSERT_EQ(pr.status, ParseResult::OK);
+
+    PlanBuilder<Dialect::MySQL> builder(catalog, parser.arena());
+    PlanNode* plan = builder.build(pr.ast);
+    ASSERT_NE(plan, nullptr);
+
+    DistributedPlanner<Dialect::MySQL> dp(shard_map, catalog, parser.arena());
+    PlanNode* dist = dp.distribute(plan);
+    ASSERT_NE(dist, nullptr);
+
+    std::vector<PlanNode*> joins, remotes;
+    find_nodes(dist, PlanNodeType::JOIN, joins);
+    find_nodes(dist, PlanNodeType::REMOTE_SCAN, remotes);
+    EXPECT_TRUE(joins.empty()) << "co-located join should not stay local";
+    ASSERT_FALSE(remotes.empty());
+    for (auto* rs : remotes) {
+        std::string remote(rs->remote_scan.remote_sql, rs->remote_scan.remote_sql_len);
+        EXPECT_NE(remote.find("JOIN"), std::string::npos) << remote;
+    }
+}

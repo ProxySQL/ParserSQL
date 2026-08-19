@@ -155,6 +155,34 @@ public:
         return 0;
     }
 
+    bool same_routing(sql_parser::StringRef a, sql_parser::StringRef b) const {
+        const TableShardConfig* ca = lookup(a);
+        const TableShardConfig* cb = lookup(b);
+        if (!ca || !cb) return false;
+        if (ca->strategy != cb->strategy) return false;
+        if (ca->shards.size() != cb->shards.size() || ca->shards.empty()) return false;
+        for (size_t i = 0; i < ca->shards.size(); ++i) {
+            if (ca->shards[i].backend_name != cb->shards[i].backend_name) return false;
+        }
+        if (ca->strategy == RoutingStrategy::RANGE) {
+            if (ca->ranges.size() != cb->ranges.size()) return false;
+            for (size_t i = 0; i < ca->ranges.size(); ++i) {
+                if (ca->ranges[i].upper_inclusive != cb->ranges[i].upper_inclusive ||
+                    ca->ranges[i].shard_index != cb->ranges[i].shard_index) return false;
+            }
+        }
+        if (ca->strategy == RoutingStrategy::LIST) {
+            if (ca->list.size() != cb->list.size()) return false;
+            for (size_t i = 0; i < ca->list.size(); ++i) {
+                if (ca->list[i].is_int != cb->list[i].is_int ||
+                    ca->list[i].int_val != cb->list[i].int_val ||
+                    ca->list[i].str_val != cb->list[i].str_val ||
+                    ca->list[i].shard_index != cb->list[i].shard_index) return false;
+            }
+        }
+        return true;
+    }
+
     // Get the single backend for an unsharded table.
     const char* get_backend(sql_parser::StringRef table_name) const {
         const TableShardConfig* cfg = lookup(table_name);

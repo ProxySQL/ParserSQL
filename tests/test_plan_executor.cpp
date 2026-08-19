@@ -177,6 +177,13 @@ TEST_F(PlanExecutorTest, CountDistinctDept) {
     EXPECT_EQ(rs.rows[0].get(0).int_val, 2);
 }
 
+TEST_F(PlanExecutorTest, HavingCountFilter) {
+    auto rs = run_query("SELECT dept, COUNT(*) FROM users GROUP BY dept HAVING COUNT(*) > 2");
+    ASSERT_EQ(rs.row_count(), 1u);
+    EXPECT_EQ(std::string(rs.rows[0].get(0).str_val.ptr, rs.rows[0].get(0).str_val.len),
+              "Engineering");
+}
+
 // SELECT name FROM users WHERE name LIKE 'A%' → LIKE filter
 TEST_F(PlanExecutorTest, SelectWithLike) {
     auto rs = run_query("SELECT name FROM users WHERE name LIKE 'A%'");
