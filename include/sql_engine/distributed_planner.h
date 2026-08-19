@@ -999,11 +999,71 @@ private:
         return result;
     }
 
-    // Case 5: Cross-backend join
+    bool join_on_shard_keys(const sql_parser::AstNode* cond,
+                            sql_parser::StringRef left_key,
+                            sql_parser::StringRef right_key) const {
+        if (!cond || cond->type != sql_parser::NodeType::NODE_BINARY_OP) return false;
+        sql_parser::StringRef op = cond->value();
+        if (op.len != 1 || op.ptr[0] != '=') return false;
+        const sql_parser::AstNode* l = cond->first_child;
+        const sql_parser::AstNode* r = l ? l->next_sibling : nullptr;
+        if (!l || !r) return false;
+        return (is_shard_key_ref(l, left_key) && is_shard_key_ref(r, right_key)) ||
+               (is_shard_key_ref(l, right_key) && is_shard_key_ref(r, left_key));
+    }
+
+    PlanNode* distribute_colocated_join(PlanNode* join_node,
+                                        const TableInfo* left_table,
+                                        const TableInfo* right_table) {
+        ScanContext lctx = extract_scan_context(join_node->left);
+        ScanContext rctx = extract_scan_context(join_node->right);
+        const sql_parser::AstNode* where_expr = nullptr;
+        if (lctx.where_expr && rctx.where_expr) {
+            sql_parser::AstNode* and_node = sql_parser::make_node(
+                arena_, sql_parser::NodeType::NODE_BINARY_OP,
+                sql_parser::StringRef{"AND", 3});
+            and_node->add_child(const_cast<sql_parser::AstNode*>(lctx.where_expr));
+            and_node->add_child(const_cast<sql_parser::AstNode*>(rctx.where_expr));
+            where_expr = and_node;
+        } else if (lctx.where_expr) {
+            where_expr = lctx.where_expr;
+        } else {
+            where_expr = rctx.where_expr;
+        }
+
+        const auto& shard_list = shards_.get_shards(left_table->table_name);
+        PlanNode* current = nullptr;
+        for (const auto& shard : shard_list) {
+            sql_parser::StringRef sql = qb_.build_select_join(
+                left_table, right_table, join_node->join.condition, where_expr);
+            PlanNode* rs = make_remote_scan(shard.backend_name.c_str(), sql, left_table);
+            if (!current) {
+                current = rs;
+            } else {
+                PlanNode* union_node = make_plan_node(arena_, PlanNodeType::SET_OP);
+                union_node->set_op.op = SET_OP_UNION;
+                union_node->set_op.all = true;
+                union_node->left = current;
+                union_node->right = rs;
+                current = union_node;
+            }
+        }
+        return current ? current : join_node;
+    }
+
     PlanNode* distribute_join(PlanNode* join_node) {
-        // Get tables from each side
         const TableInfo* left_table = find_table(join_node->left);
         const TableInfo* right_table = find_table(join_node->right);
+
+        if (left_table && right_table &&
+            shards_.is_sharded(left_table->table_name) &&
+            shards_.is_sharded(right_table->table_name) &&
+            shards_.same_routing(left_table->table_name, right_table->table_name) &&
+            join_on_shard_keys(join_node->join.condition,
+                               shards_.get_shard_key(left_table->table_name),
+                               shards_.get_shard_key(right_table->table_name))) {
+            return distribute_colocated_join(join_node, left_table, right_table);
+        }
 
         PlanNode* left_dist = nullptr;
         PlanNode* right_dist = nullptr;
@@ -1172,17 +1232,12 @@ private:
     PlanNode* distribute_update(PlanNode* plan) {
         const auto& up = plan->update_plan;
         const TableInfo* table = up.table;
-        if (!table || !shards_.has_table(table->table_name)) return plan;
 
-        // Multi-table UPDATE: emit full SQL from AST, route to primary table's backend
         if (up.original_ast) {
-            sql_parser::StringRef sql = qb_.build_update_from_ast(up.original_ast);
-            if (!shards_.is_sharded(table->table_name)) {
-                return make_remote_scan(shards_.get_backend(table->table_name), sql, table);
-            }
-            const auto& shard_list = shards_.get_shards(table->table_name);
-            return scatter_dml_to_shards(table, shard_list, [&]() { return sql; });
+            return distribute_multi_table_dml(up.original_ast, table, true);
         }
+
+        if (!table || !shards_.has_table(table->table_name)) return plan;
 
         // Check for cross-shard subqueries in WHERE and rewrite
         const sql_parser::AstNode* where_expr = up.where_expr;
@@ -1220,17 +1275,12 @@ private:
     PlanNode* distribute_delete(PlanNode* plan) {
         const auto& dp = plan->delete_plan;
         const TableInfo* table = dp.table;
-        if (!table || !shards_.has_table(table->table_name)) return plan;
 
-        // Multi-table DELETE: emit full SQL from AST, route to primary table's backend
         if (dp.original_ast) {
-            sql_parser::StringRef sql = qb_.build_delete_from_ast(dp.original_ast);
-            if (!shards_.is_sharded(table->table_name)) {
-                return make_remote_scan(shards_.get_backend(table->table_name), sql, table);
-            }
-            const auto& shard_list = shards_.get_shards(table->table_name);
-            return scatter_dml_to_shards(table, shard_list, [&]() { return sql; });
+            return distribute_multi_table_dml(dp.original_ast, table, false);
         }
+
+        if (!table || !shards_.has_table(table->table_name)) return plan;
 
         // Check for cross-shard subqueries in WHERE and rewrite
         const sql_parser::AstNode* where_expr = dp.where_expr;
@@ -1318,7 +1368,68 @@ private:
         return false;
     }
 
-    // Scatter DML SQL to all shards, combining results via UNION ALL
+    void collect_ast_table_names(const sql_parser::AstNode* n,
+                                 std::vector<sql_parser::StringRef>& out) const {
+        if (!n) return;
+        if (n->type == sql_parser::NodeType::NODE_TABLE_REF && n->first_child) {
+            const sql_parser::AstNode* name = n->first_child;
+            if (name->type == sql_parser::NodeType::NODE_IDENTIFIER) {
+                out.push_back(name->value());
+            } else if (name->type == sql_parser::NodeType::NODE_QUALIFIED_NAME) {
+                const sql_parser::AstNode* schema = name->first_child;
+                const sql_parser::AstNode* table = schema ? schema->next_sibling : nullptr;
+                if (table) out.push_back(table->value());
+                else if (schema) out.push_back(schema->value());
+            }
+        }
+        for (const sql_parser::AstNode* c = n->first_child; c; c = c->next_sibling) {
+            collect_ast_table_names(c, out);
+        }
+    }
+
+    PlanNode* distribute_multi_table_dml(const sql_parser::AstNode* ast,
+                                         const TableInfo* primary,
+                                         bool is_update) {
+        std::vector<sql_parser::StringRef> names;
+        collect_ast_table_names(ast, names);
+        const char* backend = nullptr;
+        bool saw_mapped = false;
+        for (sql_parser::StringRef name : names) {
+            if (!shards_.has_table(name)) continue;
+            saw_mapped = true;
+            if (shards_.is_sharded(name)) {
+                return fail_dml(is_update
+                    ? "multi-table UPDATE is not supported on sharded tables"
+                    : "multi-table DELETE is not supported on sharded tables");
+            }
+            const char* b = shards_.get_backend(name);
+            if (backend && b && std::strcmp(backend, b) != 0) {
+                return fail_dml(is_update
+                    ? "multi-table UPDATE spans multiple backends"
+                    : "multi-table DELETE spans multiple backends");
+            }
+            if (b) backend = b;
+        }
+        if (!backend && primary && shards_.has_table(primary->table_name)) {
+            if (shards_.is_sharded(primary->table_name)) {
+                return fail_dml(is_update
+                    ? "multi-table UPDATE is not supported on sharded tables"
+                    : "multi-table DELETE is not supported on sharded tables");
+            }
+            backend = shards_.get_backend(primary->table_name);
+            saw_mapped = true;
+        }
+        if (!backend || !saw_mapped) {
+            return fail_dml(is_update
+                ? "multi-table UPDATE is not supported on sharded tables"
+                : "multi-table DELETE is not supported on sharded tables");
+        }
+        sql_parser::StringRef sql = is_update
+            ? qb_.build_update_from_ast(ast)
+            : qb_.build_delete_from_ast(ast);
+        return make_remote_scan(backend, sql, primary);
+    }
+
     PlanNode* scatter_dml_to_shards(const TableInfo* table,
                                      const std::vector<ShardInfo>& shard_list,
                                      std::function<sql_parser::StringRef()> build_sql) {
