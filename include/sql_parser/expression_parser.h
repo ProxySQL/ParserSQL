@@ -6,6 +6,7 @@
 #include "sql_parser/tokenizer.h"
 #include "sql_parser/ast.h"
 #include "sql_parser/arena.h"
+#include "sql_parser/user_variable.h"
 
 namespace sql_parser {
 
@@ -13,9 +14,14 @@ namespace sql_parser {
 enum class Precedence : uint8_t {
     NONE = 0,
     OR,            // OR
+    XOR,           // XOR
     AND,           // AND
     NOT,           // NOT (prefix)
     COMPARISON,    // =, <, >, <=, >=, !=, <>, IS, LIKE, IN, BETWEEN
+    BIT_OR,        // |
+    BIT_XOR,       // ^
+    BIT_AND,       // &
+    SHIFT,         // <<, >>
     ADDITION,      // +, -
     MULTIPLICATION,// *, /, %
     UNARY,         // - (prefix), NOT
@@ -77,7 +83,12 @@ private:
             if (tok_.peek().type == TokenType::TK_RPAREN) tok_.skip();
         } else {
             // Legacy: skip to matching paren
-            skip_to_matching_paren();
+            const char* start = tok_.peek().text.ptr;
+            const char* end = skip_to_matching_paren();
+            if (start && end && end >= start) {
+                node->set_value(StringRef{start,
+                    static_cast<uint32_t>(end - start)});
+            }
         }
         return node;
     }
@@ -89,19 +100,27 @@ private:
         switch (t.type) {
             case TokenType::TK_INTEGER: {
                 tok_.skip();
-                return make_node(arena_, NodeType::NODE_LITERAL_INT, t.text);
+                return make_node_from_token(arena_, NodeType::NODE_LITERAL_INT, t);
             }
             case TokenType::TK_FLOAT: {
                 tok_.skip();
-                return make_node(arena_, NodeType::NODE_LITERAL_FLOAT, t.text);
+                return make_node_from_token(arena_, NodeType::NODE_LITERAL_FLOAT, t);
+            }
+            case TokenType::TK_HEX_LITERAL: {
+                tok_.skip();
+                return make_node_from_token(arena_, NodeType::NODE_LITERAL_HEX, t);
+            }
+            case TokenType::TK_BIT_LITERAL: {
+                tok_.skip();
+                return make_node_from_token(arena_, NodeType::NODE_LITERAL_BIT, t);
             }
             case TokenType::TK_STRING: {
                 tok_.skip();
-                return make_node(arena_, NodeType::NODE_LITERAL_STRING, t.text);
+                return make_node_from_token(arena_, NodeType::NODE_LITERAL_STRING, t);
             }
             case TokenType::TK_NULL: {
                 tok_.skip();
-                return make_node(arena_, NodeType::NODE_LITERAL_NULL, t.text);
+                return make_node_from_token(arena_, NodeType::NODE_LITERAL_NULL, t);
             }
             case TokenType::TK_TRUE:
             case TokenType::TK_FALSE: {
@@ -111,6 +130,12 @@ private:
             case TokenType::TK_DEFAULT: {
                 tok_.skip();
                 return make_node(arena_, NodeType::NODE_IDENTIFIER, t.text);
+            }
+            case TokenType::TK_INTERVAL: {
+                return parse_interval_literal(t);
+            }
+            case TokenType::TK_ALL: {
+                return parse_quantified_subquery(t);
             }
             case TokenType::TK_ASTERISK: {
                 tok_.skip();
@@ -133,6 +158,10 @@ private:
                 StringRef full{t.text.ptr,
                     static_cast<uint32_t>((name.text.ptr + name.text.len) - t.text.ptr)};
                 return make_node(arena_, NodeType::NODE_COLUMN_REF, full);
+            }
+            case TokenType::TK_USER_VARIABLE: {
+                tok_.skip();
+                return make_mysql_user_variable_node(arena_, t);
             }
             case TokenType::TK_DOUBLE_AT: {
                 // System variable: @@name or @@scope.name
@@ -158,19 +187,26 @@ private:
                 AstNode* operand = parse(Precedence::UNARY);
                 if (!operand) return nullptr;
                 AstNode* node = make_node(arena_, NodeType::NODE_UNARY_OP, t.text);
+                set_span_through_node_(node, t.source, operand);
                 node->add_child(operand);
                 return node;
             }
             case TokenType::TK_PLUS: {
                 // Unary plus
                 tok_.skip();
-                return parse(Precedence::UNARY);
+                AstNode* operand = parse(Precedence::UNARY);
+                if (!operand) return nullptr;
+                AstNode* node = make_node(arena_, NodeType::NODE_UNARY_OP, t.text);
+                set_span_through_node_(node, t.source, operand);
+                node->add_child(operand);
+                return node;
             }
             case TokenType::TK_NOT: {
                 tok_.skip();
                 AstNode* operand = parse(Precedence::NOT);
                 if (!operand) return nullptr;
                 AstNode* node = make_node(arena_, NodeType::NODE_UNARY_OP, t.text);
+                set_span_through_node_(node, t.source, operand);
                 node->add_child(operand);
                 return node;
             }
@@ -250,7 +286,12 @@ private:
                     return parse_postfix(tuple);
                 }
                 if (tok_.peek().type == TokenType::TK_RPAREN) {
-                    tok_.skip();
+                    Token close = tok_.next_token();
+                    AstNode* wrapper = make_node(arena_, NodeType::NODE_EXPRESSION);
+                    wrapper->set_source(StringRef{t.source.ptr,
+                        static_cast<uint32_t>(close.source.ptr + close.source.len - t.source.ptr)});
+                    wrapper->add_child(expr);
+                    return parse_postfix(wrapper);
                 }
                 // Check for postfix: (expr).field or (expr)[index]
                 return parse_postfix(expr);
@@ -271,11 +312,39 @@ private:
         }
     }
 
+    static void set_span_through_node_(AstNode* node, StringRef start,
+                                       const AstNode* end_node) {
+        if (!node || !start.ptr || !end_node) return;
+        StringRef end = end_node->source();
+        if (end.empty()) end = end_node->value();
+        if (!end.ptr || end.ptr < start.ptr) return;
+        node->set_source(StringRef{start.ptr,
+            static_cast<uint32_t>(end.ptr + end.len - start.ptr)});
+    }
+
     AstNode* parse_identifier_or_function(const Token& name_token) {
         // Check for function call: name(
         if (tok_.peek().type == TokenType::TK_LPAREN) {
             tok_.skip();  // consume (
             AstNode* func = make_node(arena_, NodeType::NODE_FUNCTION_CALL, name_token.text);
+            // CAST uses `CAST(expr AS type)` rather than a comma-separated
+            // argument list. Model it as a function call so consumers can
+            // reject or handle the expression without leaving valid input
+            // unconsumed.
+            if (name_token.text.equals_ci("CAST", 4)) {
+                AstNode* arg = parse();
+                if (!arg || tok_.peek().type != TokenType::TK_AS) return func;
+                func->add_child(arg);
+                tok_.skip();
+                Token type = tok_.next_token();
+                if (type.type == TokenType::TK_EOF ||
+                    type.type == TokenType::TK_RPAREN) {
+                    return func;
+                }
+                func->add_child(make_node(arena_, NodeType::NODE_IDENTIFIER, type.text));
+                if (tok_.peek().type == TokenType::TK_RPAREN) tok_.skip();
+                return func;
+            }
             // Parse argument list
             if (tok_.peek().type != TokenType::TK_RPAREN) {
                 while (true) {
@@ -336,6 +405,7 @@ private:
     static Precedence infix_precedence(TokenType type) {
         switch (type) {
             case TokenType::TK_OR:             return Precedence::OR;
+            case TokenType::TK_XOR:            return Precedence::XOR;
             case TokenType::TK_AND:            return Precedence::AND;
             case TokenType::TK_NOT:            return Precedence::COMPARISON; // NOT IN/BETWEEN/LIKE
             case TokenType::TK_EQUAL:
@@ -344,15 +414,25 @@ private:
             case TokenType::TK_GREATER:
             case TokenType::TK_LESS_EQUAL:
             case TokenType::TK_GREATER_EQUAL:
+            case TokenType::TK_REGEXP:
+            case TokenType::TK_SOUNDS:
+            case TokenType::TK_MEMBER:
             case TokenType::TK_LIKE:           return Precedence::COMPARISON;
             case TokenType::TK_IS:             return Precedence::COMPARISON;
             case TokenType::TK_IN:             return Precedence::COMPARISON;
             case TokenType::TK_BETWEEN:        return Precedence::COMPARISON;
+            case TokenType::TK_PIPE:           return Precedence::BIT_OR;
+            case TokenType::TK_CARET:          return Precedence::BIT_XOR;
+            case TokenType::TK_AMPERSAND:      return Precedence::BIT_AND;
+            case TokenType::TK_SHIFT_LEFT:
+            case TokenType::TK_SHIFT_RIGHT:    return Precedence::SHIFT;
             case TokenType::TK_PLUS:
             case TokenType::TK_MINUS:          return Precedence::ADDITION;
             case TokenType::TK_ASTERISK:
             case TokenType::TK_SLASH:
-            case TokenType::TK_PERCENT:        return Precedence::MULTIPLICATION;
+            case TokenType::TK_PERCENT:
+            case TokenType::TK_DIV:
+            case TokenType::TK_MOD:            return Precedence::MULTIPLICATION;
             case TokenType::TK_DOUBLE_PIPE:    return Precedence::ADDITION; // string concat
             default:                           return Precedence::NONE;
         }
@@ -363,7 +443,7 @@ private:
 
         switch (op.type) {
             case TokenType::TK_NOT: {
-                // NOT IN / NOT BETWEEN / NOT LIKE — compound negated infix
+                // NOT IN / NOT BETWEEN / NOT LIKE / NOT REGEXP — compound negated infix
                 Token actual_op = tok_.peek();
                 if (actual_op.type == TokenType::TK_IN) {
                     tok_.skip();
@@ -380,7 +460,8 @@ private:
                     not_node->add_child(between_node);
                     return not_node;
                 }
-                if (actual_op.type == TokenType::TK_LIKE) {
+                if (actual_op.type == TokenType::TK_LIKE ||
+                    actual_op.type == TokenType::TK_REGEXP) {
                     tok_.skip();
                     AstNode* right = parse(prec);
                     AstNode* like_node = make_node(arena_, NodeType::NODE_BINARY_OP, actual_op.text);
@@ -422,6 +503,10 @@ private:
                 return parse_in(left);
             case TokenType::TK_BETWEEN:
                 return parse_between(left);
+            case TokenType::TK_SOUNDS:
+                return parse_sounds_like(left, op, prec);
+            case TokenType::TK_MEMBER:
+                return parse_member_of(left, op, prec);
             default: {
                 // Standard binary operator
                 AstNode* right = parse(prec);
@@ -459,6 +544,54 @@ private:
         return node;
     }
 
+    AstNode* parse_sounds_like(AstNode* left, const Token& sounds, Precedence prec) {
+        Token like = tok_.peek();
+        StringRef op_text = sounds.text;
+        if (like.type == TokenType::TK_LIKE) {
+            tok_.skip();
+            op_text = StringRef{sounds.text.ptr,
+                static_cast<uint32_t>((like.text.ptr + like.text.len) - sounds.text.ptr)};
+        }
+        AstNode* right = parse(prec);
+        AstNode* node = make_node(arena_, NodeType::NODE_BINARY_OP, op_text);
+        node->add_child(left);
+        if (right) node->add_child(right);
+        return node;
+    }
+
+    AstNode* parse_member_of(AstNode* left, const Token& member, Precedence prec) {
+        Token of = tok_.peek();
+        StringRef op_text = member.text;
+        if (of.type == TokenType::TK_OF) {
+            tok_.skip();
+            op_text = StringRef{member.text.ptr,
+                static_cast<uint32_t>((of.text.ptr + of.text.len) - member.text.ptr)};
+        }
+
+        AstNode* right = nullptr;
+        if (tok_.peek().type == TokenType::TK_LPAREN) {
+            tok_.skip();
+            AstNode* tuple = make_node(arena_, NodeType::NODE_TUPLE);
+            if (tok_.peek().type != TokenType::TK_RPAREN) {
+                while (true) {
+                    AstNode* elem = parse();
+                    if (elem) tuple->add_child(elem);
+                    if (tok_.peek().type == TokenType::TK_COMMA) tok_.skip();
+                    else break;
+                }
+            }
+            if (tok_.peek().type == TokenType::TK_RPAREN) tok_.skip();
+            right = tuple;
+        } else {
+            right = parse(prec);
+        }
+
+        AstNode* node = make_node(arena_, NodeType::NODE_BINARY_OP, op_text);
+        node->add_child(left);
+        if (right) node->add_child(right);
+        return node;
+    }
+
     // BETWEEN low AND high
     AstNode* parse_between(AstNode* left) {
         AstNode* node = make_node(arena_, NodeType::NODE_BETWEEN);
@@ -471,6 +604,38 @@ private:
         AstNode* high = parse(Precedence::COMPARISON);
         node->add_child(high);
         return node;
+    }
+
+    AstNode* parse_interval_literal(const Token& interval) {
+        tok_.skip();
+        Token amount = tok_.next_token();
+        if (amount.type == TokenType::TK_EOF || amount.type == TokenType::TK_ERROR) {
+            return make_node(arena_, NodeType::NODE_IDENTIFIER, interval.text);
+        }
+        Token unit = tok_.next_token();
+        if (unit.type == TokenType::TK_EOF || unit.type == TokenType::TK_ERROR) {
+            StringRef span{interval.text.ptr,
+                static_cast<uint32_t>((amount.text.ptr + amount.text.len) - interval.text.ptr)};
+            return make_node(arena_, NodeType::NODE_IDENTIFIER, span);
+        }
+        StringRef span{interval.text.ptr,
+            static_cast<uint32_t>((unit.text.ptr + unit.text.len) - interval.text.ptr)};
+        return make_node(arena_, NodeType::NODE_IDENTIFIER, span);
+    }
+
+    AstNode* parse_quantified_subquery(const Token& quantifier) {
+        tok_.skip();
+        if (tok_.peek().type == TokenType::TK_LPAREN) {
+            tok_.skip();
+            if (tok_.peek().type == TokenType::TK_SELECT) {
+                const char* close = skip_to_matching_paren();
+                const char* end = close ? close + 1 : tok_.input_end();
+                return make_node(arena_, NodeType::NODE_IDENTIFIER,
+                    StringRef{quantifier.text.ptr,
+                        static_cast<uint32_t>(end - quantifier.text.ptr)});
+            }
+        }
+        return make_node(arena_, NodeType::NODE_IDENTIFIER, quantifier.text);
     }
 
     // CASE [expr] WHEN ... THEN ... [ELSE ...] END
@@ -607,14 +772,18 @@ private:
     }
 
     // Skip tokens until matching closing paren (handles nesting)
-    void skip_to_matching_paren() {
+    const char* skip_to_matching_paren() {
         int depth = 1;
         while (depth > 0) {
             Token t = tok_.next_token();
             if (t.type == TokenType::TK_LPAREN) ++depth;
-            else if (t.type == TokenType::TK_RPAREN) --depth;
+            else if (t.type == TokenType::TK_RPAREN) {
+                --depth;
+                if (depth == 0) return t.text.ptr;
+            }
             else if (t.type == TokenType::TK_EOF) break;
         }
+        return tok_.input_end();
     }
 
     // Some keywords can appear as identifiers in expression context
@@ -698,6 +867,8 @@ private:
             case TokenType::TK_PARTITION:
             case TokenType::TK_RECURSIVE:
             case TokenType::TK_REPLACE:
+            case TokenType::TK_DIV:
+            case TokenType::TK_MOD:
                 return true;
             default:
                 return false;

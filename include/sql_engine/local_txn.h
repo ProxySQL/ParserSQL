@@ -13,6 +13,7 @@
 #include <unordered_map>
 #include <cstring>
 #include <memory>
+#include <algorithm>
 
 namespace sql_engine {
 

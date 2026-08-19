@@ -63,15 +63,17 @@ private:
 
     // Helper: check if a token type is a keyword (not an identifier, literal, or operator)
     static bool is_keyword_token(TokenType type) {
-        // Keywords start at TK_SELECT and go through TK_EXCEPT
-        return static_cast<uint16_t>(type) >= static_cast<uint16_t>(TokenType::TK_SELECT);
+        return static_cast<uint16_t>(type) >= static_cast<uint16_t>(TokenType::TK_SELECT) &&
+               static_cast<uint16_t>(type) <= static_cast<uint16_t>(TokenType::TK_RECURSIVE);
     }
 
     // Helper: check if a token type is a literal value that should become ?
     static bool is_literal_token(TokenType type) {
         return type == TokenType::TK_INTEGER ||
                type == TokenType::TK_FLOAT ||
-               type == TokenType::TK_STRING;
+               type == TokenType::TK_STRING ||
+               type == TokenType::TK_HEX_LITERAL ||
+               type == TokenType::TK_BIT_LITERAL;
     }
 
     // Helper: uppercase a character
@@ -104,7 +106,12 @@ private:
 
     // Emit a single token to the string builder, uppercasing keywords, replacing literals with ?
     void emit_token(StringBuilder& sb, const Token& t, TokenType prev) {
-        bool space = (prev != TokenType::TK_EOF) && needs_space_before(prev, t.type);
+        bool quoted_user_after_account = t.type == TokenType::TK_USER_VARIABLE &&
+            t.source.len >= 2 &&
+            (t.source.ptr[1] == '\'' || t.source.ptr[1] == '"' || t.source.ptr[1] == '`') &&
+            (prev == TokenType::TK_STRING || prev == TokenType::TK_QUESTION);
+        bool space = (prev != TokenType::TK_EOF) &&
+                     !quoted_user_after_account && needs_space_before(prev, t.type);
         if (space) sb.append_char(' ');
 
         if (is_literal_token(t.type)) {
@@ -115,6 +122,13 @@ private:
             sb.append(t.text.ptr, t.text.len);
         } else if (t.type == TokenType::TK_QUESTION) {
             sb.append_char('?');
+        } else if (t.type == TokenType::TK_USER_VARIABLE) {
+            if (t.source.len >= 2 &&
+                (t.source.ptr[1] == '\'' || t.source.ptr[1] == '"' || t.source.ptr[1] == '`')) {
+                sb.append("@?", 2);
+            } else {
+                sb.append(t.source);
+            }
         } else if (t.type == TokenType::TK_COMMA) {
             sb.append(",", 1);
         } else {

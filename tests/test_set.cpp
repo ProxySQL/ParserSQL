@@ -1,8 +1,68 @@
 #include <gtest/gtest.h>
 #include "sql_parser/parser.h"
 #include <cstring>
+#include <string>
 
 using namespace sql_parser;
+
+namespace {
+std::string ref_string(StringRef ref) {
+    return ref.ptr ? std::string(ref.ptr, ref.len) : std::string();
+}
+}
+
+TEST(MySQLSetUserVariable, TargetHasDecodedValueAndExactSource) {
+    Parser<Dialect::MySQL> parser;
+    const char* sql = "SET @`a``b` = -1.25";
+    ParseResult r = parser.parse(sql, strlen(sql));
+    ASSERT_EQ(r.status, ParseResult::OK);
+    ASSERT_NE(r.ast, nullptr);
+    AstNode* assignment = r.ast->first_child;
+    ASSERT_NE(assignment, nullptr);
+    AstNode* target = assignment->first_child;
+    ASSERT_NE(target, nullptr);
+    AstNode* variable = target->first_child;
+    ASSERT_NE(variable, nullptr);
+    EXPECT_EQ(variable->type, NodeType::NODE_USER_VARIABLE);
+    EXPECT_EQ(ref_string(variable->value()), "a`b");
+    EXPECT_EQ(ref_string(variable->source()), "@`a``b`");
+    AstNode* rhs = target->next_sibling;
+    ASSERT_NE(rhs, nullptr);
+    EXPECT_EQ(rhs->type, NodeType::NODE_UNARY_OP);
+    EXPECT_EQ(ref_string(rhs->source()), "-1.25");
+}
+
+TEST(MySQLSetCompleteness, OnlyEofOrOneTrailingSemicolonIsFullInput) {
+    Parser<Dialect::MySQL> parser;
+    struct Case { const char* sql; bool full; const char* remaining; };
+    const Case cases[] = {
+        {"SET @x=1", true, ""},
+        {"SET @x=1;", true, ""},
+        {"SET @x=1;   ", true, ""},
+        {"SET @x=1 trailing", false, "trailing"},
+        {"SET @x=1,", false, ","},
+        {"SET @x=1; SELECT 1", false, "SELECT 1"},
+        {"SET @x=1;;", false, ";"},
+    };
+
+    for (const auto& tc : cases) {
+        SCOPED_TRACE(tc.sql);
+        ParseResult r = parser.parse(tc.sql, strlen(tc.sql));
+        EXPECT_EQ(r.full_input, tc.full);
+        EXPECT_EQ(ref_string(r.remaining), tc.remaining);
+    }
+}
+
+TEST(MySQLSetCompleteness, MissingClosingParenthesisIsAnError) {
+    Parser<Dialect::MySQL> parser;
+    const char* cases[] = {"SET @x=(1;", "SET @x=(1,2", "SET @x=(1"};
+    for (const char* sql : cases) {
+        SCOPED_TRACE(sql);
+        ParseResult r = parser.parse(sql, strlen(sql));
+        EXPECT_EQ(r.status, ParseResult::ERROR);
+        EXPECT_FALSE(r.full_input);
+    }
+}
 
 // ============================================================================
 // Data-driven test infrastructure
@@ -336,6 +396,11 @@ protected:
         for (const AstNode* c = node->first_child; c; c = c->next_sibling) ++n;
         return n;
     }
+
+    std::string value(const AstNode* node) {
+        if (!node || !node->value_ptr) return {};
+        return std::string(node->value_ptr, node->value_len);
+    }
 };
 
 TEST_F(MySQLSetTest, SetSimpleVariable) {
@@ -374,6 +439,51 @@ TEST_F(MySQLSetTest, SetGlobalVariable) {
     EXPECT_EQ(target->type, NodeType::NODE_VAR_TARGET);
 }
 
+TEST_F(MySQLSetTest, SetPersistScopeVariable) {
+    const char* sql = "SET PERSIST max_allowed_packet = 1073741824";
+    auto r = parser.parse(sql, strlen(sql));
+    EXPECT_EQ(r.status, ParseResult::OK);
+    ASSERT_NE(r.ast, nullptr);
+    ASSERT_NE(r.ast->first_child, nullptr);
+
+    AstNode* target = r.ast->first_child->first_child;
+    ASSERT_NE(target, nullptr);
+    ASSERT_NE(target->first_child, nullptr);
+    EXPECT_EQ(value(target->first_child), "PERSIST");
+    ASSERT_NE(target->first_child->next_sibling, nullptr);
+    EXPECT_EQ(value(target->first_child->next_sibling), "max_allowed_packet");
+}
+
+TEST_F(MySQLSetTest, SetPersistOnlyScopeVariable) {
+    const char* sql = "SET PERSIST_ONLY sql_mode = 'STRICT_TRANS_TABLES'";
+    auto r = parser.parse(sql, strlen(sql));
+    EXPECT_EQ(r.status, ParseResult::OK);
+    ASSERT_NE(r.ast, nullptr);
+    ASSERT_NE(r.ast->first_child, nullptr);
+
+    AstNode* target = r.ast->first_child->first_child;
+    ASSERT_NE(target, nullptr);
+    ASSERT_NE(target->first_child, nullptr);
+    EXPECT_EQ(value(target->first_child), "PERSIST_ONLY");
+    ASSERT_NE(target->first_child->next_sibling, nullptr);
+    EXPECT_EQ(value(target->first_child->next_sibling), "sql_mode");
+}
+
+TEST_F(MySQLSetTest, SetLocalScopeVariable) {
+    const char* sql = "SET LOCAL wait_timeout = 10";
+    auto r = parser.parse(sql, strlen(sql));
+    EXPECT_EQ(r.status, ParseResult::OK);
+    ASSERT_NE(r.ast, nullptr);
+    ASSERT_NE(r.ast->first_child, nullptr);
+
+    AstNode* target = r.ast->first_child->first_child;
+    ASSERT_NE(target, nullptr);
+    ASSERT_NE(target->first_child, nullptr);
+    EXPECT_EQ(value(target->first_child), "LOCAL");
+    ASSERT_NE(target->first_child->next_sibling, nullptr);
+    EXPECT_EQ(value(target->first_child->next_sibling), "wait_timeout");
+}
+
 TEST_F(MySQLSetTest, SetSessionVariable) {
     auto r = parser.parse("SET SESSION wait_timeout = 600", 30);
     EXPECT_EQ(r.status, ParseResult::OK);
@@ -390,6 +500,38 @@ TEST_F(MySQLSetTest, SetUserVariable) {
     auto r = parser.parse("SET @my_var = 42", 16);
     EXPECT_EQ(r.status, ParseResult::OK);
     ASSERT_NE(r.ast, nullptr);
+}
+
+TEST_F(MySQLSetTest, SetDottedUserVariable) {
+    const char* sql = "SET @user.var := 7";
+    auto r = parser.parse(sql, strlen(sql));
+    EXPECT_EQ(r.status, ParseResult::OK);
+    ASSERT_NE(r.ast, nullptr);
+    ASSERT_NE(r.ast->first_child, nullptr);
+
+    AstNode* target = r.ast->first_child->first_child;
+    ASSERT_NE(target, nullptr);
+    ASSERT_NE(target->first_child, nullptr);
+    EXPECT_EQ(target->first_child->type, NodeType::NODE_USER_VARIABLE);
+    EXPECT_EQ(value(target->first_child), "user.var");
+    EXPECT_EQ(ref_string(target->first_child->source()), "@user.var");
+}
+
+TEST_F(MySQLSetTest, SetScopedCommaItemAfterUserVariable) {
+    const char* sql = "SET @'mix' := 1, LOCAL wait_timeout := 20";
+    auto r = parser.parse(sql, strlen(sql));
+    EXPECT_EQ(r.status, ParseResult::OK);
+    ASSERT_NE(r.ast, nullptr);
+    EXPECT_EQ(child_count(r.ast), 2);
+
+    AstNode* second_assignment = r.ast->first_child->next_sibling;
+    ASSERT_NE(second_assignment, nullptr);
+    AstNode* target = second_assignment->first_child;
+    ASSERT_NE(target, nullptr);
+    ASSERT_NE(target->first_child, nullptr);
+    EXPECT_EQ(value(target->first_child), "LOCAL");
+    ASSERT_NE(target->first_child->next_sibling, nullptr);
+    EXPECT_EQ(value(target->first_child->next_sibling), "wait_timeout");
 }
 
 TEST_F(MySQLSetTest, SetNames) {
@@ -611,7 +753,7 @@ TEST_F(MySQLSetTest, SetUserVariableRHS) {
     ASSERT_NE(target, nullptr);
     AstNode* rhs = target->next_sibling;
     ASSERT_NE(rhs, nullptr);
-    EXPECT_EQ(rhs->type, NodeType::NODE_COLUMN_REF);
+    EXPECT_EQ(rhs->type, NodeType::NODE_USER_VARIABLE);
 }
 
 // ============================================================================
@@ -637,7 +779,8 @@ TEST_F(PgSQLSetTest, SetVarEqualValue) {
 }
 
 TEST_F(PgSQLSetTest, SetLocalVar) {
-    auto r = parser.parse("SET LOCAL timezone = 'UTC'", 25);
+    const char* sql = "SET LOCAL timezone = 'UTC'";
+    auto r = parser.parse(sql, strlen(sql));
     EXPECT_EQ(r.status, ParseResult::OK);
     ASSERT_NE(r.ast, nullptr);
 }
@@ -837,7 +980,7 @@ TEST(MySQLSetBulk, LenientAcceptsUnusualSyntax) {
 // ============================================================================
 
 // Helper: walk to first VAR_ASSIGNMENT's VAR_TARGET, then to its single
-// IDENTIFIER child (single-target case). Returns nullptr if shape differs.
+// variable child (single-target case). Returns nullptr if shape differs.
 static const AstNode* first_target_identifier(const AstNode* set_stmt) {
     if (!set_stmt || set_stmt->type != NodeType::NODE_SET_STMT) return nullptr;
     const AstNode* va = set_stmt->first_child;
@@ -845,7 +988,8 @@ static const AstNode* first_target_identifier(const AstNode* set_stmt) {
     const AstNode* vt = va->first_child;
     if (!vt || vt->type != NodeType::NODE_VAR_TARGET) return nullptr;
     const AstNode* id = vt->first_child;
-    if (!id || id->type != NodeType::NODE_IDENTIFIER) return nullptr;
+    if (!id || (id->type != NodeType::NODE_IDENTIFIER &&
+                id->type != NodeType::NODE_USER_VARIABLE)) return nullptr;
     return id;
 }
 
@@ -881,7 +1025,9 @@ TEST(MySQLSetP6, AtBacktickedNameKeepsFullText) {
     EXPECT_EQ(r.status, ParseResult::OK);
     const AstNode* id = first_target_identifier(r.ast);
     ASSERT_NE(id, nullptr);
-    EXPECT_EQ(std::string(id->value_ptr, id->value_len), "@my_var");
+    EXPECT_EQ(id->type, NodeType::NODE_USER_VARIABLE);
+    EXPECT_EQ(ref_string(id->value()), "my_var");
+    EXPECT_EQ(ref_string(id->source()), "@`my_var`");
 }
 
 TEST(MySQLSetP6, DoubleAtScopedBacktickedNameKeepsFullText) {

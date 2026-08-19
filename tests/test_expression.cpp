@@ -99,14 +99,102 @@ TEST_F(ExpressionTest, DefaultKeyword) {
 TEST_F(ExpressionTest, UserVariable) {
     AstNode* node = parse_expr("@my_var");
     ASSERT_NE(node, nullptr);
-    EXPECT_EQ(node->type, NodeType::NODE_COLUMN_REF);
+    EXPECT_EQ(node->type, NodeType::NODE_USER_VARIABLE);
+    EXPECT_EQ(std::string(node->value().ptr, node->value().len), "my_var");
+    EXPECT_EQ(std::string(node->source().ptr, node->source().len), "@my_var");
+}
+
+TEST_F(ExpressionTest, LosslessLiteralSourcesAndTypes) {
+    struct LiteralCase {
+        const char* sql;
+        NodeType type;
+    };
+    const LiteralCase cases[] = {
+        {"1", NodeType::NODE_LITERAL_INT},
+        {"1.25", NodeType::NODE_LITERAL_FLOAT},
+        {".25", NodeType::NODE_LITERAL_FLOAT},
+        {"1.", NodeType::NODE_LITERAL_FLOAT},
+        {"1e3", NodeType::NODE_LITERAL_FLOAT},
+        {"1.2E-3", NodeType::NODE_LITERAL_FLOAT},
+        {"0xCAFE", NodeType::NODE_LITERAL_HEX},
+        {"X'CAFE'", NodeType::NODE_LITERAL_HEX},
+        {"0b101", NodeType::NODE_LITERAL_BIT},
+        {"B'101'", NodeType::NODE_LITERAL_BIT},
+        {"'a''b'", NodeType::NODE_LITERAL_STRING},
+        {"\"a\\\"b\"", NodeType::NODE_LITERAL_STRING},
+        {"NULL", NodeType::NODE_LITERAL_NULL},
+    };
+
+    for (const auto& tc : cases) {
+        SCOPED_TRACE(tc.sql);
+        arena.reset();
+        AstNode* node = parse_expr(tc.sql);
+        ASSERT_NE(node, nullptr);
+        EXPECT_EQ(node->type, tc.type);
+        EXPECT_EQ(std::string(node->source().ptr, node->source().len), tc.sql);
+    }
+}
+
+TEST_F(ExpressionTest, UserVariableNamesDecodeWithoutLosingSource) {
+    struct VariableCase {
+        const char* sql;
+        const char* decoded;
+    };
+    const VariableCase cases[] = {
+        {"@plain", "plain"},
+        {"@with.dot", "with.dot"},
+        {"@with$dollar", "with$dollar"},
+        {"@'quoted-name'", "quoted-name"},
+        {"@\"quoted-name\"", "quoted-name"},
+        {"@`quoted-name`", "quoted-name"},
+        {"@'a''b'", "a'b"},
+        {"@\"a\"\"b\"", "a\"b"},
+        {"@`a``b`", "a`b"},
+        {"@'back\\\\slash'", "back\\\\slash"},
+    };
+
+    for (const auto& tc : cases) {
+        SCOPED_TRACE(tc.sql);
+        arena.reset();
+        AstNode* node = parse_expr(tc.sql);
+        ASSERT_NE(node, nullptr);
+        EXPECT_EQ(node->type, NodeType::NODE_USER_VARIABLE);
+        EXPECT_EQ(std::string(node->value().ptr, node->value().len), tc.decoded);
+        EXPECT_EQ(std::string(node->source().ptr, node->source().len), tc.sql);
+    }
+}
+
+TEST_F(ExpressionTest, UserVariableNamesEnforceDecodedLengthLimit) {
+    std::string accepted = "@" + std::string(64, 'a');
+    AstNode* node = parse_expr(accepted.c_str());
+    ASSERT_NE(node, nullptr);
+    EXPECT_EQ(node->value().len, 64u);
+
+    arena.reset();
+    std::string rejected = "@" + std::string(65, 'a');
+    EXPECT_EQ(parse_expr(rejected.c_str()), nullptr);
+}
+
+TEST_F(ExpressionTest, UnarySignsRetainWholeSourceSpan) {
+    AstNode* negative = parse_expr("-1.2E-3");
+    ASSERT_NE(negative, nullptr);
+    EXPECT_EQ(negative->type, NodeType::NODE_UNARY_OP);
+    EXPECT_EQ(std::string(negative->source().ptr, negative->source().len), "-1.2E-3");
+
+    arena.reset();
+    AstNode* positive = parse_expr("+0xCAFE");
+    ASSERT_NE(positive, nullptr);
+    EXPECT_EQ(positive->type, NodeType::NODE_UNARY_OP);
+    EXPECT_EQ(std::string(positive->source().ptr, positive->source().len), "+0xCAFE");
 }
 
 TEST_F(ExpressionTest, ParenthesizedExpression) {
     AstNode* node = parse_expr("(42)");
     ASSERT_NE(node, nullptr);
-    EXPECT_EQ(node->type, NodeType::NODE_LITERAL_INT);
-    EXPECT_EQ(std::string(node->value_ptr, node->value_len), "42");
+    EXPECT_EQ(node->type, NodeType::NODE_EXPRESSION);
+    EXPECT_EQ(std::string(node->source().ptr, node->source().len), "(42)");
+    ASSERT_NE(node->first_child, nullptr);
+    EXPECT_EQ(node->first_child->type, NodeType::NODE_LITERAL_INT);
 }
 
 // ===== Task 2: Binary Operators, IS NULL, BETWEEN, IN, Functions =====
@@ -229,8 +317,11 @@ TEST_F(ExpressionTest, NestedParens) {
     EXPECT_EQ(std::string(node->value_ptr, node->value_len), "*");
     // Left child should be 1+2
     ASSERT_NE(node->first_child, nullptr);
-    EXPECT_EQ(node->first_child->type, NodeType::NODE_BINARY_OP);
-    EXPECT_EQ(std::string(node->first_child->value_ptr, node->first_child->value_len), "+");
+    EXPECT_EQ(node->first_child->type, NodeType::NODE_EXPRESSION);
+    ASSERT_NE(node->first_child->first_child, nullptr);
+    EXPECT_EQ(node->first_child->first_child->type, NodeType::NODE_BINARY_OP);
+    EXPECT_EQ(std::string(node->first_child->first_child->value_ptr,
+                          node->first_child->first_child->value_len), "+");
 }
 
 TEST_F(ExpressionTest, LikeOperator) {
