@@ -126,15 +126,16 @@ public:
         std::string sql_key(sql, len);
         auto cache_it = plan_cache_.find(sql_key);
         if (cache_it != plan_cache_.end()) {
-            // Cache hit: move this entry to the front of the LRU list.
             plan_cache_order_.splice(plan_cache_order_.begin(),
                                      plan_cache_order_,
                                      cache_it->second);
             exec_arena_.reset();
             auto& entry = *cache_it->second;
+            PlanNode* plan = maybe_distribute(entry.plan, exec_arena_);
+            if (!plan) return {};
             PlanExecutor<D> executor(functions_, catalog_, exec_arena_);
             wire_executor(executor);
-            return executor.execute(entry.plan);
+            return executor.execute(plan);
         }
 
         // Cache miss: full parse -> plan -> optimize -> distribute pipeline
@@ -164,25 +165,21 @@ public:
 
         plan = optimizer_.optimize(plan, cached_parser->arena());
 
-        // Distribute across shards if shard map is configured
+        ResultSet rs;
         if (shard_map_ && remote_executor_) {
-            DistributedPlanner<D> dplanner(*shard_map_, catalog_, cached_parser->arena(), remote_executor_, &functions_);
-            plan = dplanner.distribute(plan);
+            exec_arena_.reset();
+            PlanNode* dist = maybe_distribute(plan, exec_arena_);
+            if (!dist) return {};
+            PlanExecutor<D> executor(functions_, catalog_, exec_arena_);
+            wire_executor(executor);
+            rs = executor.execute(dist);
+        } else {
+            PlanExecutor<D> executor(functions_, catalog_, cached_parser->arena());
+            wire_executor(executor);
+            rs = executor.execute(plan);
         }
 
-        // Execute first using the parser's arena. preprocess_aggregates (called
-        // inside execute()) may allocate into the arena to modify the plan in-place.
-        // Those allocations must persist in the parser arena (not exec_arena_) so
-        // the cached plan remains valid across calls.
-        PlanExecutor<D> executor(functions_, catalog_, cached_parser->arena());
-        wire_executor(executor);
-        ResultSet rs = executor.execute(plan);
-
-        // Cache the plan, enforcing the LRU bound. The parser arena is kept
-        // alive via unique_ptr stored in the CachedPlan so all plan/AST
-        // string pointers remain valid for subsequent cache hits.
         insert_into_plan_cache(std::move(sql_key), std::move(cached_parser), plan);
-
         return rs;
     }
 
@@ -377,6 +374,15 @@ private:
     CacheList plan_cache_order_;
     std::unordered_map<std::string, CacheIter> plan_cache_;
     size_t plan_cache_max_size_ = 1024;
+
+    PlanNode* maybe_distribute(PlanNode* plan, sql_parser::Arena& arena) {
+        if (!plan || !shard_map_ || !remote_executor_) return plan;
+        DistributedPlanner<D> dplanner(*shard_map_, catalog_, arena,
+                                       remote_executor_, &functions_);
+        PlanNode* dist = dplanner.distribute(plan);
+        if (dplanner.last_error()) return nullptr;
+        return dist;
+    }
 
     void insert_into_plan_cache(std::string key,
                                 std::unique_ptr<sql_parser::Parser<D>> parser,

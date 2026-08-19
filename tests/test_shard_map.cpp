@@ -179,13 +179,36 @@ TEST(ShardMapListTest, IntKeysRouteByExplicitMap) {
     EXPECT_EQ(map.shard_index_for_int(sref("users"), 7), 1u);
 }
 
-TEST(ShardMapListTest, MissingKeyRoutesToShardZero) {
+TEST(ShardMapListTest, MissingKeyIsUnroutable) {
     TableShardConfig cfg = make_two_shards(RoutingStrategy::LIST);
     cfg.list = {ShardListEntry{true, 1, "", 0}};
     ShardMap map;
     map.add_table(cfg);
 
-    EXPECT_EQ(map.shard_index_for_int(sref("users"), 999), 0u);
+    size_t idx = 99;
+    EXPECT_FALSE(map.try_shard_index_for_int(sref("users"), 999, idx));
+}
+
+TEST(ShardMapListTest, BetweenCollectsMappedInts) {
+    TableShardConfig cfg = make_two_shards(RoutingStrategy::LIST);
+    cfg.list = {
+        ShardListEntry{true, 1, "", 0},
+        ShardListEntry{true, 6, "", 1},
+        ShardListEntry{true, 7, "", 1},
+        ShardListEntry{true, 20, "", 0},
+    };
+    ShardMap map;
+    map.add_table(cfg);
+
+    std::vector<size_t> mid;
+    map.collect_int_list_shards(sref("users"), 5, 10, mid);
+    ASSERT_EQ(mid.size(), 2u);
+    EXPECT_EQ(mid[0], 1u);
+    EXPECT_EQ(mid[1], 1u);
+
+    std::vector<size_t> none;
+    map.collect_int_list_shards(sref("users"), 2, 5, none);
+    EXPECT_TRUE(none.empty());
 }
 
 TEST(ShardMapListTest, StringKeysRouteByExplicitMap) {
@@ -199,7 +222,8 @@ TEST(ShardMapListTest, StringKeysRouteByExplicitMap) {
 
     EXPECT_EQ(map.shard_index_for_string(sref("users"), "us-east", 7), 0u);
     EXPECT_EQ(map.shard_index_for_string(sref("users"), "us-west", 7), 1u);
-    EXPECT_EQ(map.shard_index_for_string(sref("users"), "eu-north", 8), 0u);
+    size_t miss = 99;
+    EXPECT_FALSE(map.try_shard_index_for_string(sref("users"), "eu-north", 8, miss));
 }
 
 // ----------------------------------------------------------------------
@@ -225,8 +249,32 @@ TEST(ShardMapTest, ClampOnOutOfRangeShardIndex) {
     EXPECT_EQ(map.shard_index_for_int(sref("users"), 50), 1u);
 }
 
-TEST(ShardMapTest, UnknownTableReturnsZero) {
-    ShardMap map;  // empty
-    EXPECT_EQ(map.shard_index_for_int(sref("nope"), 5), 0u);
-    EXPECT_EQ(map.shard_index_for_string(sref("nope"), "x", 1), 0u);
+TEST(ShardMapTest, UnknownTableIsUnroutable) {
+    ShardMap map;
+    size_t idx = 99;
+    EXPECT_FALSE(map.try_shard_index_for_int(sref("nope"), 5, idx));
+    EXPECT_FALSE(map.try_shard_index_for_string(sref("nope"), "x", 1, idx));
+}
+
+TEST(ShardMapTest, CompositeHashIsDeterministicAndDiffersFromSingle) {
+    TableShardConfig cfg;
+    cfg.table_name = "kv";
+    cfg.shard_key = "tenant_id+id";
+    cfg.shards = {ShardInfo{"s0"}, ShardInfo{"s1"}, ShardInfo{"s2"}};
+    ShardMap map;
+    map.add_table(cfg);
+
+    EXPECT_EQ(map.get_shard_keys(sref("kv")).size(), 2u);
+    EXPECT_EQ(std::string(map.get_shard_key(sref("kv")).ptr,
+                          map.get_shard_key(sref("kv")).len), "tenant_id");
+
+    ShardKeyPart a[] = {{true, 1, nullptr, 0}, {true, 3, nullptr, 0}};
+    ShardKeyPart b[] = {{true, 2, nullptr, 0}, {true, 3, nullptr, 0}};
+    size_t ia = 0, ib = 0, ia2 = 0;
+    ASSERT_TRUE(map.try_shard_index_for_parts(sref("kv"), a, 2, ia));
+    ASSERT_TRUE(map.try_shard_index_for_parts(sref("kv"), b, 2, ib));
+    ASSERT_TRUE(map.try_shard_index_for_parts(sref("kv"), a, 2, ia2));
+    EXPECT_EQ(ia, ia2);
+    EXPECT_LT(ia, 3u);
+    EXPECT_LT(ib, 3u);
 }

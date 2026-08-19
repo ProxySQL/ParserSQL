@@ -226,3 +226,19 @@ TEST(SSLConfigTest, ParseShardSpecRejectsEmptyList) {
     EXPECT_FALSE(ps.ok);
     EXPECT_NE(ps.error.find("at least one"), std::string::npos);
 }
+
+TEST(SSLConfigTest, ParseShardSpecCompositeHash) {
+    auto ps = parse_shard_spec("kv:tenant_id+id:hash:s0,s1,s2");
+
+    ASSERT_TRUE(ps.ok);
+    EXPECT_EQ(ps.config.table_name, "kv");
+    EXPECT_EQ(ps.config.shard_key, "tenant_id+id");
+    EXPECT_EQ(ps.config.strategy, RoutingStrategy::HASH);
+    ASSERT_EQ(ps.config.shards.size(), 3u);
+}
+
+TEST(SSLConfigTest, ParseShardSpecRejectsCompositeRange) {
+    auto ps = parse_shard_spec("kv:tenant_id+id:range:5=s0,10=s1");
+    EXPECT_FALSE(ps.ok);
+    EXPECT_NE(ps.error.find("HASH"), std::string::npos);
+}

@@ -874,6 +874,40 @@ TEST_F(DistributedPlannerTest, ShardRouting_RangeInequalityPrunes) {
     EXPECT_EQ(count_remotes("SELECT * FROM users WHERE id >= 1 AND id <= 15"), 3u);
 }
 
+TEST_F(DistributedPlannerTest, ShardRouting_ListBetweenPrunes) {
+    TableShardConfig cfg;
+    cfg.table_name = "users";
+    cfg.shard_key = "id";
+    cfg.shards = {{"shard_1"}, {"shard_2"}, {"shard_3"}};
+    cfg.strategy = RoutingStrategy::LIST;
+    cfg.list = {
+        {true, 1, "", 0},
+        {true, 6, "", 1},
+        {true, 7, "", 1},
+        {true, 15, "", 2},
+    };
+    shard_map.add_table(cfg);
+
+    auto count_remotes = [&](const char* sql) {
+        Parser<Dialect::MySQL> parser;
+        auto pr = parser.parse(sql, std::strlen(sql));
+        PlanBuilder<Dialect::MySQL> builder(catalog, parser.arena());
+        PlanNode* plan = builder.build(pr.ast);
+        DistributedPlanner<Dialect::MySQL> dp(shard_map, catalog, parser.arena());
+        PlanNode* dist = dp.distribute(plan);
+        std::vector<PlanNode*> remotes;
+        find_nodes(dist, PlanNodeType::REMOTE_SCAN, remotes);
+        return remotes.size();
+    };
+
+    EXPECT_EQ(count_remotes("SELECT * FROM users WHERE id BETWEEN 6 AND 7"), 1u);
+    EXPECT_EQ(count_remotes("SELECT * FROM users WHERE id BETWEEN 1 AND 15"), 3u);
+    EXPECT_EQ(count_remotes("SELECT * FROM users WHERE id = 99"), 3u);
+    EXPECT_EQ(count_remotes("SELECT * FROM users WHERE id IN (6, 99)"), 1u);
+    EXPECT_EQ(count_remotes("SELECT * FROM users WHERE id IN (6, 15)"), 2u);
+    EXPECT_EQ(count_remotes("SELECT * FROM users WHERE id BETWEEN 2 AND 5"), 3u);
+}
+
 TEST_F(DistributedPlannerTest, ShardRouting_Correctness) {
     // The shard routing uses FNV-1a 64-bit hash of the key % num_shards
     // to pick a shard, but the test fixture uses sequential partitioning
@@ -1164,4 +1198,112 @@ TEST_F(DistributedPlannerTest, ColocatedJoinPushedToShards) {
         std::string remote(rs->remote_scan.remote_sql, rs->remote_scan.remote_sql_len);
         EXPECT_NE(remote.find("JOIN"), std::string::npos) << remote;
     }
+}
+
+TEST_F(DistributedPlannerTest, CompositeColocatedJoinPushedToShards) {
+    catalog.add_table("", "kv", {
+        {"tenant_id", SqlType::make_int(), false},
+        {"id",        SqlType::make_int(), false},
+        {"name",      SqlType::make_varchar(255), true},
+    });
+    catalog.add_table("", "kv_orders", {
+        {"tenant_id", SqlType::make_int(), false},
+        {"id",        SqlType::make_int(), false},
+        {"amt",       SqlType::make_int(), true},
+    });
+    TableShardConfig kv;
+    kv.table_name = "kv";
+    kv.shard_key = "tenant_id+id";
+    kv.shards = {{"shard_1"}, {"shard_2"}, {"shard_3"}};
+    shard_map.add_table(kv);
+    TableShardConfig kvo;
+    kvo.table_name = "kv_orders";
+    kvo.shard_key = "tenant_id+id";
+    kvo.shards = {{"shard_1"}, {"shard_2"}, {"shard_3"}};
+    shard_map.add_table(kvo);
+
+    Parser<Dialect::MySQL> parser;
+    const char* sql =
+        "SELECT * FROM kv JOIN kv_orders ON kv.tenant_id = kv_orders.tenant_id "
+        "AND kv.id = kv_orders.id";
+    auto pr = parser.parse(sql, std::strlen(sql));
+    ASSERT_EQ(pr.status, ParseResult::OK);
+
+    PlanBuilder<Dialect::MySQL> builder(catalog, parser.arena());
+    PlanNode* plan = builder.build(pr.ast);
+    ASSERT_NE(plan, nullptr);
+
+    DistributedPlanner<Dialect::MySQL> dp(shard_map, catalog, parser.arena());
+    PlanNode* dist = dp.distribute(plan);
+    ASSERT_NE(dist, nullptr);
+
+    std::vector<PlanNode*> joins, remotes;
+    find_nodes(dist, PlanNodeType::JOIN, joins);
+    find_nodes(dist, PlanNodeType::REMOTE_SCAN, remotes);
+    EXPECT_TRUE(joins.empty()) << "composite co-located join should not stay local";
+    ASSERT_EQ(remotes.size(), 3u);
+    for (auto* rs : remotes) {
+        std::string remote(rs->remote_scan.remote_sql, rs->remote_scan.remote_sql_len);
+        EXPECT_NE(remote.find("JOIN"), std::string::npos) << remote;
+    }
+}
+
+TEST_F(DistributedPlannerTest, IncompleteCompositeJoinStaysLocal) {
+    catalog.add_table("", "kv", {
+        {"tenant_id", SqlType::make_int(), false},
+        {"id",        SqlType::make_int(), false},
+        {"name",      SqlType::make_varchar(255), true},
+    });
+    catalog.add_table("", "kv_orders", {
+        {"tenant_id", SqlType::make_int(), false},
+        {"id",        SqlType::make_int(), false},
+        {"amt",       SqlType::make_int(), true},
+    });
+    TableShardConfig kv;
+    kv.table_name = "kv";
+    kv.shard_key = "tenant_id+id";
+    kv.shards = {{"shard_1"}, {"shard_2"}, {"shard_3"}};
+    shard_map.add_table(kv);
+    TableShardConfig kvo;
+    kvo.table_name = "kv_orders";
+    kvo.shard_key = "tenant_id+id";
+    kvo.shards = {{"shard_1"}, {"shard_2"}, {"shard_3"}};
+    shard_map.add_table(kvo);
+
+    Parser<Dialect::MySQL> parser;
+    const char* sql = "SELECT * FROM kv JOIN kv_orders ON kv.tenant_id = kv_orders.tenant_id";
+    auto pr = parser.parse(sql, std::strlen(sql));
+    ASSERT_EQ(pr.status, ParseResult::OK);
+
+    PlanBuilder<Dialect::MySQL> builder(catalog, parser.arena());
+    PlanNode* plan = builder.build(pr.ast);
+    ASSERT_NE(plan, nullptr);
+
+    DistributedPlanner<Dialect::MySQL> dp(shard_map, catalog, parser.arena());
+    PlanNode* dist = dp.distribute(plan);
+    ASSERT_NE(dist, nullptr);
+
+    std::vector<PlanNode*> joins;
+    find_nodes(dist, PlanNodeType::JOIN, joins);
+    EXPECT_FALSE(joins.empty()) << "join on a partial composite key must gather";
+}
+
+TEST_F(DistributedPlannerTest, UnknownTableErrors) {
+    catalog.add_table("", "ghost", {
+        {"id", SqlType::make_int(), false},
+    });
+    Parser<Dialect::MySQL> parser;
+    const char* sql = "SELECT * FROM ghost";
+    auto pr = parser.parse(sql, std::strlen(sql));
+    ASSERT_EQ(pr.status, ParseResult::OK);
+
+    PlanBuilder<Dialect::MySQL> builder(catalog, parser.arena());
+    PlanNode* plan = builder.build(pr.ast);
+    ASSERT_NE(plan, nullptr);
+
+    DistributedPlanner<Dialect::MySQL> dp(shard_map, catalog, parser.arena());
+    PlanNode* dist = dp.distribute(plan);
+    EXPECT_EQ(dist, nullptr);
+    ASSERT_NE(dp.last_error(), nullptr);
+    EXPECT_NE(std::string(dp.last_error()).find("shard map"), std::string::npos);
 }
