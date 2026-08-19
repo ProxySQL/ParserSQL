@@ -1,5 +1,6 @@
 #include <gtest/gtest.h>
 #include "sql_engine/pgsql_remote_executor.h"
+#include "sql_engine/thread_safe_executor.h"
 #include "sql_engine/backend_config.h"
 
 #include <libpq-fe.h>
@@ -225,6 +226,15 @@ TEST_F(PgSQLExecutorTest, DateType) {
     auto rs = exec_->execute("test_pgsql", sql);
     ASSERT_EQ(rs.row_count(), 1u);
     EXPECT_EQ(rs.rows[0].get(0).tag, sql_engine::Value::TAG_DATE);
+}
+
+TEST(ThreadSafePgTest, PooledSelect) {
+    SKIP_IF_NO_PGSQL();
+    sql_engine::ThreadSafeMultiRemoteExecutor exec;
+    exec.add_backend(make_pgsql_config("pool_pg"));
+    sql_parser::StringRef sql{"SELECT 1", 8};
+    auto rs = exec.execute("pool_pg", sql);
+    EXPECT_EQ(rs.row_count(), 1u);
 }
 
 } // namespace

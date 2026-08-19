@@ -35,6 +35,7 @@
 #include "sql_engine/in_memory_catalog.h"
 #include "sql_engine/data_source.h"
 #include "sql_engine/local_txn.h"
+#include "sql_engine/distributed_txn.h"
 #include "sql_engine/multi_remote_executor.h"
 #include "sql_engine/thread_safe_executor.h"
 #include "sql_engine/shard_map.h"
@@ -103,14 +104,13 @@ static void worker_thread(
     (void)thread_id;
 
     // Each thread gets its own arena, txn manager, executor, and session
-    Arena txn_arena{65536, 1048576};
-    LocalTransactionManager txn_mgr(txn_arena);
-
     ThreadSafeMultiRemoteExecutor remote_exec;
     for (auto& bc : backends) {
         remote_exec.add_backend(bc);
     }
 
+    DistributedTransactionManager txn_mgr(
+        remote_exec, DistributedTransactionManager::BackendDialect::MYSQL);
     Session<Dialect::MySQL> session(catalog, txn_mgr);
     session.set_remote_executor(&remote_exec);
     session.set_parallel_open(true);  // thread-safe executor enables parallel shard I/O

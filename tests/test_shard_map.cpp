@@ -9,6 +9,7 @@
 #include "sql_engine/shard_map.h"
 
 #include <set>
+#include <climits>
 
 using namespace sql_engine;
 using sql_parser::StringRef;
@@ -106,6 +107,23 @@ TEST(ShardMapRangeTest, MatchesDemoDataPlacement) {
     EXPECT_EQ(map.shard_index_for_int(sref("users"), 5), 0u);
     EXPECT_EQ(map.shard_index_for_int(sref("users"), 6), 1u);
     EXPECT_EQ(map.shard_index_for_int(sref("users"), 10), 1u);
+}
+
+TEST(ShardMapRangeTest, CollectIntRangeShards) {
+    TableShardConfig cfg = make_two_shards(RoutingStrategy::RANGE);
+    cfg.ranges = {ShardRange{5, 0}, ShardRange{10, 1}};
+    ShardMap map;
+    map.add_table(cfg);
+
+    std::vector<size_t> lo;
+    map.collect_int_range_shards(sref("users"), INT64_MIN, 5, lo);
+    ASSERT_EQ(lo.size(), 1u);
+    EXPECT_EQ(lo[0], 0u);
+
+    std::vector<size_t> hi;
+    map.collect_int_range_shards(sref("users"), 6, INT64_MAX, hi);
+    ASSERT_EQ(hi.size(), 1u);
+    EXPECT_EQ(hi[0], 1u);
 }
 
 TEST(ShardMapRangeTest, AboveMaxBoundFallsToLastShard) {

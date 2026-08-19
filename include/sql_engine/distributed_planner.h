@@ -18,6 +18,7 @@
 #include <cstring>
 #include <cstdio>
 #include <cstdlib>
+#include <climits>
 #include <vector>
 #include <unordered_map>
 #include <functional>
@@ -401,6 +402,62 @@ private:
                     }
                 }
             }
+            if (is_compare_op(op) &&
+                shards_.routing_strategy(table_name) == RoutingStrategy::RANGE) {
+                const sql_parser::AstNode* left_node = expr->first_child;
+                const sql_parser::AstNode* right_node = left_node ? left_node->next_sibling : nullptr;
+                if (left_node && right_node) {
+                    const sql_parser::AstNode* col = nullptr;
+                    const sql_parser::AstNode* lit = nullptr;
+                    bool key_on_left = false;
+                    if (is_shard_key_ref(left_node, shard_key) && is_literal(right_node)) {
+                        col = left_node; lit = right_node; key_on_left = true;
+                    } else if (is_shard_key_ref(right_node, shard_key) && is_literal(left_node)) {
+                        col = right_node; lit = left_node; key_on_left = false;
+                    }
+                    if (col && lit) {
+                        int64_t v = literal_to_int(lit);
+                        int64_t lo = INT64_MIN, hi = INT64_MAX;
+                        char c0 = op.ptr[0];
+                        bool has_eq = op.len == 2 && op.ptr[1] == '=';
+                        if (c0 == '<' && key_on_left) {
+                            hi = has_eq ? v : (v == INT64_MIN ? INT64_MIN : v - 1);
+                        } else if (c0 == '>' && key_on_left) {
+                            lo = has_eq ? v : (v == INT64_MAX ? INT64_MAX : v + 1);
+                        } else if (c0 == '<' && !key_on_left) {
+                            lo = has_eq ? v : (v == INT64_MAX ? INT64_MAX : v + 1);
+                        } else if (c0 == '>' && !key_on_left) {
+                            hi = has_eq ? v : (v == INT64_MIN ? INT64_MIN : v - 1);
+                        }
+                        shards_.collect_int_range_shards(table_name, lo, hi, target_indices);
+                        return;
+                    }
+                }
+            }
+            if (op.len == 2 &&
+                (op.ptr[0] == 'O' || op.ptr[0] == 'o') &&
+                (op.ptr[1] == 'R' || op.ptr[1] == 'r')) {
+                const sql_parser::AstNode* left_node = expr->first_child;
+                const sql_parser::AstNode* right_node = left_node ? left_node->next_sibling : nullptr;
+                std::vector<size_t> left_targets, right_targets;
+                extract_shard_targets(left_node, shard_key, table_name, num_shards, left_targets);
+                extract_shard_targets(right_node, shard_key, table_name, num_shards, right_targets);
+                if (left_targets.empty() || right_targets.empty()) return;
+                std::vector<bool> seen(num_shards, false);
+                for (auto i : left_targets) {
+                    if (i < num_shards && !seen[i]) {
+                        seen[i] = true;
+                        target_indices.push_back(i);
+                    }
+                }
+                for (auto i : right_targets) {
+                    if (i < num_shards && !seen[i]) {
+                        seen[i] = true;
+                        target_indices.push_back(i);
+                    }
+                }
+                return;
+            }
             // Recurse into AND branches
             if (op.len == 3 &&
                 (op.ptr[0] == 'A' || op.ptr[0] == 'a') &&
@@ -446,6 +503,29 @@ private:
                 }
             }
         }
+
+        if (expr->type == sql_parser::NodeType::NODE_BETWEEN &&
+            shards_.routing_strategy(table_name) == RoutingStrategy::RANGE) {
+            const sql_parser::AstNode* col = expr->first_child;
+            const sql_parser::AstNode* lo = col ? col->next_sibling : nullptr;
+            const sql_parser::AstNode* hi = lo ? lo->next_sibling : nullptr;
+            if (col && is_shard_key_ref(col, shard_key) && is_literal(lo) && is_literal(hi)) {
+                shards_.collect_int_range_shards(table_name,
+                                                 literal_to_int(lo), literal_to_int(hi),
+                                                 target_indices);
+            }
+        }
+    }
+
+    static bool is_compare_op(sql_parser::StringRef op) {
+        if (op.len == 1) return op.ptr[0] == '<' || op.ptr[0] == '>';
+        if (op.len == 2) return (op.ptr[0] == '<' || op.ptr[0] == '>') && op.ptr[1] == '=';
+        return false;
+    }
+
+    static int64_t literal_to_int(const sql_parser::AstNode* lit) {
+        if (!lit || !lit->value().ptr) return 0;
+        return std::strtoll(lit->value().ptr, nullptr, 10);
     }
 
     bool is_shard_key_ref(const sql_parser::AstNode* node, sql_parser::StringRef shard_key) const {

@@ -93,7 +93,7 @@ echo "SELECT 1 + 2, UPPER('hello'), COALESCE(NULL, 42)" | ./sqlengine
 # Against a MySQL backend
 ./sqlengine --backend "mysql://root:pass@127.0.0.1:3306/mydb?name=primary"
 
-# Sharded across two backends
+# Sharded across two backends (2PC is on; optional --txn-log PATH)
 ./sqlengine \
   --backend "mysql://root:pass@host1:3306/db?name=shard1" \
   --backend "mysql://root:pass@host2:3306/db?name=shard2" \
@@ -171,20 +171,20 @@ ResultSet rs = executor.execute(plan);
 #include "sql_engine/session.h"
 #include "sql_engine/thread_safe_executor.h"
 #include "sql_engine/shard_map.h"
-#include "sql_engine/local_txn.h"
+#include "sql_engine/distributed_txn.h"
 
-// Backends (connection-pooled, thread-safe)
+// Backends (connection-pooled, thread-safe; MySQL or PostgreSQL)
 ThreadSafeMultiRemoteExecutor executor;
 executor.add_backend({.name = "shard1", .host = "h1", .port = 3306, ...});
 executor.add_backend({.name = "shard2", .host = "h2", .port = 3306, ...});
 
 // Sharding policy: "users" is sharded on "id" across shard1, shard2
 ShardMap shards;
-shards.add_sharded_table("users", "id", {"shard1", "shard2"});
+shards.add_table({"users", "id", {{"shard1"}, {"shard2"}}});
 
-// Catalog, transactions, session
+// Catalog + 2PC (required for atomic multi-shard DML)
 InMemoryCatalog catalog;  /* ... add_table(...) ... */
-LocalTransactionManager txn;
+DistributedTransactionManager txn(executor);
 Session<Dialect::MySQL> session(catalog, txn);
 session.set_remote_executor(&executor);
 session.set_shard_map(&shards);
@@ -354,11 +354,11 @@ auto report = recovery.recover();
 
 ### Distributed execution
 
-- **Shard routing** — shard-key lookups go to one backend; scatter queries go to all
-- **Distributed aggregation** — per-shard partial aggregates + coordinator merge (COUNT+SUM+MIN+MAX + AVG from SUM/COUNT)
-- **Distributed sort** — per-shard sort + coordinator merge
-- **Cross-shard joins** — hash-join coordinator; materialized subquery cache
-- **Cross-shard DML** — scatter INSERT/UPDATE/DELETE when no shard key; single-shard when key present
+- **Shard routing** — equality / `IN` / `OR` of equalities prune via `ShardMap`; RANGE also prunes `<`/`>`/`BETWEEN`. Placeholders scatter.
+- **Distributed aggregation** — per-shard partial aggregates + coordinator merge (`COUNT`/`SUM`/`MIN`/`MAX`/`AVG`). `COUNT(DISTINCT)` gathers then aggregates locally.
+- **Distributed sort** — per-shard sort + coordinator merge when keys are table columns
+- **Joins** — co-located same-key joins push down; otherwise gather both sides and join locally
+- **Cross-shard DML** — routed by `ShardMap`; missing/non-literal shard key and multi-table DML on shards fail closed
 - **Cross-shard INSERT ... SELECT** — source materialized, rows routed by destination shard key
 
 ### Transactions
@@ -372,10 +372,10 @@ auto report = recovery.recover();
 
 ### Backends & connectivity
 
-- **MySQL** — libmysqlclient with pooled and single-connection paths, UTF-8, configurable timeouts
-- **PostgreSQL** — libpq with statement_timeout, UTC-normalized TIMESTAMPTZ handling
+- **MySQL** — libmysqlclient with pooled (`ThreadSafeMultiRemoteExecutor`) and single-connection paths
+- **PostgreSQL** — libpq pooled on the same executor, plus a single-connection path; `statement_timeout` and UTC TIMESTAMPTZ
 - **SSL/TLS** — `ssl_mode`, `ssl_ca`, `ssl_cert`, `ssl_key` configurable per backend for both dialects
-- **Connection pool** — thread-safe with health checks, reconnection, RAII `ConnectionGuard`
+- **Connection pool** — thread-safe per dialect, RAII checkout, poison-on-error
 - **MySQL wire-protocol server** — `mysql_server` speaks the MySQL protocol; backends are ParserSQL engines
 
 ### Thread-safety
@@ -388,7 +388,7 @@ auto report = recovery.recover();
 
 | Tool | Build | Purpose |
 |---|---|---|
-| `sqlengine` | `make build-sqlengine` | Interactive SQL CLI; stdin, one-shot, or REPL; optional backends and sharding |
+| `sqlengine` | `make build-sqlengine` | Interactive SQL CLI; 2PC when `--backend` is set; optional `--txn-log` |
 | `mysql_server` | `make mysql-server` | MySQL wire-protocol server fronted by the ParserSQL engine |
 | `corpus_test` | `make build-corpus-test` | Read SQL from stdin/files, parse each, report OK/PARTIAL/ERROR |
 | `engine_stress_test` | `make engine-stress` | Direct-API engine stress test |

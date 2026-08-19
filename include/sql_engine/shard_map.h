@@ -3,6 +3,7 @@
 
 #include "sql_parser/common.h"
 #include <cstdint>
+#include <climits>
 #include <cstring>
 #include <string>
 #include <vector>
@@ -153,6 +154,32 @@ public:
                 return 0;
         }
         return 0;
+    }
+
+    RoutingStrategy routing_strategy(sql_parser::StringRef table_name) const {
+        const TableShardConfig* cfg = lookup(table_name);
+        return cfg ? cfg->strategy : RoutingStrategy::HASH;
+    }
+
+    // RANGE only. Inclusive [lo, hi]. HASH/LIST yield no indices (caller scatters).
+    void collect_int_range_shards(sql_parser::StringRef table_name,
+                                  int64_t lo, int64_t hi,
+                                  std::vector<size_t>& out) const {
+        const TableShardConfig* cfg = lookup(table_name);
+        if (!cfg || cfg->strategy != RoutingStrategy::RANGE || cfg->ranges.empty())
+            return;
+        if (lo > hi) return;
+        size_t n = cfg->shards.size();
+        const auto& ranges = cfg->ranges;
+        for (size_t i = 0; i < ranges.size(); ++i) {
+            int64_t seg_hi = (i + 1 == ranges.size())
+                ? INT64_MAX : ranges[i].upper_inclusive;
+            int64_t seg_lo = (i == 0) ? INT64_MIN
+                : (cfg->ranges[i - 1].upper_inclusive == INT64_MAX
+                   ? INT64_MAX : cfg->ranges[i - 1].upper_inclusive + 1);
+            if (seg_lo <= hi && seg_hi >= lo)
+                out.push_back(clamp_index(ranges[i].shard_index, n));
+        }
     }
 
     bool same_routing(sql_parser::StringRef a, sql_parser::StringRef b) const {

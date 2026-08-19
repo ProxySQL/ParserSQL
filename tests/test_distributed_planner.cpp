@@ -808,6 +808,72 @@ TEST_F(DistributedPlannerTest, ShardRouting_NoShardKey_AllShards) {
         << "Non-shard-key filter should query all shards";
 }
 
+TEST_F(DistributedPlannerTest, ShardRouting_OrOfEqualitiesPrunesUnion) {
+    Parser<Dialect::MySQL> parser;
+    auto pr = parser.parse("SELECT * FROM users WHERE id = 4 OR id = 4", 42);
+    ASSERT_EQ(pr.status, ParseResult::OK);
+    PlanBuilder<Dialect::MySQL> builder(catalog, parser.arena());
+    PlanNode* plan = builder.build(pr.ast);
+    DistributedPlanner<Dialect::MySQL> dp(shard_map, catalog, parser.arena());
+    PlanNode* dist = dp.distribute(plan);
+    std::vector<PlanNode*> remotes;
+    find_nodes(dist, PlanNodeType::REMOTE_SCAN, remotes);
+    EXPECT_EQ(remotes.size(), 1u);
+}
+
+TEST_F(DistributedPlannerTest, ShardRouting_OrWithNonKeyScatters) {
+    Parser<Dialect::MySQL> parser;
+    auto pr = parser.parse("SELECT * FROM users WHERE id = 4 OR age > 20", 45);
+    ASSERT_EQ(pr.status, ParseResult::OK);
+    PlanBuilder<Dialect::MySQL> builder(catalog, parser.arena());
+    PlanNode* plan = builder.build(pr.ast);
+    DistributedPlanner<Dialect::MySQL> dp(shard_map, catalog, parser.arena());
+    PlanNode* dist = dp.distribute(plan);
+    std::vector<PlanNode*> remotes;
+    find_nodes(dist, PlanNodeType::REMOTE_SCAN, remotes);
+    EXPECT_EQ(remotes.size(), 3u);
+}
+
+TEST_F(DistributedPlannerTest, ShardRouting_PlaceholderScatters) {
+    Parser<Dialect::MySQL> parser;
+    auto pr = parser.parse("SELECT * FROM users WHERE id = ?", 32);
+    ASSERT_EQ(pr.status, ParseResult::OK);
+    PlanBuilder<Dialect::MySQL> builder(catalog, parser.arena());
+    PlanNode* plan = builder.build(pr.ast);
+    DistributedPlanner<Dialect::MySQL> dp(shard_map, catalog, parser.arena());
+    PlanNode* dist = dp.distribute(plan);
+    std::vector<PlanNode*> remotes;
+    find_nodes(dist, PlanNodeType::REMOTE_SCAN, remotes);
+    EXPECT_EQ(remotes.size(), 3u);
+}
+
+TEST_F(DistributedPlannerTest, ShardRouting_RangeInequalityPrunes) {
+    TableShardConfig cfg;
+    cfg.table_name = "users";
+    cfg.shard_key = "id";
+    cfg.shards = {{"shard_1"}, {"shard_2"}, {"shard_3"}};
+    cfg.strategy = RoutingStrategy::RANGE;
+    cfg.ranges = {{5, 0}, {10, 1}, {100000, 2}};
+    shard_map.add_table(cfg);
+
+    auto count_remotes = [&](const char* sql) {
+        Parser<Dialect::MySQL> parser;
+        auto pr = parser.parse(sql, std::strlen(sql));
+        PlanBuilder<Dialect::MySQL> builder(catalog, parser.arena());
+        PlanNode* plan = builder.build(pr.ast);
+        DistributedPlanner<Dialect::MySQL> dp(shard_map, catalog, parser.arena());
+        PlanNode* dist = dp.distribute(plan);
+        std::vector<PlanNode*> remotes;
+        find_nodes(dist, PlanNodeType::REMOTE_SCAN, remotes);
+        return remotes.size();
+    };
+
+    EXPECT_EQ(count_remotes("SELECT * FROM users WHERE id <= 5"), 1u);
+    EXPECT_EQ(count_remotes("SELECT * FROM users WHERE id > 10"), 1u);
+    EXPECT_EQ(count_remotes("SELECT * FROM users WHERE id BETWEEN 6 AND 10"), 1u);
+    EXPECT_EQ(count_remotes("SELECT * FROM users WHERE id >= 1 AND id <= 15"), 3u);
+}
+
 TEST_F(DistributedPlannerTest, ShardRouting_Correctness) {
     // The shard routing uses FNV-1a 64-bit hash of the key % num_shards
     // to pick a shard, but the test fixture uses sequential partitioning
