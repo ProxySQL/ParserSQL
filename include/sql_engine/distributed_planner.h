@@ -141,28 +141,38 @@ private:
             }
 
             case PlanNodeType::PROJECT: {
-                // Check for PROJECT -> [SORT ->] [FILTER ->] AGGREGATE pattern
-                // For aggregate queries, we want to handle the whole thing in distribute_aggregate
+                // PROJECT -> [SORT ->] [FILTER(HAVING) ->] AGGREGATE
+                PlanNode* sort_node = nullptr;
+                PlanNode* having_node = nullptr;
                 PlanNode* agg_child = node->left;
-                if (agg_child && agg_child->type == PlanNodeType::SORT)
+                if (agg_child && agg_child->type == PlanNodeType::SORT) {
+                    sort_node = agg_child;
                     agg_child = agg_child->left;
-                if (agg_child && agg_child->type == PlanNodeType::FILTER)
+                }
+                if (agg_child && agg_child->type == PlanNodeType::FILTER) {
+                    having_node = agg_child;
                     agg_child = agg_child->left;
+                }
                 if (agg_child && agg_child->type == PlanNodeType::AGGREGATE) {
-                    // Extract aggregate info from the PROJECT select list
                     push_agg_exprs_from_project(node, agg_child);
                     PlanNode* dist_agg = distribute_aggregate(agg_child);
-                    if (dist_agg && dist_agg->type == PlanNodeType::MERGE_AGGREGATE) {
-                        // Re-add FILTER (HAVING) if present
-                        if (node->left && node->left->type == PlanNodeType::FILTER) {
+                    if (dist_agg && (dist_agg->type == PlanNodeType::MERGE_AGGREGATE ||
+                                     dist_agg->type == PlanNodeType::AGGREGATE)) {
+                        PlanNode* top = dist_agg;
+                        if (having_node) {
                             PlanNode* having = make_plan_node(arena_, PlanNodeType::FILTER);
-                            having->filter.expr = node->left->filter.expr;
-                            having->left = dist_agg;
-                            return having;
+                            having->filter.expr = having_node->filter.expr;
+                            having->left = top;
+                            top = having;
                         }
-                        return dist_agg;
+                        if (sort_node) {
+                            PlanNode* sort = make_plan_node(arena_, PlanNodeType::SORT);
+                            sort->sort = sort_node->sort;
+                            sort->left = top;
+                            top = sort;
+                        }
+                        return top;
                     }
-                    // For unsharded, the remote already computes everything
                     return dist_agg;
                 }
 
@@ -188,6 +198,20 @@ private:
 
             case PlanNodeType::JOIN:
                 return distribute_join(node);
+
+            case PlanNodeType::WINDOW: {
+                PlanNode* result = make_plan_node(arena_, PlanNodeType::WINDOW);
+                result->window = node->window;
+                result->left = distribute_node(node->left);
+                return result;
+            }
+
+            case PlanNodeType::DERIVED_SCAN: {
+                PlanNode* result = make_plan_node(arena_, PlanNodeType::DERIVED_SCAN);
+                result->derived_scan = node->derived_scan;
+                result->derived_scan.inner_plan = distribute(node->derived_scan.inner_plan);
+                return result;
+            }
 
             case PlanNodeType::SET_OP: {
                 PlanNode* result = make_plan_node(arena_, PlanNodeType::SET_OP);
@@ -259,6 +283,27 @@ private:
         }
         ctx = extract_scan_context(node->left);
         return ctx;
+    }
+
+    static bool contains_type(const PlanNode* node, PlanNodeType type) {
+        if (!node) return false;
+        if (node->type == type) return true;
+        if (contains_type(node->left, type)) return true;
+        if (contains_type(node->right, type)) return true;
+        if (node->type == PlanNodeType::MERGE_AGGREGATE) {
+            for (uint16_t i = 0; i < node->merge_aggregate.child_count; ++i) {
+                if (contains_type(node->merge_aggregate.children[i], type)) return true;
+            }
+        }
+        if (node->type == PlanNodeType::MERGE_SORT) {
+            for (uint16_t i = 0; i < node->merge_sort.child_count; ++i) {
+                if (contains_type(node->merge_sort.children[i], type)) return true;
+            }
+        }
+        if (node->type == PlanNodeType::DERIVED_SCAN) {
+            return contains_type(node->derived_scan.inner_plan, type);
+        }
+        return false;
     }
 
     // Case 1 & 2: Distribute a scan (possibly with filter pushed down)
@@ -510,7 +555,7 @@ private:
         std::memcpy(bn, backend, blen + 1);
         node->remote_scan.backend_name = bn;
         node->remote_scan.remote_sql = sql.ptr;
-        node->remote_scan.remote_sql_len = static_cast<uint16_t>(sql.len);
+        node->remote_scan.remote_sql_len = sql.len;
         node->remote_scan.table = table;
         // Caller is responsible for setting output_exprs when the remote SQL
         // is not a passthrough SELECT *. make_plan_node() already zero-fills
@@ -548,8 +593,14 @@ private:
 
         const TableInfo* table = ctx.scan->scan.table;
         if (!shards_.has_table(table->table_name) || !shards_.is_sharded(table->table_name)) {
-            // Unsharded -- push the whole thing to remote
             return make_unsharded_aggregate(agg_node, ctx, table);
+        }
+
+        if (!all_aggregates_two_phase(agg_node)) {
+            PlanNode* result = make_plan_node(arena_, PlanNodeType::AGGREGATE);
+            result->aggregate = agg_node->aggregate;
+            result->left = distribute_node(agg_node->left);
+            return result;
         }
 
         // Sharded aggregate: each shard computes partial aggregates.
@@ -661,6 +712,24 @@ private:
         return make_remote_scan_with_outputs(backend, sql, table, projs);
     }
 
+    static bool is_two_phase_aggregate(const sql_parser::AstNode* expr) {
+        if (!expr || expr->type != sql_parser::NodeType::NODE_FUNCTION_CALL) return false;
+        if (expr->flags & sql_parser::FLAG_FUNC_DISTINCT) return false;
+        sql_parser::StringRef name = expr->value();
+        return name.equals_ci("COUNT", 5) || name.equals_ci("SUM", 3) ||
+               name.equals_ci("AVG", 3) || name.equals_ci("MIN", 3) ||
+               name.equals_ci("MAX", 3);
+    }
+
+    bool all_aggregates_two_phase(const PlanNode* agg_node) const {
+        if (!agg_node) return false;
+        if (agg_node->aggregate.agg_count == 0) return true;
+        for (uint16_t i = 0; i < agg_node->aggregate.agg_count; ++i) {
+            if (!is_two_phase_aggregate(agg_node->aggregate.agg_exprs[i])) return false;
+        }
+        return true;
+    }
+
     void decompose_aggregate(const sql_parser::AstNode* expr,
                               std::vector<const sql_parser::AstNode*>& projs,
                               std::vector<uint8_t>& merge_ops) {
@@ -673,11 +742,9 @@ private:
         sql_parser::StringRef name = expr->value();
 
         if (name.equals_ci("COUNT", 5)) {
-            // Remote: COUNT(*) or COUNT(col), Local: SUM of counts
             projs.push_back(expr);
             merge_ops.push_back(static_cast<uint8_t>(MergeOp::SUM_OF_COUNTS));
         } else if (name.equals_ci("SUM", 3)) {
-            // Remote: SUM(col), Local: SUM of sums
             projs.push_back(expr);
             merge_ops.push_back(static_cast<uint8_t>(MergeOp::SUM_OF_SUMS));
         } else if (name.equals_ci("AVG", 3)) {
@@ -725,8 +792,55 @@ private:
     }
 
     // Case 4: Distributed sort + limit
+    PlanNode* local_sort(PlanNode* sort_node) {
+        PlanNode* result = make_plan_node(arena_, PlanNodeType::SORT);
+        result->sort = sort_node->sort;
+        result->left = distribute_node(sort_node->left);
+        return result;
+    }
+
+    int sort_key_table_ordinal(const sql_parser::AstNode* key, const TableInfo* table) const {
+        if (!key || !table) return -1;
+        if (key->type == sql_parser::NodeType::NODE_LITERAL_INT) {
+            sql_parser::StringRef sv = key->value();
+            if (!sv.ptr || sv.len == 0) return -1;
+            int64_t n = std::strtoll(sv.ptr, nullptr, 10);
+            if (n < 1 || n > static_cast<int64_t>(table->column_count)) return -1;
+            return static_cast<int>(n - 1);
+        }
+        sql_parser::StringRef col_name;
+        if (key->type == sql_parser::NodeType::NODE_COLUMN_REF ||
+            key->type == sql_parser::NodeType::NODE_IDENTIFIER) {
+            col_name = key->value();
+        } else if (key->type == sql_parser::NodeType::NODE_QUALIFIED_NAME) {
+            const sql_parser::AstNode* c = key->first_child;
+            if (c && c->next_sibling) col_name = c->next_sibling->value();
+            else if (c) col_name = c->value();
+        } else {
+            return -1;
+        }
+        if (!col_name.ptr) return -1;
+        const ColumnInfo* col = catalog_.get_column(table, col_name);
+        if (!col) return -1;
+        return static_cast<int>(col->ordinal);
+    }
+
+    bool all_sort_keys_are_table_columns(const PlanNode* sort_node, const TableInfo* table) const {
+        if (!sort_node || !table) return false;
+        for (uint16_t i = 0; i < sort_node->sort.count; ++i) {
+            if (sort_key_table_ordinal(sort_node->sort.keys[i], table) < 0) return false;
+        }
+        return true;
+    }
+
     PlanNode* distribute_sort(PlanNode* sort_node) {
-        // Check if the child is a scan (possibly through filter) on a sharded table
+        if (contains_type(sort_node->left, PlanNodeType::WINDOW) ||
+            contains_type(sort_node->left, PlanNodeType::DERIVED_SCAN) ||
+            contains_type(sort_node->left, PlanNodeType::AGGREGATE) ||
+            contains_type(sort_node->left, PlanNodeType::MERGE_AGGREGATE)) {
+            return local_sort(sort_node);
+        }
+
         ScanContext ctx = extract_scan_context(sort_node->left);
         if (!ctx.scan || !ctx.scan->scan.table) {
             PlanNode* result = make_plan_node(arena_, PlanNodeType::SORT);
@@ -741,6 +855,10 @@ private:
             result->sort = sort_node->sort;
             result->left = distribute_node(sort_node->left);
             return result;
+        }
+
+        if (!all_sort_keys_are_table_columns(sort_node, table)) {
+            return local_sort(sort_node);
         }
 
         if (!shards_.is_sharded(table->table_name)) {
@@ -795,13 +913,26 @@ private:
         // Check if child is Sort on sharded table
         if (limit_node->left && limit_node->left->type == PlanNodeType::SORT) {
             PlanNode* sort_node = limit_node->left;
+            if (contains_type(sort_node->left, PlanNodeType::WINDOW) ||
+                contains_type(sort_node->left, PlanNodeType::DERIVED_SCAN) ||
+                contains_type(sort_node->left, PlanNodeType::AGGREGATE) ||
+                contains_type(sort_node->left, PlanNodeType::MERGE_AGGREGATE)) {
+                PlanNode* result = make_plan_node(arena_, PlanNodeType::LIMIT);
+                result->limit = limit_node->limit;
+                result->left = distribute_node(limit_node->left);
+                return result;
+            }
             ScanContext ctx = extract_scan_context(sort_node->left);
             if (ctx.scan && ctx.scan->scan.table) {
                 const TableInfo* table = ctx.scan->scan.table;
                 if (shards_.has_table(table->table_name) &&
                     shards_.is_sharded(table->table_name)) {
-                    // Case 4: Sharded sort + limit
-                    // Each shard: ORDER BY + LIMIT, MergeSort, then outer Limit
+                    if (!all_sort_keys_are_table_columns(sort_node, table)) {
+                        PlanNode* result = make_plan_node(arena_, PlanNodeType::LIMIT);
+                        result->limit = limit_node->limit;
+                        result->left = distribute_node(limit_node->left);
+                        return result;
+                    }
                     int64_t remote_limit = limit_node->limit.count + limit_node->limit.offset;
 
                     PlanNode* merge = make_sharded_merge_sort(
@@ -839,7 +970,16 @@ private:
             }
         }
 
-        // Check if child is scan on sharded/unsharded table (limit without sort)
+        if (contains_type(limit_node->left, PlanNodeType::WINDOW) ||
+            contains_type(limit_node->left, PlanNodeType::DERIVED_SCAN) ||
+            contains_type(limit_node->left, PlanNodeType::AGGREGATE) ||
+            contains_type(limit_node->left, PlanNodeType::MERGE_AGGREGATE)) {
+            PlanNode* result = make_plan_node(arena_, PlanNodeType::LIMIT);
+            result->limit = limit_node->limit;
+            result->left = distribute_node(limit_node->left);
+            return result;
+        }
+
         ScanContext ctx = extract_scan_context(limit_node->left);
         if (ctx.scan && ctx.scan->scan.table) {
             const TableInfo* table = ctx.scan->scan.table;
@@ -859,11 +999,71 @@ private:
         return result;
     }
 
-    // Case 5: Cross-backend join
+    bool join_on_shard_keys(const sql_parser::AstNode* cond,
+                            sql_parser::StringRef left_key,
+                            sql_parser::StringRef right_key) const {
+        if (!cond || cond->type != sql_parser::NodeType::NODE_BINARY_OP) return false;
+        sql_parser::StringRef op = cond->value();
+        if (op.len != 1 || op.ptr[0] != '=') return false;
+        const sql_parser::AstNode* l = cond->first_child;
+        const sql_parser::AstNode* r = l ? l->next_sibling : nullptr;
+        if (!l || !r) return false;
+        return (is_shard_key_ref(l, left_key) && is_shard_key_ref(r, right_key)) ||
+               (is_shard_key_ref(l, right_key) && is_shard_key_ref(r, left_key));
+    }
+
+    PlanNode* distribute_colocated_join(PlanNode* join_node,
+                                        const TableInfo* left_table,
+                                        const TableInfo* right_table) {
+        ScanContext lctx = extract_scan_context(join_node->left);
+        ScanContext rctx = extract_scan_context(join_node->right);
+        const sql_parser::AstNode* where_expr = nullptr;
+        if (lctx.where_expr && rctx.where_expr) {
+            sql_parser::AstNode* and_node = sql_parser::make_node(
+                arena_, sql_parser::NodeType::NODE_BINARY_OP,
+                sql_parser::StringRef{"AND", 3});
+            and_node->add_child(const_cast<sql_parser::AstNode*>(lctx.where_expr));
+            and_node->add_child(const_cast<sql_parser::AstNode*>(rctx.where_expr));
+            where_expr = and_node;
+        } else if (lctx.where_expr) {
+            where_expr = lctx.where_expr;
+        } else {
+            where_expr = rctx.where_expr;
+        }
+
+        const auto& shard_list = shards_.get_shards(left_table->table_name);
+        PlanNode* current = nullptr;
+        for (const auto& shard : shard_list) {
+            sql_parser::StringRef sql = qb_.build_select_join(
+                left_table, right_table, join_node->join.condition, where_expr);
+            PlanNode* rs = make_remote_scan(shard.backend_name.c_str(), sql, left_table);
+            if (!current) {
+                current = rs;
+            } else {
+                PlanNode* union_node = make_plan_node(arena_, PlanNodeType::SET_OP);
+                union_node->set_op.op = SET_OP_UNION;
+                union_node->set_op.all = true;
+                union_node->left = current;
+                union_node->right = rs;
+                current = union_node;
+            }
+        }
+        return current ? current : join_node;
+    }
+
     PlanNode* distribute_join(PlanNode* join_node) {
-        // Get tables from each side
         const TableInfo* left_table = find_table(join_node->left);
         const TableInfo* right_table = find_table(join_node->right);
+
+        if (left_table && right_table &&
+            shards_.is_sharded(left_table->table_name) &&
+            shards_.is_sharded(right_table->table_name) &&
+            shards_.same_routing(left_table->table_name, right_table->table_name) &&
+            join_on_shard_keys(join_node->join.condition,
+                               shards_.get_shard_key(left_table->table_name),
+                               shards_.get_shard_key(right_table->table_name))) {
+            return distribute_colocated_join(join_node, left_table, right_table);
+        }
 
         PlanNode* left_dist = nullptr;
         PlanNode* right_dist = nullptr;
@@ -1032,17 +1232,12 @@ private:
     PlanNode* distribute_update(PlanNode* plan) {
         const auto& up = plan->update_plan;
         const TableInfo* table = up.table;
-        if (!table || !shards_.has_table(table->table_name)) return plan;
 
-        // Multi-table UPDATE: emit full SQL from AST, route to primary table's backend
         if (up.original_ast) {
-            sql_parser::StringRef sql = qb_.build_update_from_ast(up.original_ast);
-            if (!shards_.is_sharded(table->table_name)) {
-                return make_remote_scan(shards_.get_backend(table->table_name), sql, table);
-            }
-            const auto& shard_list = shards_.get_shards(table->table_name);
-            return scatter_dml_to_shards(table, shard_list, [&]() { return sql; });
+            return distribute_multi_table_dml(up.original_ast, table, true);
         }
+
+        if (!table || !shards_.has_table(table->table_name)) return plan;
 
         // Check for cross-shard subqueries in WHERE and rewrite
         const sql_parser::AstNode* where_expr = up.where_expr;
@@ -1080,17 +1275,12 @@ private:
     PlanNode* distribute_delete(PlanNode* plan) {
         const auto& dp = plan->delete_plan;
         const TableInfo* table = dp.table;
-        if (!table || !shards_.has_table(table->table_name)) return plan;
 
-        // Multi-table DELETE: emit full SQL from AST, route to primary table's backend
         if (dp.original_ast) {
-            sql_parser::StringRef sql = qb_.build_delete_from_ast(dp.original_ast);
-            if (!shards_.is_sharded(table->table_name)) {
-                return make_remote_scan(shards_.get_backend(table->table_name), sql, table);
-            }
-            const auto& shard_list = shards_.get_shards(table->table_name);
-            return scatter_dml_to_shards(table, shard_list, [&]() { return sql; });
+            return distribute_multi_table_dml(dp.original_ast, table, false);
         }
+
+        if (!table || !shards_.has_table(table->table_name)) return plan;
 
         // Check for cross-shard subqueries in WHERE and rewrite
         const sql_parser::AstNode* where_expr = dp.where_expr;
@@ -1178,7 +1368,68 @@ private:
         return false;
     }
 
-    // Scatter DML SQL to all shards, combining results via UNION ALL
+    void collect_ast_table_names(const sql_parser::AstNode* n,
+                                 std::vector<sql_parser::StringRef>& out) const {
+        if (!n) return;
+        if (n->type == sql_parser::NodeType::NODE_TABLE_REF && n->first_child) {
+            const sql_parser::AstNode* name = n->first_child;
+            if (name->type == sql_parser::NodeType::NODE_IDENTIFIER) {
+                out.push_back(name->value());
+            } else if (name->type == sql_parser::NodeType::NODE_QUALIFIED_NAME) {
+                const sql_parser::AstNode* schema = name->first_child;
+                const sql_parser::AstNode* table = schema ? schema->next_sibling : nullptr;
+                if (table) out.push_back(table->value());
+                else if (schema) out.push_back(schema->value());
+            }
+        }
+        for (const sql_parser::AstNode* c = n->first_child; c; c = c->next_sibling) {
+            collect_ast_table_names(c, out);
+        }
+    }
+
+    PlanNode* distribute_multi_table_dml(const sql_parser::AstNode* ast,
+                                         const TableInfo* primary,
+                                         bool is_update) {
+        std::vector<sql_parser::StringRef> names;
+        collect_ast_table_names(ast, names);
+        const char* backend = nullptr;
+        bool saw_mapped = false;
+        for (sql_parser::StringRef name : names) {
+            if (!shards_.has_table(name)) continue;
+            saw_mapped = true;
+            if (shards_.is_sharded(name)) {
+                return fail_dml(is_update
+                    ? "multi-table UPDATE is not supported on sharded tables"
+                    : "multi-table DELETE is not supported on sharded tables");
+            }
+            const char* b = shards_.get_backend(name);
+            if (backend && b && std::strcmp(backend, b) != 0) {
+                return fail_dml(is_update
+                    ? "multi-table UPDATE spans multiple backends"
+                    : "multi-table DELETE spans multiple backends");
+            }
+            if (b) backend = b;
+        }
+        if (!backend && primary && shards_.has_table(primary->table_name)) {
+            if (shards_.is_sharded(primary->table_name)) {
+                return fail_dml(is_update
+                    ? "multi-table UPDATE is not supported on sharded tables"
+                    : "multi-table DELETE is not supported on sharded tables");
+            }
+            backend = shards_.get_backend(primary->table_name);
+            saw_mapped = true;
+        }
+        if (!backend || !saw_mapped) {
+            return fail_dml(is_update
+                ? "multi-table UPDATE is not supported on sharded tables"
+                : "multi-table DELETE is not supported on sharded tables");
+        }
+        sql_parser::StringRef sql = is_update
+            ? qb_.build_update_from_ast(ast)
+            : qb_.build_delete_from_ast(ast);
+        return make_remote_scan(backend, sql, primary);
+    }
+
     PlanNode* scatter_dml_to_shards(const TableInfo* table,
                                      const std::vector<ShardInfo>& shard_list,
                                      std::function<sql_parser::StringRef()> build_sql) {

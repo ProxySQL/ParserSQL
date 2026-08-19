@@ -94,6 +94,28 @@ public:
         return sb.finish();
     }
 
+    sql_parser::StringRef build_select_join(
+            const TableInfo* left,
+            const TableInfo* right,
+            const sql_parser::AstNode* on_expr,
+            const sql_parser::AstNode* where_expr)
+    {
+        sql_parser::StringBuilder sb(arena_, 512);
+        sb.append("SELECT * FROM ");
+        if (left) sb.append(left->table_name.ptr, left->table_name.len);
+        sb.append(" JOIN ");
+        if (right) sb.append(right->table_name.ptr, right->table_name.len);
+        if (on_expr) {
+            sb.append(" ON ");
+            emit_expr(on_expr, sb);
+        }
+        if (where_expr) {
+            sb.append(" WHERE ");
+            emit_expr(where_expr, sb);
+        }
+        return sb.finish();
+    }
+
     // Build an INSERT statement string.
     sql_parser::StringRef build_insert(
             const TableInfo* table,

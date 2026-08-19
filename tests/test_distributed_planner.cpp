@@ -390,6 +390,10 @@ protected:
                 find_nodes(node->merge_sort.children[i], type, out);
             return;
         }
+        if (node->type == PlanNodeType::DERIVED_SCAN) {
+            find_nodes(node->derived_scan.inner_plan, type, out);
+            return;
+        }
         find_nodes(node->left, type, out);
         find_nodes(node->right, type, out);
     }
@@ -848,4 +852,250 @@ TEST_F(DistributedPlannerTest, ShardMap_IndexForInt) {
     size_t idx2 = shard_map.shard_index_for_int(users_ref, 5);
     EXPECT_EQ(idx1, idx2);
     EXPECT_LT(idx1, 3u);
+}
+
+TEST_F(DistributedPlannerTest, CountDistinctIsNotTwoPhaseMerge) {
+    Parser<Dialect::MySQL> parser;
+    const char* sql = "SELECT COUNT(DISTINCT dept) FROM users";
+    auto pr = parser.parse(sql, std::strlen(sql));
+    ASSERT_EQ(pr.status, ParseResult::OK);
+
+    const AstNode* items = nullptr;
+    for (const AstNode* c = pr.ast->first_child; c; c = c->next_sibling) {
+        if (c->type == NodeType::NODE_SELECT_ITEM_LIST) items = c;
+    }
+    ASSERT_NE(items, nullptr);
+    ASSERT_NE(items->first_child, nullptr);
+    const AstNode* count_expr = items->first_child->first_child;
+    ASSERT_NE(count_expr, nullptr);
+    EXPECT_EQ(count_expr->type, NodeType::NODE_FUNCTION_CALL);
+    EXPECT_NE(static_cast<unsigned>(count_expr->flags & FLAG_FUNC_DISTINCT), 0u);
+
+    PlanBuilder<Dialect::MySQL> builder(catalog, parser.arena());
+    PlanNode* plan = builder.build(pr.ast);
+    ASSERT_NE(plan, nullptr);
+    if (plan->type == PlanNodeType::PROJECT && plan->project.count > 0) {
+        EXPECT_NE(static_cast<unsigned>(plan->project.exprs[0]->flags & FLAG_FUNC_DISTINCT), 0u);
+    }
+
+    DistributedPlanner<Dialect::MySQL> dp(shard_map, catalog, parser.arena());
+    PlanNode* dist = dp.distribute(plan);
+    ASSERT_NE(dist, nullptr);
+
+    std::vector<PlanNode*> merges;
+    find_nodes(dist, PlanNodeType::MERGE_AGGREGATE, merges);
+    EXPECT_TRUE(merges.empty()) << "COUNT(DISTINCT) must not use SUM_OF_COUNTS merge";
+}
+
+TEST_F(DistributedPlannerTest, CountDistinctCorrectness) {
+    Parser<Dialect::MySQL> parser;
+    const char* sql = "SELECT COUNT(DISTINCT dept) FROM users";
+    auto pr = parser.parse(sql, std::strlen(sql));
+    ASSERT_EQ(pr.status, ParseResult::OK);
+    PlanBuilder<Dialect::MySQL> builder(catalog, parser.arena());
+    PlanNode* plan = builder.build(pr.ast);
+    DistributedPlanner<Dialect::MySQL> dp(shard_map, catalog, parser.arena());
+    PlanNode* dist = dp.distribute(plan);
+    ASSERT_NE(dist, nullptr);
+    ASSERT_EQ(dist->type, PlanNodeType::AGGREGATE);
+    ASSERT_EQ(dist->aggregate.agg_count, 1u);
+    EXPECT_NE(static_cast<unsigned>(dist->aggregate.agg_exprs[0]->flags & FLAG_FUNC_DISTINCT), 0u);
+
+    auto local_rs = execute_local("SELECT COUNT(DISTINCT dept) FROM users");
+    auto dist_rs = execute_distributed("SELECT COUNT(DISTINCT dept) FROM users");
+    EXPECT_EQ(local_rs.row_count(), 1u);
+    EXPECT_EQ(dist_rs.row_count(), 1u);
+    EXPECT_TRUE(compare_results_unordered(local_rs, dist_rs));
+    ASSERT_GE(dist_rs.row_count(), 1u);
+    EXPECT_EQ(dist_rs.rows[0].get(0).int_val, 3);
+}
+
+TEST_F(DistributedPlannerTest, GroupByHavingKeepsFilter) {
+    Parser<Dialect::MySQL> parser;
+    const char* sql = "SELECT dept, COUNT(*) FROM users GROUP BY dept HAVING COUNT(*) > 4 ORDER BY dept";
+    auto pr = parser.parse(sql, std::strlen(sql));
+    ASSERT_EQ(pr.status, ParseResult::OK);
+
+    PlanBuilder<Dialect::MySQL> builder(catalog, parser.arena());
+    PlanNode* plan = builder.build(pr.ast);
+    ASSERT_NE(plan, nullptr);
+
+    DistributedPlanner<Dialect::MySQL> dp(shard_map, catalog, parser.arena());
+    PlanNode* dist = dp.distribute(plan);
+    ASSERT_NE(dist, nullptr);
+
+    std::vector<PlanNode*> filters, sorts, merges;
+    find_nodes(dist, PlanNodeType::FILTER, filters);
+    find_nodes(dist, PlanNodeType::SORT, sorts);
+    find_nodes(dist, PlanNodeType::MERGE_AGGREGATE, merges);
+    EXPECT_FALSE(filters.empty()) << "HAVING filter must be kept";
+    EXPECT_FALSE(sorts.empty()) << "ORDER BY must be kept";
+    EXPECT_FALSE(merges.empty());
+}
+
+TEST_F(DistributedPlannerTest, GroupByOrderByCorrectness) {
+    const char* sql = "SELECT dept, COUNT(*) FROM users GROUP BY dept ORDER BY dept";
+    auto local_rs = execute_local(sql);
+    auto dist_rs = execute_distributed(sql);
+    EXPECT_EQ(local_rs.row_count(), 3u);
+    EXPECT_TRUE(compare_results_ordered(local_rs, dist_rs));
+}
+
+TEST_F(DistributedPlannerTest, WindowNotDroppedByOrderBy) {
+    Parser<Dialect::MySQL> parser;
+    const char* sql = "SELECT name, ROW_NUMBER() OVER (ORDER BY age) AS rn FROM users ORDER BY name";
+    auto pr = parser.parse(sql, std::strlen(sql));
+    ASSERT_EQ(pr.status, ParseResult::OK);
+
+    PlanBuilder<Dialect::MySQL> builder(catalog, parser.arena());
+    PlanNode* plan = builder.build(pr.ast);
+    ASSERT_NE(plan, nullptr);
+
+    DistributedPlanner<Dialect::MySQL> dp(shard_map, catalog, parser.arena());
+    PlanNode* dist = dp.distribute(plan);
+    ASSERT_NE(dist, nullptr);
+
+    std::vector<PlanNode*> windows;
+    find_nodes(dist, PlanNodeType::WINDOW, windows);
+    EXPECT_FALSE(windows.empty()) << "WINDOW node must survive ORDER BY distribution";
+}
+
+TEST_F(DistributedPlannerTest, WindowGatherCorrectness) {
+    const char* sql = "SELECT name, ROW_NUMBER() OVER (ORDER BY age) AS rn FROM users";
+    auto local_rs = execute_local(sql);
+    auto dist_rs = execute_distributed(sql);
+    EXPECT_EQ(local_rs.row_count(), 15u);
+    EXPECT_EQ(dist_rs.row_count(), 15u);
+    EXPECT_TRUE(compare_results_unordered(local_rs, dist_rs));
+}
+
+TEST_F(DistributedPlannerTest, DerivedScanIsDistributed) {
+    Parser<Dialect::MySQL> parser;
+    const char* sql = "SELECT name FROM (SELECT name, age FROM users WHERE age > 20) AS t";
+    auto pr = parser.parse(sql, std::strlen(sql));
+    ASSERT_EQ(pr.status, ParseResult::OK);
+
+    PlanBuilder<Dialect::MySQL> builder(catalog, parser.arena());
+    PlanNode* plan = builder.build(pr.ast);
+    ASSERT_NE(plan, nullptr);
+
+    DistributedPlanner<Dialect::MySQL> dp(shard_map, catalog, parser.arena());
+    PlanNode* dist = dp.distribute(plan);
+    ASSERT_NE(dist, nullptr);
+
+    std::vector<PlanNode*> scans, remotes;
+    find_nodes(dist, PlanNodeType::SCAN, scans);
+    find_nodes(dist, PlanNodeType::REMOTE_SCAN, remotes);
+    EXPECT_TRUE(scans.empty()) << "inner SCAN must be rewritten";
+    EXPECT_FALSE(remotes.empty());
+}
+
+TEST_F(DistributedPlannerTest, DerivedScanCorrectness) {
+    const char* sql = "SELECT name FROM (SELECT name, age FROM users WHERE age > 20) AS t";
+    auto local_rs = execute_local(sql);
+    auto dist_rs = execute_distributed(sql);
+    EXPECT_GT(local_rs.row_count(), 0u);
+    EXPECT_EQ(local_rs.row_count(), dist_rs.row_count());
+    EXPECT_TRUE(compare_results_unordered(local_rs, dist_rs));
+}
+
+TEST_F(DistributedPlannerTest, OrderByExpressionDoesNotMergeOnColumnZero) {
+    Parser<Dialect::MySQL> parser;
+    const char* sql = "SELECT name, age FROM users ORDER BY age + 1";
+    auto pr = parser.parse(sql, std::strlen(sql));
+    ASSERT_EQ(pr.status, ParseResult::OK);
+
+    PlanBuilder<Dialect::MySQL> builder(catalog, parser.arena());
+    PlanNode* plan = builder.build(pr.ast);
+    ASSERT_NE(plan, nullptr);
+
+    DistributedPlanner<Dialect::MySQL> dp(shard_map, catalog, parser.arena());
+    PlanNode* dist = dp.distribute(plan);
+    ASSERT_NE(dist, nullptr);
+
+    std::vector<PlanNode*> merges;
+    find_nodes(dist, PlanNodeType::MERGE_SORT, merges);
+    EXPECT_TRUE(merges.empty()) << "expression ORDER BY must not MERGE_SORT on col 0";
+
+    auto local_rs = execute_local(sql);
+    auto dist_rs = execute_distributed(sql);
+    EXPECT_EQ(local_rs.row_count(), dist_rs.row_count());
+    EXPECT_TRUE(compare_results_ordered(local_rs, dist_rs));
+}
+
+TEST_F(DistributedPlannerTest, OrderByAliasAndPositionCorrectness) {
+    const char* sql = "SELECT name AS n, age AS a FROM users ORDER BY a DESC";
+    auto local_rs = execute_local(sql);
+    auto dist_rs = execute_distributed(sql);
+    EXPECT_EQ(local_rs.row_count(), 15u);
+    EXPECT_TRUE(compare_results_ordered(local_rs, dist_rs));
+
+    const char* sql2 = "SELECT name, age FROM users ORDER BY 2 DESC";
+    auto local2 = execute_local(sql2);
+    auto dist2 = execute_distributed(sql2);
+    EXPECT_TRUE(compare_results_ordered(local2, dist2));
+}
+
+TEST_F(DistributedPlannerTest, RemoteSqlLenIsNotTruncated) {
+    std::string name(70000, 'x');
+    std::string sql = "SELECT * FROM users WHERE name = '" + name + "'";
+    Parser<Dialect::MySQL> parser;
+    auto pr = parser.parse(sql.c_str(), sql.size());
+    ASSERT_EQ(pr.status, ParseResult::OK);
+
+    PlanBuilder<Dialect::MySQL> builder(catalog, parser.arena());
+    PlanNode* plan = builder.build(pr.ast);
+    ASSERT_NE(plan, nullptr);
+
+    DistributedPlanner<Dialect::MySQL> dp(shard_map, catalog, parser.arena());
+    PlanNode* dist = dp.distribute(plan);
+    ASSERT_NE(dist, nullptr);
+
+    std::vector<PlanNode*> remotes;
+    find_nodes(dist, PlanNodeType::REMOTE_SCAN, remotes);
+    ASSERT_FALSE(remotes.empty());
+    for (auto* rs : remotes) {
+        EXPECT_GT(rs->remote_scan.remote_sql_len, 65535u);
+        std::string remote(rs->remote_scan.remote_sql, rs->remote_scan.remote_sql_len);
+        EXPECT_NE(remote.find(name), std::string::npos);
+        EXPECT_EQ(rs->remote_scan.remote_sql_len, remote.size());
+    }
+}
+
+TEST_F(DistributedPlannerTest, HavingCountCorrectness) {
+    const char* sql = "SELECT dept, COUNT(*) FROM users GROUP BY dept HAVING COUNT(*) > 4";
+    auto local_rs = execute_local(sql);
+    auto dist_rs = execute_distributed(sql);
+    EXPECT_EQ(local_rs.row_count(), 2u);
+    EXPECT_TRUE(compare_results_unordered(local_rs, dist_rs));
+}
+
+TEST_F(DistributedPlannerTest, ColocatedJoinPushedToShards) {
+    shard_map.add_table(TableShardConfig{
+        "orders", "user_id",
+        {ShardInfo{"shard_1"}, ShardInfo{"shard_2"}, ShardInfo{"shard_3"}}
+    });
+
+    Parser<Dialect::MySQL> parser;
+    const char* sql = "SELECT * FROM users JOIN orders ON users.id = orders.user_id";
+    auto pr = parser.parse(sql, std::strlen(sql));
+    ASSERT_EQ(pr.status, ParseResult::OK);
+
+    PlanBuilder<Dialect::MySQL> builder(catalog, parser.arena());
+    PlanNode* plan = builder.build(pr.ast);
+    ASSERT_NE(plan, nullptr);
+
+    DistributedPlanner<Dialect::MySQL> dp(shard_map, catalog, parser.arena());
+    PlanNode* dist = dp.distribute(plan);
+    ASSERT_NE(dist, nullptr);
+
+    std::vector<PlanNode*> joins, remotes;
+    find_nodes(dist, PlanNodeType::JOIN, joins);
+    find_nodes(dist, PlanNodeType::REMOTE_SCAN, remotes);
+    EXPECT_TRUE(joins.empty()) << "co-located join should not stay local";
+    ASSERT_FALSE(remotes.empty());
+    for (auto* rs : remotes) {
+        std::string remote(rs->remote_scan.remote_sql, rs->remote_scan.remote_sql_len);
+        EXPECT_NE(remote.find("JOIN"), std::string::npos) << remote;
+    }
 }

@@ -331,6 +331,10 @@ private:
             // argument list. Model it as a function call so consumers can
             // reject or handle the expression without leaving valid input
             // unconsumed.
+            if (tok_.peek().type == TokenType::TK_DISTINCT) {
+                func->flags |= FLAG_FUNC_DISTINCT;
+                tok_.skip();
+            }
             if (name_token.text.equals_ci("CAST", 4)) {
                 AstNode* arg = parse();
                 if (!arg || tok_.peek().type != TokenType::TK_AS) return func;

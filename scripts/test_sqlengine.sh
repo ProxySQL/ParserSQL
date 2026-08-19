@@ -290,6 +290,13 @@ test_sharded() {
     # Total = 890000.
     out=$(run_sharded "SELECT SUM(salary) FROM users")
     assert_contains "sharded: SUM(salary) all users = 890000" "${out}" "890000"
+
+    # Engine INSERT then point-SELECT must agree (RANGE routing).
+    out=$(run_sharded "INSERT INTO users (id, name, age, dept, salary) VALUES (11, 'Zed', 40, 'Test', 1)")
+    assert_contains "sharded: INSERT id=11" "${out}" "Query OK, 1 row"
+    out=$(run_sharded "SELECT name FROM users WHERE id = 11")
+    assert_contains "sharded: point SELECT after INSERT (Zed)" "${out}" "Zed"
+    run_sharded "DELETE FROM users WHERE id = 11" >/dev/null
 }
 
 # ----------------------------------------------------------------------

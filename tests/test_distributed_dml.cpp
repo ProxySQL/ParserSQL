@@ -770,3 +770,17 @@ TEST_F(DistributedDmlTest, InsertThenPointSelectList) {
     EXPECT_EQ(execute_distributed_select("SELECT name FROM users WHERE id = 7").row_count(), 1u);
     EXPECT_EQ(execute_distributed_select("SELECT name FROM users WHERE id = 20").row_count(), 1u);
 }
+
+TEST_F(DistributedDmlTest, MultiTableUpdateOnShardedFails) {
+    auto result = execute_distributed_dml(
+        "UPDATE users u JOIN orders o ON u.id = o.user_id SET u.age = 30");
+    EXPECT_FALSE(result.success);
+    EXPECT_NE(result.error_message.find("sharded"), std::string::npos);
+}
+
+TEST_F(DistributedDmlTest, MultiTableDeleteOnShardedFails) {
+    auto result = execute_distributed_dml(
+        "DELETE u FROM users u JOIN orders o ON u.id = o.user_id");
+    EXPECT_FALSE(result.success);
+    EXPECT_NE(result.error_message.find("sharded"), std::string::npos);
+}
