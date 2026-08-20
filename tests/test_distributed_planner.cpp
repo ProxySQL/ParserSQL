@@ -1288,6 +1288,57 @@ TEST_F(DistributedPlannerTest, IncompleteCompositeJoinStaysLocal) {
     EXPECT_FALSE(joins.empty()) << "join on a partial composite key must gather";
 }
 
+TEST_F(DistributedPlannerTest, CompositeRangePrunesOnFirstKey) {
+    TableShardConfig cfg;
+    cfg.table_name = "users";
+    cfg.shard_key = "id+name";
+    cfg.shards = {{"shard_1"}, {"shard_2"}, {"shard_3"}};
+    cfg.strategy = RoutingStrategy::RANGE;
+    cfg.ranges = {{5, 0}, {10, 1}, {100000, 2}};
+    shard_map.add_table(cfg);
+
+    auto count_remotes = [&](const char* sql) {
+        Parser<Dialect::MySQL> parser;
+        auto pr = parser.parse(sql, std::strlen(sql));
+        PlanBuilder<Dialect::MySQL> builder(catalog, parser.arena());
+        PlanNode* plan = builder.build(pr.ast);
+        DistributedPlanner<Dialect::MySQL> dp(shard_map, catalog, parser.arena());
+        PlanNode* dist = dp.distribute(plan);
+        std::vector<PlanNode*> remotes;
+        find_nodes(dist, PlanNodeType::REMOTE_SCAN, remotes);
+        return remotes.size();
+    };
+
+    EXPECT_EQ(count_remotes("SELECT * FROM users WHERE id <= 5"), 1u);
+    EXPECT_EQ(count_remotes("SELECT * FROM users WHERE id BETWEEN 6 AND 10"), 1u);
+}
+
+TEST_F(DistributedPlannerTest, SemiJoinPrunesProbeShards) {
+    Parser<Dialect::MySQL> parser;
+    const char* sql = "SELECT * FROM users JOIN orders ON users.id = orders.user_id";
+    auto pr = parser.parse(sql, std::strlen(sql));
+    ASSERT_EQ(pr.status, ParseResult::OK);
+    PlanBuilder<Dialect::MySQL> builder(catalog, parser.arena());
+    PlanNode* plan = builder.build(pr.ast);
+    ASSERT_NE(plan, nullptr);
+
+    DistributedPlanner<Dialect::MySQL> dp(shard_map, catalog, parser.arena(),
+                                          &mock_executor, &functions);
+    PlanNode* dist = dp.distribute(plan);
+    ASSERT_NE(dist, nullptr);
+
+    std::vector<PlanNode*> remotes;
+    find_nodes(dist, PlanNodeType::REMOTE_SCAN, remotes);
+    bool saw_users_in = false;
+    for (auto* rs : remotes) {
+        std::string remote(rs->remote_scan.remote_sql, rs->remote_scan.remote_sql_len);
+        if (remote.find("users") != std::string::npos &&
+            remote.find("IN") != std::string::npos)
+            saw_users_in = true;
+    }
+    EXPECT_TRUE(saw_users_in) << "semi-join should push IN on the sharded probe";
+}
+
 TEST_F(DistributedPlannerTest, UnknownTableErrors) {
     catalog.add_table("", "ghost", {
         {"id", SqlType::make_int(), false},

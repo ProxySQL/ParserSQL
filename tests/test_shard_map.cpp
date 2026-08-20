@@ -278,3 +278,22 @@ TEST(ShardMapTest, CompositeHashIsDeterministicAndDiffersFromSingle) {
     EXPECT_LT(ia, 3u);
     EXPECT_LT(ib, 3u);
 }
+
+TEST(ShardMapTest, CompositeRangeRoutesOnFirstKey) {
+    TableShardConfig cfg;
+    cfg.table_name = "kv";
+    cfg.shard_key = "tenant_id+id";
+    cfg.shards = {ShardInfo{"s0"}, ShardInfo{"s1"}};
+    cfg.strategy = RoutingStrategy::RANGE;
+    cfg.ranges = {ShardRange{5, 0}, ShardRange{100, 1}};
+    ShardMap map;
+    map.add_table(cfg);
+
+    ShardKeyPart low[] = {{true, 3, nullptr, 0}, {true, 99, nullptr, 0}};
+    ShardKeyPart high[] = {{true, 9, nullptr, 0}, {true, 1, nullptr, 0}};
+    size_t il = 99, ih = 99;
+    ASSERT_TRUE(map.try_shard_index_for_parts(sref("kv"), low, 2, il));
+    ASSERT_TRUE(map.try_shard_index_for_parts(sref("kv"), high, 2, ih));
+    EXPECT_EQ(il, 0u);
+    EXPECT_EQ(ih, 1u);
+}

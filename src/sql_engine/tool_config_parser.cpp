@@ -208,10 +208,6 @@ ParsedShard parse_shard_spec(const std::string& spec) {
             return ps;
         }
     } else if (strategy_token == "range") {
-        if (ps.config.shard_key.find('+') != std::string::npos) {
-            ps.error = "composite shard keys require HASH strategy: " + spec;
-            return ps;
-        }
         ps.config.strategy = RoutingStrategy::RANGE;
         for (auto& entry : split_csv(body)) {
             std::string upper_str, backend;

@@ -237,8 +237,10 @@ TEST(SSLConfigTest, ParseShardSpecCompositeHash) {
     ASSERT_EQ(ps.config.shards.size(), 3u);
 }
 
-TEST(SSLConfigTest, ParseShardSpecRejectsCompositeRange) {
+TEST(SSLConfigTest, ParseShardSpecCompositeRangeUsesFirstKey) {
     auto ps = parse_shard_spec("kv:tenant_id+id:range:5=s0,10=s1");
-    EXPECT_FALSE(ps.ok);
-    EXPECT_NE(ps.error.find("HASH"), std::string::npos);
+    ASSERT_TRUE(ps.ok);
+    EXPECT_EQ(ps.config.strategy, RoutingStrategy::RANGE);
+    EXPECT_EQ(ps.config.shard_key, "tenant_id+id");
+    ASSERT_EQ(ps.config.ranges.size(), 2u);
 }
