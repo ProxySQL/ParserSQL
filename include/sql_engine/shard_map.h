@@ -177,7 +177,7 @@ public:
                                    size_t& out) const {
         const TableShardConfig* cfg = lookup(table_name);
         if (!cfg || cfg->shards.empty() || !parts || n == 0) return false;
-        if (n == 1) {
+        if (n == 1 || cfg->strategy == RoutingStrategy::RANGE) {
             return parts[0].is_int
                 ? try_shard_index_for_int(table_name, parts[0].int_val, out)
                 : try_shard_index_for_string(table_name, parts[0].str,

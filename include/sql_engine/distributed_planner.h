@@ -357,7 +357,13 @@ private:
         if (keys.empty()) return all_shards;
 
         std::vector<size_t> target_indices;
-        if (keys.size() > 1) {
+        if (keys.size() > 1 &&
+            shards_.routing_strategy(table->table_name) == RoutingStrategy::RANGE) {
+            sql_parser::StringRef first{keys[0].c_str(),
+                static_cast<uint32_t>(keys[0].size())};
+            extract_shard_targets(where_expr, first, table->table_name,
+                                  all_shards.size(), target_indices);
+        } else if (keys.size() > 1) {
             extract_composite_targets(where_expr, keys, table->table_name, target_indices);
         } else {
             sql_parser::StringRef shard_key{keys[0].c_str(),
@@ -1203,6 +1209,157 @@ private:
         return current ? current : join_node;
     }
 
+    bool column_on_table(const sql_parser::AstNode* node, const TableInfo* table,
+                         const TableInfo* other) const {
+        if (!node || !table) return false;
+        if (node->type == sql_parser::NodeType::NODE_QUALIFIED_NAME) {
+            const sql_parser::AstNode* t = node->first_child;
+            if (!t) return false;
+            sql_parser::StringRef tn = t->value();
+            if (table->table_name.equals_ci(tn.ptr, tn.len)) return true;
+            if (table->alias.ptr && table->alias.equals_ci(tn.ptr, tn.len)) return true;
+            return false;
+        }
+        if (node->type == sql_parser::NodeType::NODE_COLUMN_REF ||
+            node->type == sql_parser::NodeType::NODE_IDENTIFIER) {
+            if (!catalog_.get_column(table, node->value())) return false;
+            if (other && catalog_.get_column(other, node->value())) return false;
+            return true;
+        }
+        return false;
+    }
+
+    const sql_parser::AstNode* probe_key_in_join(const sql_parser::AstNode* cond,
+                                                 const TableInfo* probe,
+                                                 const TableInfo* build) const {
+        if (!cond || !probe || !build) return nullptr;
+        const auto& keys = shards_.get_shard_keys(probe->table_name);
+        if (keys.size() != 1) return nullptr;
+        sql_parser::StringRef sk{keys[0].c_str(), static_cast<uint32_t>(keys[0].size())};
+        std::vector<std::pair<const sql_parser::AstNode*, const sql_parser::AstNode*>> eqs;
+        collect_eq_pairs(cond, eqs);
+        for (const auto& eq : eqs) {
+            if (is_shard_key_ref(eq.first, sk) && column_on_table(eq.second, build, probe))
+                return eq.first;
+            if (is_shard_key_ref(eq.second, sk) && column_on_table(eq.first, build, probe))
+                return eq.second;
+        }
+        return nullptr;
+    }
+
+    sql_parser::AstNode* make_in_list_on_column(const sql_parser::AstNode* col,
+                                                const std::vector<Value>& values) {
+        if (!col || values.empty()) return nullptr;
+        sql_parser::AstNode* stub = sql_parser::make_node(
+            arena_, sql_parser::NodeType::NODE_IN_LIST,
+            sql_parser::StringRef{nullptr, 0});
+        sql_parser::AstNode* col_copy = sql_parser::make_node(
+            arena_, col->type, col->value(), col->flags);
+        col_copy->first_child = col->first_child;
+        stub->add_child(col_copy);
+        return build_in_list_from_values(stub, values);
+    }
+
+    sql_parser::AstNode* and_preds(const sql_parser::AstNode* a,
+                                   const sql_parser::AstNode* b) {
+        if (!a) return const_cast<sql_parser::AstNode*>(b);
+        if (!b) return const_cast<sql_parser::AstNode*>(a);
+        sql_parser::AstNode* n = sql_parser::make_node(
+            arena_, sql_parser::NodeType::NODE_BINARY_OP,
+            sql_parser::StringRef{"AND", 3});
+        n->add_child(const_cast<sql_parser::AstNode*>(a));
+        n->add_child(const_cast<sql_parser::AstNode*>(b));
+        return n;
+    }
+
+    std::vector<Value> collect_build_join_keys(const TableInfo* build,
+                                               const sql_parser::AstNode* where_expr,
+                                               const sql_parser::AstNode* join_eq_other) {
+        std::vector<Value> out;
+        if (!build || !join_eq_other || !remote_executor_) return out;
+        const sql_parser::AstNode* proj[1] = {join_eq_other};
+        const auto& shards = shards_.get_shards(build->table_name);
+        if (shards.empty()) return out;
+        std::vector<ShardInfo> targets = shards;
+        if (shards_.is_sharded(build->table_name) && shards.size() > 1)
+            return out;
+        sql_parser::StringRef sql = qb_.build_select(
+            build, where_expr, proj, 1, nullptr, 0,
+            nullptr, nullptr, 0, -1, true);
+        ResultSet rs = remote_executor_->execute(shards[0].backend_name.c_str(), sql);
+        for (const auto& row : rs.rows) {
+            if (row.column_count > 0 && value_is_routable(row.get(0)))
+                out.push_back(copy_value_arena(row.get(0)));
+        }
+        return out;
+    }
+
+    const sql_parser::AstNode* other_eq_side(const sql_parser::AstNode* cond,
+                                             const sql_parser::AstNode* probe_key) const {
+        std::vector<std::pair<const sql_parser::AstNode*, const sql_parser::AstNode*>> eqs;
+        collect_eq_pairs(cond, eqs);
+        for (const auto& eq : eqs) {
+            if (eq.first == probe_key) return eq.second;
+            if (eq.second == probe_key) return eq.first;
+        }
+        return nullptr;
+    }
+
+    PlanNode* try_semijoin_prune(PlanNode* join_node,
+                                 const TableInfo* left_table,
+                                 const TableInfo* right_table) {
+        if (!join_node || !remote_executor_ || !join_node->join.condition)
+            return nullptr;
+        if (!left_table || !right_table) return nullptr;
+
+        bool ls = shards_.is_sharded(left_table->table_name);
+        bool rs = shards_.is_sharded(right_table->table_name);
+        if (ls == rs) return nullptr;
+
+        const TableInfo* probe = ls ? left_table : right_table;
+        const TableInfo* build = ls ? right_table : left_table;
+        bool probe_is_left = ls;
+        const sql_parser::AstNode* probe_key =
+            probe_key_in_join(join_node->join.condition, probe, build);
+        if (!probe_key) return nullptr;
+        const sql_parser::AstNode* build_col =
+            other_eq_side(join_node->join.condition, probe_key);
+        if (!build_col) return nullptr;
+
+        ScanContext bctx = extract_scan_context(
+            probe_is_left ? join_node->right : join_node->left);
+        std::vector<Value> keys = collect_build_join_keys(build, bctx.where_expr, build_col);
+        if (keys.empty()) return nullptr;
+
+        sql_parser::AstNode* in_list = make_in_list_on_column(probe_key, keys);
+        if (!in_list) return nullptr;
+
+        ScanContext pctx = extract_scan_context(
+            probe_is_left ? join_node->left : join_node->right);
+        if (!pctx.scan) return nullptr;
+        const sql_parser::AstNode* probe_where = and_preds(pctx.where_expr, in_list);
+        PlanNode* probe_dist = distribute_scan(pctx.scan, probe_where,
+                                               nullptr, nullptr, nullptr, false);
+
+        PlanNode* build_dist = nullptr;
+        if (bctx.scan && !shards_.is_sharded(build->table_name)) {
+            sql_parser::StringRef sql = qb_.build_select(
+                build, bctx.where_expr, nullptr, 0, nullptr, 0,
+                nullptr, nullptr, 0, -1, false);
+            build_dist = make_remote_scan(
+                shards_.get_backend(build->table_name), sql, build);
+        } else {
+            build_dist = distribute_node(probe_is_left ? join_node->right : join_node->left);
+        }
+        if (!probe_dist || !build_dist) return nullptr;
+
+        PlanNode* result = make_plan_node(arena_, PlanNodeType::JOIN);
+        result->join = join_node->join;
+        result->left = probe_is_left ? probe_dist : build_dist;
+        result->right = probe_is_left ? build_dist : probe_dist;
+        return result;
+    }
+
     PlanNode* distribute_join(PlanNode* join_node) {
         const TableInfo* left_table = find_table(join_node->left);
         const TableInfo* right_table = find_table(join_node->right);
@@ -1216,6 +1373,9 @@ private:
                                        shards_.get_shard_keys(right_table->table_name))) {
             return distribute_colocated_join(join_node, left_table, right_table);
         }
+
+        if (PlanNode* sj = try_semijoin_prune(join_node, left_table, right_table))
+            return sj;
 
         PlanNode* left_dist = nullptr;
         PlanNode* right_dist = nullptr;
