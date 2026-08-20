@@ -356,8 +356,14 @@ int main(int argc, char* argv[]) {
     }
 
     if (remote_exec) {
+        bool all_pg = !backends.empty();
+        for (const auto& b : backends) {
+            if (b.dialect != Dialect::PostgreSQL) { all_pg = false; break; }
+        }
         dtxn.reset(new DistributedTransactionManager(
-            *remote_exec, DistributedTransactionManager::BackendDialect::MYSQL));
+            *remote_exec,
+            all_pg ? DistributedTransactionManager::BackendDialect::POSTGRESQL
+                   : DistributedTransactionManager::BackendDialect::MYSQL));
         if (!txn_log_path.empty()) {
             if (!txn_log.open(txn_log_path)) {
                 std::cerr << "Error: cannot open txn log " << txn_log_path << std::endl;

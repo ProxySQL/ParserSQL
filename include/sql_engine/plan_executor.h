@@ -1171,11 +1171,29 @@ private:
     }
 
     Operator* build_set_op(PlanNode* node) {
+        std::vector<PlanNode*> remote_leaves;
+        if (node->set_op.op == SET_OP_UNION && node->set_op.all &&
+            collect_union_all_remotes(node, remote_leaves) &&
+            remote_leaves.size() > 2) {
+            std::vector<Operator*> children;
+            children.reserve(remote_leaves.size());
+            for (PlanNode* leaf : remote_leaves) {
+                Operator* child = build_remote_scan(leaf);
+                if (!child) return nullptr;
+                children.push_back(child);
+            }
+            bool parallel = parallel_open_enabled_ && children.size() > 1;
+            auto op = std::make_unique<SetOpOperator>(
+                std::move(children), parallel, parallel ? pool_ : nullptr);
+            Operator* ptr = op.get();
+            operators_.push_back(std::move(op));
+            return ptr;
+        }
+
         Operator* left = build_operator(node->left);
         Operator* right = build_operator(node->right);
         if (!left || !right) return nullptr;
 
-        // Enable parallel open when both children are remote scans and executor is thread-safe
         bool parallel = parallel_open_enabled_ &&
                          (node->left && node->left->type == PlanNodeType::REMOTE_SCAN &&
                           node->right && node->right->type == PlanNodeType::REMOTE_SCAN);
@@ -1185,6 +1203,21 @@ private:
         Operator* ptr = op.get();
         operators_.push_back(std::move(op));
         return ptr;
+    }
+
+    static bool collect_union_all_remotes(const PlanNode* node,
+                                          std::vector<PlanNode*>& out) {
+        if (!node) return false;
+        if (node->type == PlanNodeType::REMOTE_SCAN) {
+            out.push_back(const_cast<PlanNode*>(node));
+            return true;
+        }
+        if (node->type == PlanNodeType::SET_OP &&
+            node->set_op.op == SET_OP_UNION && node->set_op.all) {
+            return collect_union_all_remotes(node->left, out) &&
+                   collect_union_all_remotes(node->right, out);
+        }
+        return false;
     }
 
     Operator* build_remote_scan(PlanNode* node) {
