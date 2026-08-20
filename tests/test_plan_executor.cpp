@@ -147,6 +147,43 @@ TEST_F(PlanExecutorTest, SelectDistinctDept) {
     EXPECT_EQ(depts.size(), 2u);
 }
 
+TEST_F(PlanExecutorTest, OrderByAliasAndPosition) {
+    auto by_alias = run_query("SELECT name AS n, age AS a FROM users ORDER BY a DESC");
+    ASSERT_EQ(by_alias.row_count(), 5u);
+    EXPECT_EQ(by_alias.rows[0].get(1).int_val, 35);
+
+    auto by_pos = run_query("SELECT name, age FROM users ORDER BY 2 DESC");
+    ASSERT_EQ(by_pos.row_count(), 5u);
+    EXPECT_EQ(by_pos.rows[0].get(1).int_val, 35);
+}
+
+TEST_F(PlanExecutorTest, CountDistinctDept) {
+    parser.reset();
+    const char* sql = "SELECT COUNT(DISTINCT dept) FROM users";
+    auto r = parser.parse(sql, std::strlen(sql));
+    ASSERT_EQ(r.status, ParseResult::OK);
+    PlanBuilder<Dialect::MySQL> builder(catalog, parser.arena());
+    PlanNode* plan = builder.build(r.ast);
+    ASSERT_NE(plan, nullptr);
+    ASSERT_EQ(plan->type, PlanNodeType::PROJECT);
+    ASSERT_GE(plan->project.count, 1u);
+    EXPECT_EQ(plan->project.exprs[0]->type, NodeType::NODE_FUNCTION_CALL);
+    EXPECT_NE(static_cast<unsigned>(plan->project.exprs[0]->flags & FLAG_FUNC_DISTINCT), 0u);
+
+    PlanExecutor<Dialect::MySQL> executor(functions, catalog, parser.arena());
+    executor.add_data_source("users", users_source);
+    auto rs = executor.execute(plan);
+    ASSERT_EQ(rs.row_count(), 1u);
+    EXPECT_EQ(rs.rows[0].get(0).int_val, 2);
+}
+
+TEST_F(PlanExecutorTest, HavingCountFilter) {
+    auto rs = run_query("SELECT dept, COUNT(*) FROM users GROUP BY dept HAVING COUNT(*) > 2");
+    ASSERT_EQ(rs.row_count(), 1u);
+    EXPECT_EQ(std::string(rs.rows[0].get(0).str_val.ptr, rs.rows[0].get(0).str_val.len),
+              "Engineering");
+}
+
 // SELECT name FROM users WHERE name LIKE 'A%' → LIKE filter
 TEST_F(PlanExecutorTest, SelectWithLike) {
     auto rs = run_query("SELECT name FROM users WHERE name LIKE 'A%'");

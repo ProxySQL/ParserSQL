@@ -15,6 +15,9 @@
 #include "sql_engine/shard_map.h"
 #include "sql_engine/in_memory_catalog.h"
 #include "sql_engine/function_registry.h"
+#include "sql_engine/session.h"
+#include "sql_engine/local_txn.h"
+#include "sql_engine/distributed_txn.h"
 #include "sql_parser/parser.h"
 
 #include <mysql/mysql.h>
@@ -270,6 +273,185 @@ TEST_F(MultiExecutorTest, UnknownBackendReturnsEmpty) {
     sql_parser::StringRef sql{"SELECT 1", 8};
     auto rs = exec_->execute("unknown", sql);
     EXPECT_TRUE(rs.empty());
+}
+
+static bool mysql_port_available(uint16_t port) {
+    MYSQL* conn = mysql_init(nullptr);
+    if (!conn) return false;
+    unsigned int timeout = 2;
+    mysql_options(conn, MYSQL_OPT_CONNECT_TIMEOUT, &timeout);
+    bool ok = mysql_real_connect(conn, "127.0.0.1", "root", "test",
+                                  "testdb", port, nullptr, 0) != nullptr;
+    mysql_close(conn);
+    return ok;
+}
+
+class LiveShardedWriteTest : public ::testing::Test {
+protected:
+    void SetUp() override {
+        exec_ = std::make_unique<MultiRemoteExecutor>();
+        BackendConfig s1;
+        s1.name = "shard1";
+        s1.host = "127.0.0.1";
+        s1.port = 13306;
+        s1.user = "root";
+        s1.password = "test";
+        s1.database = "testdb";
+        s1.dialect = Dialect::MySQL;
+        BackendConfig s2 = s1;
+        s2.name = "shard2";
+        s2.port = 13307;
+        exec_->add_backend(s1);
+        exec_->add_backend(s2);
+
+        catalog_.add_table("", "shard_write_t", {
+            {"id",   SqlType::make_int(),        false},
+            {"name", SqlType::make_varchar(64),  true},
+        });
+
+        TableShardConfig cfg;
+        cfg.table_name = "shard_write_t";
+        cfg.shard_key = "id";
+        cfg.shards = {{"shard1"}, {"shard2"}};
+        cfg.strategy = RoutingStrategy::RANGE;
+        cfg.ranges = {{5, 0}, {100000, 1}};
+        shard_map_.add_table(cfg);
+    }
+
+    void TearDown() override {
+        if (exec_) exec_->disconnect_all();
+    }
+
+    std::unique_ptr<MultiRemoteExecutor> exec_;
+    InMemoryCatalog catalog_;
+    ShardMap shard_map_;
+};
+
+TEST_F(LiveShardedWriteTest, InsertThenPointSelect) {
+    if (!mysql_port_available(13306) || !mysql_port_available(13307)) {
+        GTEST_SKIP() << "Need MySQL on 13306 and 13307 (start_sharding_demo.sh)";
+    }
+
+    const char* ddl =
+        "CREATE TABLE IF NOT EXISTS shard_write_t (id INT PRIMARY KEY, name VARCHAR(64))";
+    StringRef ddl_ref{ddl, static_cast<uint32_t>(std::strlen(ddl))};
+    exec_->execute_dml("shard1", ddl_ref);
+    exec_->execute_dml("shard2", ddl_ref);
+    const char* wipe = "DELETE FROM shard_write_t";
+    StringRef wipe_ref{wipe, static_cast<uint32_t>(std::strlen(wipe))};
+    exec_->execute_dml("shard1", wipe_ref);
+    exec_->execute_dml("shard2", wipe_ref);
+
+    Arena txn_arena{65536, 1048576};
+    LocalTransactionManager txn(txn_arena);
+    Session<Dialect::MySQL> session(catalog_, txn);
+    session.set_remote_executor(exec_.get());
+    session.set_shard_map(&shard_map_);
+
+    auto ins1 = session.execute_statement(
+        "INSERT INTO shard_write_t (id, name) VALUES (3, 'low')");
+    auto ins2 = session.execute_statement(
+        "INSERT INTO shard_write_t (id, name) VALUES (9, 'high')");
+    EXPECT_TRUE(ins1.success) << ins1.error_message;
+    EXPECT_TRUE(ins2.success) << ins2.error_message;
+
+    auto low = session.execute_query("SELECT name FROM shard_write_t WHERE id = 3");
+    auto high = session.execute_query("SELECT name FROM shard_write_t WHERE id = 9");
+    ASSERT_EQ(low.row_count(), 1u);
+    ASSERT_EQ(high.row_count(), 1u);
+    EXPECT_EQ(std::string(low.rows[0].get(0).str_val.ptr, low.rows[0].get(0).str_val.len), "low");
+    EXPECT_EQ(std::string(high.rows[0].get(0).str_val.ptr, high.rows[0].get(0).str_val.len), "high");
+
+    session.execute_statement("DELETE FROM shard_write_t WHERE id = 3");
+    session.execute_statement("DELETE FROM shard_write_t WHERE id = 9");
+}
+
+bool pg_port_available(uint16_t port) {
+    std::string conninfo = std::string("host=127.0.0.1 port=") + std::to_string(port)
+        + " user=postgres password=test dbname=testdb connect_timeout=2";
+    PGconn* conn = PQconnectdb(conninfo.c_str());
+    bool ok = (PQstatus(conn) == CONNECTION_OK);
+    PQfinish(conn);
+    return ok;
+}
+
+TEST(LivePgShardedWriteTest, RangeListAndTwoPhaseCommit) {
+    if (!pg_port_available(16432) || !pg_port_available(16433)) {
+        GTEST_SKIP() << "Need PG on 16432 and 16433 (start_pg_sharding_demo.sh)";
+    }
+
+    MultiRemoteExecutor exec;
+    BackendConfig p1;
+    p1.name = "pg1";
+    p1.host = "127.0.0.1";
+    p1.port = 16432;
+    p1.user = "postgres";
+    p1.password = "test";
+    p1.database = "testdb";
+    p1.dialect = Dialect::PostgreSQL;
+    BackendConfig p2 = p1;
+    p2.name = "pg2";
+    p2.port = 16433;
+    exec.add_backend(p1);
+    exec.add_backend(p2);
+
+    InMemoryCatalog catalog;
+    catalog.add_table("", "users", {
+        {"id",   SqlType::make_int(), false},
+        {"name", SqlType::make_varchar(255), true},
+        {"age",  SqlType::make_int(), true},
+    });
+    catalog.add_table("", "regions", {
+        {"name", SqlType::make_varchar(64), false},
+        {"tz",   SqlType::make_varchar(32), true},
+    });
+
+    ShardMap shards;
+    TableShardConfig users;
+    users.table_name = "users";
+    users.shard_key = "id";
+    users.shards = {{"pg1"}, {"pg2"}};
+    users.strategy = RoutingStrategy::RANGE;
+    users.ranges = {{5, 0}, {100000, 1}};
+    shards.add_table(users);
+    TableShardConfig regions;
+    regions.table_name = "regions";
+    regions.shard_key = "name";
+    regions.shards = {{"pg1"}, {"pg2"}};
+    regions.strategy = RoutingStrategy::LIST;
+    regions.list = {
+        {false, 0, "us-east", 0},
+        {false, 0, "us-west", 1},
+    };
+    shards.add_table(regions);
+
+    Arena txn_arena{65536, 1048576};
+    DistributedTransactionManager txn(
+        exec, DistributedTransactionManager::BackendDialect::POSTGRESQL);
+    Session<Dialect::PostgreSQL> session(catalog, txn);
+    session.set_remote_executor(&exec);
+    session.set_shard_map(&shards);
+
+    auto east = session.execute_query("SELECT tz FROM regions WHERE name = 'us-east'");
+    auto west = session.execute_query("SELECT tz FROM regions WHERE name = 'us-west'");
+    ASSERT_EQ(east.row_count(), 1u);
+    ASSERT_EQ(west.row_count(), 1u);
+
+    EXPECT_TRUE(session.begin());
+    auto i0 = session.execute_statement(
+        "INSERT INTO users (id, name, age) VALUES (0, 'Zero', 1)");
+    auto i11 = session.execute_statement(
+        "INSERT INTO users (id, name, age) VALUES (11, 'Eleven', 2)");
+    EXPECT_TRUE(i0.success) << i0.error_message;
+    EXPECT_TRUE(i11.success) << i11.error_message;
+    EXPECT_TRUE(session.commit());
+
+    auto back = session.execute_query("SELECT name FROM users WHERE id IN (0, 11)");
+    EXPECT_EQ(back.row_count(), 2u);
+
+    session.execute_statement("DELETE FROM users WHERE id = 0");
+    session.execute_statement("DELETE FROM users WHERE id = 11");
+    exec.disconnect_all();
 }
 
 } // namespace

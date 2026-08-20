@@ -56,6 +56,8 @@
 #include <string>
 #include <vector>
 #include <memory>
+#include <cstdlib>
+#include <cstring>
 
 namespace sql_engine {
 
@@ -846,15 +848,128 @@ private:
         return ptr;
     }
 
+    static bool same_agg_call(const sql_parser::AstNode* a, const sql_parser::AstNode* b) {
+        if (!a || !b) return false;
+        if (a->type != sql_parser::NodeType::NODE_FUNCTION_CALL ||
+            b->type != sql_parser::NodeType::NODE_FUNCTION_CALL) return false;
+        return a->value().equals_ci(b->value().ptr, b->value().len);
+    }
+
+    const sql_parser::AstNode* rewrite_having_expr(const sql_parser::AstNode* expr,
+                                                    PlanNode* agg_node) {
+        if (!expr || !agg_node) return expr;
+        uint16_t group_count = 0;
+        uint16_t agg_count = 0;
+        const sql_parser::AstNode** agg_exprs = nullptr;
+        const sql_parser::AstNode** group_by = nullptr;
+        if (agg_node->type == PlanNodeType::AGGREGATE) {
+            group_count = agg_node->aggregate.group_count;
+            agg_count = agg_node->aggregate.agg_count;
+            agg_exprs = agg_node->aggregate.agg_exprs;
+            group_by = agg_node->aggregate.group_by;
+        } else if (agg_node->type == PlanNodeType::MERGE_AGGREGATE) {
+            group_count = agg_node->merge_aggregate.group_key_count;
+            if (agg_node->merge_aggregate.output_exprs &&
+                agg_node->merge_aggregate.output_expr_count > group_count) {
+                agg_exprs = agg_node->merge_aggregate.output_exprs + group_count;
+                agg_count = static_cast<uint16_t>(
+                    agg_node->merge_aggregate.output_expr_count - group_count);
+                group_by = agg_node->merge_aggregate.output_exprs;
+            }
+        } else {
+            return expr;
+        }
+
+        if (expr->type == sql_parser::NodeType::NODE_FUNCTION_CALL && agg_exprs) {
+            for (uint16_t i = 0; i < agg_count; ++i) {
+                if (same_agg_call(expr, agg_exprs[i])) {
+                    sql_parser::StringRef name = expr->value();
+                    return sql_parser::make_node(
+                        arena_, sql_parser::NodeType::NODE_IDENTIFIER, name);
+                }
+            }
+        }
+
+        bool changed = false;
+        sql_parser::AstNode* clone = sql_parser::make_node(
+            arena_, expr->type, expr->value(), expr->flags);
+        for (const sql_parser::AstNode* c = expr->first_child; c; c = c->next_sibling) {
+            const sql_parser::AstNode* rw = rewrite_having_expr(c, agg_node);
+            if (rw != c) changed = true;
+            if (rw) clone->add_child(const_cast<sql_parser::AstNode*>(rw));
+        }
+        (void)group_count;
+        (void)group_by;
+        return changed ? clone : expr;
+    }
+
+    const TableInfo* make_agg_output_table(PlanNode* agg_node) {
+        if (!agg_node) return nullptr;
+        uint16_t group_count = 0;
+        uint16_t agg_count = 0;
+        const sql_parser::AstNode** group_by = nullptr;
+        const sql_parser::AstNode** agg_exprs = nullptr;
+        if (agg_node->type == PlanNodeType::AGGREGATE) {
+            group_count = agg_node->aggregate.group_count;
+            agg_count = agg_node->aggregate.agg_count;
+            group_by = agg_node->aggregate.group_by;
+            agg_exprs = agg_node->aggregate.agg_exprs;
+        } else if (agg_node->type == PlanNodeType::MERGE_AGGREGATE &&
+                   agg_node->merge_aggregate.output_exprs) {
+            group_count = agg_node->merge_aggregate.group_key_count;
+            group_by = agg_node->merge_aggregate.output_exprs;
+            if (agg_node->merge_aggregate.output_expr_count > group_count) {
+                agg_exprs = agg_node->merge_aggregate.output_exprs + group_count;
+                agg_count = static_cast<uint16_t>(
+                    agg_node->merge_aggregate.output_expr_count - group_count);
+            }
+        } else {
+            return nullptr;
+        }
+
+        uint16_t n = static_cast<uint16_t>(group_count + agg_count);
+        if (n == 0) return nullptr;
+        auto* cols = static_cast<ColumnInfo*>(arena_.allocate(sizeof(ColumnInfo) * n));
+        if (!cols) return nullptr;
+        for (uint16_t i = 0; i < group_count; ++i) {
+            cols[i].ordinal = i;
+            cols[i].nullable = true;
+            cols[i].type = SqlType::make_int();
+            cols[i].name = (group_by && group_by[i]) ? group_by[i]->value()
+                                                     : sql_parser::StringRef{};
+        }
+        for (uint16_t i = 0; i < agg_count; ++i) {
+            cols[group_count + i].ordinal = static_cast<uint16_t>(group_count + i);
+            cols[group_count + i].nullable = true;
+            cols[group_count + i].type = SqlType::make_int();
+            cols[group_count + i].name = (agg_exprs && agg_exprs[i])
+                ? agg_exprs[i]->value() : sql_parser::StringRef{};
+        }
+        auto* ti = static_cast<TableInfo*>(arena_.allocate(sizeof(TableInfo)));
+        if (!ti) return nullptr;
+        std::memset(ti, 0, sizeof(TableInfo));
+        ti->columns = cols;
+        ti->column_count = n;
+        return ti;
+    }
+
     Operator* build_filter(PlanNode* node) {
         Operator* child = build_operator(node->left);
         if (!child && node->left) return nullptr;
 
         std::vector<const TableInfo*> tables;
-        collect_tables(node->left, tables);
+        const sql_parser::AstNode* expr = node->filter.expr;
+        if (node->left && (node->left->type == PlanNodeType::AGGREGATE ||
+                           node->left->type == PlanNodeType::MERGE_AGGREGATE)) {
+            expr = rewrite_having_expr(expr, node->left);
+            const TableInfo* synth = make_agg_output_table(node->left);
+            if (synth) tables.push_back(synth);
+        } else {
+            collect_tables(node->left, tables);
+        }
 
         auto op = std::make_unique<FilterOperator<D>>(
-            child, node->filter.expr, catalog_, tables, functions_, arena_,
+            child, expr, catalog_, tables, functions_, arena_,
             &subquery_exec_, outer_resolver_);
         Operator* ptr = op.get();
         operators_.push_back(std::move(op));
@@ -1056,11 +1171,29 @@ private:
     }
 
     Operator* build_set_op(PlanNode* node) {
+        std::vector<PlanNode*> remote_leaves;
+        if (node->set_op.op == SET_OP_UNION && node->set_op.all &&
+            collect_union_all_remotes(node, remote_leaves) &&
+            remote_leaves.size() > 2) {
+            std::vector<Operator*> children;
+            children.reserve(remote_leaves.size());
+            for (PlanNode* leaf : remote_leaves) {
+                Operator* child = build_remote_scan(leaf);
+                if (!child) return nullptr;
+                children.push_back(child);
+            }
+            bool parallel = parallel_open_enabled_ && children.size() > 1;
+            auto op = std::make_unique<SetOpOperator>(
+                std::move(children), parallel, parallel ? pool_ : nullptr);
+            Operator* ptr = op.get();
+            operators_.push_back(std::move(op));
+            return ptr;
+        }
+
         Operator* left = build_operator(node->left);
         Operator* right = build_operator(node->right);
         if (!left || !right) return nullptr;
 
-        // Enable parallel open when both children are remote scans and executor is thread-safe
         bool parallel = parallel_open_enabled_ &&
                          (node->left && node->left->type == PlanNodeType::REMOTE_SCAN &&
                           node->right && node->right->type == PlanNodeType::REMOTE_SCAN);
@@ -1070,6 +1203,21 @@ private:
         Operator* ptr = op.get();
         operators_.push_back(std::move(op));
         return ptr;
+    }
+
+    static bool collect_union_all_remotes(const PlanNode* node,
+                                          std::vector<PlanNode*>& out) {
+        if (!node) return false;
+        if (node->type == PlanNodeType::REMOTE_SCAN) {
+            out.push_back(const_cast<PlanNode*>(node));
+            return true;
+        }
+        if (node->type == PlanNodeType::SET_OP &&
+            node->set_op.op == SET_OP_UNION && node->set_op.all) {
+            return collect_union_all_remotes(node->left, out) &&
+                   collect_union_all_remotes(node->right, out);
+        }
+        return false;
     }
 
     Operator* build_remote_scan(PlanNode* node) {
@@ -1170,12 +1318,21 @@ private:
 
     uint16_t resolve_column_index(const sql_parser::AstNode* key, const TableInfo* table) {
         if (!key || !table) return 0;
+        if (key->type == sql_parser::NodeType::NODE_LITERAL_INT) {
+            sql_parser::StringRef sv = key->value();
+            if (!sv.ptr || sv.len == 0) return 0;
+            int64_t n = std::strtoll(sv.ptr, nullptr, 10);
+            if (n < 1) return 0;
+            if (n > static_cast<int64_t>(table->column_count)) {
+                return static_cast<uint16_t>(table->column_count - 1);
+            }
+            return static_cast<uint16_t>(n - 1);
+        }
         sql_parser::StringRef col_name;
         if (key->type == sql_parser::NodeType::NODE_COLUMN_REF ||
             key->type == sql_parser::NodeType::NODE_IDENTIFIER) {
             col_name = key->value();
         } else if (key->type == sql_parser::NodeType::NODE_QUALIFIED_NAME) {
-            // table.column -- get the column part
             const sql_parser::AstNode* c = key->first_child;
             if (c && c->next_sibling) col_name = c->next_sibling->value();
             else if (c) col_name = c->value();

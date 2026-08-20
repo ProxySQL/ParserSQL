@@ -172,6 +172,10 @@ ParsedShard parse_shard_spec(const std::string& spec) {
 
     ps.config.table_name = spec.substr(0, c1);
     ps.config.shard_key = spec.substr(c1 + 1, c2 - c1 - 1);
+    if (ps.config.shard_key.empty()) {
+        ps.error = "Empty shard key in: " + spec;
+        return ps;
+    }
 
     // Look for an optional strategy qualifier in the next colon-separated
     // token: hash | range | list. If absent, default to HASH.
@@ -226,6 +230,10 @@ ParsedShard parse_shard_spec(const std::string& spec) {
             return ps;
         }
     } else if (strategy_token == "list") {
+        if (ps.config.shard_key.find('+') != std::string::npos) {
+            ps.error = "composite shard keys require HASH strategy: " + spec;
+            return ps;
+        }
         ps.config.strategy = RoutingStrategy::LIST;
         for (auto& entry : split_csv(body)) {
             std::string val_str, backend;

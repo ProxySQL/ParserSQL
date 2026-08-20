@@ -35,6 +35,7 @@
 #include "sql_engine/in_memory_catalog.h"
 #include "sql_engine/data_source.h"
 #include "sql_engine/local_txn.h"
+#include "sql_engine/distributed_txn.h"
 #include "sql_engine/multi_remote_executor.h"
 #include "sql_engine/thread_safe_executor.h"
 #include "sql_engine/shard_map.h"
@@ -103,14 +104,13 @@ static void worker_thread(
     (void)thread_id;
 
     // Each thread gets its own arena, txn manager, executor, and session
-    Arena txn_arena{65536, 1048576};
-    LocalTransactionManager txn_mgr(txn_arena);
-
     ThreadSafeMultiRemoteExecutor remote_exec;
     for (auto& bc : backends) {
         remote_exec.add_backend(bc);
     }
 
+    DistributedTransactionManager txn_mgr(
+        remote_exec, DistributedTransactionManager::BackendDialect::MYSQL);
     Session<Dialect::MySQL> session(catalog, txn_mgr);
     session.set_remote_executor(&remote_exec);
     session.set_parallel_open(true);  // thread-safe executor enables parallel shard I/O
@@ -377,11 +377,33 @@ static void discover_schemas(InMemoryCatalog& catalog,
 }
 
 // ============================================================
+static const std::string& backend_for_int_key(
+    const ShardMap& map,
+    const char* table,
+    int64_t key,
+    const std::vector<std::string>& fallback)
+{
+    StringRef t{table, static_cast<uint32_t>(std::strlen(table))};
+    if (!map.has_table(t) || map.get_shards(t).empty()) return fallback.front();
+    size_t idx = map.shard_index_for_int(t, key);
+    return map.get_shards(t)[idx].backend_name;
+}
+
+static int64_t load_key_for_table(const ShardMap& map, const char* table,
+                                   int64_t id, int64_t user_id) {
+    StringRef t{table, static_cast<uint32_t>(std::strlen(table))};
+    StringRef sk = map.get_shard_key(t);
+    if (sk.equals_ci("user_id", 7)) return user_id;
+    return id;
+}
+
 // Load test data via MySQL
 // ============================================================
 
 static void load_test_data(MultiRemoteExecutor& remote_exec,
                             const std::vector<TableShardConfig>& shards) {
+    ShardMap tmp_shards;
+    for (const auto& sc : shards) tmp_shards.add_table(sc);
     // Collect all unique backend names
     std::vector<std::string> all_backends;
     for (auto& sc : shards) {
@@ -450,7 +472,8 @@ static void load_test_data(MultiRemoteExecutor& remote_exec,
         std::string sql_str = sql.str();
         StringRef ref{sql_str.c_str(), static_cast<uint32_t>(sql_str.size())};
 
-        const std::string& bn = all_backends[static_cast<size_t>(i) % all_backends.size()];
+        const std::string& bn = backend_for_int_key(
+            tmp_shards, "users", load_key_for_table(tmp_shards, "users", i, i), all_backends);
         try { remote_exec.execute_dml(bn.c_str(), ref); } catch (...) {}
     }
 
@@ -466,7 +489,9 @@ static void load_test_data(MultiRemoteExecutor& remote_exec,
         std::string sql_str = sql.str();
         StringRef ref{sql_str.c_str(), static_cast<uint32_t>(sql_str.size())};
 
-        const std::string& bn = all_backends[static_cast<size_t>(i) % all_backends.size()];
+        const std::string& bn = backend_for_int_key(
+            tmp_shards, "orders",
+            load_key_for_table(tmp_shards, "orders", i, user_id), all_backends);
         try { remote_exec.execute_dml(bn.c_str(), ref); } catch (...) {}
     }
 

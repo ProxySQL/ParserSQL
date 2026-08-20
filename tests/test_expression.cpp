@@ -301,6 +301,15 @@ TEST_F(ExpressionTest, FunctionCall) {
     EXPECT_EQ(node->first_child->type, NodeType::NODE_ASTERISK);
 }
 
+TEST_F(ExpressionTest, FunctionCallDistinct) {
+    AstNode* node = parse_expr("COUNT(DISTINCT dept)");
+    ASSERT_NE(node, nullptr);
+    EXPECT_EQ(node->type, NodeType::NODE_FUNCTION_CALL);
+    EXPECT_NE(static_cast<unsigned>(node->flags & FLAG_FUNC_DISTINCT), 0u);
+    ASSERT_NE(node->first_child, nullptr);
+    EXPECT_EQ(node->first_child->type, NodeType::NODE_COLUMN_REF);
+}
+
 TEST_F(ExpressionTest, FunctionCallMultiArg) {
     AstNode* node = parse_expr("COALESCE(a, b, 0)");
     ASSERT_NE(node, nullptr);

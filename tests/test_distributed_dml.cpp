@@ -12,6 +12,8 @@
 #include "sql_engine/in_memory_catalog.h"
 #include "sql_engine/data_source.h"
 #include "sql_engine/function_registry.h"
+#include "sql_engine/session.h"
+#include "sql_engine/local_txn.h"
 #include "sql_parser/parser.h"
 #include <cstring>
 #include <string>
@@ -305,11 +307,30 @@ protected:
             return r;
         }
 
-        DistributedPlanner<Dialect::MySQL> dist(shard_map, catalog, parser.arena());
+        DistributedPlanner<Dialect::MySQL> dist(shard_map, catalog, parser.arena(),
+                                                 &mock_executor, &functions);
         PlanNode* dist_plan = dist.distribute_dml(plan);
+        if (dist.last_error()) {
+            DmlResult r;
+            r.error_message = dist.last_error();
+            return r;
+        }
 
-        // Execute all REMOTE_SCAN nodes in the distributed plan
         return execute_remote_dml_plan(dist_plan);
+    }
+
+    size_t shard_for_id(int64_t id) {
+        return shard_map.shard_index_for_int(StringRef{"users", 5}, id);
+    }
+
+    const char* backend_for_id(int64_t id) {
+        return shard_map.get_shards(StringRef{"users", 5})[shard_for_id(id)].backend_name.c_str();
+    }
+
+    size_t row_count_on(const char* backend, const char* table) {
+        auto* b = mock_executor.get_backend(backend);
+        auto it = b->mutable_sources.find(table);
+        return it == b->mutable_sources.end() ? 0u : it->second->row_count();
     }
 
     DmlResult execute_remote_dml_plan(PlanNode* plan) {
@@ -353,8 +374,10 @@ protected:
         PlanNode* plan = builder.build(pr.ast);
         if (!plan) return {};
 
-        DistributedPlanner<Dialect::MySQL> dist(shard_map, catalog, p.arena());
+        DistributedPlanner<Dialect::MySQL> dist(shard_map, catalog, p.arena(),
+                                                 &mock_executor, &functions);
         PlanNode* dist_plan = dist.distribute(plan);
+        if (dist.last_error()) return {};
 
         PlanExecutor<Dialect::MySQL> executor(functions, catalog, p.arena());
         executor.set_remote_executor(&mock_executor);
@@ -380,42 +403,34 @@ TEST_F(DistributedDmlTest, InsertUnsharded) {
     EXPECT_EQ(mock_executor.total_row_count("orders"), 1u);
 }
 
-// INSERT to sharded table -> route by shard key value
+// INSERT to sharded table -> route by ShardMap
 TEST_F(DistributedDmlTest, InsertShardedSingleRow) {
     mock_executor.clear_sql_logs();
 
-    // id=3 should route to shard 3%3=0
     auto result = execute_distributed_dml("INSERT INTO users (id, name, age) VALUES (3, 'Carol', 17)");
     EXPECT_TRUE(result.success);
     EXPECT_EQ(result.affected_rows, 1u);
 
-    // Only one shard should have the row
     EXPECT_EQ(mock_executor.total_row_count("users"), 1u);
-
-    // Specifically shard0 (3 % 3 == 0)
-    auto* s0 = mock_executor.get_backend("shard0");
-    auto it0 = s0->mutable_sources.find("users");
-    EXPECT_EQ(it0->second->row_count(), 1u);
+    EXPECT_EQ(row_count_on(backend_for_id(3), "users"), 1u);
 }
 
-// Multi-row INSERT to sharded -> rows grouped by shard
+// Multi-row INSERT to sharded -> rows grouped by ShardMap
 TEST_F(DistributedDmlTest, InsertShardedMultiRow) {
     mock_executor.clear_sql_logs();
 
-    // id=0 -> shard0, id=1 -> shard1, id=2 -> shard2, id=3 -> shard0
+    const int64_t ids[] = {0, 1, 2, 3};
     auto result = execute_distributed_dml(
         "INSERT INTO users (id, name, age) VALUES (0, 'Zero', 10), (1, 'One', 20), (2, 'Two', 30), (3, 'Three', 40)");
     EXPECT_TRUE(result.success);
     EXPECT_EQ(result.affected_rows, 4u);
     EXPECT_EQ(mock_executor.total_row_count("users"), 4u);
 
-    // shard0 should have id=0,3 (2 rows); shard1 has id=1 (1 row); shard2 has id=2 (1 row)
-    auto* s0 = mock_executor.get_backend("shard0");
-    auto* s1 = mock_executor.get_backend("shard1");
-    auto* s2 = mock_executor.get_backend("shard2");
-    EXPECT_EQ(s0->mutable_sources["users"]->row_count(), 2u);
-    EXPECT_EQ(s1->mutable_sources["users"]->row_count(), 1u);
-    EXPECT_EQ(s2->mutable_sources["users"]->row_count(), 1u);
+    size_t expected[3] = {0, 0, 0};
+    for (int64_t id : ids) expected[shard_for_id(id)]++;
+    EXPECT_EQ(row_count_on("shard0", "users"), expected[0]);
+    EXPECT_EQ(row_count_on("shard1", "users"), expected[1]);
+    EXPECT_EQ(row_count_on("shard2", "users"), expected[2]);
 }
 
 // UPDATE unsharded -> single backend
@@ -434,17 +449,19 @@ TEST_F(DistributedDmlTest, UpdateUnsharded) {
 
 // UPDATE sharded with shard key in WHERE -> single shard targeted
 TEST_F(DistributedDmlTest, UpdateShardedTargeted) {
-    // Insert a row: id=3 -> shard0
     execute_distributed_dml("INSERT INTO users (id, name, age) VALUES (3, 'Carol', 17)");
     mock_executor.clear_sql_logs();
 
     auto result = execute_distributed_dml("UPDATE users SET age = 18 WHERE id = 3");
     EXPECT_TRUE(result.success);
 
-    // Only shard0 should have received the UPDATE (3 % 3 == 0)
-    EXPECT_EQ(mock_executor.get_executed_sqls("shard0").size(), 1u);
-    EXPECT_EQ(mock_executor.get_executed_sqls("shard1").size(), 0u);
-    EXPECT_EQ(mock_executor.get_executed_sqls("shard2").size(), 0u);
+    const char* target = backend_for_id(3);
+    EXPECT_EQ(mock_executor.get_executed_sqls(target).size(), 1u);
+    for (const char* name : {"shard0", "shard1", "shard2"}) {
+        if (std::strcmp(name, target) != 0) {
+            EXPECT_EQ(mock_executor.get_executed_sqls(name).size(), 0u);
+        }
+    }
 }
 
 // UPDATE sharded without shard key -> scatter to all shards
@@ -480,10 +497,13 @@ TEST_F(DistributedDmlTest, DeleteShardedTargeted) {
     auto result = execute_distributed_dml("DELETE FROM users WHERE id = 3");
     EXPECT_TRUE(result.success);
 
-    // Only shard0 (3 % 3 == 0)
-    EXPECT_EQ(mock_executor.get_executed_sqls("shard0").size(), 1u);
-    EXPECT_EQ(mock_executor.get_executed_sqls("shard1").size(), 0u);
-    EXPECT_EQ(mock_executor.get_executed_sqls("shard2").size(), 0u);
+    const char* target = backend_for_id(3);
+    EXPECT_EQ(mock_executor.get_executed_sqls(target).size(), 1u);
+    for (const char* name : {"shard0", "shard1", "shard2"}) {
+        if (std::strcmp(name, target) != 0) {
+            EXPECT_EQ(mock_executor.get_executed_sqls(name).size(), 0u);
+        }
+    }
 }
 
 // DELETE sharded scatter -> all shards
@@ -508,14 +528,14 @@ TEST_F(DistributedDmlTest, InsertThenSelectVerify) {
     // Verify total count
     EXPECT_EQ(mock_executor.total_row_count("users"), 3u);
 
-    // Each shard should have exactly 1 row
-    EXPECT_EQ(mock_executor.get_backend("shard0")->mutable_sources["users"]->row_count(), 1u);
-    EXPECT_EQ(mock_executor.get_backend("shard1")->mutable_sources["users"]->row_count(), 1u);
-    EXPECT_EQ(mock_executor.get_backend("shard2")->mutable_sources["users"]->row_count(), 1u);
-
-    // Verify data via distributed SELECT
     auto rs = execute_distributed_select("SELECT * FROM users");
     EXPECT_EQ(rs.row_count(), 3u);
+
+    for (int64_t id : {0, 1, 2}) {
+        std::string sql = "SELECT name FROM users WHERE id = " + std::to_string(id);
+        auto point = execute_distributed_select(sql.c_str());
+        EXPECT_EQ(point.row_count(), 1u) << "point lookup missed id=" << id;
+    }
 }
 
 // ==================================================================
@@ -559,12 +579,14 @@ TEST_F(DistributedDmlTest, DmlWithCrossShardSubquery) {
     collect_and_execute_remote_scans(dist_plan, total);
     EXPECT_TRUE(total.success);
 
-    // Users 0 and 1 should be deleted; user 2 should remain
     EXPECT_EQ(mock_executor.total_row_count("users"), 1u);
-
-    // The remaining user should be Carol (id=2) on shard2
-    auto* s2 = mock_executor.get_backend("shard2");
-    EXPECT_EQ(s2->mutable_sources["users"]->row_count(), 1u);
+    auto* remaining = mock_executor.get_backend(backend_for_id(2))->mutable_sources["users"];
+    ASSERT_GE(remaining->row_count(), 1u);
+    bool found_carol = false;
+    for (size_t i = 0; i < remaining->row_count(); ++i) {
+        if (remaining->rows()[i].get(0).int_val == 2) found_carol = true;
+    }
+    EXPECT_TRUE(found_carol);
 }
 
 // UPDATE users SET age = 99 WHERE id IN (SELECT user_id FROM orders)
@@ -603,17 +625,17 @@ TEST_F(DistributedDmlTest, UpdateWithCrossShardSubquery) {
     // Total user count unchanged
     EXPECT_EQ(mock_executor.total_row_count("users"), 3u);
 
-    // Verify age updates by checking shard0 (id=0) and shard1 (id=1)
-    auto* s0 = mock_executor.get_backend("shard0");
-    auto* s1 = mock_executor.get_backend("shard1");
-    ASSERT_EQ(s0->mutable_sources["users"]->row_count(), 1u);
-    ASSERT_EQ(s1->mutable_sources["users"]->row_count(), 1u);
-    // age is column index 2
-    EXPECT_EQ(s0->mutable_sources["users"]->rows()[0].get(2).int_val, 99);
-    EXPECT_EQ(s1->mutable_sources["users"]->rows()[0].get(2).int_val, 99);
-    // Carol should be unchanged
-    auto* s2 = mock_executor.get_backend("shard2");
-    EXPECT_EQ(s2->mutable_sources["users"]->rows()[0].get(2).int_val, 17);
+    auto find_age = [&](int64_t id) -> int64_t {
+        const char* bn = backend_for_id(id);
+        auto* src = mock_executor.get_backend(bn)->mutable_sources["users"];
+        for (size_t i = 0; i < src->row_count(); ++i) {
+            if (src->rows()[i].get(0).int_val == id) return src->rows()[i].get(2).int_val;
+        }
+        return -1;
+    };
+    EXPECT_EQ(find_age(0), 99);
+    EXPECT_EQ(find_age(1), 99);
+    EXPECT_EQ(find_age(2), 17);
 }
 
 // ==================================================================
@@ -674,4 +696,263 @@ TEST_F(DistributedDmlTest, InsertSelectDistributed) {
 
     // user_archive on orders_backend should now have 3 rows
     EXPECT_EQ(mock_executor.get_backend("orders_backend")->mutable_sources["user_archive"]->row_count(), 3u);
+}
+
+TEST_F(DistributedDmlTest, InsertMissingShardKeyErrors) {
+    auto result = execute_distributed_dml("INSERT INTO users (name, age) VALUES ('Carol', 17)");
+    EXPECT_FALSE(result.success);
+    EXPECT_NE(result.error_message.find("shard key"), std::string::npos);
+    EXPECT_EQ(mock_executor.total_row_count("users"), 0u);
+}
+
+TEST_F(DistributedDmlTest, InsertNonLiteralShardKeyErrors) {
+    auto result = execute_distributed_dml(
+        "INSERT INTO users (id, name, age) VALUES (1 + 1, 'Carol', 17)");
+    EXPECT_FALSE(result.success);
+    EXPECT_NE(result.error_message.find("literal"), std::string::npos);
+    EXPECT_EQ(mock_executor.total_row_count("users"), 0u);
+}
+
+TEST_F(DistributedDmlTest, UpdateShardKeyMovesRow) {
+    execute_distributed_dml("INSERT INTO users (id, name, age) VALUES (3, 'Carol', 17)");
+    const char* src = backend_for_id(3);
+    const char* dst = backend_for_id(9);
+    ASSERT_STRNE(src, dst);
+
+    auto result = execute_distributed_dml("UPDATE users SET id = 9 WHERE id = 3");
+    EXPECT_TRUE(result.success) << result.error_message;
+    EXPECT_EQ(row_count_on(src, "users"), 0u);
+    EXPECT_EQ(row_count_on(dst, "users"), 1u);
+
+    auto got = execute_distributed_select("SELECT name FROM users WHERE id = 9");
+    ASSERT_EQ(got.row_count(), 1u);
+    EXPECT_EQ(std::string(got.rows[0].get(0).str_val.ptr, got.rows[0].get(0).str_val.len),
+              "Carol");
+}
+
+TEST_F(DistributedDmlTest, UpdateShardKeySameShard) {
+    int64_t a = 3;
+    int64_t b = a;
+    for (int64_t i = 4; i < 200; ++i) {
+        if (shard_for_id(i) == shard_for_id(a)) { b = i; break; }
+    }
+    ASSERT_NE(a, b);
+
+    execute_distributed_dml("INSERT INTO users (id, name, age) VALUES (3, 'Carol', 17)");
+    auto result = execute_distributed_dml(
+        ("UPDATE users SET id = " + std::to_string(b) + " WHERE id = 3").c_str());
+    EXPECT_TRUE(result.success) << result.error_message;
+    EXPECT_EQ(row_count_on(backend_for_id(a), "users"), 1u);
+    auto got = execute_distributed_select(
+        ("SELECT id FROM users WHERE id = " + std::to_string(b)).c_str());
+    ASSERT_EQ(got.row_count(), 1u);
+}
+
+TEST_F(DistributedDmlTest, UnknownTableDmlErrors) {
+    catalog.add_table("", "ghost", {
+        {"id", SqlType::make_int(), false},
+    });
+    auto result = execute_distributed_dml("INSERT INTO ghost (id) VALUES (1)");
+    EXPECT_FALSE(result.success);
+    EXPECT_NE(result.error_message.find("shard map"), std::string::npos);
+}
+
+TEST_F(DistributedDmlTest, CompositeShardKeyInsertSelect) {
+    catalog.add_table("", "kv", {
+        {"tenant_id", SqlType::make_int(), false},
+        {"id",        SqlType::make_int(), false},
+        {"name",      SqlType::make_varchar(255), true},
+    });
+    TableShardConfig cfg;
+    cfg.table_name = "kv";
+    cfg.shard_key = "tenant_id+id";
+    cfg.shards = {{"shard0"}, {"shard1"}, {"shard2"}};
+    shard_map.add_table(cfg);
+    mock_executor.add_table_to_all("kv", {
+        {"tenant_id", SqlType::make_int(), false},
+        {"id",        SqlType::make_int(), false},
+        {"name",      SqlType::make_varchar(255), true},
+    });
+
+    auto missing = execute_distributed_dml(
+        "INSERT INTO kv (id, name) VALUES (1, 'x')");
+    EXPECT_FALSE(missing.success);
+    EXPECT_NE(missing.error_message.find("shard key"), std::string::npos);
+
+    EXPECT_TRUE(execute_distributed_dml(
+        "INSERT INTO kv (tenant_id, id, name) VALUES (1, 3, 'Alice')").success);
+    EXPECT_TRUE(execute_distributed_dml(
+        "INSERT INTO kv (tenant_id, id, name) VALUES (2, 3, 'Bob')").success);
+
+    auto alice = execute_distributed_select(
+        "SELECT name FROM kv WHERE tenant_id = 1 AND id = 3");
+    ASSERT_EQ(alice.row_count(), 1u);
+    EXPECT_EQ(std::string(alice.rows[0].get(0).str_val.ptr,
+                          alice.rows[0].get(0).str_val.len), "Alice");
+
+    auto bob = execute_distributed_select(
+        "SELECT name FROM kv WHERE tenant_id = 2 AND id = 3");
+    ASSERT_EQ(bob.row_count(), 1u);
+    EXPECT_EQ(std::string(bob.rows[0].get(0).str_val.ptr,
+                          bob.rows[0].get(0).str_val.len), "Bob");
+}
+
+TEST_F(DistributedDmlTest, InsertThenPointSelectRange) {
+    TableShardConfig cfg;
+    cfg.table_name = "users";
+    cfg.shard_key = "id";
+    cfg.shards = {{"shard0"}, {"shard1"}, {"shard2"}};
+    cfg.strategy = RoutingStrategy::RANGE;
+    cfg.ranges = {{5, 0}, {10, 1}, {100000, 2}};
+    shard_map.add_table(cfg);
+
+    EXPECT_TRUE(execute_distributed_dml("INSERT INTO users (id, name, age) VALUES (3, 'Low', 1)").success);
+    EXPECT_TRUE(execute_distributed_dml("INSERT INTO users (id, name, age) VALUES (7, 'Mid', 2)").success);
+    EXPECT_TRUE(execute_distributed_dml("INSERT INTO users (id, name, age) VALUES (20, 'High', 3)").success);
+
+    EXPECT_EQ(row_count_on("shard0", "users"), 1u);
+    EXPECT_EQ(row_count_on("shard1", "users"), 1u);
+    EXPECT_EQ(row_count_on("shard2", "users"), 1u);
+
+    auto low = execute_distributed_select("SELECT name FROM users WHERE id = 3");
+    ASSERT_EQ(low.row_count(), 1u);
+    EXPECT_EQ(std::string(low.rows[0].get(0).str_val.ptr, low.rows[0].get(0).str_val.len), "Low");
+
+    auto mid = execute_distributed_select("SELECT name FROM users WHERE id = 7");
+    ASSERT_EQ(mid.row_count(), 1u);
+    EXPECT_EQ(std::string(mid.rows[0].get(0).str_val.ptr, mid.rows[0].get(0).str_val.len), "Mid");
+
+    auto high = execute_distributed_select("SELECT name FROM users WHERE id = 20");
+    ASSERT_EQ(high.row_count(), 1u);
+    EXPECT_EQ(std::string(high.rows[0].get(0).str_val.ptr, high.rows[0].get(0).str_val.len), "High");
+}
+
+TEST_F(DistributedDmlTest, InsertThenPointSelectList) {
+    TableShardConfig cfg;
+    cfg.table_name = "users";
+    cfg.shard_key = "id";
+    cfg.shards = {{"shard0"}, {"shard1"}, {"shard2"}};
+    cfg.strategy = RoutingStrategy::LIST;
+    cfg.list = {
+        {true, 3, "", 0},
+        {true, 7, "", 1},
+        {true, 20, "", 2},
+    };
+    shard_map.add_table(cfg);
+
+    EXPECT_TRUE(execute_distributed_dml("INSERT INTO users (id, name, age) VALUES (3, 'A', 1)").success);
+    EXPECT_TRUE(execute_distributed_dml("INSERT INTO users (id, name, age) VALUES (7, 'B', 2)").success);
+    EXPECT_TRUE(execute_distributed_dml("INSERT INTO users (id, name, age) VALUES (20, 'C', 3)").success);
+
+    EXPECT_EQ(row_count_on("shard0", "users"), 1u);
+    EXPECT_EQ(row_count_on("shard1", "users"), 1u);
+    EXPECT_EQ(row_count_on("shard2", "users"), 1u);
+
+    EXPECT_EQ(execute_distributed_select("SELECT name FROM users WHERE id = 3").row_count(), 1u);
+    EXPECT_EQ(execute_distributed_select("SELECT name FROM users WHERE id = 7").row_count(), 1u);
+    EXPECT_EQ(execute_distributed_select("SELECT name FROM users WHERE id = 20").row_count(), 1u);
+}
+
+TEST_F(DistributedDmlTest, MultiTableUpdateOnShardedFails) {
+    auto result = execute_distributed_dml(
+        "UPDATE users u JOIN orders o ON u.id = o.user_id SET u.age = 30");
+    EXPECT_FALSE(result.success);
+    EXPECT_NE(result.error_message.find("sharded"), std::string::npos);
+}
+
+TEST_F(DistributedDmlTest, MultiTableDeleteOnShardedFails) {
+    auto result = execute_distributed_dml(
+        "DELETE u FROM users u JOIN orders o ON u.id = o.user_id");
+    EXPECT_FALSE(result.success);
+    EXPECT_NE(result.error_message.find("sharded"), std::string::npos);
+}
+
+TEST_F(DistributedDmlTest, InsertUnmappedListValueErrors) {
+    TableShardConfig cfg;
+    cfg.table_name = "users";
+    cfg.shard_key = "id";
+    cfg.shards = {{"shard0"}, {"shard1"}, {"shard2"}};
+    cfg.strategy = RoutingStrategy::LIST;
+    cfg.list = {
+        {true, 3, "", 0},
+        {true, 7, "", 1},
+    };
+    shard_map.add_table(cfg);
+
+    auto result = execute_distributed_dml(
+        "INSERT INTO users (id, name, age) VALUES (99, 'Nope', 1)");
+    EXPECT_FALSE(result.success);
+    EXPECT_NE(result.error_message.find("mapped"), std::string::npos);
+    EXPECT_EQ(mock_executor.total_row_count("users"), 0u);
+}
+
+TEST_F(DistributedDmlTest, InsertThenListBetweenSelect) {
+    TableShardConfig cfg;
+    cfg.table_name = "users";
+    cfg.shard_key = "id";
+    cfg.shards = {{"shard0"}, {"shard1"}, {"shard2"}};
+    cfg.strategy = RoutingStrategy::LIST;
+    cfg.list = {
+        {true, 3, "", 0},
+        {true, 7, "", 1},
+        {true, 20, "", 2},
+    };
+    shard_map.add_table(cfg);
+
+    EXPECT_TRUE(execute_distributed_dml(
+        "INSERT INTO users (id, name, age) VALUES (3, 'A', 1)").success);
+    EXPECT_TRUE(execute_distributed_dml(
+        "INSERT INTO users (id, name, age) VALUES (7, 'B', 2)").success);
+    EXPECT_TRUE(execute_distributed_dml(
+        "INSERT INTO users (id, name, age) VALUES (20, 'C', 3)").success);
+
+    auto mid = execute_distributed_select("SELECT name FROM users WHERE id BETWEEN 6 AND 8");
+    ASSERT_EQ(mid.row_count(), 1u);
+    EXPECT_EQ(std::string(mid.rows[0].get(0).str_val.ptr, mid.rows[0].get(0).str_val.len), "B");
+}
+
+TEST_F(DistributedDmlTest, PlanCacheRedistributesSelect) {
+    execute_distributed_dml("INSERT INTO users (id, name, age) VALUES (3, 'Carol', 17)");
+    LocalTransactionManager txn(data_arena);
+    Session<Dialect::MySQL> session(catalog, txn);
+    session.set_remote_executor(&mock_executor);
+    session.set_shard_map(&shard_map);
+
+    auto first = session.execute_query("SELECT name FROM users WHERE id = 3");
+    ASSERT_EQ(first.row_count(), 1u);
+    EXPECT_EQ(session.plan_cache_size(), 1u);
+
+    auto second = session.execute_query("SELECT name FROM users WHERE id = 3");
+    ASSERT_EQ(second.row_count(), 1u);
+    EXPECT_EQ(session.plan_cache_size(), 1u);
+    EXPECT_EQ(std::string(second.rows[0].get(0).str_val.ptr,
+                          second.rows[0].get(0).str_val.len), "Carol");
+}
+
+TEST_F(DistributedDmlTest, PlanCacheSeesUpdatedShardMap) {
+    execute_distributed_dml("INSERT INTO users (id, name, age) VALUES (3, 'Carol', 17)");
+    std::string home = backend_for_id(3);
+    LocalTransactionManager txn(data_arena);
+    Session<Dialect::MySQL> session(catalog, txn);
+    session.set_remote_executor(&mock_executor);
+    session.set_shard_map(&shard_map);
+
+    const char* sql = "SELECT name FROM users WHERE id = 3";
+    ASSERT_EQ(session.execute_query(sql).row_count(), 1u);
+    EXPECT_EQ(session.plan_cache_size(), 1u);
+
+    TableShardConfig unsharded;
+    unsharded.table_name = "users";
+    unsharded.shard_key = "";
+    unsharded.shards = {{home}};
+    shard_map.add_table(unsharded);
+    mock_executor.clear_sql_logs();
+
+    auto rs = session.execute_query(sql);
+    ASSERT_EQ(rs.row_count(), 1u);
+    EXPECT_EQ(mock_executor.get_executed_sqls(home).size(), 1u);
+    for (const char* s : {"shard0", "shard1", "shard2"}) {
+        if (s != home)
+            EXPECT_EQ(mock_executor.get_executed_sqls(s).size(), 0u) << s;
+    }
 }

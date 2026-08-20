@@ -13,6 +13,7 @@
 #include "sql_engine/result_set.h"
 #include "sql_engine/dml_result.h"
 #include "sql_engine/mutable_data_source.h"
+#include "sql_engine/remote_executor.h"
 #include "sql_parser/parser.h"
 #include "sql_parser/common.h"
 
@@ -24,6 +25,44 @@
 #include <memory>
 
 namespace sql_engine {
+
+class TxnRoutingExecutor : public RemoteExecutor {
+public:
+    void bind(RemoteExecutor* inner, TransactionManager* txn) {
+        inner_ = inner;
+        txn_ = txn;
+    }
+
+    ResultSet execute(const char* backend_name, sql_parser::StringRef sql) override {
+        if (txn_ && txn_->in_transaction() && txn_->is_distributed() &&
+            txn_->route_query_supported()) {
+            return txn_->route_query(backend_name, sql);
+        }
+        return inner_ ? inner_->execute(backend_name, sql) : ResultSet{};
+    }
+
+    DmlResult execute_dml(const char* backend_name, sql_parser::StringRef sql) override {
+        if (txn_ && txn_->in_transaction() && txn_->is_distributed()) {
+            return txn_->route_dml(backend_name, sql);
+        }
+        if (inner_) return inner_->execute_dml(backend_name, sql);
+        DmlResult r;
+        r.error_message = "no remote executor";
+        return r;
+    }
+
+    bool allows_unpinned_distributed_2pc() const override {
+        return inner_ && inner_->allows_unpinned_distributed_2pc();
+    }
+
+    std::unique_ptr<RemoteSession> checkout_session(const char* backend_name) override {
+        return inner_ ? inner_->checkout_session(backend_name) : nullptr;
+    }
+
+private:
+    RemoteExecutor* inner_ = nullptr;
+    TransactionManager* txn_ = nullptr;
+};
 
 // Session<D> is the high-level API that ties together parsing, planning,
 // optimization, execution, and transaction management.
@@ -87,15 +126,16 @@ public:
         std::string sql_key(sql, len);
         auto cache_it = plan_cache_.find(sql_key);
         if (cache_it != plan_cache_.end()) {
-            // Cache hit: move this entry to the front of the LRU list.
             plan_cache_order_.splice(plan_cache_order_.begin(),
                                      plan_cache_order_,
                                      cache_it->second);
             exec_arena_.reset();
             auto& entry = *cache_it->second;
+            PlanNode* plan = maybe_distribute(entry.plan, exec_arena_);
+            if (!plan) return {};
             PlanExecutor<D> executor(functions_, catalog_, exec_arena_);
             wire_executor(executor);
-            return executor.execute(entry.plan);
+            return executor.execute(plan);
         }
 
         // Cache miss: full parse -> plan -> optimize -> distribute pipeline
@@ -125,25 +165,21 @@ public:
 
         plan = optimizer_.optimize(plan, cached_parser->arena());
 
-        // Distribute across shards if shard map is configured
+        ResultSet rs;
         if (shard_map_ && remote_executor_) {
-            DistributedPlanner<D> dplanner(*shard_map_, catalog_, cached_parser->arena(), remote_executor_, &functions_);
-            plan = dplanner.distribute(plan);
+            exec_arena_.reset();
+            PlanNode* dist = maybe_distribute(plan, exec_arena_);
+            if (!dist) return {};
+            PlanExecutor<D> executor(functions_, catalog_, exec_arena_);
+            wire_executor(executor);
+            rs = executor.execute(dist);
+        } else {
+            PlanExecutor<D> executor(functions_, catalog_, cached_parser->arena());
+            wire_executor(executor);
+            rs = executor.execute(plan);
         }
 
-        // Execute first using the parser's arena. preprocess_aggregates (called
-        // inside execute()) may allocate into the arena to modify the plan in-place.
-        // Those allocations must persist in the parser arena (not exec_arena_) so
-        // the cached plan remains valid across calls.
-        PlanExecutor<D> executor(functions_, catalog_, cached_parser->arena());
-        wire_executor(executor);
-        ResultSet rs = executor.execute(plan);
-
-        // Cache the plan, enforcing the LRU bound. The parser arena is kept
-        // alive via unique_ptr stored in the CachedPlan so all plan/AST
-        // string pointers remain valid for subsequent cache hits.
         insert_into_plan_cache(std::move(sql_key), std::move(cached_parser), plan);
-
         return rs;
     }
 
@@ -224,7 +260,10 @@ public:
                                       remote_executor_, &functions_);
             PlanNode* dist_plan = dp.distribute_dml(plan);
 
-            if (dist_plan && dist_plan->type == PlanNodeType::REMOTE_SCAN) {
+            if (dp.last_error()) {
+                result.success = false;
+                result.error_message = dp.last_error();
+            } else if (dist_plan && dist_plan->type == PlanNodeType::REMOTE_SCAN) {
                 // Single-shard DML
                 sql_parser::StringRef sql_ref{dist_plan->remote_scan.remote_sql,
                                               dist_plan->remote_scan.remote_sql_len};
@@ -303,6 +342,7 @@ private:
     FunctionRegistry<D> functions_;
     Optimizer<D> optimizer_;
     RemoteExecutor* remote_executor_ = nullptr;
+    TxnRoutingExecutor routing_exec_;
     const ShardMap* shard_map_ = nullptr;
     bool parallel_open_enabled_ = false;
     std::unordered_map<std::string, DataSource*> sources_;
@@ -334,6 +374,15 @@ private:
     CacheList plan_cache_order_;
     std::unordered_map<std::string, CacheIter> plan_cache_;
     size_t plan_cache_max_size_ = 1024;
+
+    PlanNode* maybe_distribute(PlanNode* plan, sql_parser::Arena& arena) {
+        if (!plan || !shard_map_ || !remote_executor_) return plan;
+        DistributedPlanner<D> dplanner(*shard_map_, catalog_, arena,
+                                       remote_executor_, &functions_);
+        PlanNode* dist = dplanner.distribute(plan);
+        if (dplanner.last_error()) return nullptr;
+        return dist;
+    }
 
     void insert_into_plan_cache(std::string key,
                                 std::unique_ptr<sql_parser::Parser<D>> parser,
@@ -374,8 +423,10 @@ private:
             executor.add_data_source(kv.first.c_str(), kv.second);
         for (auto& kv : mutable_sources_)
             executor.add_mutable_data_source(kv.first.c_str(), kv.second);
-        if (remote_executor_)
-            executor.set_remote_executor(remote_executor_);
+        if (remote_executor_) {
+            routing_exec_.bind(remote_executor_, &txn_mgr_);
+            executor.set_remote_executor(&routing_exec_);
+        }
         if (parallel_open_enabled_) {
             executor.set_parallel_open(true);
             if (pool_)

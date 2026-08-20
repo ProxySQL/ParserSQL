@@ -178,6 +178,18 @@ public:
         return executor_.execute_dml(backend_name, sql);
     }
 
+    ResultSet route_query(const char* backend_name,
+                          sql_parser::StringRef sql) override {
+        if (!active_) return executor_.execute(backend_name, sql);
+        auto it = sessions_.find(backend_name);
+        if (it != sessions_.end() && it->second) {
+            return it->second->execute(sql);
+        }
+        return executor_.execute(backend_name, sql);
+    }
+
+    bool route_query_supported() const override { return true; }
+
     bool commit() override {
         if (!active_) return false;
         if (participants_.empty()) {
