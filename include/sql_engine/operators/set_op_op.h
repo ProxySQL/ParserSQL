@@ -17,86 +17,82 @@ class SetOpOperator : public Operator {
 public:
     SetOpOperator(Operator* left, Operator* right, uint8_t op, bool all,
                   bool parallel_open = false, ThreadPool* pool = nullptr)
-        : left_(left), right_(right), op_(op), all_(all),
+        : op_(op), all_(all), parallel_open_(parallel_open), pool_(pool) {
+        children_.push_back(left);
+        children_.push_back(right);
+    }
+
+    explicit SetOpOperator(std::vector<Operator*> children,
+                           bool parallel_open = false, ThreadPool* pool = nullptr)
+        : children_(std::move(children)), op_(SET_OP_UNION), all_(true),
           parallel_open_(parallel_open), pool_(pool) {}
 
     void open() override {
-        if (parallel_open_ && pool_) {
-            // Thread-pool parallel open: ~1-2us dispatch vs ~200us for std::async
-            auto fl = pool_->submit([this]{ left_->open(); });
-            auto fr = pool_->submit([this]{ right_->open(); });
-            fl.get();
-            fr.get();
-        } else if (parallel_open_) {
-            // Fallback: std::async when no pool available
-            auto fl = std::async(std::launch::async, [this]{ left_->open(); });
-            auto fr = std::async(std::launch::async, [this]{ right_->open(); });
-            fl.get();
-            fr.get();
+        if (children_.empty()) return;
+        if (parallel_open_ && children_.size() > 1) {
+            std::vector<std::future<void>> futures;
+            futures.reserve(children_.size());
+            for (size_t i = 0; i < children_.size(); ++i) {
+                auto launcher = [this, i]{ children_[i]->open(); };
+                if (pool_) {
+                    futures.push_back(pool_->submit(std::move(launcher)));
+                } else {
+                    futures.push_back(std::async(std::launch::async, std::move(launcher)));
+                }
+            }
+            for (auto& f : futures) f.get();
         } else {
-            left_->open();
-            right_->open();
+            for (auto* c : children_) c->open();
         }
-        reading_left_ = true;
+        child_idx_ = 0;
         seen_.clear();
         expected_col_count_ = -1;
 
-        if (op_ == SET_OP_INTERSECT || op_ == SET_OP_EXCEPT) {
-            // Materialize right side into a set
+        if ((op_ == SET_OP_INTERSECT || op_ == SET_OP_EXCEPT) && children_.size() >= 2) {
             right_set_.clear();
             Row r{};
-            while (right_->next(r)) {
+            while (children_[1]->next(r)) {
                 check_col_count(r);
                 check_operator_row_limit(right_set_.size(), kDefaultMaxOperatorRows, "SetOpOperator");
                 right_set_.insert(row_key(r));
             }
-            right_->close();
+            children_[1]->close();
+            right_closed_ = true;
         }
     }
 
     bool next(Row& out) override {
+        if (children_.empty()) return false;
+
         if (op_ == SET_OP_UNION && !all_) {
-            // UNION (deduplicated)
-            while (true) {
-                bool got = false;
-                if (reading_left_) {
-                    got = left_->next(out);
-                    if (!got) { reading_left_ = false; }
+            while (child_idx_ < children_.size()) {
+                if (!children_[child_idx_]->next(out)) {
+                    ++child_idx_;
+                    continue;
                 }
-                if (!reading_left_) {
-                    got = right_->next(out);
-                    if (!got) return false;
+                check_col_count(out);
+                std::string key = row_key(out);
+                if (seen_.find(key) == seen_.end()) {
+                    check_operator_row_limit(seen_.size(), kDefaultMaxOperatorRows, "SetOpOperator");
                 }
-                if (got) {
-                    check_col_count(out);
-                    std::string key = row_key(out);
-                    if (seen_.find(key) == seen_.end()) {
-                        check_operator_row_limit(seen_.size(), kDefaultMaxOperatorRows, "SetOpOperator");
-                    }
-                    if (seen_.insert(key).second) return true;
-                }
+                if (seen_.insert(key).second) return true;
             }
+            return false;
         }
 
         if (op_ == SET_OP_UNION && all_) {
-            // UNION ALL: yield left then right
-            if (reading_left_) {
-                if (left_->next(out)) {
+            while (child_idx_ < children_.size()) {
+                if (children_[child_idx_]->next(out)) {
                     check_col_count(out);
                     return true;
                 }
-                reading_left_ = false;
-            }
-            if (right_->next(out)) {
-                check_col_count(out);
-                return true;
+                ++child_idx_;
             }
             return false;
         }
 
         if (op_ == SET_OP_INTERSECT) {
-            // Yield left rows that also appear in right
-            while (left_->next(out)) {
+            while (children_[0]->next(out)) {
                 check_col_count(out);
                 std::string key = row_key(out);
                 if (right_set_.count(key)) {
@@ -108,8 +104,7 @@ public:
         }
 
         if (op_ == SET_OP_EXCEPT) {
-            // Yield left rows that don't appear in right
-            while (left_->next(out)) {
+            while (children_[0]->next(out)) {
                 check_col_count(out);
                 std::string key = row_key(out);
                 if (!right_set_.count(key)) {
@@ -124,20 +119,22 @@ public:
     }
 
     void close() override {
-        left_->close();
-        right_->close();
+        for (size_t i = 0; i < children_.size(); ++i) {
+            if (right_closed_ && i == 1) continue;
+            children_[i]->close();
+        }
         seen_.clear();
         right_set_.clear();
     }
 
 private:
-    Operator* left_;
-    Operator* right_;
+    std::vector<Operator*> children_;
     uint8_t op_;
     bool all_;
     bool parallel_open_;
     ThreadPool* pool_ = nullptr;
-    bool reading_left_ = true;
+    size_t child_idx_ = 0;
+    bool right_closed_ = false;
     std::unordered_set<std::string> seen_;
     std::unordered_set<std::string> right_set_;
     // Column count established by the first row we see. Used to detect

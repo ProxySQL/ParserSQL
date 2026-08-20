@@ -17,6 +17,7 @@
 #include "sql_engine/function_registry.h"
 #include "sql_engine/session.h"
 #include "sql_engine/local_txn.h"
+#include "sql_engine/distributed_txn.h"
 #include "sql_parser/parser.h"
 
 #include <mysql/mysql.h>
@@ -363,6 +364,94 @@ TEST_F(LiveShardedWriteTest, InsertThenPointSelect) {
 
     session.execute_statement("DELETE FROM shard_write_t WHERE id = 3");
     session.execute_statement("DELETE FROM shard_write_t WHERE id = 9");
+}
+
+bool pg_port_available(uint16_t port) {
+    std::string conninfo = std::string("host=127.0.0.1 port=") + std::to_string(port)
+        + " user=postgres password=test dbname=testdb connect_timeout=2";
+    PGconn* conn = PQconnectdb(conninfo.c_str());
+    bool ok = (PQstatus(conn) == CONNECTION_OK);
+    PQfinish(conn);
+    return ok;
+}
+
+TEST(LivePgShardedWriteTest, RangeListAndTwoPhaseCommit) {
+    if (!pg_port_available(16432) || !pg_port_available(16433)) {
+        GTEST_SKIP() << "Need PG on 16432 and 16433 (start_pg_sharding_demo.sh)";
+    }
+
+    MultiRemoteExecutor exec;
+    BackendConfig p1;
+    p1.name = "pg1";
+    p1.host = "127.0.0.1";
+    p1.port = 16432;
+    p1.user = "postgres";
+    p1.password = "test";
+    p1.database = "testdb";
+    p1.dialect = Dialect::PostgreSQL;
+    BackendConfig p2 = p1;
+    p2.name = "pg2";
+    p2.port = 16433;
+    exec.add_backend(p1);
+    exec.add_backend(p2);
+
+    InMemoryCatalog catalog;
+    catalog.add_table("", "users", {
+        {"id",   SqlType::make_int(), false},
+        {"name", SqlType::make_varchar(255), true},
+        {"age",  SqlType::make_int(), true},
+    });
+    catalog.add_table("", "regions", {
+        {"name", SqlType::make_varchar(64), false},
+        {"tz",   SqlType::make_varchar(32), true},
+    });
+
+    ShardMap shards;
+    TableShardConfig users;
+    users.table_name = "users";
+    users.shard_key = "id";
+    users.shards = {{"pg1"}, {"pg2"}};
+    users.strategy = RoutingStrategy::RANGE;
+    users.ranges = {{5, 0}, {100000, 1}};
+    shards.add_table(users);
+    TableShardConfig regions;
+    regions.table_name = "regions";
+    regions.shard_key = "name";
+    regions.shards = {{"pg1"}, {"pg2"}};
+    regions.strategy = RoutingStrategy::LIST;
+    regions.list = {
+        {false, 0, "us-east", 0},
+        {false, 0, "us-west", 1},
+    };
+    shards.add_table(regions);
+
+    Arena txn_arena{65536, 1048576};
+    DistributedTransactionManager txn(
+        exec, DistributedTransactionManager::BackendDialect::POSTGRESQL);
+    Session<Dialect::PostgreSQL> session(catalog, txn);
+    session.set_remote_executor(&exec);
+    session.set_shard_map(&shards);
+
+    auto east = session.execute_query("SELECT tz FROM regions WHERE name = 'us-east'");
+    auto west = session.execute_query("SELECT tz FROM regions WHERE name = 'us-west'");
+    ASSERT_EQ(east.row_count(), 1u);
+    ASSERT_EQ(west.row_count(), 1u);
+
+    EXPECT_TRUE(session.begin());
+    auto i0 = session.execute_statement(
+        "INSERT INTO users (id, name, age) VALUES (0, 'Zero', 1)");
+    auto i11 = session.execute_statement(
+        "INSERT INTO users (id, name, age) VALUES (11, 'Eleven', 2)");
+    EXPECT_TRUE(i0.success) << i0.error_message;
+    EXPECT_TRUE(i11.success) << i11.error_message;
+    EXPECT_TRUE(session.commit());
+
+    auto back = session.execute_query("SELECT name FROM users WHERE id IN (0, 11)");
+    EXPECT_EQ(back.row_count(), 2u);
+
+    session.execute_statement("DELETE FROM users WHERE id = 0");
+    session.execute_statement("DELETE FROM users WHERE id = 11");
+    exec.disconnect_all();
 }
 
 } // namespace

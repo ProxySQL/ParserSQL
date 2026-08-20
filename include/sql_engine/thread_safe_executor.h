@@ -14,6 +14,7 @@
 #include "sql_engine/remote_executor.h"
 #include "sql_engine/remote_session.h"
 #include "sql_engine/connection_pool.h"
+#include "sql_engine/pg_connection_pool.h"
 #include "sql_engine/backend_config.h"
 #include "sql_engine/result_set.h"
 #include "sql_engine/dml_result.h"
@@ -23,6 +24,7 @@
 #include "sql_parser/common.h"
 
 #include <mysql/mysql.h>
+#include <libpq-fe.h>
 #include <memory>
 #include <string>
 #include <cstdlib>
@@ -127,6 +129,89 @@ inline ResultSet mysql_result_to_resultset_impl(MYSQL_RES* res) {
                 rs, mysql_row[i], is_null ? 0 : lengths[i],
                 fields[i].type, is_null);
             row.set(static_cast<uint16_t>(i), v);
+        }
+    }
+    return rs;
+}
+
+#ifndef BOOLOID
+#define BOOLOID         16
+#define INT2OID         21
+#define INT4OID         23
+#define INT8OID         20
+#define FLOAT4OID       700
+#define FLOAT8OID       701
+#define NUMERICOID      1700
+#define DATEOID         1082
+#define TIMEOID         1083
+#define TIMESTAMPOID    1114
+#define TIMESTAMPTZOID  1184
+#define BYTEAOID        17
+#define JSONOID         114
+#define JSONBOID        3802
+#define OIDOID          26
+#endif
+
+inline Value pg_field_to_value_impl(
+    ResultSet& rs, const char* data, int length, Oid type, bool is_null)
+{
+    if (is_null) return value_null();
+    switch (type) {
+        case BOOLOID:
+            return value_bool(data[0] == 't' || data[0] == 'T');
+        case INT2OID:
+        case INT4OID:
+        case INT8OID:
+        case OIDOID:
+            return value_int(std::strtoll(data, nullptr, 10));
+        case FLOAT4OID:
+        case FLOAT8OID:
+            return value_double(std::strtod(data, nullptr));
+        case NUMERICOID: {
+            sql_parser::StringRef s = rs.own_string(data, static_cast<uint32_t>(length));
+            return value_string(s);
+        }
+        case DATEOID:
+            return value_date(datetime_parse::parse_date(data));
+        case TIMESTAMPOID:
+            return value_datetime(datetime_parse::parse_datetime(data));
+        case TIMESTAMPTZOID:
+            return value_timestamp(datetime_parse::parse_datetime_tz(data));
+        case TIMEOID:
+            return value_time(datetime_parse::parse_time(data));
+        case BYTEAOID: {
+            sql_parser::StringRef s = rs.own_string(data, static_cast<uint32_t>(length));
+            return value_bytes(s);
+        }
+        case JSONOID:
+        case JSONBOID: {
+            sql_parser::StringRef s = rs.own_string(data, static_cast<uint32_t>(length));
+            return value_json(s);
+        }
+        default: {
+            sql_parser::StringRef s = rs.own_string(data, static_cast<uint32_t>(length));
+            return value_string(s);
+        }
+    }
+}
+
+inline ResultSet pg_result_to_resultset_impl(PGresult* res) {
+    ResultSet rs;
+    int num_fields = PQnfields(res);
+    int num_rows = PQntuples(res);
+    rs.column_count = static_cast<uint16_t>(num_fields);
+    for (int i = 0; i < num_fields; ++i) {
+        rs.column_names.emplace_back(PQfname(res, i));
+    }
+    for (int r = 0; r < num_rows; ++r) {
+        Row& row = rs.add_heap_row(rs.column_count);
+        for (int c = 0; c < num_fields; ++c) {
+            bool is_null = PQgetisnull(res, r, c) != 0;
+            Oid oid = PQftype(res, c);
+            const char* data = PQgetvalue(res, r, c);
+            int length = PQgetlength(res, r, c);
+            row.set(static_cast<uint16_t>(c),
+                    pg_field_to_value_impl(rs, data, length, oid, is_null));
         }
     }
     return rs;
@@ -280,19 +365,122 @@ private:
     bool poisoned_ = false;
 };
 
+class PgConnectionGuard {
+public:
+    PgConnectionGuard(PgConnectionPool& pool, std::string name)
+        : pool_(pool), name_(std::move(name)), conn_(pool_.checkout(name_)) {}
+    ~PgConnectionGuard() {
+        if (!conn_) return;
+        if (poisoned_) PQfinish(conn_);
+        else pool_.checkin(name_, conn_);
+    }
+    PgConnectionGuard(const PgConnectionGuard&) = delete;
+    PgConnectionGuard& operator=(const PgConnectionGuard&) = delete;
+    PGconn* get() const { return conn_; }
+    void poison() { poisoned_ = true; }
+private:
+    PgConnectionPool& pool_;
+    std::string name_;
+    PGconn* conn_;
+    bool poisoned_ = false;
+};
+
+class PooledPgSession : public RemoteSession {
+public:
+    PooledPgSession(PgConnectionPool& pool, std::string name)
+        : pool_(pool), name_(std::move(name)), conn_(pool_.checkout(name_)) {}
+    ~PooledPgSession() override {
+        if (!conn_) return;
+        if (poisoned_) PQfinish(conn_);
+        else pool_.checkin(name_, conn_);
+    }
+    PooledPgSession(const PooledPgSession&) = delete;
+    PooledPgSession& operator=(const PooledPgSession&) = delete;
+
+    ResultSet execute(sql_parser::StringRef sql) override {
+        ResultSet rs;
+        if (!conn_) { poisoned_ = true; return rs; }
+        std::string q(sql.ptr, sql.len);
+        PGresult* res = PQexec(conn_, q.c_str());
+        if (!res) { poisoned_ = true; return rs; }
+        ExecStatusType st = PQresultStatus(res);
+        if (st != PGRES_TUPLES_OK) {
+            PQclear(res);
+            return rs;
+        }
+        rs = detail::pg_result_to_resultset_impl(res);
+        PQclear(res);
+        return rs;
+    }
+
+    DmlResult execute_dml(sql_parser::StringRef sql) override {
+        DmlResult result;
+        if (!conn_) {
+            poisoned_ = true;
+            result.error_message = "no connection";
+            return result;
+        }
+        std::string q(sql.ptr, sql.len);
+        PGresult* res = PQexec(conn_, q.c_str());
+        if (!res) {
+            poisoned_ = true;
+            result.error_message = "PQexec returned null";
+            return result;
+        }
+        ExecStatusType st = PQresultStatus(res);
+        if (st != PGRES_COMMAND_OK && st != PGRES_TUPLES_OK) {
+            result.error_message = PQresultErrorMessage(res);
+            PQclear(res);
+            return result;
+        }
+        const char* tuples = PQcmdTuples(res);
+        if (tuples && tuples[0])
+            result.affected_rows = static_cast<uint64_t>(std::strtoull(tuples, nullptr, 10));
+        result.success = true;
+        PQclear(res);
+        return result;
+    }
+
+    void poison() override { poisoned_ = true; }
+
+private:
+    PgConnectionPool& pool_;
+    std::string name_;
+    PGconn* conn_;
+    bool poisoned_ = false;
+};
+
 class ThreadSafeMultiRemoteExecutor : public RemoteExecutor {
 public:
     ThreadSafeMultiRemoteExecutor() = default;
     ~ThreadSafeMultiRemoteExecutor() override = default;
 
     void add_backend(const BackendConfig& config) {
-        pool_.add_backend(config);
-        // Track dialect per backend (currently only MySQL is pooled)
         std::lock_guard<std::mutex> lk(mu_);
         backend_dialects_[config.name] = config.dialect;
+        if (config.dialect == sql_parser::Dialect::PostgreSQL)
+            pg_pool_.add_backend(config);
+        else
+            pool_.add_backend(config);
     }
 
     ResultSet execute(const char* backend_name, sql_parser::StringRef sql) override {
+        if (is_pg(backend_name)) {
+            PgConnectionGuard guard(pg_pool_, std::string(backend_name));
+            ResultSet rs;
+            PGconn* conn = guard.get();
+            if (!conn) { guard.poison(); return rs; }
+            std::string q(sql.ptr, sql.len);
+            PGresult* res = PQexec(conn, q.c_str());
+            if (!res) { guard.poison(); return rs; }
+            if (PQresultStatus(res) != PGRES_TUPLES_OK) {
+                PQclear(res);
+                return rs;
+            }
+            rs = detail::pg_result_to_resultset_impl(res);
+            PQclear(res);
+            return rs;
+        }
         ConnectionGuard guard(pool_, std::string(backend_name));
         ResultSet rs;
         MYSQL* conn = guard.get();
@@ -326,6 +514,35 @@ public:
     }
 
     DmlResult execute_dml(const char* backend_name, sql_parser::StringRef sql) override {
+        if (is_pg(backend_name)) {
+            PgConnectionGuard guard(pg_pool_, std::string(backend_name));
+            DmlResult result;
+            PGconn* conn = guard.get();
+            if (!conn) {
+                guard.poison();
+                result.error_message = "failed to acquire connection";
+                return result;
+            }
+            std::string q(sql.ptr, sql.len);
+            PGresult* res = PQexec(conn, q.c_str());
+            if (!res) {
+                guard.poison();
+                result.error_message = "PQexec returned null";
+                return result;
+            }
+            ExecStatusType st = PQresultStatus(res);
+            if (st != PGRES_COMMAND_OK && st != PGRES_TUPLES_OK) {
+                result.error_message = PQresultErrorMessage(res);
+                PQclear(res);
+                return result;
+            }
+            const char* tuples = PQcmdTuples(res);
+            if (tuples && tuples[0])
+                result.affected_rows = static_cast<uint64_t>(std::strtoull(tuples, nullptr, 10));
+            result.success = true;
+            PQclear(res);
+            return result;
+        }
         ConnectionGuard guard(pool_, std::string(backend_name));
         DmlResult result;
         MYSQL* conn = guard.get();
@@ -363,6 +580,8 @@ public:
     // the connection is returned to the pool on destruction (or closed
     // if the session was poisoned).
     std::unique_ptr<RemoteSession> checkout_session(const char* backend_name) override {
+        if (is_pg(backend_name))
+            return std::make_unique<PooledPgSession>(pg_pool_, std::string(backend_name));
         return std::make_unique<PooledMySQLSession>(pool_, std::string(backend_name));
     }
 
@@ -372,8 +591,16 @@ public:
 
 private:
     ConnectionPool pool_;
-    std::mutex mu_;
+    PgConnectionPool pg_pool_;
+    mutable std::mutex mu_;
     std::unordered_map<std::string, sql_parser::Dialect> backend_dialects_;
+
+    bool is_pg(const char* backend_name) const {
+        std::lock_guard<std::mutex> lk(mu_);
+        auto it = backend_dialects_.find(backend_name ? backend_name : "");
+        return it != backend_dialects_.end() &&
+               it->second == sql_parser::Dialect::PostgreSQL;
+    }
 
     // Wrap the free function for the legacy (unpinned) pooled execute path.
     static ResultSet mysql_result_to_resultset(MYSQL_RES* res) {

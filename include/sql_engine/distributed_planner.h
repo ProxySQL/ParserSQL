@@ -12,15 +12,20 @@
 #include "sql_engine/result_set.h"
 #include "sql_engine/plan_builder.h"
 #include "sql_engine/plan_executor.h"
+#include "sql_engine/catalog_resolver.h"
 #include "sql_parser/arena.h"
 #include "sql_parser/ast.h"
 #include "sql_parser/common.h"
+#include "sql_parser/string_builder.h"
+#include "sql_parser/emitter.h"
 #include <cstring>
 #include <cstdio>
 #include <cstdlib>
+#include <climits>
 #include <vector>
 #include <unordered_map>
 #include <functional>
+#include <utility>
 
 namespace sql_engine {
 
@@ -317,7 +322,8 @@ private:
         const TableInfo* table = scan_node->scan.table;
         if (!table) return scan_node;
 
-        if (!shards_.has_table(table->table_name)) return scan_node;
+        if (!shards_.has_table(table->table_name))
+            return fail_dml("table not in shard map");
 
         if (!shards_.is_sharded(table->table_name)) {
             // Case 1: Unsharded -- single RemoteScan
@@ -347,13 +353,24 @@ private:
                                          const std::vector<ShardInfo>& all_shards) {
         if (!where_expr || all_shards.empty()) return all_shards;
 
-        sql_parser::StringRef shard_key = shards_.get_shard_key(table->table_name);
-        if (!shard_key.ptr || shard_key.len == 0) return all_shards;
+        const auto& keys = shards_.get_shard_keys(table->table_name);
+        if (keys.empty()) return all_shards;
 
-        // Try to extract shard key literal values from WHERE expression
         std::vector<size_t> target_indices;
-        extract_shard_targets(where_expr, shard_key, table->table_name,
-                              all_shards.size(), target_indices);
+        if (keys.size() > 1 &&
+            shards_.routing_strategy(table->table_name) == RoutingStrategy::RANGE) {
+            sql_parser::StringRef first{keys[0].c_str(),
+                static_cast<uint32_t>(keys[0].size())};
+            extract_shard_targets(where_expr, first, table->table_name,
+                                  all_shards.size(), target_indices);
+        } else if (keys.size() > 1) {
+            extract_composite_targets(where_expr, keys, table->table_name, target_indices);
+        } else {
+            sql_parser::StringRef shard_key{keys[0].c_str(),
+                static_cast<uint32_t>(keys[0].size())};
+            extract_shard_targets(where_expr, shard_key, table->table_name,
+                                  all_shards.size(), target_indices);
+        }
 
         if (target_indices.empty()) return all_shards;
 
@@ -395,11 +412,68 @@ private:
                         col_node = right_node; lit_node = left_node;
                     }
                     if (col_node && lit_node) {
-                        size_t idx = literal_to_shard_index(lit_node, table_name, num_shards);
-                        target_indices.push_back(idx);
+                        size_t idx = 0;
+                        if (try_literal_to_shard_index(lit_node, table_name, idx))
+                            target_indices.push_back(idx);
                         return;
                     }
                 }
+            }
+            if (is_compare_op(op) &&
+                shards_.routing_strategy(table_name) == RoutingStrategy::RANGE) {
+                const sql_parser::AstNode* left_node = expr->first_child;
+                const sql_parser::AstNode* right_node = left_node ? left_node->next_sibling : nullptr;
+                if (left_node && right_node) {
+                    const sql_parser::AstNode* col = nullptr;
+                    const sql_parser::AstNode* lit = nullptr;
+                    bool key_on_left = false;
+                    if (is_shard_key_ref(left_node, shard_key) && is_literal(right_node)) {
+                        col = left_node; lit = right_node; key_on_left = true;
+                    } else if (is_shard_key_ref(right_node, shard_key) && is_literal(left_node)) {
+                        col = right_node; lit = left_node; key_on_left = false;
+                    }
+                    if (col && lit) {
+                        int64_t v = literal_to_int(lit);
+                        int64_t lo = INT64_MIN, hi = INT64_MAX;
+                        char c0 = op.ptr[0];
+                        bool has_eq = op.len == 2 && op.ptr[1] == '=';
+                        if (c0 == '<' && key_on_left) {
+                            hi = has_eq ? v : (v == INT64_MIN ? INT64_MIN : v - 1);
+                        } else if (c0 == '>' && key_on_left) {
+                            lo = has_eq ? v : (v == INT64_MAX ? INT64_MAX : v + 1);
+                        } else if (c0 == '<' && !key_on_left) {
+                            lo = has_eq ? v : (v == INT64_MAX ? INT64_MAX : v + 1);
+                        } else if (c0 == '>' && !key_on_left) {
+                            hi = has_eq ? v : (v == INT64_MIN ? INT64_MIN : v - 1);
+                        }
+                        shards_.collect_int_range_shards(table_name, lo, hi, target_indices);
+                        return;
+                    }
+                }
+            }
+            if (op.len == 2 &&
+                (op.ptr[0] == 'O' || op.ptr[0] == 'o') &&
+                (op.ptr[1] == 'R' || op.ptr[1] == 'r')) {
+                const sql_parser::AstNode* left_node = expr->first_child;
+                const sql_parser::AstNode* right_node = left_node ? left_node->next_sibling : nullptr;
+                std::vector<size_t> left_targets, right_targets;
+                extract_shard_targets(left_node, shard_key, table_name, num_shards, left_targets);
+                extract_shard_targets(right_node, shard_key, table_name, num_shards, right_targets);
+                if (left_targets.empty() || right_targets.empty()) return;
+                std::vector<bool> seen(num_shards, false);
+                for (auto i : left_targets) {
+                    if (i < num_shards && !seen[i]) {
+                        seen[i] = true;
+                        target_indices.push_back(i);
+                    }
+                }
+                for (auto i : right_targets) {
+                    if (i < num_shards && !seen[i]) {
+                        seen[i] = true;
+                        target_indices.push_back(i);
+                    }
+                }
+                return;
             }
             // Recurse into AND branches
             if (op.len == 3 &&
@@ -437,7 +511,9 @@ private:
             if (col_expr && is_shard_key_ref(col_expr, shard_key)) {
                 for (const sql_parser::AstNode* item = col_expr->next_sibling; item; item = item->next_sibling) {
                     if (is_literal(item)) {
-                        target_indices.push_back(literal_to_shard_index(item, table_name, num_shards));
+                        size_t idx = 0;
+                        if (try_literal_to_shard_index(item, table_name, idx))
+                            target_indices.push_back(idx);
                     } else {
                         // Non-literal in IN list -- can't prune
                         target_indices.clear();
@@ -446,6 +522,37 @@ private:
                 }
             }
         }
+
+        if (expr->type == sql_parser::NodeType::NODE_BETWEEN) {
+            RoutingStrategy strat = shards_.routing_strategy(table_name);
+            if (strat == RoutingStrategy::RANGE || strat == RoutingStrategy::LIST) {
+                const sql_parser::AstNode* col = expr->first_child;
+                const sql_parser::AstNode* lo = col ? col->next_sibling : nullptr;
+                const sql_parser::AstNode* hi = lo ? lo->next_sibling : nullptr;
+                if (col && is_shard_key_ref(col, shard_key) && is_literal(lo) && is_literal(hi)) {
+                    if (strat == RoutingStrategy::RANGE) {
+                        shards_.collect_int_range_shards(table_name,
+                                                         literal_to_int(lo), literal_to_int(hi),
+                                                         target_indices);
+                    } else {
+                        shards_.collect_int_list_shards(table_name,
+                                                        literal_to_int(lo), literal_to_int(hi),
+                                                        target_indices);
+                    }
+                }
+            }
+        }
+    }
+
+    static bool is_compare_op(sql_parser::StringRef op) {
+        if (op.len == 1) return op.ptr[0] == '<' || op.ptr[0] == '>';
+        if (op.len == 2) return (op.ptr[0] == '<' || op.ptr[0] == '>') && op.ptr[1] == '=';
+        return false;
+    }
+
+    static int64_t literal_to_int(const sql_parser::AstNode* lit) {
+        if (!lit || !lit->value().ptr) return 0;
+        return std::strtoll(lit->value().ptr, nullptr, 10);
     }
 
     bool is_shard_key_ref(const sql_parser::AstNode* node, sql_parser::StringRef shard_key) const {
@@ -471,27 +578,27 @@ private:
                node->type == sql_parser::NodeType::NODE_LITERAL_STRING;
     }
 
-    size_t literal_to_shard_index(const sql_parser::AstNode* lit,
+    bool try_literal_to_shard_index(const sql_parser::AstNode* lit,
                                     sql_parser::StringRef table_name,
-                                    size_t num_shards) const {
-        if (!lit || num_shards == 0) return 0;
+                                    size_t& out) const {
+        if (!lit) return false;
         if (lit->type == sql_parser::NodeType::NODE_LITERAL_INT) {
             sql_parser::StringRef sv = lit->value();
             int64_t val = 0;
             if (sv.ptr && sv.len > 0) val = std::strtoll(sv.ptr, nullptr, 10);
-            return shards_.shard_index_for_int(table_name, val);
+            return shards_.try_shard_index_for_int(table_name, val, out);
         }
         if (lit->type == sql_parser::NodeType::NODE_LITERAL_STRING) {
             sql_parser::StringRef sv = lit->value();
-            return shards_.shard_index_for_string(table_name, sv.ptr, sv.len);
+            return shards_.try_shard_index_for_string(table_name, sv.ptr, sv.len, out);
         }
         if (lit->type == sql_parser::NodeType::NODE_LITERAL_FLOAT) {
             sql_parser::StringRef sv = lit->value();
             double dv = sv.ptr ? std::strtod(sv.ptr, nullptr) : 0.0;
-            int64_t iv = static_cast<int64_t>(dv);
-            return shards_.shard_index_for_int(table_name, iv);
+            return shards_.try_shard_index_for_int(
+                table_name, static_cast<int64_t>(dv), out);
         }
-        return 0;
+        return false;
     }
 
     // Build N RemoteScans with UNION ALL
@@ -548,6 +655,7 @@ private:
 
     PlanNode* make_remote_scan(const char* backend, sql_parser::StringRef sql,
                                 const TableInfo* table) {
+        if (!backend) return fail_dml("table not in shard map");
         PlanNode* node = make_plan_node(arena_, PlanNodeType::REMOTE_SCAN);
         // Copy backend name to arena
         uint32_t blen = static_cast<uint32_t>(std::strlen(backend));
@@ -592,7 +700,9 @@ private:
         }
 
         const TableInfo* table = ctx.scan->scan.table;
-        if (!shards_.has_table(table->table_name) || !shards_.is_sharded(table->table_name)) {
+        if (!shards_.has_table(table->table_name))
+            return fail_dml("table not in shard map");
+        if (!shards_.is_sharded(table->table_name)) {
             return make_unsharded_aggregate(agg_node, ctx, table);
         }
 
@@ -850,12 +960,8 @@ private:
         }
 
         const TableInfo* table = ctx.scan->scan.table;
-        if (!shards_.has_table(table->table_name)) {
-            PlanNode* result = make_plan_node(arena_, PlanNodeType::SORT);
-            result->sort = sort_node->sort;
-            result->left = distribute_node(sort_node->left);
-            return result;
-        }
+        if (!shards_.has_table(table->table_name))
+            return fail_dml("table not in shard map");
 
         if (!all_sort_keys_are_table_columns(sort_node, table)) {
             return local_sort(sort_node);
@@ -1012,6 +1118,58 @@ private:
                (is_shard_key_ref(l, right_key) && is_shard_key_ref(r, left_key));
     }
 
+    void collect_eq_pairs(const sql_parser::AstNode* expr,
+                          std::vector<std::pair<const sql_parser::AstNode*,
+                                                const sql_parser::AstNode*>>& out) const {
+        if (!expr || expr->type != sql_parser::NodeType::NODE_BINARY_OP) return;
+        sql_parser::StringRef op = expr->value();
+        if (op.len == 1 && op.ptr[0] == '=') {
+            const sql_parser::AstNode* l = expr->first_child;
+            const sql_parser::AstNode* r = l ? l->next_sibling : nullptr;
+            if (l && r) out.push_back({l, r});
+            return;
+        }
+        if (op.len == 3 &&
+            (op.ptr[0] == 'A' || op.ptr[0] == 'a') &&
+            (op.ptr[1] == 'N' || op.ptr[1] == 'n') &&
+            (op.ptr[2] == 'D' || op.ptr[2] == 'd')) {
+            collect_eq_pairs(expr->first_child, out);
+            if (expr->first_child)
+                collect_eq_pairs(expr->first_child->next_sibling, out);
+        }
+    }
+
+    bool join_covers_composite_keys(const sql_parser::AstNode* cond,
+                                    const std::vector<std::string>& left_keys,
+                                    const std::vector<std::string>& right_keys) const {
+        if (left_keys.empty() || left_keys.size() != right_keys.size()) return false;
+        if (left_keys.size() == 1) {
+            sql_parser::StringRef lk{left_keys[0].c_str(),
+                static_cast<uint32_t>(left_keys[0].size())};
+            sql_parser::StringRef rk{right_keys[0].c_str(),
+                static_cast<uint32_t>(right_keys[0].size())};
+            return join_on_shard_keys(cond, lk, rk);
+        }
+        std::vector<std::pair<const sql_parser::AstNode*, const sql_parser::AstNode*>> eqs;
+        collect_eq_pairs(cond, eqs);
+        for (size_t i = 0; i < left_keys.size(); ++i) {
+            sql_parser::StringRef lk{left_keys[i].c_str(),
+                static_cast<uint32_t>(left_keys[i].size())};
+            sql_parser::StringRef rk{right_keys[i].c_str(),
+                static_cast<uint32_t>(right_keys[i].size())};
+            bool found = false;
+            for (const auto& eq : eqs) {
+                if ((is_shard_key_ref(eq.first, lk) && is_shard_key_ref(eq.second, rk)) ||
+                    (is_shard_key_ref(eq.first, rk) && is_shard_key_ref(eq.second, lk))) {
+                    found = true;
+                    break;
+                }
+            }
+            if (!found) return false;
+        }
+        return true;
+    }
+
     PlanNode* distribute_colocated_join(PlanNode* join_node,
                                         const TableInfo* left_table,
                                         const TableInfo* right_table) {
@@ -1051,6 +1209,157 @@ private:
         return current ? current : join_node;
     }
 
+    bool column_on_table(const sql_parser::AstNode* node, const TableInfo* table,
+                         const TableInfo* other) const {
+        if (!node || !table) return false;
+        if (node->type == sql_parser::NodeType::NODE_QUALIFIED_NAME) {
+            const sql_parser::AstNode* t = node->first_child;
+            if (!t) return false;
+            sql_parser::StringRef tn = t->value();
+            if (table->table_name.equals_ci(tn.ptr, tn.len)) return true;
+            if (table->alias.ptr && table->alias.equals_ci(tn.ptr, tn.len)) return true;
+            return false;
+        }
+        if (node->type == sql_parser::NodeType::NODE_COLUMN_REF ||
+            node->type == sql_parser::NodeType::NODE_IDENTIFIER) {
+            if (!catalog_.get_column(table, node->value())) return false;
+            if (other && catalog_.get_column(other, node->value())) return false;
+            return true;
+        }
+        return false;
+    }
+
+    const sql_parser::AstNode* probe_key_in_join(const sql_parser::AstNode* cond,
+                                                 const TableInfo* probe,
+                                                 const TableInfo* build) const {
+        if (!cond || !probe || !build) return nullptr;
+        const auto& keys = shards_.get_shard_keys(probe->table_name);
+        if (keys.size() != 1) return nullptr;
+        sql_parser::StringRef sk{keys[0].c_str(), static_cast<uint32_t>(keys[0].size())};
+        std::vector<std::pair<const sql_parser::AstNode*, const sql_parser::AstNode*>> eqs;
+        collect_eq_pairs(cond, eqs);
+        for (const auto& eq : eqs) {
+            if (is_shard_key_ref(eq.first, sk) && column_on_table(eq.second, build, probe))
+                return eq.first;
+            if (is_shard_key_ref(eq.second, sk) && column_on_table(eq.first, build, probe))
+                return eq.second;
+        }
+        return nullptr;
+    }
+
+    sql_parser::AstNode* make_in_list_on_column(const sql_parser::AstNode* col,
+                                                const std::vector<Value>& values) {
+        if (!col || values.empty()) return nullptr;
+        sql_parser::AstNode* stub = sql_parser::make_node(
+            arena_, sql_parser::NodeType::NODE_IN_LIST,
+            sql_parser::StringRef{nullptr, 0});
+        sql_parser::AstNode* col_copy = sql_parser::make_node(
+            arena_, col->type, col->value(), col->flags);
+        col_copy->first_child = col->first_child;
+        stub->add_child(col_copy);
+        return build_in_list_from_values(stub, values);
+    }
+
+    sql_parser::AstNode* and_preds(const sql_parser::AstNode* a,
+                                   const sql_parser::AstNode* b) {
+        if (!a) return const_cast<sql_parser::AstNode*>(b);
+        if (!b) return const_cast<sql_parser::AstNode*>(a);
+        sql_parser::AstNode* n = sql_parser::make_node(
+            arena_, sql_parser::NodeType::NODE_BINARY_OP,
+            sql_parser::StringRef{"AND", 3});
+        n->add_child(const_cast<sql_parser::AstNode*>(a));
+        n->add_child(const_cast<sql_parser::AstNode*>(b));
+        return n;
+    }
+
+    std::vector<Value> collect_build_join_keys(const TableInfo* build,
+                                               const sql_parser::AstNode* where_expr,
+                                               const sql_parser::AstNode* join_eq_other) {
+        std::vector<Value> out;
+        if (!build || !join_eq_other || !remote_executor_) return out;
+        const sql_parser::AstNode* proj[1] = {join_eq_other};
+        const auto& shards = shards_.get_shards(build->table_name);
+        if (shards.empty()) return out;
+        std::vector<ShardInfo> targets = shards;
+        if (shards_.is_sharded(build->table_name) && shards.size() > 1)
+            return out;
+        sql_parser::StringRef sql = qb_.build_select(
+            build, where_expr, proj, 1, nullptr, 0,
+            nullptr, nullptr, 0, -1, true);
+        ResultSet rs = remote_executor_->execute(shards[0].backend_name.c_str(), sql);
+        for (const auto& row : rs.rows) {
+            if (row.column_count > 0 && value_is_routable(row.get(0)))
+                out.push_back(copy_value_arena(row.get(0)));
+        }
+        return out;
+    }
+
+    const sql_parser::AstNode* other_eq_side(const sql_parser::AstNode* cond,
+                                             const sql_parser::AstNode* probe_key) const {
+        std::vector<std::pair<const sql_parser::AstNode*, const sql_parser::AstNode*>> eqs;
+        collect_eq_pairs(cond, eqs);
+        for (const auto& eq : eqs) {
+            if (eq.first == probe_key) return eq.second;
+            if (eq.second == probe_key) return eq.first;
+        }
+        return nullptr;
+    }
+
+    PlanNode* try_semijoin_prune(PlanNode* join_node,
+                                 const TableInfo* left_table,
+                                 const TableInfo* right_table) {
+        if (!join_node || !remote_executor_ || !join_node->join.condition)
+            return nullptr;
+        if (!left_table || !right_table) return nullptr;
+
+        bool ls = shards_.is_sharded(left_table->table_name);
+        bool rs = shards_.is_sharded(right_table->table_name);
+        if (ls == rs) return nullptr;
+
+        const TableInfo* probe = ls ? left_table : right_table;
+        const TableInfo* build = ls ? right_table : left_table;
+        bool probe_is_left = ls;
+        const sql_parser::AstNode* probe_key =
+            probe_key_in_join(join_node->join.condition, probe, build);
+        if (!probe_key) return nullptr;
+        const sql_parser::AstNode* build_col =
+            other_eq_side(join_node->join.condition, probe_key);
+        if (!build_col) return nullptr;
+
+        ScanContext bctx = extract_scan_context(
+            probe_is_left ? join_node->right : join_node->left);
+        std::vector<Value> keys = collect_build_join_keys(build, bctx.where_expr, build_col);
+        if (keys.empty()) return nullptr;
+
+        sql_parser::AstNode* in_list = make_in_list_on_column(probe_key, keys);
+        if (!in_list) return nullptr;
+
+        ScanContext pctx = extract_scan_context(
+            probe_is_left ? join_node->left : join_node->right);
+        if (!pctx.scan) return nullptr;
+        const sql_parser::AstNode* probe_where = and_preds(pctx.where_expr, in_list);
+        PlanNode* probe_dist = distribute_scan(pctx.scan, probe_where,
+                                               nullptr, nullptr, nullptr, false);
+
+        PlanNode* build_dist = nullptr;
+        if (bctx.scan && !shards_.is_sharded(build->table_name)) {
+            sql_parser::StringRef sql = qb_.build_select(
+                build, bctx.where_expr, nullptr, 0, nullptr, 0,
+                nullptr, nullptr, 0, -1, false);
+            build_dist = make_remote_scan(
+                shards_.get_backend(build->table_name), sql, build);
+        } else {
+            build_dist = distribute_node(probe_is_left ? join_node->right : join_node->left);
+        }
+        if (!probe_dist || !build_dist) return nullptr;
+
+        PlanNode* result = make_plan_node(arena_, PlanNodeType::JOIN);
+        result->join = join_node->join;
+        result->left = probe_is_left ? probe_dist : build_dist;
+        result->right = probe_is_left ? build_dist : probe_dist;
+        return result;
+    }
+
     PlanNode* distribute_join(PlanNode* join_node) {
         const TableInfo* left_table = find_table(join_node->left);
         const TableInfo* right_table = find_table(join_node->right);
@@ -1059,11 +1368,14 @@ private:
             shards_.is_sharded(left_table->table_name) &&
             shards_.is_sharded(right_table->table_name) &&
             shards_.same_routing(left_table->table_name, right_table->table_name) &&
-            join_on_shard_keys(join_node->join.condition,
-                               shards_.get_shard_key(left_table->table_name),
-                               shards_.get_shard_key(right_table->table_name))) {
+            join_covers_composite_keys(join_node->join.condition,
+                                       shards_.get_shard_keys(left_table->table_name),
+                                       shards_.get_shard_keys(right_table->table_name))) {
             return distribute_colocated_join(join_node, left_table, right_table);
         }
+
+        if (PlanNode* sj = try_semijoin_prune(join_node, left_table, right_table))
+            return sj;
 
         PlanNode* left_dist = nullptr;
         PlanNode* right_dist = nullptr;
@@ -1118,7 +1430,9 @@ private:
     PlanNode* distribute_insert(PlanNode* plan) {
         const auto& ip = plan->insert_plan;
         const TableInfo* table = ip.table;
-        if (!table || !shards_.has_table(table->table_name)) return plan;
+        if (!table) return plan;
+        if (!shards_.has_table(table->table_name))
+            return fail_dml("table not in shard map");
 
         // Check for INSERT ... SELECT (select_source stores the SELECT AST)
         if (ip.select_source && ip.select_source->type == PlanNodeType::DERIVED_SCAN
@@ -1137,53 +1451,44 @@ private:
             return make_remote_scan(shards_.get_backend(table->table_name), sql, table);
         }
 
-        // Sharded: group rows by shard key value
-        sql_parser::StringRef shard_key = shards_.get_shard_key(table->table_name);
-        if (!shard_key.ptr) return plan;
+        const auto& key_names = shards_.get_shard_keys(table->table_name);
+        if (key_names.empty()) return plan;
 
-        // Find shard key column ordinal in the column list
-        int shard_col_idx = -1;
-        if (ip.columns && ip.column_count > 0) {
-            for (uint16_t i = 0; i < ip.column_count; ++i) {
-                if (ip.columns[i] && ip.columns[i]->value().equals_ci(shard_key.ptr, shard_key.len)) {
-                    shard_col_idx = static_cast<int>(i);
-                    break;
-                }
-            }
-        } else if (table) {
-            // No explicit column list -- match by table column order
-            for (uint16_t i = 0; i < table->column_count; ++i) {
-                if (table->columns[i].name.equals_ci(shard_key.ptr, shard_key.len)) {
-                    shard_col_idx = static_cast<int>(i);
-                    break;
-                }
-            }
+        std::vector<int> key_ords(key_names.size(), -1);
+        for (size_t k = 0; k < key_names.size(); ++k) {
+            sql_parser::StringRef kn{key_names[k].c_str(),
+                static_cast<uint32_t>(key_names[k].size())};
+            key_ords[k] = find_insert_key_ordinal(ip.columns, ip.column_count, table, kn);
         }
-
-        if (shard_col_idx < 0) {
-            return fail_dml("cannot route INSERT: shard key column is not present");
+        for (int ord : key_ords) {
+            if (ord < 0)
+                return fail_dml("cannot route INSERT: shard key column is not present");
         }
 
         const auto& shard_list = shards_.get_shards(table->table_name);
 
-        // Group rows by ShardMap route. Map: shard_index -> list of row indices.
         std::unordered_map<size_t, std::vector<uint16_t>> shard_rows;
 
         for (uint16_t ri = 0; ri < ip.row_count; ++ri) {
             const sql_parser::AstNode* row_ast = ip.value_rows[ri];
             if (!row_ast) continue;
 
-            const sql_parser::AstNode* expr = row_ast->first_child;
-            for (int j = 0; j < shard_col_idx && expr; ++j) {
-                expr = expr->next_sibling;
+            std::vector<ShardKeyPart> parts;
+            parts.reserve(key_ords.size());
+            for (int ord : key_ords) {
+                const sql_parser::AstNode* expr = row_ast->first_child;
+                for (int j = 0; j < ord && expr; ++j) expr = expr->next_sibling;
+                if (!expr)
+                    return fail_dml("cannot route INSERT: missing shard key value");
+                Value v = evaluate_shard_key_value(expr);
+                if (!value_is_routable(v))
+                    return fail_dml("cannot route INSERT: shard key is not a literal");
+                parts.push_back(value_to_part(v));
             }
-            if (!expr) {
-                return fail_dml("cannot route INSERT: missing shard key value");
-            }
-
             size_t shard_idx = 0;
-            if (!route_value(table->table_name, evaluate_shard_key_value(expr), shard_idx)) {
-                return fail_dml("cannot route INSERT: shard key is not a literal");
+            if (!shards_.try_shard_index_for_parts(table->table_name, parts.data(),
+                                                   parts.size(), shard_idx)) {
+                return fail_dml("cannot route INSERT: shard key value is not mapped");
             }
             shard_rows[shard_idx].push_back(ri);
         }
@@ -1237,7 +1542,9 @@ private:
             return distribute_multi_table_dml(up.original_ast, table, true);
         }
 
-        if (!table || !shards_.has_table(table->table_name)) return plan;
+        if (!table) return plan;
+        if (!shards_.has_table(table->table_name))
+            return fail_dml("table not in shard map");
 
         // Check for cross-shard subqueries in WHERE and rewrite
         const sql_parser::AstNode* where_expr = up.where_expr;
@@ -1252,9 +1559,8 @@ private:
             return make_remote_scan(shards_.get_backend(table->table_name), sql, table);
         }
 
-        sql_parser::StringRef shard_key = shards_.get_shard_key(table->table_name);
-        if (assigns_shard_key(up.set_columns, up.set_count, shard_key)) {
-            return fail_dml("cannot UPDATE shard key column");
+        if (assigns_any_shard_key(up.set_columns, up.set_count, table->table_name)) {
+            return distribute_update_move(plan, table, where_expr);
         }
 
         const auto& shard_list = shards_.get_shards(table->table_name);
@@ -1280,7 +1586,9 @@ private:
             return distribute_multi_table_dml(dp.original_ast, table, false);
         }
 
-        if (!table || !shards_.has_table(table->table_name)) return plan;
+        if (!table) return plan;
+        if (!shards_.has_table(table->table_name))
+            return fail_dml("table not in shard map");
 
         // Check for cross-shard subqueries in WHERE and rewrite
         const sql_parser::AstNode* where_expr = dp.where_expr;
@@ -1333,19 +1641,16 @@ private:
     }
 
     bool route_value(sql_parser::StringRef table_name, const Value& v, size_t& shard_idx) const {
-        if (v.tag == Value::TAG_INT64) {
-            shard_idx = shards_.shard_index_for_int(table_name, v.int_val);
-            return true;
-        }
+        if (!shards_.has_table(table_name)) return false;
+        if (v.tag == Value::TAG_INT64)
+            return shards_.try_shard_index_for_int(table_name, v.int_val, shard_idx);
         if (v.tag == Value::TAG_UINT64) {
-            shard_idx = shards_.shard_index_for_int(
-                table_name, static_cast<int64_t>(v.uint_val));
-            return true;
+            return shards_.try_shard_index_for_int(
+                table_name, static_cast<int64_t>(v.uint_val), shard_idx);
         }
         if (v.tag == Value::TAG_STRING && v.str_val.ptr) {
-            shard_idx = shards_.shard_index_for_string(
-                table_name, v.str_val.ptr, v.str_val.len);
-            return true;
+            return shards_.try_shard_index_for_string(
+                table_name, v.str_val.ptr, v.str_val.len, shard_idx);
         }
         return false;
     }
@@ -1357,6 +1662,341 @@ private:
             if (is_column_ref(set_columns[i], shard_key)) return true;
         }
         return false;
+    }
+
+    bool assigns_any_shard_key(const sql_parser::AstNode** set_columns, uint16_t set_count,
+                               sql_parser::StringRef table_name) const {
+        for (const auto& k : shards_.get_shard_keys(table_name)) {
+            sql_parser::StringRef kn{k.c_str(), static_cast<uint32_t>(k.size())};
+            if (assigns_shard_key(set_columns, set_count, kn)) return true;
+        }
+        return false;
+    }
+
+    static bool value_is_routable(const Value& v) {
+        return v.tag == Value::TAG_INT64 || v.tag == Value::TAG_UINT64 ||
+               (v.tag == Value::TAG_STRING && v.str_val.ptr);
+    }
+
+    static ShardKeyPart value_to_part(const Value& v) {
+        ShardKeyPart p;
+        if (v.tag == Value::TAG_INT64) {
+            p.is_int = true;
+            p.int_val = v.int_val;
+        } else if (v.tag == Value::TAG_UINT64) {
+            p.is_int = true;
+            p.int_val = static_cast<int64_t>(v.uint_val);
+        } else {
+            p.is_int = false;
+            p.str = v.str_val.ptr;
+            p.str_len = v.str_val.len;
+        }
+        return p;
+    }
+
+    static int find_insert_key_ordinal(const sql_parser::AstNode** columns,
+                                       uint16_t column_count,
+                                       const TableInfo* table,
+                                       sql_parser::StringRef key) {
+        if (columns && column_count > 0) {
+            for (uint16_t i = 0; i < column_count; ++i) {
+                if (columns[i] && columns[i]->value().equals_ci(key.ptr, key.len))
+                    return static_cast<int>(i);
+            }
+            return -1;
+        }
+        if (!table) return -1;
+        for (uint16_t i = 0; i < table->column_count; ++i) {
+            if (table->columns[i].name.equals_ci(key.ptr, key.len))
+                return static_cast<int>(i);
+        }
+        return -1;
+    }
+
+    void collect_key_eq_values(const sql_parser::AstNode* expr,
+                               sql_parser::StringRef key,
+                               std::vector<Value>& out) {
+        if (!expr) return;
+        if (expr->type == sql_parser::NodeType::NODE_BINARY_OP) {
+            sql_parser::StringRef op = expr->value();
+            if (op.len == 1 && op.ptr[0] == '=') {
+                const sql_parser::AstNode* l = expr->first_child;
+                const sql_parser::AstNode* r = l ? l->next_sibling : nullptr;
+                if (l && r) {
+                    const sql_parser::AstNode* lit = nullptr;
+                    if (is_shard_key_ref(l, key) && is_literal(r)) lit = r;
+                    else if (is_shard_key_ref(r, key) && is_literal(l)) lit = l;
+                    if (lit) {
+                        Value v = evaluate_shard_key_value(lit);
+                        if (value_is_routable(v)) out.push_back(v);
+                    }
+                }
+                return;
+            }
+            if (op.len == 3 &&
+                (op.ptr[0] == 'A' || op.ptr[0] == 'a') &&
+                (op.ptr[1] == 'N' || op.ptr[1] == 'n') &&
+                (op.ptr[2] == 'D' || op.ptr[2] == 'd')) {
+                collect_key_eq_values(expr->first_child, key, out);
+                if (expr->first_child)
+                    collect_key_eq_values(expr->first_child->next_sibling, key, out);
+            }
+            return;
+        }
+        if (expr->type == sql_parser::NodeType::NODE_IN_LIST) {
+            const sql_parser::AstNode* col = expr->first_child;
+            if (col && is_shard_key_ref(col, key)) {
+                for (const sql_parser::AstNode* item = col->next_sibling; item;
+                     item = item->next_sibling) {
+                    if (!is_literal(item)) {
+                        out.clear();
+                        return;
+                    }
+                    Value v = evaluate_shard_key_value(item);
+                    if (value_is_routable(v)) out.push_back(v);
+                }
+            }
+        }
+    }
+
+    void extract_composite_targets(const sql_parser::AstNode* where_expr,
+                                   const std::vector<std::string>& keys,
+                                   sql_parser::StringRef table_name,
+                                   std::vector<size_t>& target_indices) {
+        std::vector<std::vector<Value>> dims(keys.size());
+        for (size_t k = 0; k < keys.size(); ++k) {
+            sql_parser::StringRef kn{keys[k].c_str(),
+                static_cast<uint32_t>(keys[k].size())};
+            collect_key_eq_values(where_expr, kn, dims[k]);
+            if (dims[k].empty()) return;
+        }
+        std::vector<size_t> cursor(keys.size(), 0);
+        for (;;) {
+            std::vector<ShardKeyPart> parts(keys.size());
+            for (size_t k = 0; k < keys.size(); ++k)
+                parts[k] = value_to_part(dims[k][cursor[k]]);
+            size_t idx = 0;
+            if (shards_.try_shard_index_for_parts(table_name, parts.data(),
+                                                  parts.size(), idx))
+                target_indices.push_back(idx);
+            size_t d = keys.size();
+            while (d-- > 0) {
+                if (++cursor[d] < dims[d].size()) break;
+                cursor[d] = 0;
+            }
+            if (d == static_cast<size_t>(-1)) break;
+        }
+    }
+
+    PlanNode* append_remote(PlanNode* current, PlanNode* next) {
+        if (!next) return current;
+        if (!current) return next;
+        PlanNode* union_node = make_plan_node(arena_, PlanNodeType::SET_OP);
+        union_node->set_op.op = SET_OP_UNION;
+        union_node->set_op.all = true;
+        union_node->left = current;
+        union_node->right = next;
+        return union_node;
+    }
+
+    Value copy_value_arena(const Value& v) {
+        if ((v.tag == Value::TAG_STRING || v.tag == Value::TAG_DECIMAL ||
+             v.tag == Value::TAG_BYTES || v.tag == Value::TAG_JSON) &&
+            v.str_val.ptr && v.str_val.len > 0) {
+            char* p = static_cast<char*>(arena_.allocate(v.str_val.len));
+            std::memcpy(p, v.str_val.ptr, v.str_val.len);
+            Value out = v;
+            out.str_val = sql_parser::StringRef{p, v.str_val.len};
+            return out;
+        }
+        return v;
+    }
+
+    Row copy_row_arena(const Row& src) {
+        Row dst = make_row(arena_, src.column_count);
+        for (uint16_t i = 0; i < src.column_count; ++i)
+            dst.set(i, copy_value_arena(src.get(i)));
+        return dst;
+    }
+
+    bool route_row_keys(const TableInfo* table, const Row& row, size_t& idx) const {
+        const auto& keys = shards_.get_shard_keys(table->table_name);
+        if (keys.empty()) return false;
+        std::vector<ShardKeyPart> parts;
+        parts.reserve(keys.size());
+        for (const auto& k : keys) {
+            sql_parser::StringRef kn{k.c_str(), static_cast<uint32_t>(k.size())};
+            const ColumnInfo* col = catalog_.get_column(table, kn);
+            if (!col || col->ordinal >= row.column_count) return false;
+            Value v = row.get(col->ordinal);
+            if (!value_is_routable(v)) return false;
+            parts.push_back(value_to_part(v));
+        }
+        return shards_.try_shard_index_for_parts(
+            table->table_name, parts.data(), parts.size(), idx);
+    }
+
+    Row apply_update_set(const Row& src, const TableInfo* table,
+                         const sql_parser::AstNode** set_cols,
+                         const sql_parser::AstNode** set_exprs,
+                         uint16_t set_count) {
+        Row dst = copy_row_arena(src);
+        auto resolve = make_resolver(catalog_, table, src.values);
+        for (uint16_t i = 0; i < set_count; ++i) {
+            if (!set_cols[i]) continue;
+            const ColumnInfo* col = catalog_.get_column(table, set_cols[i]->value());
+            if (!col) continue;
+            Value nv = value_null();
+            if (functions_) {
+                nv = evaluate_expression<D>(set_exprs[i], resolve, *functions_, arena_);
+            } else {
+                nv = evaluate_shard_key_value(set_exprs[i]);
+            }
+            dst.set(col->ordinal, copy_value_arena(nv));
+        }
+        return dst;
+    }
+
+    sql_parser::StringRef build_identity_pred(const TableInfo* table, const Row& row,
+                                              sql_parser::StringBuilder& sb) {
+        for (uint16_t i = 0; i < table->column_count && i < row.column_count; ++i) {
+            if (i > 0) sb.append(" AND ");
+            sb.append(table->columns[i].name.ptr, table->columns[i].name.len);
+            if (row.get(i).is_null()) {
+                sb.append(" IS NULL", 8);
+            } else {
+                sb.append(" = ");
+                emit_value(row.get(i), sb);
+            }
+        }
+        return sb.finish();
+    }
+
+    sql_parser::StringRef build_delete_identity(const TableInfo* table, const Row& row) {
+        sql_parser::StringBuilder sb(arena_, 256);
+        sb.append("DELETE FROM ");
+        sb.append(table->table_name.ptr, table->table_name.len);
+        sb.append(" WHERE ");
+        return build_identity_pred(table, row, sb);
+    }
+
+    sql_parser::StringRef build_update_identity(const TableInfo* table,
+                                                const sql_parser::AstNode** set_cols,
+                                                const sql_parser::AstNode** set_exprs,
+                                                uint16_t set_count,
+                                                const Row& old_row) {
+        sql_parser::StringBuilder sb(arena_, 256);
+        sb.append("UPDATE ");
+        sb.append(table->table_name.ptr, table->table_name.len);
+        sb.append(" SET ");
+        for (uint16_t i = 0; i < set_count; ++i) {
+            if (i > 0) sb.append(", ");
+            if (set_cols[i]) {
+                sql_parser::StringRef cn = set_cols[i]->value();
+                sb.append(cn.ptr, cn.len);
+            }
+            sb.append(" = ");
+            if (set_exprs[i]) {
+                sql_parser::Emitter<D> emitter(arena_);
+                emitter.emit(set_exprs[i]);
+                sql_parser::StringRef ev = emitter.result();
+                sb.append(ev.ptr, ev.len);
+            }
+        }
+        sb.append(" WHERE ");
+        return build_identity_pred(table, old_row, sb);
+    }
+
+    PlanNode* distribute_update_move(PlanNode* plan, const TableInfo* table,
+                                     const sql_parser::AstNode* where_expr) {
+        if (!remote_executor_)
+            return fail_dml("cannot UPDATE shard key without a remote executor");
+
+        const auto& up = plan->update_plan;
+        const auto& shard_list = shards_.get_shards(table->table_name);
+        std::vector<ShardInfo> pruned = prune_shards(table, where_expr, shard_list);
+        if (pruned.empty()) return plan;
+
+        struct Move {
+            size_t src = 0;
+            size_t dst = 0;
+            Row old_row{};
+            Row new_row{};
+        };
+        std::vector<Move> moves;
+
+        for (const auto& shard : pruned) {
+            size_t src = 0;
+            for (size_t i = 0; i < shard_list.size(); ++i) {
+                if (shard_list[i].backend_name == shard.backend_name) {
+                    src = i;
+                    break;
+                }
+            }
+            sql_parser::StringRef sql = qb_.build_select(
+                table, where_expr, nullptr, 0, nullptr, 0,
+                nullptr, nullptr, 0, -1, false);
+            ResultSet rs = remote_executor_->execute(shard.backend_name.c_str(), sql);
+            for (const auto& row : rs.rows) {
+                Move m;
+                m.src = src;
+                m.old_row = copy_row_arena(row);
+                m.new_row = apply_update_set(m.old_row, table, up.set_columns,
+                                             up.set_exprs, up.set_count);
+                if (!route_row_keys(table, m.new_row, m.dst))
+                    return fail_dml("cannot UPDATE shard key: new key is not routable");
+                moves.push_back(m);
+            }
+        }
+
+        if (moves.empty()) {
+            sql_parser::StringRef sql = qb_.build_update(
+                table, up.set_columns, up.set_exprs, up.set_count, where_expr);
+            return make_remote_scan(pruned[0].backend_name.c_str(), sql, table);
+        }
+
+        bool any_move = false;
+        for (const auto& m : moves) {
+            if (m.src != m.dst) { any_move = true; break; }
+        }
+        if (!any_move) {
+            if (pruned.size() == 1) {
+                sql_parser::StringRef sql = qb_.build_update(
+                    table, up.set_columns, up.set_exprs, up.set_count, where_expr);
+                return make_remote_scan(pruned[0].backend_name.c_str(), sql, table);
+            }
+            const sql_parser::AstNode* final_where = where_expr;
+            return scatter_dml_to_shards(table, pruned, [&]() {
+                return qb_.build_update(
+                    table, up.set_columns, up.set_exprs, up.set_count, final_where);
+            });
+        }
+
+        PlanNode* current = nullptr;
+        std::unordered_map<size_t, std::vector<Row>> inserts;
+        for (const auto& m : moves) {
+            if (m.src == m.dst) {
+                sql_parser::StringRef sql = build_update_identity(
+                    table, up.set_columns, up.set_exprs, up.set_count, m.old_row);
+                current = append_remote(
+                    current, make_remote_scan(shard_list[m.src].backend_name.c_str(),
+                                              sql, table));
+            } else {
+                current = append_remote(
+                    current,
+                    make_remote_scan(shard_list[m.src].backend_name.c_str(),
+                                     build_delete_identity(table, m.old_row), table));
+                inserts[m.dst].push_back(m.new_row);
+            }
+        }
+        for (auto& kv : inserts) {
+            current = append_remote(
+                current,
+                make_remote_scan(shard_list[kv.first].backend_name.c_str(),
+                                 build_insert_from_rows(table, nullptr, 0, kv.second),
+                                 table));
+        }
+        return current ? current : plan;
     }
 
     bool is_column_ref(const sql_parser::AstNode* node, sql_parser::StringRef col_name) const {
@@ -1754,7 +2394,8 @@ private:
         }
 
         // Determine target shards for each row
-        if (!shards_.has_table(table->table_name)) return plan;
+        if (!shards_.has_table(table->table_name))
+            return fail_dml("table not in shard map");
 
         if (!shards_.is_sharded(table->table_name)) {
             // Unsharded: build a single INSERT with all rows
@@ -1763,42 +2404,37 @@ private:
             return make_remote_scan(shards_.get_backend(table->table_name), sql, table);
         }
 
-        // Sharded: group rows by shard key
-        sql_parser::StringRef shard_key = shards_.get_shard_key(table->table_name);
-        if (!shard_key.ptr) return plan;
+        const auto& key_names = shards_.get_shard_keys(table->table_name);
+        if (key_names.empty()) return plan;
 
-        // Find shard key column ordinal in the result set
-        int shard_col_idx = -1;
-        if (ip.columns && ip.column_count > 0) {
-            for (uint16_t i = 0; i < ip.column_count; ++i) {
-                if (ip.columns[i] && ip.columns[i]->value().equals_ci(shard_key.ptr, shard_key.len)) {
-                    shard_col_idx = static_cast<int>(i);
-                    break;
-                }
-            }
-        } else if (table) {
-            for (uint16_t i = 0; i < table->column_count; ++i) {
-                if (table->columns[i].name.equals_ci(shard_key.ptr, shard_key.len)) {
-                    shard_col_idx = static_cast<int>(i);
-                    break;
-                }
-            }
+        std::vector<int> key_ords(key_names.size(), -1);
+        for (size_t k = 0; k < key_names.size(); ++k) {
+            sql_parser::StringRef kn{key_names[k].c_str(),
+                static_cast<uint32_t>(key_names[k].size())};
+            key_ords[k] = find_insert_key_ordinal(ip.columns, ip.column_count, table, kn);
         }
-
-        if (shard_col_idx < 0) {
-            return fail_dml("cannot route INSERT ... SELECT: shard key column is not present");
+        for (int ord : key_ords) {
+            if (ord < 0)
+                return fail_dml("cannot route INSERT ... SELECT: shard key column is not present");
         }
 
         const auto& shard_list = shards_.get_shards(table->table_name);
 
         std::unordered_map<size_t, std::vector<size_t>> shard_rows;
         for (size_t ri = 0; ri < rs.rows.size(); ++ri) {
-            if (shard_col_idx >= rs.rows[ri].column_count) {
-                return fail_dml("cannot route INSERT ... SELECT: missing shard key value");
+            std::vector<ShardKeyPart> parts;
+            parts.reserve(key_ords.size());
+            for (int ord : key_ords) {
+                if (ord >= rs.rows[ri].column_count)
+                    return fail_dml("cannot route INSERT ... SELECT: missing shard key value");
+                Value v = rs.rows[ri].get(static_cast<uint16_t>(ord));
+                if (!value_is_routable(v))
+                    return fail_dml("cannot route INSERT ... SELECT: shard key is not a literal");
+                parts.push_back(value_to_part(v));
             }
-            Value v = rs.rows[ri].get(static_cast<uint16_t>(shard_col_idx));
             size_t shard_idx = 0;
-            if (!route_value(table->table_name, v, shard_idx)) {
+            if (!shards_.try_shard_index_for_parts(table->table_name, parts.data(),
+                                                   parts.size(), shard_idx)) {
                 return fail_dml("cannot route INSERT ... SELECT: shard key is not a literal");
             }
             shard_rows[shard_idx].push_back(ri);
@@ -1928,17 +2564,13 @@ private:
         }
 
         const TableInfo* table = ctx.scan->scan.table;
-        if (!shards_.has_table(table->table_name) || !shards_.is_sharded(table->table_name)) {
-            if (shards_.has_table(table->table_name) && !shards_.is_sharded(table->table_name)) {
-                // Unsharded: push DISTINCT to remote
-                sql_parser::StringRef sql = qb_.build_select(
-                    table, ctx.where_expr, proj_exprs, proj_count,
-                    nullptr, 0, nullptr, nullptr, 0, -1, true);
-                return make_remote_scan(shards_.get_backend(table->table_name), sql, table);
-            }
-            PlanNode* result = make_plan_node(arena_, PlanNodeType::DISTINCT);
-            result->left = distribute_node(distinct_node->left);
-            return result;
+        if (!shards_.has_table(table->table_name))
+            return fail_dml("table not in shard map");
+        if (!shards_.is_sharded(table->table_name)) {
+            sql_parser::StringRef sql = qb_.build_select(
+                table, ctx.where_expr, proj_exprs, proj_count,
+                nullptr, 0, nullptr, nullptr, 0, -1, true);
+            return make_remote_scan(shards_.get_backend(table->table_name), sql, table);
         }
 
         // Sharded DISTINCT: each shard computes DISTINCT, local DISTINCT deduplicates

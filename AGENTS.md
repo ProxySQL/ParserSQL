@@ -7,7 +7,7 @@ Trust the `Makefile` over prose. Extension recipes live in `CLAUDE.md`. `docs/su
 - Parser: header-only templates in `include/sql_parser/` except `src/sql_parser/{arena,parser}.cpp`
 - Engine: headers in `include/sql_engine/` (`operators/`, `functions/`, `rules/`); compiled files are the explicit `ENGINE_SRCS` list
 - High-level API: `Session<D>` (`include/sql_engine/session.h`) — parse → plan → optimize → distribute → execute
-- Production remote path: `ThreadSafeMultiRemoteExecutor`, not the single-connection executors
+- Production remote path: `ThreadSafeMultiRemoteExecutor` (pooled MySQL **and** PostgreSQL), not the single-connection executors
 - All shard routing (SELECT prune and DML) goes through `ShardMap`. Do not add a private hash in the planner.
 - Backend URL / shard-spec parsing: `tool_config_parser` — do not add another copy in tools
 - Do not edit `third_party/`

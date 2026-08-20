@@ -3,6 +3,7 @@
 
 #include "sql_parser/common.h"
 #include <cstdint>
+#include <climits>
 #include <cstring>
 #include <string>
 #include <vector>
@@ -50,19 +51,34 @@ struct ShardListEntry {
     size_t shard_index = 0;
 };
 
+// One component of a (possibly composite) shard key. n==1 reuses the
+// single-column HASH/RANGE/LIST path so existing routes stay identical.
+struct ShardKeyPart {
+    bool is_int = true;
+    int64_t int_val = 0;
+    const char* str = nullptr;
+    uint32_t str_len = 0;
+};
+
 struct TableShardConfig {
     std::string table_name;
-    std::string shard_key;          // empty if unsharded
+    std::string shard_key;          // empty if unsharded; "a+b" for composite
     std::vector<ShardInfo> shards;  // 1 if unsharded, N if sharded
     RoutingStrategy strategy = RoutingStrategy::HASH;
     std::vector<ShardRange> ranges;       // used iff strategy == RANGE
     std::vector<ShardListEntry> list;     // used iff strategy == LIST
+    std::vector<std::string> shard_keys;  // filled by ShardMap::add_table
 };
 
 class ShardMap {
 public:
     void add_table(const TableShardConfig& config) {
         TableShardConfig copy = config;
+        if (copy.shard_keys.empty() && !copy.shard_key.empty()) {
+            split_keys(copy.shard_key, copy.shard_keys);
+        } else if (copy.shard_key.empty() && !copy.shard_keys.empty()) {
+            copy.shard_key = join_keys(copy.shard_keys);
+        }
         if (copy.strategy == RoutingStrategy::RANGE) {
             std::sort(copy.ranges.begin(), copy.ranges.end(),
                       [](const ShardRange& a, const ShardRange& b) {
@@ -76,7 +92,7 @@ public:
     bool is_sharded(sql_parser::StringRef table_name) const {
         const TableShardConfig* cfg = lookup(table_name);
         if (!cfg) return false;
-        return !cfg->shard_key.empty() && cfg->shards.size() > 1;
+        return !cfg->shard_keys.empty() && cfg->shards.size() > 1;
     }
 
     const std::vector<ShardInfo>& get_shards(sql_parser::StringRef table_name) const {
@@ -88,20 +104,109 @@ public:
 
     sql_parser::StringRef get_shard_key(sql_parser::StringRef table_name) const {
         const TableShardConfig* cfg = lookup(table_name);
-        if (cfg && !cfg->shard_key.empty()) {
-            const std::string& sk = cfg->shard_key;
+        if (cfg && !cfg->shard_keys.empty()) {
+            const std::string& sk = cfg->shard_keys[0];
             return sql_parser::StringRef{sk.c_str(), static_cast<uint32_t>(sk.size())};
         }
         return sql_parser::StringRef{nullptr, 0};
+    }
+
+    const std::vector<std::string>& get_shard_keys(sql_parser::StringRef table_name) const {
+        const TableShardConfig* cfg = lookup(table_name);
+        if (cfg) return cfg->shard_keys;
+        static const std::vector<std::string> empty;
+        return empty;
     }
 
     bool has_table(sql_parser::StringRef table_name) const {
         return lookup(table_name) != nullptr;
     }
 
+    // False if the table is unknown, has no shards, or a LIST value is unmapped.
+    bool try_shard_index_for_int(sql_parser::StringRef table_name, int64_t value,
+                                 size_t& out) const {
+        const TableShardConfig* cfg = lookup(table_name);
+        if (!cfg || cfg->shards.empty()) return false;
+        size_t n = cfg->shards.size();
+        switch (cfg->strategy) {
+            case RoutingStrategy::HASH:
+                out = fnv1a_int64(value) % n;
+                return true;
+            case RoutingStrategy::RANGE:
+                out = shard_index_for_int(table_name, value);
+                return true;
+            case RoutingStrategy::LIST:
+                for (const auto& e : cfg->list) {
+                    if (e.is_int && e.int_val == value) {
+                        out = clamp_index(e.shard_index, n);
+                        return true;
+                    }
+                }
+                return false;
+        }
+        return false;
+    }
+
+    bool try_shard_index_for_string(sql_parser::StringRef table_name,
+                                    const char* val, uint32_t val_len,
+                                    size_t& out) const {
+        const TableShardConfig* cfg = lookup(table_name);
+        if (!cfg || cfg->shards.empty()) return false;
+        size_t n = cfg->shards.size();
+        switch (cfg->strategy) {
+            case RoutingStrategy::HASH:
+                out = fnv1a_bytes(reinterpret_cast<const uint8_t*>(val), val_len) % n;
+                return true;
+            case RoutingStrategy::RANGE:
+                return false;
+            case RoutingStrategy::LIST:
+                for (const auto& e : cfg->list) {
+                    if (!e.is_int && e.str_val.size() == val_len &&
+                        std::memcmp(e.str_val.data(), val, val_len) == 0) {
+                        out = clamp_index(e.shard_index, n);
+                        return true;
+                    }
+                }
+                return false;
+        }
+        return false;
+    }
+
+    bool try_shard_index_for_parts(sql_parser::StringRef table_name,
+                                   const ShardKeyPart* parts, size_t n,
+                                   size_t& out) const {
+        const TableShardConfig* cfg = lookup(table_name);
+        if (!cfg || cfg->shards.empty() || !parts || n == 0) return false;
+        if (n == 1 || cfg->strategy == RoutingStrategy::RANGE) {
+            return parts[0].is_int
+                ? try_shard_index_for_int(table_name, parts[0].int_val, out)
+                : try_shard_index_for_string(table_name, parts[0].str,
+                                             parts[0].str_len, out);
+        }
+        if (cfg->strategy != RoutingStrategy::HASH) return false;
+        uint64_t h = 0xcbf29ce484222325ULL;
+        for (size_t i = 0; i < n; ++i) {
+            if (parts[i].is_int) {
+                uint64_t u = static_cast<uint64_t>(parts[i].int_val);
+                uint8_t bytes[8];
+                for (int b = 0; b < 8; ++b)
+                    bytes[b] = static_cast<uint8_t>((u >> (b * 8)) & 0xff);
+                h = fnv1a_mix(h, bytes, 8);
+            } else {
+                h = fnv1a_mix(h,
+                              reinterpret_cast<const uint8_t*>(parts[i].str),
+                              parts[i].str_len);
+            }
+            uint8_t sep = 0xff;
+            h = fnv1a_mix(h, &sep, 1);
+        }
+        out = static_cast<size_t>(h % cfg->shards.size());
+        return true;
+    }
+
     // Determine which shard index a value maps to. Dispatches on the
     // configured RoutingStrategy. Returns 0 if the table is unknown or
-    // has no shards.
+    // has no shards — prefer try_shard_index_for_* which fails closed.
     size_t shard_index_for_int(sql_parser::StringRef table_name, int64_t value) const {
         const TableShardConfig* cfg = lookup(table_name);
         if (!cfg || cfg->shards.empty()) return 0;
@@ -153,6 +258,47 @@ public:
                 return 0;
         }
         return 0;
+    }
+
+    RoutingStrategy routing_strategy(sql_parser::StringRef table_name) const {
+        const TableShardConfig* cfg = lookup(table_name);
+        return cfg ? cfg->strategy : RoutingStrategy::HASH;
+    }
+
+    // LIST only. Inclusive [lo, hi]. Pushes every mapped int in the window.
+    void collect_int_list_shards(sql_parser::StringRef table_name,
+                                 int64_t lo, int64_t hi,
+                                 std::vector<size_t>& out) const {
+        const TableShardConfig* cfg = lookup(table_name);
+        if (!cfg || cfg->strategy != RoutingStrategy::LIST || cfg->list.empty())
+            return;
+        if (lo > hi) return;
+        size_t n = cfg->shards.size();
+        for (const auto& e : cfg->list) {
+            if (e.is_int && e.int_val >= lo && e.int_val <= hi)
+                out.push_back(clamp_index(e.shard_index, n));
+        }
+    }
+
+    // RANGE only. Inclusive [lo, hi]. HASH/LIST yield no indices (caller scatters).
+    void collect_int_range_shards(sql_parser::StringRef table_name,
+                                  int64_t lo, int64_t hi,
+                                  std::vector<size_t>& out) const {
+        const TableShardConfig* cfg = lookup(table_name);
+        if (!cfg || cfg->strategy != RoutingStrategy::RANGE || cfg->ranges.empty())
+            return;
+        if (lo > hi) return;
+        size_t n = cfg->shards.size();
+        const auto& ranges = cfg->ranges;
+        for (size_t i = 0; i < ranges.size(); ++i) {
+            int64_t seg_hi = (i + 1 == ranges.size())
+                ? INT64_MAX : ranges[i].upper_inclusive;
+            int64_t seg_lo = (i == 0) ? INT64_MIN
+                : (cfg->ranges[i - 1].upper_inclusive == INT64_MAX
+                   ? INT64_MAX : cfg->ranges[i - 1].upper_inclusive + 1);
+            if (seg_lo <= hi && seg_hi >= lo)
+                out.push_back(clamp_index(ranges[i].shard_index, n));
+        }
     }
 
     bool same_routing(sql_parser::StringRef a, sql_parser::StringRef b) const {
@@ -211,15 +357,43 @@ private:
         return idx < n ? idx : (n == 0 ? 0 : n - 1);
     }
 
+    static void split_keys(const std::string& spec, std::vector<std::string>& out) {
+        size_t start = 0;
+        while (start <= spec.size()) {
+            size_t plus = spec.find('+', start);
+            if (plus == std::string::npos) {
+                out.push_back(spec.substr(start));
+                break;
+            }
+            out.push_back(spec.substr(start, plus - start));
+            start = plus + 1;
+        }
+        out.erase(std::remove_if(out.begin(), out.end(),
+                                 [](const std::string& s) { return s.empty(); }),
+                  out.end());
+    }
+
+    static std::string join_keys(const std::vector<std::string>& keys) {
+        std::string out;
+        for (size_t i = 0; i < keys.size(); ++i) {
+            if (i) out += '+';
+            out += keys[i];
+        }
+        return out;
+    }
+
     // FNV-1a 64-bit. Deterministic across compilers, fast, good enough for
     // shard-key routing where adversarial inputs are not a concern.
-    static uint64_t fnv1a_bytes(const uint8_t* data, size_t len) {
-        uint64_t h = 0xcbf29ce484222325ULL;
+    static uint64_t fnv1a_mix(uint64_t h, const uint8_t* data, size_t len) {
         for (size_t i = 0; i < len; ++i) {
             h ^= static_cast<uint64_t>(data[i]);
             h *= 0x100000001b3ULL;
         }
         return h;
+    }
+
+    static uint64_t fnv1a_bytes(const uint8_t* data, size_t len) {
+        return fnv1a_mix(0xcbf29ce484222325ULL, data, len);
     }
 
     static uint64_t fnv1a_int64(int64_t v) {

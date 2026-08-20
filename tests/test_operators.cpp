@@ -1001,6 +1001,26 @@ TEST_F(SetOpOpTest, UnionAll) {
     setop.close();
 }
 
+TEST_F(SetOpOpTest, UnionAllNary) {
+    std::vector<Row> a = {build_row(arena, {value_int(1)})};
+    std::vector<Row> b = {build_row(arena, {value_int(2)})};
+    std::vector<Row> c = {build_row(arena, {value_int(3)})};
+    InMemoryDataSource ds_a(table, a);
+    InMemoryDataSource ds_b(table, b);
+    InMemoryDataSource ds_c(table, c);
+    ScanOperator scan_a(&ds_a);
+    ScanOperator scan_b(&ds_b);
+    ScanOperator scan_c(&ds_c);
+
+    SetOpOperator setop({&scan_a, &scan_b, &scan_c});
+    setop.open();
+    Row out{};
+    int count = 0;
+    while (setop.next(out)) count++;
+    EXPECT_EQ(count, 3);
+    setop.close();
+}
+
 // Regression test for silent column-count mismatch in set operations.
 // Before the validation fix, SetOpOperator::row_key would iterate each row's
 // own column_count, producing truncated/misaligned keys and silently-wrong
