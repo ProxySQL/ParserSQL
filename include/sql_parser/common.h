@@ -66,6 +66,11 @@ static constexpr uint16_t FLAG_SET_OP_ALL = 0x01;
 // which matters for SHOW search_path / SHOW <var> canonical re-emission.
 static constexpr uint16_t FLAG_IDENT_DELIMITED = 0x01;
 
+// -- Flags for a NODE_TRANSACTION_STMT mode child --
+// Set when the mode is an isolation level, so the emitter re-inserts the
+// ISOLATION LEVEL keywords the parser consumed.
+static constexpr uint16_t FLAG_TXN_MODE_ISOLATION = 0x01;
+
 // -- Statement type (always set, even for PARTIAL/ERROR) --
 
 enum class StmtType : uint8_t {
@@ -237,6 +242,9 @@ enum class NodeType : uint16_t {
     NODE_USER_VARIABLE,
     NODE_LITERAL_HEX,
     NODE_LITERAL_BIT,
+
+    // TRANSACTION
+    NODE_TRANSACTION_STMT,
 };
 
 } // namespace sql_parser

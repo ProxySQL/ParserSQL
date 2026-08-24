@@ -62,6 +62,7 @@ private:
     ParseResult parse_call();
     ParseResult parse_do();
     ParseResult parse_load_data();
+    ParseResult parse_transaction(const Token& first);
 
     // Tier 2 extractors
     ParseResult extract_insert(const Token& first);
@@ -88,6 +89,12 @@ private:
 
     // Scan forward to semicolon or EOF, set result.remaining
     void scan_to_end(ParseResult& result);
+
+    // Parse the transaction modes after BEGIN / START TRANSACTION, set result.ast.
+    // 'introducer' is the canonical spelling of the keywords that opened the
+    // statement, an unrecognized mode ends the loop and is left to scan_to_end().
+    void parse_transaction_modes(ParseResult& result, StringRef introducer,
+                                bool allow_modes);
 };
 
 } // namespace sql_parser

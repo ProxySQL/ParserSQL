@@ -64,7 +64,7 @@ ParseResult Parser<D>::classify_and_dispatch() {
         case TokenType::TK_DELETE:   return parse_delete();
         case TokenType::TK_REPLACE:  return parse_insert(true);
         case TokenType::TK_BEGIN:
-        case TokenType::TK_START:
+        case TokenType::TK_START:    return parse_transaction(first);
         case TokenType::TK_COMMIT:
         case TokenType::TK_ROLLBACK:
         case TokenType::TK_SAVEPOINT:return extract_transaction(first);
@@ -910,6 +910,40 @@ ParseResult Parser<D>::parse_load_data() {
     return r;
 }
 
+// ---- TRANSACTION ----
+
+template <Dialect D>
+ParseResult Parser<D>::parse_transaction(const Token& first) {
+    ParseResult r;
+    bool is_begin = (first.type == TokenType::TK_BEGIN);
+    r.stmt_type = is_begin ? StmtType::BEGIN : StmtType::START_TRANSACTION;
+
+    StringRef introducer = is_begin ? StringRef{"BEGIN", 5}
+                                    : StringRef{"START TRANSACTION", 17};
+    Token next = tokenizer_.peek();
+    if (next.type == TokenType::TK_TRANSACTION) {
+        if (!is_begin) {
+            tokenizer_.skip();
+        } else if constexpr (D == Dialect::PostgreSQL) {
+            // MySQL's BEGIN takes WORK but not TRANSACTION.
+            tokenizer_.skip();
+            introducer = StringRef{"BEGIN TRANSACTION", 17};
+        }
+    } else if (is_begin && next.type == TokenType::TK_IDENTIFIER &&
+               next.text.equals_ci("WORK", 4)) {
+        // WORK is a noise word after BEGIN in both dialects; no form of its own.
+        tokenizer_.skip();
+    }
+
+    // MySQL carries modes on START TRANSACTION only; its BEGIN takes none.
+    bool allow_modes = (D == Dialect::PostgreSQL) || !is_begin;
+
+    r.status = ParseResult::OK;
+    parse_transaction_modes(r, introducer, allow_modes);
+    scan_to_end(r);
+    return r;
+}
+
 // ---- Helpers ----
 
 template <Dialect D>
@@ -970,6 +1004,122 @@ void Parser<D>::scan_to_end(ParseResult& result) {
         result.remaining = StringRef{remaining_start,
             static_cast<uint32_t>(tokenizer_.input_end() - remaining_start)};
     }
+}
+
+template <Dialect D>
+void Parser<D>::parse_transaction_modes(ParseResult& result, StringRef introducer,
+                                        bool allow_modes) {
+    AstNode* root = make_node(arena_, NodeType::NODE_TRANSACTION_STMT, introducer);
+    if (!root) { result.status = ParseResult::ERROR; return; }
+
+    while (allow_modes) {
+        Token t = tokenizer_.peek();
+
+        if (t.type == TokenType::TK_ISOLATION) {
+            // MySQL sets the isolation level with SET TRANSACTION, not here.
+            if constexpr (D == Dialect::MySQL) break;
+            tokenizer_.skip();
+            if (tokenizer_.peek().type == TokenType::TK_LEVEL) tokenizer_.skip();
+
+            Token level = tokenizer_.next_token();
+            if (level.type == TokenType::TK_EOF) {
+                result.status = ParseResult::PARTIAL;
+                break;
+            }
+            StringRef value = level.text;
+            if (level.type == TokenType::TK_SERIALIZABLE) {
+                value = StringRef{"SERIALIZABLE", 12};
+            } else if (level.type == TokenType::TK_READ ||
+                       level.type == TokenType::TK_REPEATABLE) {
+                // READ COMMITTED / READ UNCOMMITTED / REPEATABLE READ
+                Token second = tokenizer_.next_token();
+                if (second.type == TokenType::TK_EOF) {
+                    result.status = ParseResult::PARTIAL;
+                    break;
+                }
+                if (second.type == TokenType::TK_COMMITTED) {
+                    value = StringRef{"READ COMMITTED", 14};
+                } else if (second.type == TokenType::TK_UNCOMMITTED) {
+                    value = StringRef{"READ UNCOMMITTED", 16};
+                } else if (second.type == TokenType::TK_READ) {
+                    value = StringRef{"REPEATABLE READ", 15};
+                } else {
+                    value = StringRef{level.text.ptr,
+                        static_cast<uint32_t>((second.text.ptr + second.text.len) - level.text.ptr)};
+                }
+            }
+            AstNode* mode = make_node(arena_, NodeType::NODE_IDENTIFIER, value);
+            if (mode) mode->flags = FLAG_TXN_MODE_ISOLATION;
+            root->add_child(mode);
+        } else if (t.type == TokenType::TK_READ) {
+            tokenizer_.skip();
+            Token rw = tokenizer_.next_token(); // ONLY or WRITE
+            if (rw.type == TokenType::TK_EOF) {
+                result.status = ParseResult::PARTIAL;
+                break;
+            }
+            StringRef value;
+            if (rw.type == TokenType::TK_ONLY) {
+                value = StringRef{"READ ONLY", 9};
+            } else if (rw.type == TokenType::TK_WRITE) {
+                value = StringRef{"READ WRITE", 10};
+            } else {
+                value = StringRef{t.text.ptr,
+                    static_cast<uint32_t>((rw.text.ptr + rw.text.len) - t.text.ptr)};
+            }
+            root->add_child(make_node(arena_, NodeType::NODE_IDENTIFIER, value));
+        } else if (t.type == TokenType::TK_NOT ||
+                   (t.type == TokenType::TK_IDENTIFIER &&
+                    t.text.equals_ci("DEFERRABLE", 10))) {
+            // PostgreSQL: [ NOT ] DEFERRABLE. Parsed so it cannot hide a later mode.
+            if constexpr (D == Dialect::PostgreSQL) {
+                bool is_not = (t.type == TokenType::TK_NOT);
+                tokenizer_.skip();
+                if (is_not) {
+                    Token d = tokenizer_.next_token();
+                    if (d.type != TokenType::TK_IDENTIFIER ||
+                        !d.text.equals_ci("DEFERRABLE", 10)) {
+                        result.status = ParseResult::PARTIAL;
+                        break;
+                    }
+                }
+                root->add_child(make_node(arena_, NodeType::NODE_IDENTIFIER,
+                    is_not ? StringRef{"NOT DEFERRABLE", 14}
+                           : StringRef{"DEFERRABLE", 10}));
+            } else {
+                break;
+            }
+        } else if (t.type == TokenType::TK_WITH) {
+            // MySQL: WITH CONSISTENT SNAPSHOT, same reason.
+            if constexpr (D == Dialect::MySQL) {
+                tokenizer_.skip();
+                Token c = tokenizer_.next_token();
+                Token sn = tokenizer_.next_token();
+                if (c.type != TokenType::TK_IDENTIFIER ||
+                    !c.text.equals_ci("CONSISTENT", 10) ||
+                    sn.type != TokenType::TK_IDENTIFIER ||
+                    !sn.text.equals_ci("SNAPSHOT", 8)) {
+                    result.status = ParseResult::PARTIAL;
+                    break;
+                }
+                root->add_child(make_node(arena_, NodeType::NODE_IDENTIFIER,
+                    StringRef{"WITH CONSISTENT SNAPSHOT", 24}));
+            } else {
+                break;
+            }
+        } else {
+            break;
+        }
+
+        // PostgreSQL allows the commas to be omitted; MySQL requires them.
+        if (tokenizer_.peek().type == TokenType::TK_COMMA) {
+            tokenizer_.skip();
+        } else if constexpr (D == Dialect::MySQL) {
+            break;
+        }
+    }
+
+    result.ast = root;
 }
 
 // ---- Tier 2 Extractors ----
@@ -1060,15 +1210,6 @@ ParseResult Parser<D>::extract_transaction(const Token& first) {
     r.status = ParseResult::OK;
 
     switch (first.type) {
-        case TokenType::TK_BEGIN:
-            r.stmt_type = StmtType::BEGIN;
-            break;
-        case TokenType::TK_START:
-            r.stmt_type = StmtType::START_TRANSACTION;
-            // consume TRANSACTION if present
-            if (tokenizer_.peek().type == TokenType::TK_TRANSACTION)
-                tokenizer_.skip();
-            break;
         case TokenType::TK_COMMIT:
             r.stmt_type = StmtType::COMMIT;
             break;

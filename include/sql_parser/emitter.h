@@ -100,6 +100,9 @@ private:
             case NodeType::NODE_LOAD_DATA_STMT:       emit_load_data_stmt(node); break;
             case NodeType::NODE_LOAD_DATA_OPTIONS:    /* emitted inline */ break;
 
+            // ---- TRANSACTION ----
+            case NodeType::NODE_TRANSACTION_STMT:     emit_transaction_stmt(node); break;
+
             // ---- UPDATE statement ----
             case NodeType::NODE_UPDATE_STMT:     emit_update_stmt(node); break;
             case NodeType::NODE_UPDATE_SET_CLAUSE: emit_update_set_clause(node); break;
@@ -1044,6 +1047,24 @@ private:
             }
         }
         if (has_cols) sb_.append_char(')');
+    }
+
+    // ---- TRANSACTION ----
+
+    void emit_transaction_stmt(const AstNode* node) {
+        emit_value(node);  // introducing keywords (BEGIN, BEGIN TRANSACTION, START TRANSACTION)
+
+        if (node->first_child) sb_.append_char(' ');
+        bool first = true;
+        for (const AstNode* child = node->first_child; child; child = child->next_sibling) {
+            if (!first) sb_.append(", ");
+            first = false;
+            // The parser strips ISOLATION LEVEL and flags the child; restore it
+            if (child->flags & FLAG_TXN_MODE_ISOLATION) {
+                sb_.append("ISOLATION LEVEL ");
+            }
+            emit_node(child);
+        }
     }
 
     // ---- Compound query ----
