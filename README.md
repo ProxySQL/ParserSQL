@@ -292,7 +292,7 @@ auto report = recovery.recover();
           │          ▼
           │      ResultSet
           │
-          └─── Tier 2 (lightweight): DDL, transactions, SHOW, GRANT, USE ...
+          └─── Tier 2 (lightweight): DDL, COMMIT/ROLLBACK, SHOW, GRANT, USE ...
 ```
 
 ### Execution layer
@@ -330,7 +330,7 @@ auto report = recovery.recover();
 
 ### Parser
 
-- **Tier 1 deep parse:** SELECT, INSERT, UPDATE, DELETE, SET, REPLACE, EXPLAIN, CALL, DO, LOAD DATA
+- **Tier 1 deep parse:** SELECT, INSERT, UPDATE, DELETE, SET, REPLACE, EXPLAIN, CALL, DO, LOAD DATA, BEGIN, START TRANSACTION
 - **Compound queries:** UNION / INTERSECT / EXCEPT with SQL-standard precedence and parenthesized nesting
 - **CTEs:** `WITH ... [RECURSIVE] AS (...)` — non-recursive materialized, recursive planned
 - **Window functions:** ROW_NUMBER, RANK, DENSE_RANK, SUM/COUNT/AVG/MIN/MAX OVER (PARTITION BY ... ORDER BY ...)
@@ -341,7 +341,7 @@ auto report = recovery.recover();
 - **Query reconstruction:** Parse → modify AST → emit valid SQL (round-trip)
 - **Digest:** Normalize for fingerprinting (literals → `?`, IN-list collapse, keyword upper-case) + 64-bit FNV-1a hash
 - **Prepared-statement cache:** LRU keyed by SQL text; one parser arena per cached plan
-- **Tier 2 classification** for all other statements (DDL, transactions, SHOW, GRANT, ...)
+- **Tier 2 classification** for all other statements (DDL, COMMIT/ROLLBACK/SAVEPOINT, SHOW, GRANT, ...)
 
 ### Query engine
 
