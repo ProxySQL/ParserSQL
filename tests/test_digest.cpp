@@ -278,11 +278,30 @@ class PgSQLDigestTest : public ::testing::Test {
 protected:
     Parser<Dialect::PostgreSQL> parser;
 
+    // AST-based digest (parses SQL, invalidates previous arena allocations)
+    StableDigest digest_ast(const char* sql) {
+        auto r = parser.parse(sql, strlen(sql));
+        Digest<Dialect::PostgreSQL> digest(parser.arena());
+        DigestResult dr;
+        if (r.ast) {
+            dr = digest.compute(r.ast);
+        } else {
+            dr = digest.compute(sql, strlen(sql));
+        }
+        return StableDigest{std::string(dr.normalized.ptr, dr.normalized.len), dr.hash};
+    }
+
+    // Token-level digest (uses arena but does NOT call parse, so arena is stable
+    // within a single call but may be invalidated by subsequent parse calls)
     StableDigest digest_token(const char* sql) {
         parser.reset();
         Digest<Dialect::PostgreSQL> digest(parser.arena());
         auto dr = digest.compute(sql, strlen(sql));
         return StableDigest{std::string(dr.normalized.ptr, dr.normalized.len), dr.hash};
+    }
+
+    std::string normalized(const char* sql) {
+        return digest_ast(sql).normalized;
     }
 
     std::string normalized_token(const char* sql) {
@@ -308,6 +327,20 @@ TEST_F(PgSQLDigestTest, InListCollapsed) {
 TEST_F(PgSQLDigestTest, ReturningDigest) {
     EXPECT_EQ(normalized_token("INSERT INTO t (a) VALUES (1) RETURNING *"),
               "INSERT INTO t (a) VALUES (?) RETURNING *");
+}
+
+// ========== Transaction modes ==========
+
+TEST_F(PgSQLDigestTest, TransactionCharacteristicsUppercased) {
+    EXPECT_EQ(normalized("begin read only"), "BEGIN READ ONLY");
+    EXPECT_EQ(normalized("begin isolation level serializable"),
+              "BEGIN ISOLATION LEVEL SERIALIZABLE");
+}
+
+TEST_F(PgSQLDigestTest, TransactionCasingDoesNotChangeHash) {
+    auto d1 = digest_ast("BEGIN READ ONLY");
+    auto d2 = digest_ast("begin read only");
+    EXPECT_EQ(d1.hash, d2.hash);
 }
 
 // ========== Token-level digest for various Tier 2 statements ==========
