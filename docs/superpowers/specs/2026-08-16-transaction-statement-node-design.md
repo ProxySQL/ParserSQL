@@ -65,14 +65,6 @@ function because they shared a *lack* of parsing.
 NODE_TRANSACTION_STMT,
 ```
 
-Flags for `NODE_TRANSACTION_STMT`:
-
-```cpp
-static constexpr uint16_t FLAG_TXN_BEGIN = 0;
-static constexpr uint16_t FLAG_TXN_BEGIN_TRANSACTION = 1;   // PostgreSQL only
-static constexpr uint16_t FLAG_TXN_START_TRANSACTION = 2;
-```
-
 Flags for a `NODE_TRANSACTION_STMT` mode child:
 
 ```cpp
@@ -138,31 +130,31 @@ A construct the dialect does not define terminates the loop and falls to `scan_t
 
 ```
 BEGIN READ ONLY                                                   (PostgreSQL)
-└── NODE_TRANSACTION_STMT            flags = FLAG_TXN_BEGIN
+└── NODE_TRANSACTION_STMT "BEGIN"
     └── NODE_IDENTIFIER "READ ONLY"
 
 BEGIN ISOLATION LEVEL READ COMMITTED, READ ONLY                   (PostgreSQL)
-└── NODE_TRANSACTION_STMT            flags = FLAG_TXN_BEGIN
+└── NODE_TRANSACTION_STMT "BEGIN"
     ├── NODE_IDENTIFIER "READ COMMITTED"   flags = FLAG_TXN_MODE_ISOLATION
     └── NODE_IDENTIFIER "READ ONLY"
 
 BEGIN ISOLATION LEVEL SERIALIZABLE, READ ONLY, DEFERRABLE         (PostgreSQL)
-└── NODE_TRANSACTION_STMT            flags = FLAG_TXN_BEGIN
+└── NODE_TRANSACTION_STMT "BEGIN"
     ├── NODE_IDENTIFIER "SERIALIZABLE"     flags = FLAG_TXN_MODE_ISOLATION
     ├── NODE_IDENTIFIER "READ ONLY"
     └── NODE_IDENTIFIER "DEFERRABLE"
 
 START TRANSACTION WITH CONSISTENT SNAPSHOT, READ ONLY             (MySQL)
-└── NODE_TRANSACTION_STMT            flags = FLAG_TXN_START_TRANSACTION
+└── NODE_TRANSACTION_STMT "START TRANSACTION"
     ├── NODE_IDENTIFIER "WITH CONSISTENT SNAPSHOT"
     └── NODE_IDENTIFIER "READ ONLY"
 
 START TRANSACTION READ ONLY                                       (both)
-└── NODE_TRANSACTION_STMT            flags = FLAG_TXN_START_TRANSACTION
+└── NODE_TRANSACTION_STMT "START TRANSACTION"
     └── NODE_IDENTIFIER "READ ONLY"
 
 START TRANSACTION                                                 (both)
-└── NODE_TRANSACTION_STMT            flags = FLAG_TXN_START_TRANSACTION
+└── NODE_TRANSACTION_STMT "START TRANSACTION"
 ```
 
 Mode values are stored under their **canonical spelling**, not as a span of the input, so a consumer can compare a child against `"READ ONLY"` without first normalizing case or internal whitespace. `select_parser.h` already does this for `NOWAIT` and `SKIP LOCKED`. Spanning the source instead would make `READ   ONLY` a different string from `READ ONLY`, which every consumer would then have to work around.
@@ -171,13 +163,13 @@ Mode values are stored under their **canonical spelling**, not as a span of the 
 
 ### Recording the introducing keywords
 
-`stmt_type` distinguishes `BEGIN` from `START TRANSACTION`, but not `BEGIN` from `BEGIN TRANSACTION`. The emitter needs that to round-trip, so it is recorded in the node flags rather than the node value — keywords are then emitted canonically like every other keyword in the emitter, instead of copying the input's casing. This matters for digests: `begin read only` and `BEGIN READ ONLY` must normalize to the same digest text, as they did when the statement had no AST and fell through to the token-level digest path, which uppercases keyword tokens.
+`stmt_type` distinguishes `BEGIN` from `START TRANSACTION`, but not `BEGIN` from `BEGIN TRANSACTION`. The emitter needs that to round-trip, so the introducing keywords are stored as the node's **value**, under their canonical spelling — following `NODE_SET_OPERATION`, which likewise holds its mutually exclusive operator (`UNION` / `INTERSECT` / `EXCEPT`) in the value and reserves `flags` for the independent `ALL` modifier. A canonical literal rather than a source span keeps casing out of the digest: `begin read only` and `BEGIN READ ONLY` must normalize to the same digest text, as they did when the statement had no AST and fell through to the token-level digest path, which uppercases keyword tokens.
 
 ---
 
 ## Emitter Extensions
 
-One new method, `emit_transaction_stmt()`, plus its dispatch case. It writes the introducing keywords from `flags`, then each mode. A single mode is emitted without a comma so the common forms round-trip exactly; multiple modes are comma-separated, which PostgreSQL accepts and MySQL requires. No case folding happens here as the parser already stored each mode canonically.
+One new method, `emit_transaction_stmt()`, plus its dispatch case. It writes the node's value — the introducing keywords — then each mode. A single mode is emitted without a comma so the common forms round-trip exactly; multiple modes are comma-separated, which PostgreSQL accepts and MySQL requires. No case folding happens here as the parser already stored each mode canonically.
 
 | input | emitted | dialect |
 |---|---|---|
@@ -201,9 +193,9 @@ An input that starts a mode without completing it — `BEGIN READ`, `BEGIN ISOLA
 
 ## Implementation
 
-1. `NODE_TRANSACTION_STMT` and the `FLAG_TXN_*` constants in `common.h`.
+1. `NODE_TRANSACTION_STMT` and `FLAG_TXN_MODE_ISOLATION` in `common.h`.
 2. `parse_transaction()` in `parser.cpp`, declared in the Tier-1 block of `parser.h`; `TK_BEGIN` / `TK_START` routed to it from `classify_and_dispatch()` and removed from `extract_transaction()`.
-3. `parse_transaction_modes(ParseResult&, uint16_t)` as the mode loop, following the Tier-1 conventions: `ERROR` if the node cannot be allocated, `PARTIAL` on an incomplete mode. Each mode is stored under its canonical spelling, as `select_parser.h` already does for `NOWAIT` and `SKIP LOCKED`, so a consumer never has to normalize before comparing.
+3. `parse_transaction_modes(ParseResult&, StringRef)` as the mode loop, following the Tier-1 conventions: `ERROR` if the node cannot be allocated, `PARTIAL` on an incomplete mode. Each mode is stored under its canonical spelling, as `select_parser.h` already does for `NOWAIT` and `SKIP LOCKED`, so a consumer never has to normalize before comparing.
 4. `emit_transaction_stmt()` and its dispatch case in `emitter.h`.
 5. Tests in `tests/test_misc_stmts.cpp`, beside the other Tier-1 statements that live in `parser.cpp`, plus digest coverage in `tests/test_digest.cpp`.
 
