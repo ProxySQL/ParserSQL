@@ -132,7 +132,7 @@ public:
             exec_arena_.reset();
             auto& entry = *cache_it->second;
             PlanNode* plan = maybe_distribute(entry.plan, exec_arena_);
-            if (!plan) return {};
+            if (!plan) return ResultSet::fail(last_query_error_.c_str());
             PlanExecutor<D> executor(functions_, catalog_, exec_arena_);
             wire_executor(executor);
             return executor.execute(plan);
@@ -169,7 +169,7 @@ public:
         if (shard_map_ && remote_executor_) {
             exec_arena_.reset();
             PlanNode* dist = maybe_distribute(plan, exec_arena_);
-            if (!dist) return {};
+            if (!dist) return ResultSet::fail(last_query_error_.c_str());
             PlanExecutor<D> executor(functions_, catalog_, exec_arena_);
             wire_executor(executor);
             rs = executor.execute(dist);
@@ -275,7 +275,11 @@ public:
                         dist_plan->remote_scan.backend_name, sql_ref);
                 }
             } else if (dist_plan && dist_plan->type == PlanNodeType::SET_OP) {
-                // Scatter DML to multiple shards
+                if (plan_is_row_move(dist_plan) && !txn_mgr_.is_distributed()) {
+                    result.success = false;
+                    result.error_message =
+                        "cross-shard row move requires a distributed transaction";
+                } else {
                 result.success = true;
                 result.affected_rows = 0;
                 for_each_remote_scan(dist_plan, [&](const PlanNode* rs) {
@@ -295,6 +299,7 @@ public:
                     }
                     result.affected_rows += shard_result.affected_rows;
                 });
+                }
             } else {
                 // Not distributed (table not in shard map) -- local execution
                 PlanExecutor<D> executor(functions_, catalog_, parser_.arena());
@@ -376,14 +381,19 @@ private:
     CacheList plan_cache_order_;
     std::unordered_map<std::string, CacheIter> plan_cache_;
     size_t plan_cache_max_size_ = 1024;
+    std::string last_query_error_;
 
     PlanNode* maybe_distribute(PlanNode* plan, sql_parser::Arena& arena) {
+        last_query_error_.clear();
         if (!plan || !shard_map_ || !remote_executor_) return plan;
         routing_exec_.bind(remote_executor_, &txn_mgr_);
         DistributedPlanner<D> dplanner(*shard_map_, catalog_, arena,
                                        &routing_exec_, &functions_);
         PlanNode* dist = dplanner.distribute(plan);
-        if (dplanner.last_error()) return nullptr;
+        if (dplanner.last_error()) {
+            last_query_error_ = dplanner.last_error();
+            return nullptr;
+        }
         return dist;
     }
 
@@ -406,6 +416,18 @@ private:
         // The map stores the iterator and a copy of the key (so the lookup
         // string and the entry's owned key both remain valid through moves).
         plan_cache_[plan_cache_order_.front().key] = plan_cache_order_.begin();
+    }
+
+    static bool plan_is_row_move(const PlanNode* node) {
+        bool has_del = false, has_ins = false;
+        for_each_remote_scan(node, [&](const PlanNode* rs) {
+            const char* s = rs->remote_scan.remote_sql;
+            uint32_t n = rs->remote_scan.remote_sql_len;
+            if (!s || n < 6) return;
+            if (n >= 6 && (s[0] == 'D' || s[0] == 'd')) has_del = true;
+            if (n >= 6 && (s[0] == 'I' || s[0] == 'i')) has_ins = true;
+        });
+        return has_del && has_ins;
     }
 
     static void for_each_remote_scan(const PlanNode* node,

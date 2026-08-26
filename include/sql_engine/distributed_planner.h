@@ -25,6 +25,7 @@
 #include <vector>
 #include <unordered_map>
 #include <functional>
+#include <string>
 #include <utility>
 
 namespace sql_engine {
@@ -78,9 +79,16 @@ private:
     RemoteExecutor* remote_executor_;
     FunctionRegistry<D>* functions_;
     const char* error_;
+    std::string error_storage_;
 
     PlanNode* fail_dml(const char* message) {
         error_ = message;
+        return nullptr;
+    }
+
+    PlanNode* fail_dml_owned(std::string message) {
+        error_storage_ = std::move(message);
+        error_ = error_storage_.c_str();
         return nullptr;
     }
 
@@ -1555,6 +1563,7 @@ private:
         const sql_parser::AstNode* where_expr = up.where_expr;
         if (where_expr && has_subquery(where_expr) && remote_executor_) {
             where_expr = rewrite_where_subquery(where_expr, table);
+            if (error_) return nullptr;
         }
 
         if (!shards_.is_sharded(table->table_name)) {
@@ -1599,6 +1608,7 @@ private:
         const sql_parser::AstNode* where_expr = dp.where_expr;
         if (where_expr && has_subquery(where_expr) && remote_executor_) {
             where_expr = rewrite_where_subquery(where_expr, table);
+            if (error_) return nullptr;
         }
 
         if (!shards_.is_sharded(table->table_name)) {
@@ -1940,8 +1950,16 @@ private:
             }
             sql_parser::StringRef sql = qb_.build_select(
                 table, where_expr, nullptr, 0, nullptr, 0,
-                nullptr, nullptr, 0, -1, false);
+                nullptr, nullptr, 0, -1, false, true);
             ResultSet rs = remote_executor_->execute(shard.backend_name.c_str(), sql);
+            if (!rs.ok) {
+                std::string msg = rs.error_message.empty()
+                    ? "shard-key UPDATE SELECT failed" : rs.error_message;
+                msg += " [";
+                msg.append(sql.ptr, sql.len);
+                msg += "]";
+                return fail_dml_owned(std::move(msg));
+            }
             for (const auto& row : rs.rows) {
                 Move m;
                 m.src = src;
@@ -2200,6 +2218,11 @@ private:
         // Execute: if it's a RemoteScan, execute via remote executor
         // Otherwise, need to execute locally
         ResultSet rs = execute_distributed_plan(dist_plan);
+        if (!rs.ok) {
+            error_storage_ = rs.error_message.empty() ? "subquery failed" : rs.error_message;
+            error_ = error_storage_.c_str();
+            return result;
+        }
 
         for (const auto& row : rs.rows) {
             if (row.column_count > 0) {
@@ -2211,7 +2234,8 @@ private:
 
     // Execute a distributed plan tree (recursively handles SET_OP / REMOTE_SCAN).
     ResultSet execute_distributed_plan(PlanNode* node) {
-        if (!node || !remote_executor_) return {};
+        if (!remote_executor_) return ResultSet::fail("no remote executor");
+        if (!node) return ResultSet::fail("empty distributed plan");
 
         if (node->type == PlanNodeType::REMOTE_SCAN) {
             sql_parser::StringRef sql{node->remote_scan.remote_sql,
@@ -2220,9 +2244,10 @@ private:
         }
 
         if (node->type == PlanNodeType::SET_OP) {
-            // UNION ALL: concatenate results
             ResultSet left = execute_distributed_plan(node->left);
+            if (!left.ok) return left;
             ResultSet right = execute_distributed_plan(node->right);
+            if (!right.ok) return right;
             for (auto& row : right.rows) {
                 left.rows.push_back(row);
             }
@@ -2428,11 +2453,15 @@ private:
 
         PlanNode* dist_select = distribute_node(select_plan);
         ResultSet rs = execute_distributed_plan(dist_select);
+        if (!rs.ok) {
+            return fail_dml_owned(rs.error_message.empty()
+                ? "INSERT ... SELECT failed" : rs.error_message);
+        }
 
         if (rs.rows.empty()) {
-            // No rows to insert -- return a no-op
-            // Just return the original plan (which will do nothing since select_source is null)
-            return plan;
+            const auto& sl = shards_.get_shards(table->table_name);
+            if (sl.empty()) return fail_dml("table not in shard map");
+            return make_noop_update(table, sl[0].backend_name.c_str());
         }
 
         // Determine target shards for each row

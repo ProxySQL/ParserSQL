@@ -30,7 +30,8 @@ public:
             uint8_t* order_dirs,
             uint16_t order_count,
             int64_t limit,                                 // -1 = no limit
-            bool distinct)
+            bool distinct,
+            bool for_update = false)
     {
         sql_parser::StringBuilder sb(arena_, 512);
 
@@ -90,6 +91,8 @@ public:
             int n = snprintf(buf, sizeof(buf), "%lld", (long long)limit);
             sb.append(buf, n);
         }
+
+        if (for_update) sb.append(" FOR UPDATE");
 
         return sb.finish();
     }

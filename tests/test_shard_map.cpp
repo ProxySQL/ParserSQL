@@ -225,7 +225,8 @@ TEST(ShardMapRangeTest, StringKeyDoesNotRouteSpuriously) {
     ShardMap map;
     map.add_table(cfg);
 
-    EXPECT_EQ(map.shard_index_for_string(sref("users"), "anything", 8), 0u);
+    EXPECT_EQ(map.shard_index_for_string(sref("users"), "anything", 8),
+              static_cast<size_t>(-1));
 }
 
 // ----------------------------------------------------------------------

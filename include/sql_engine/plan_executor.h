@@ -309,9 +309,8 @@ public:
             rs.column_count = rs.rows[0].column_count;
         }
 
-        // Build column names from plan
         build_column_names(plan, rs);
-
+        rs.ok = true;
         return rs;
     }
 

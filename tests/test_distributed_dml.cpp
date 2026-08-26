@@ -97,12 +97,16 @@ public:
 
     ResultSet execute(const char* backend_name, StringRef sql) override {
         auto it = backends_.find(backend_name);
-        if (it == backends_.end()) return {};
+        if (it == backends_.end()) return ResultSet::fail("unknown backend");
 
         DmlBackendData* bd = it->second.get();
         bd->executed_sqls.emplace_back(sql.ptr, sql.len);
 
         std::string sql_str(sql.ptr, sql.len);
+        const char* fu = " FOR UPDATE";
+        if (sql_str.size() > 11 &&
+            sql_str.compare(sql_str.size() - 11, 11, fu) == 0)
+            sql_str.resize(sql_str.size() - 11);
 
         // Detect DML vs SELECT
         if (is_dml(sql_str)) {
@@ -124,7 +128,9 @@ public:
         for (auto& [tname, src] : bd->mutable_sources) {
             executor.add_mutable_data_source(tname.c_str(), src);
         }
-        return executor.execute(plan);
+        ResultSet out = executor.execute(plan);
+        out.ok = true;
+        return out;
     }
 
     DmlResult execute_dml(const char* backend_name, StringRef sql) override {
@@ -1076,15 +1082,13 @@ TEST_F(DistributedDmlTest, InsertSelectEmptySourceIsNoop) {
 
 TEST_F(DistributedDmlTest, UnknownTableSelectIsEmpty) {
     catalog.add_table("", "ghost", {{"id", SqlType::make_int(), false}});
-    Parser<Dialect::MySQL> parser;
-    auto pr = parser.parse("SELECT * FROM ghost", 19);
-    ASSERT_EQ(pr.status, ParseResult::OK);
-    PlanBuilder<Dialect::MySQL> builder(catalog, parser.arena());
-    PlanNode* plan = builder.build(pr.ast);
-    DistributedPlanner<Dialect::MySQL> dist(shard_map, catalog, parser.arena(),
-                                             &mock_executor, &functions);
-    EXPECT_EQ(dist.distribute(plan), nullptr);
-    ASSERT_NE(dist.last_error(), nullptr);
+    LocalTransactionManager txn(data_arena);
+    Session<Dialect::MySQL> session(catalog, txn);
+    session.set_remote_executor(&mock_executor);
+    session.set_shard_map(&shard_map);
+    auto rs = session.execute_query("SELECT * FROM ghost");
+    EXPECT_FALSE(rs.ok);
+    EXPECT_NE(rs.error_message.find("shard map"), std::string::npos);
 }
 
 TEST_F(DistributedDmlTest, UpdateUnknownTableErrors) {
