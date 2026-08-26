@@ -9,6 +9,7 @@
 #include <vector>
 #include <unordered_map>
 #include <algorithm>
+#include <cstdlib>
 
 namespace sql_engine {
 
@@ -154,9 +155,13 @@ public:
         if (!cfg || cfg->shards.empty()) return false;
         size_t n = cfg->shards.size();
         switch (cfg->strategy) {
-            case RoutingStrategy::HASH:
+            case RoutingStrategy::HASH: {
+                int64_t as_int = 0;
+                if (parse_full_int(val, val_len, as_int))
+                    return try_shard_index_for_int(table_name, as_int, out);
                 out = fnv1a_bytes(reinterpret_cast<const uint8_t*>(val), val_len) % n;
                 return true;
+            }
             case RoutingStrategy::RANGE:
                 return false;
             case RoutingStrategy::LIST:
@@ -241,8 +246,12 @@ public:
         if (!cfg || cfg->shards.empty()) return 0;
         size_t n = cfg->shards.size();
         switch (cfg->strategy) {
-            case RoutingStrategy::HASH:
+            case RoutingStrategy::HASH: {
+                int64_t as_int = 0;
+                if (parse_full_int(val, val_len, as_int))
+                    return shard_index_for_int(table_name, as_int);
                 return fnv1a_bytes(reinterpret_cast<const uint8_t*>(val), val_len) % n;
+            }
             case RoutingStrategy::RANGE:
                 // RANGE is integer-keyed only. Fall back to scatter-friendly
                 // shard 0 rather than producing a misleading single-shard
@@ -355,6 +364,18 @@ private:
 
     static size_t clamp_index(size_t idx, size_t n) {
         return idx < n ? idx : (n == 0 ? 0 : n - 1);
+    }
+
+    static bool parse_full_int(const char* val, uint32_t val_len, int64_t& out) {
+        if (!val || val_len == 0 || val_len > 20) return false;
+        char buf[24];
+        std::memcpy(buf, val, val_len);
+        buf[val_len] = '\0';
+        char* end = nullptr;
+        long long n = std::strtoll(buf, &end, 10);
+        if (!end || end != buf + val_len) return false;
+        out = static_cast<int64_t>(n);
+        return true;
     }
 
     static void split_keys(const std::string& spec, std::vector<std::string>& out) {

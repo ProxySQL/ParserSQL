@@ -730,6 +730,36 @@ TEST_F(DistributedDmlTest, UpdateShardKeyMovesRow) {
               "Carol");
 }
 
+TEST_F(DistributedDmlTest, UpdateQualifiedShardKeyMovesRow) {
+    execute_distributed_dml("INSERT INTO users (id, name, age) VALUES (3, 'Carol', 17)");
+    const char* src = backend_for_id(3);
+    const char* dst = backend_for_id(9);
+    ASSERT_STRNE(src, dst);
+
+    auto result = execute_distributed_dml("UPDATE users SET users.id = 9 WHERE id = 3");
+    EXPECT_TRUE(result.success) << result.error_message;
+    EXPECT_EQ(row_count_on(src, "users"), 0u);
+    EXPECT_EQ(row_count_on(dst, "users"), 1u);
+}
+
+TEST_F(DistributedDmlTest, UpdateShardKeyNoMatchingRowIsNoop) {
+    execute_distributed_dml("INSERT INTO users (id, name, age) VALUES (3, 'Carol', 17)");
+    const char* home = backend_for_id(3);
+    auto result = execute_distributed_dml("UPDATE users SET id = 9 WHERE id = 99");
+    EXPECT_TRUE(result.success) << result.error_message;
+    EXPECT_EQ(row_count_on(home, "users"), 1u);
+    EXPECT_EQ(mock_executor.total_row_count("users"), 1u);
+}
+
+TEST_F(DistributedDmlTest, InsertStringIntHashesLikeInt) {
+    auto ins = execute_distributed_dml(
+        "INSERT INTO users (id, name, age) VALUES ('3', 'Carol', 17)");
+    EXPECT_TRUE(ins.success) << ins.error_message;
+    EXPECT_EQ(row_count_on(backend_for_id(3), "users"), 1u);
+    auto got = execute_distributed_select("SELECT name FROM users WHERE id = 3");
+    ASSERT_EQ(got.row_count(), 1u);
+}
+
 TEST_F(DistributedDmlTest, UpdateShardKeySameShard) {
     int64_t a = 3;
     int64_t b = a;

@@ -1200,6 +1200,51 @@ TEST_F(DistributedPlannerTest, ColocatedJoinPushedToShards) {
     }
 }
 
+TEST_F(DistributedPlannerTest, ColocatedLeftJoinEmitsLeftJoin) {
+    shard_map.add_table(TableShardConfig{
+        "orders", "user_id",
+        {ShardInfo{"shard_1"}, ShardInfo{"shard_2"}, ShardInfo{"shard_3"}}
+    });
+
+    Parser<Dialect::MySQL> parser;
+    const char* sql = "SELECT * FROM users LEFT JOIN orders ON users.id = orders.user_id";
+    auto pr = parser.parse(sql, std::strlen(sql));
+    ASSERT_EQ(pr.status, ParseResult::OK);
+    PlanBuilder<Dialect::MySQL> builder(catalog, parser.arena());
+    PlanNode* plan = builder.build(pr.ast);
+    DistributedPlanner<Dialect::MySQL> dp(shard_map, catalog, parser.arena());
+    PlanNode* dist = dp.distribute(plan);
+    ASSERT_NE(dist, nullptr);
+
+    std::vector<PlanNode*> remotes;
+    find_nodes(dist, PlanNodeType::REMOTE_SCAN, remotes);
+    ASSERT_FALSE(remotes.empty());
+    for (auto* rs : remotes) {
+        std::string remote(rs->remote_scan.remote_sql, rs->remote_scan.remote_sql_len);
+        EXPECT_NE(remote.find("LEFT JOIN"), std::string::npos) << remote;
+    }
+}
+
+TEST_F(DistributedPlannerTest, SemiJoinSkipsLeftJoin) {
+    Parser<Dialect::MySQL> parser;
+    const char* sql = "SELECT * FROM users LEFT JOIN orders ON users.id = orders.user_id";
+    auto pr = parser.parse(sql, std::strlen(sql));
+    ASSERT_EQ(pr.status, ParseResult::OK);
+    PlanBuilder<Dialect::MySQL> builder(catalog, parser.arena());
+    PlanNode* plan = builder.build(pr.ast);
+    DistributedPlanner<Dialect::MySQL> dp(shard_map, catalog, parser.arena(),
+                                          &mock_executor, &functions);
+    PlanNode* dist = dp.distribute(plan);
+    ASSERT_NE(dist, nullptr);
+    std::vector<PlanNode*> remotes;
+    find_nodes(dist, PlanNodeType::REMOTE_SCAN, remotes);
+    for (auto* rs : remotes) {
+        std::string remote(rs->remote_scan.remote_sql, rs->remote_scan.remote_sql_len);
+        if (remote.find("users") != std::string::npos)
+            EXPECT_EQ(remote.find(" IN "), std::string::npos) << remote;
+    }
+}
+
 TEST_F(DistributedPlannerTest, CompositeColocatedJoinPushedToShards) {
     catalog.add_table("", "kv", {
         {"tenant_id", SqlType::make_int(), false},

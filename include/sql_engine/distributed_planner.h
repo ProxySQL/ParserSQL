@@ -159,8 +159,11 @@ private:
                     agg_child = agg_child->left;
                 }
                 if (agg_child && agg_child->type == PlanNodeType::AGGREGATE) {
-                    push_agg_exprs_from_project(node, agg_child);
-                    PlanNode* dist_agg = distribute_aggregate(agg_child);
+                    PlanNode* agg_copy = make_plan_node(arena_, PlanNodeType::AGGREGATE);
+                    agg_copy->aggregate = agg_child->aggregate;
+                    agg_copy->left = agg_child->left;
+                    push_agg_exprs_from_project(node, agg_copy);
+                    PlanNode* dist_agg = distribute_aggregate(agg_copy);
                     if (dist_agg && (dist_agg->type == PlanNodeType::MERGE_AGGREGATE ||
                                      dist_agg->type == PlanNodeType::AGGREGATE)) {
                         PlanNode* top = dist_agg;
@@ -1193,7 +1196,8 @@ private:
         PlanNode* current = nullptr;
         for (const auto& shard : shard_list) {
             sql_parser::StringRef sql = qb_.build_select_join(
-                left_table, right_table, join_node->join.condition, where_expr);
+                left_table, right_table, join_node->join.condition, where_expr,
+                join_node->join.join_type);
             PlanNode* rs = make_remote_scan(shard.backend_name.c_str(), sql, left_table);
             if (!current) {
                 current = rs;
@@ -1310,6 +1314,7 @@ private:
                                  const TableInfo* right_table) {
         if (!join_node || !remote_executor_ || !join_node->join.condition)
             return nullptr;
+        if (join_node->join.join_type != JOIN_INNER) return nullptr;
         if (!left_table || !right_table) return nullptr;
 
         bool ls = shards_.is_sharded(left_table->table_name);
@@ -1659,7 +1664,7 @@ private:
                            sql_parser::StringRef shard_key) const {
         if (!set_columns || !shard_key.ptr) return false;
         for (uint16_t i = 0; i < set_count; ++i) {
-            if (is_column_ref(set_columns[i], shard_key)) return true;
+            if (is_shard_key_ref(set_columns[i], shard_key)) return true;
         }
         return false;
     }
@@ -1844,7 +1849,7 @@ private:
         auto resolve = make_resolver(catalog_, table, src.values);
         for (uint16_t i = 0; i < set_count; ++i) {
             if (!set_cols[i]) continue;
-            const ColumnInfo* col = catalog_.get_column(table, set_cols[i]->value());
+            const ColumnInfo* col = catalog_.get_column(table, set_col_name(set_cols[i]));
             if (!col) continue;
             Value nv = value_null();
             if (functions_) {
@@ -1950,9 +1955,7 @@ private:
         }
 
         if (moves.empty()) {
-            sql_parser::StringRef sql = qb_.build_update(
-                table, up.set_columns, up.set_exprs, up.set_count, where_expr);
-            return make_remote_scan(pruned[0].backend_name.c_str(), sql, table);
+            return make_noop_update(table, pruned[0].backend_name.c_str());
         }
 
         bool any_move = false;
@@ -1997,6 +2000,31 @@ private:
                                  table));
         }
         return current ? current : plan;
+    }
+
+    static sql_parser::StringRef set_col_name(const sql_parser::AstNode* node) {
+        if (!node) return sql_parser::StringRef{nullptr, 0};
+        if (node->type == sql_parser::NodeType::NODE_QUALIFIED_NAME) {
+            const sql_parser::AstNode* c = node->first_child;
+            if (c && c->next_sibling) return c->next_sibling->value();
+        }
+        return node->value();
+    }
+
+    PlanNode* make_noop_update(const TableInfo* table, const char* backend) {
+        sql_parser::StringBuilder sb(arena_, 64);
+        sb.append("UPDATE ");
+        if (table) sb.append(table->table_name.ptr, table->table_name.len);
+        sb.append(" SET ");
+        if (table && table->column_count > 0) {
+            sb.append(table->columns[0].name.ptr, table->columns[0].name.len);
+            sb.append(" = ");
+            sb.append(table->columns[0].name.ptr, table->columns[0].name.len);
+        } else {
+            sb.append("id = id");
+        }
+        sb.append(" WHERE 1 = 0");
+        return make_remote_scan(backend, sb.finish(), table);
     }
 
     bool is_column_ref(const sql_parser::AstNode* node, sql_parser::StringRef col_name) const {
@@ -2175,7 +2203,7 @@ private:
 
         for (const auto& row : rs.rows) {
             if (row.column_count > 0) {
-                result.push_back(row.get(0));
+                result.push_back(copy_value_arena(row.get(0)));
             }
         }
         return result;
@@ -2249,8 +2277,9 @@ private:
                 lit = sql_parser::make_node(arena_, sql_parser::NodeType::NODE_LITERAL_INT,
                                              sql_parser::StringRef{s, static_cast<uint32_t>(n)});
             } else if (v.tag == Value::TAG_STRING && v.str_val.ptr) {
+                Value owned = copy_value_arena(v);
                 lit = sql_parser::make_node(arena_, sql_parser::NodeType::NODE_LITERAL_STRING,
-                                             v.str_val);
+                                             owned.str_val);
             } else if (v.tag == Value::TAG_DOUBLE) {
                 char buf[64];
                 int n = snprintf(buf, sizeof(buf), "%g", v.double_val);
@@ -2267,6 +2296,19 @@ private:
         }
 
         return new_in;
+    }
+
+    sql_parser::AstNode* make_false_pred() {
+        sql_parser::AstNode* eq = sql_parser::make_node(
+            arena_, sql_parser::NodeType::NODE_BINARY_OP,
+            sql_parser::StringRef{"=", 1});
+        eq->add_child(sql_parser::make_node(
+            arena_, sql_parser::NodeType::NODE_LITERAL_INT,
+            sql_parser::StringRef{"0", 1}));
+        eq->add_child(sql_parser::make_node(
+            arena_, sql_parser::NodeType::NODE_LITERAL_INT,
+            sql_parser::StringRef{"1", 1}));
+        return eq;
     }
 
     // Rewrite a WHERE expression by replacing the first IN (subquery) with IN (literals).
@@ -2286,7 +2328,7 @@ private:
                     if (!values.empty()) {
                         return build_in_list_from_values(where_expr, values);
                     }
-                    return where_expr;
+                    return make_false_pred();
                 }
             }
         }

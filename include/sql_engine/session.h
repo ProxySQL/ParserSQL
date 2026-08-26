@@ -256,8 +256,9 @@ public:
 
         // If sharding is configured, distribute DML to remote backends.
         if (shard_map_ && remote_executor_) {
+            routing_exec_.bind(remote_executor_, &txn_mgr_);
             DistributedPlanner<D> dp(*shard_map_, catalog_, parser_.arena(),
-                                      remote_executor_, &functions_);
+                                      &routing_exec_, &functions_);
             PlanNode* dist_plan = dp.distribute_dml(plan);
 
             if (dp.last_error()) {
@@ -278,6 +279,7 @@ public:
                 result.success = true;
                 result.affected_rows = 0;
                 for_each_remote_scan(dist_plan, [&](const PlanNode* rs) {
+                    if (!result.success) return;
                     sql_parser::StringRef s{rs->remote_scan.remote_sql,
                                             rs->remote_scan.remote_sql_len};
                     DmlResult shard_result;
@@ -377,8 +379,9 @@ private:
 
     PlanNode* maybe_distribute(PlanNode* plan, sql_parser::Arena& arena) {
         if (!plan || !shard_map_ || !remote_executor_) return plan;
+        routing_exec_.bind(remote_executor_, &txn_mgr_);
         DistributedPlanner<D> dplanner(*shard_map_, catalog_, arena,
-                                       remote_executor_, &functions_);
+                                       &routing_exec_, &functions_);
         PlanNode* dist = dplanner.distribute(plan);
         if (dplanner.last_error()) return nullptr;
         return dist;

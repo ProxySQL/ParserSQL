@@ -10,6 +10,7 @@
 
 #include <set>
 #include <climits>
+#include <string>
 
 using namespace sql_engine;
 using sql_parser::StringRef;
@@ -44,6 +45,19 @@ TEST(ShardMapHashTest, IsDeterministic) {
         size_t a = map.shard_index_for_int(sref("users"), i);
         size_t b = map.shard_index_for_int(sref("users"), i);
         EXPECT_EQ(a, b) << "for value " << i;
+    }
+}
+
+TEST(ShardMapHashTest, StringIntegerRoutesLikeInt) {
+    ShardMap map;
+    map.add_table(make_two_shards(RoutingStrategy::HASH));
+    for (int i = -20; i < 20; ++i) {
+        std::string s = std::to_string(i);
+        size_t a = map.shard_index_for_int(sref("users"), i);
+        size_t b = 99;
+        ASSERT_TRUE(map.try_shard_index_for_string(
+            sref("users"), s.c_str(), static_cast<uint32_t>(s.size()), b));
+        EXPECT_EQ(a, b) << "for " << i;
     }
 }
 
