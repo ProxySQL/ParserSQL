@@ -1358,6 +1358,86 @@ TEST_F(DistributedPlannerTest, CompositeRangePrunesOnFirstKey) {
     EXPECT_EQ(count_remotes("SELECT * FROM users WHERE id BETWEEN 6 AND 10"), 1u);
 }
 
+TEST_F(DistributedPlannerTest, ColocatedRightJoinEmitsRightJoin) {
+    shard_map.add_table(TableShardConfig{
+        "orders", "user_id",
+        {ShardInfo{"shard_1"}, ShardInfo{"shard_2"}, ShardInfo{"shard_3"}}
+    });
+    Parser<Dialect::MySQL> parser;
+    const char* sql = "SELECT * FROM users RIGHT JOIN orders ON users.id = orders.user_id";
+    auto pr = parser.parse(sql, std::strlen(sql));
+    ASSERT_EQ(pr.status, ParseResult::OK);
+    PlanBuilder<Dialect::MySQL> builder(catalog, parser.arena());
+    PlanNode* plan = builder.build(pr.ast);
+    DistributedPlanner<Dialect::MySQL> dp(shard_map, catalog, parser.arena());
+    PlanNode* dist = dp.distribute(plan);
+    std::vector<PlanNode*> remotes;
+    find_nodes(dist, PlanNodeType::REMOTE_SCAN, remotes);
+    ASSERT_FALSE(remotes.empty());
+    bool saw_right = false;
+    for (auto* rs : remotes) {
+        std::string remote(rs->remote_scan.remote_sql, rs->remote_scan.remote_sql_len);
+        if (remote.find("RIGHT JOIN") != std::string::npos) saw_right = true;
+    }
+    EXPECT_TRUE(saw_right);
+}
+
+TEST_F(DistributedPlannerTest, OrEqualityPrunesUnionOfShards) {
+    TableShardConfig cfg;
+    cfg.table_name = "users";
+    cfg.shard_key = "id";
+    cfg.shards = {{"shard_1"}, {"shard_2"}, {"shard_3"}};
+    cfg.strategy = RoutingStrategy::LIST;
+    cfg.list = {{true, 1, "", 0}, {true, 6, "", 1}, {true, 15, "", 2}};
+    shard_map.add_table(cfg);
+
+    Parser<Dialect::MySQL> parser;
+    auto pr = parser.parse("SELECT * FROM users WHERE id = 1 OR id = 6", 42);
+    PlanBuilder<Dialect::MySQL> builder(catalog, parser.arena());
+    PlanNode* plan = builder.build(pr.ast);
+    DistributedPlanner<Dialect::MySQL> dp(shard_map, catalog, parser.arena());
+    PlanNode* dist = dp.distribute(plan);
+    std::vector<PlanNode*> remotes;
+    find_nodes(dist, PlanNodeType::REMOTE_SCAN, remotes);
+    EXPECT_EQ(remotes.size(), 2u);
+}
+
+TEST_F(DistributedPlannerTest, CompositeHashPartialWhereScatters) {
+    TableShardConfig cfg;
+    cfg.table_name = "users";
+    cfg.shard_key = "id+name";
+    cfg.shards = {{"shard_1"}, {"shard_2"}, {"shard_3"}};
+    shard_map.add_table(cfg);
+
+    Parser<Dialect::MySQL> parser;
+    auto pr = parser.parse("SELECT * FROM users WHERE id = 3", 32);
+    PlanBuilder<Dialect::MySQL> builder(catalog, parser.arena());
+    PlanNode* plan = builder.build(pr.ast);
+    DistributedPlanner<Dialect::MySQL> dp(shard_map, catalog, parser.arena());
+    PlanNode* dist = dp.distribute(plan);
+    std::vector<PlanNode*> remotes;
+    find_nodes(dist, PlanNodeType::REMOTE_SCAN, remotes);
+    EXPECT_EQ(remotes.size(), 3u);
+}
+
+TEST_F(DistributedPlannerTest, CompositeHashBothKeysPrune) {
+    TableShardConfig cfg;
+    cfg.table_name = "users";
+    cfg.shard_key = "id+age";
+    cfg.shards = {{"shard_1"}, {"shard_2"}, {"shard_3"}};
+    shard_map.add_table(cfg);
+
+    Parser<Dialect::MySQL> parser;
+    auto pr = parser.parse("SELECT * FROM users WHERE id = 3 AND age = 17", 45);
+    PlanBuilder<Dialect::MySQL> builder(catalog, parser.arena());
+    PlanNode* plan = builder.build(pr.ast);
+    DistributedPlanner<Dialect::MySQL> dp(shard_map, catalog, parser.arena());
+    PlanNode* dist = dp.distribute(plan);
+    std::vector<PlanNode*> remotes;
+    find_nodes(dist, PlanNodeType::REMOTE_SCAN, remotes);
+    EXPECT_EQ(remotes.size(), 1u);
+}
+
 TEST_F(DistributedPlannerTest, SemiJoinPrunesProbeShards) {
     Parser<Dialect::MySQL> parser;
     const char* sql = "SELECT * FROM users JOIN orders ON users.id = orders.user_id";

@@ -48,6 +48,62 @@ TEST(ShardMapHashTest, IsDeterministic) {
     }
 }
 
+TEST(ShardMapHashTest, LeadingZerosRouteLikeInt) {
+    ShardMap map;
+    map.add_table(make_two_shards(RoutingStrategy::HASH));
+    size_t a = map.shard_index_for_int(sref("users"), 3);
+    size_t b = 99;
+    ASSERT_TRUE(map.try_shard_index_for_string(sref("users"), "03", 2, b));
+    EXPECT_EQ(a, b);
+}
+
+TEST(ShardMapHashTest, NonNumericStringDoesNotCoerce) {
+    TableShardConfig cfg;
+    cfg.table_name = "users";
+    cfg.shard_key = "id";
+    cfg.shards = {ShardInfo{"a"}, ShardInfo{"b"}, ShardInfo{"c"}, ShardInfo{"d"}};
+    ShardMap map;
+    map.add_table(cfg);
+    size_t as_int = map.shard_index_for_int(sref("users"), 3);
+    bool differs = false;
+    const char* samples[] = {"3x", "3.0", " 3", "3 "};
+    for (const char* s : samples) {
+        size_t idx = 99;
+        ASSERT_TRUE(map.try_shard_index_for_string(
+            sref("users"), s, static_cast<uint32_t>(std::strlen(s)), idx));
+        if (idx != as_int) differs = true;
+    }
+    EXPECT_TRUE(differs);
+}
+
+TEST(ShardMapHashTest, EmptyStringIsUnparsed) {
+    ShardMap map;
+    map.add_table(make_two_shards(RoutingStrategy::HASH));
+    size_t idx = 99;
+    EXPECT_TRUE(map.try_shard_index_for_string(sref("users"), "", 0, idx));
+    EXPECT_LT(idx, 2u);
+}
+
+TEST(ShardMapListTest, StringIntegerDoesNotCoerceToIntKey) {
+    TableShardConfig cfg = make_two_shards(RoutingStrategy::LIST);
+    cfg.list = {ShardListEntry{true, 3, "", 1}};
+    ShardMap map;
+    map.add_table(cfg);
+    size_t idx = 99;
+    EXPECT_FALSE(map.try_shard_index_for_string(sref("users"), "3", 1, idx));
+    EXPECT_TRUE(map.try_shard_index_for_int(sref("users"), 3, idx));
+    EXPECT_EQ(idx, 1u);
+}
+
+TEST(ShardMapRangeTest, StringIntegerIsUnroutable) {
+    TableShardConfig cfg = make_two_shards(RoutingStrategy::RANGE);
+    cfg.ranges = {ShardRange{5, 0}, ShardRange{100, 1}};
+    ShardMap map;
+    map.add_table(cfg);
+    size_t idx = 99;
+    EXPECT_FALSE(map.try_shard_index_for_string(sref("users"), "3", 1, idx));
+}
+
 TEST(ShardMapHashTest, StringIntegerRoutesLikeInt) {
     ShardMap map;
     map.add_table(make_two_shards(RoutingStrategy::HASH));
