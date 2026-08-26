@@ -25,6 +25,7 @@
 #include <vector>
 #include <unordered_map>
 #include <functional>
+#include <string>
 #include <utility>
 
 namespace sql_engine {
@@ -78,9 +79,16 @@ private:
     RemoteExecutor* remote_executor_;
     FunctionRegistry<D>* functions_;
     const char* error_;
+    std::string error_storage_;
 
     PlanNode* fail_dml(const char* message) {
         error_ = message;
+        return nullptr;
+    }
+
+    PlanNode* fail_dml_owned(std::string message) {
+        error_storage_ = std::move(message);
+        error_ = error_storage_.c_str();
         return nullptr;
     }
 
@@ -159,8 +167,11 @@ private:
                     agg_child = agg_child->left;
                 }
                 if (agg_child && agg_child->type == PlanNodeType::AGGREGATE) {
-                    push_agg_exprs_from_project(node, agg_child);
-                    PlanNode* dist_agg = distribute_aggregate(agg_child);
+                    PlanNode* agg_copy = make_plan_node(arena_, PlanNodeType::AGGREGATE);
+                    agg_copy->aggregate = agg_child->aggregate;
+                    agg_copy->left = agg_child->left;
+                    push_agg_exprs_from_project(node, agg_copy);
+                    PlanNode* dist_agg = distribute_aggregate(agg_copy);
                     if (dist_agg && (dist_agg->type == PlanNodeType::MERGE_AGGREGATE ||
                                      dist_agg->type == PlanNodeType::AGGREGATE)) {
                         PlanNode* top = dist_agg;
@@ -1193,7 +1204,8 @@ private:
         PlanNode* current = nullptr;
         for (const auto& shard : shard_list) {
             sql_parser::StringRef sql = qb_.build_select_join(
-                left_table, right_table, join_node->join.condition, where_expr);
+                left_table, right_table, join_node->join.condition, where_expr,
+                join_node->join.join_type);
             PlanNode* rs = make_remote_scan(shard.backend_name.c_str(), sql, left_table);
             if (!current) {
                 current = rs;
@@ -1310,6 +1322,7 @@ private:
                                  const TableInfo* right_table) {
         if (!join_node || !remote_executor_ || !join_node->join.condition)
             return nullptr;
+        if (join_node->join.join_type != JOIN_INNER) return nullptr;
         if (!left_table || !right_table) return nullptr;
 
         bool ls = shards_.is_sharded(left_table->table_name);
@@ -1550,6 +1563,7 @@ private:
         const sql_parser::AstNode* where_expr = up.where_expr;
         if (where_expr && has_subquery(where_expr) && remote_executor_) {
             where_expr = rewrite_where_subquery(where_expr, table);
+            if (error_) return nullptr;
         }
 
         if (!shards_.is_sharded(table->table_name)) {
@@ -1594,6 +1608,7 @@ private:
         const sql_parser::AstNode* where_expr = dp.where_expr;
         if (where_expr && has_subquery(where_expr) && remote_executor_) {
             where_expr = rewrite_where_subquery(where_expr, table);
+            if (error_) return nullptr;
         }
 
         if (!shards_.is_sharded(table->table_name)) {
@@ -1659,7 +1674,7 @@ private:
                            sql_parser::StringRef shard_key) const {
         if (!set_columns || !shard_key.ptr) return false;
         for (uint16_t i = 0; i < set_count; ++i) {
-            if (is_column_ref(set_columns[i], shard_key)) return true;
+            if (is_shard_key_ref(set_columns[i], shard_key)) return true;
         }
         return false;
     }
@@ -1844,7 +1859,7 @@ private:
         auto resolve = make_resolver(catalog_, table, src.values);
         for (uint16_t i = 0; i < set_count; ++i) {
             if (!set_cols[i]) continue;
-            const ColumnInfo* col = catalog_.get_column(table, set_cols[i]->value());
+            const ColumnInfo* col = catalog_.get_column(table, set_col_name(set_cols[i]));
             if (!col) continue;
             Value nv = value_null();
             if (functions_) {
@@ -1935,8 +1950,16 @@ private:
             }
             sql_parser::StringRef sql = qb_.build_select(
                 table, where_expr, nullptr, 0, nullptr, 0,
-                nullptr, nullptr, 0, -1, false);
+                nullptr, nullptr, 0, -1, false, true);
             ResultSet rs = remote_executor_->execute(shard.backend_name.c_str(), sql);
+            if (!rs.ok) {
+                std::string msg = rs.error_message.empty()
+                    ? "shard-key UPDATE SELECT failed" : rs.error_message;
+                msg += " [";
+                msg.append(sql.ptr, sql.len);
+                msg += "]";
+                return fail_dml_owned(std::move(msg));
+            }
             for (const auto& row : rs.rows) {
                 Move m;
                 m.src = src;
@@ -1950,9 +1973,7 @@ private:
         }
 
         if (moves.empty()) {
-            sql_parser::StringRef sql = qb_.build_update(
-                table, up.set_columns, up.set_exprs, up.set_count, where_expr);
-            return make_remote_scan(pruned[0].backend_name.c_str(), sql, table);
+            return make_noop_update(table, pruned[0].backend_name.c_str());
         }
 
         bool any_move = false;
@@ -1997,6 +2018,31 @@ private:
                                  table));
         }
         return current ? current : plan;
+    }
+
+    static sql_parser::StringRef set_col_name(const sql_parser::AstNode* node) {
+        if (!node) return sql_parser::StringRef{nullptr, 0};
+        if (node->type == sql_parser::NodeType::NODE_QUALIFIED_NAME) {
+            const sql_parser::AstNode* c = node->first_child;
+            if (c && c->next_sibling) return c->next_sibling->value();
+        }
+        return node->value();
+    }
+
+    PlanNode* make_noop_update(const TableInfo* table, const char* backend) {
+        sql_parser::StringBuilder sb(arena_, 64);
+        sb.append("UPDATE ");
+        if (table) sb.append(table->table_name.ptr, table->table_name.len);
+        sb.append(" SET ");
+        if (table && table->column_count > 0) {
+            sb.append(table->columns[0].name.ptr, table->columns[0].name.len);
+            sb.append(" = ");
+            sb.append(table->columns[0].name.ptr, table->columns[0].name.len);
+        } else {
+            sb.append("id = id");
+        }
+        sb.append(" WHERE 1 = 0");
+        return make_remote_scan(backend, sb.finish(), table);
     }
 
     bool is_column_ref(const sql_parser::AstNode* node, sql_parser::StringRef col_name) const {
@@ -2172,10 +2218,15 @@ private:
         // Execute: if it's a RemoteScan, execute via remote executor
         // Otherwise, need to execute locally
         ResultSet rs = execute_distributed_plan(dist_plan);
+        if (!rs.ok) {
+            error_storage_ = rs.error_message.empty() ? "subquery failed" : rs.error_message;
+            error_ = error_storage_.c_str();
+            return result;
+        }
 
         for (const auto& row : rs.rows) {
             if (row.column_count > 0) {
-                result.push_back(row.get(0));
+                result.push_back(copy_value_arena(row.get(0)));
             }
         }
         return result;
@@ -2183,7 +2234,8 @@ private:
 
     // Execute a distributed plan tree (recursively handles SET_OP / REMOTE_SCAN).
     ResultSet execute_distributed_plan(PlanNode* node) {
-        if (!node || !remote_executor_) return {};
+        if (!remote_executor_) return ResultSet::fail("no remote executor");
+        if (!node) return ResultSet::fail("empty distributed plan");
 
         if (node->type == PlanNodeType::REMOTE_SCAN) {
             sql_parser::StringRef sql{node->remote_scan.remote_sql,
@@ -2192,9 +2244,10 @@ private:
         }
 
         if (node->type == PlanNodeType::SET_OP) {
-            // UNION ALL: concatenate results
             ResultSet left = execute_distributed_plan(node->left);
+            if (!left.ok) return left;
             ResultSet right = execute_distributed_plan(node->right);
+            if (!right.ok) return right;
             for (auto& row : right.rows) {
                 left.rows.push_back(row);
             }
@@ -2249,8 +2302,9 @@ private:
                 lit = sql_parser::make_node(arena_, sql_parser::NodeType::NODE_LITERAL_INT,
                                              sql_parser::StringRef{s, static_cast<uint32_t>(n)});
             } else if (v.tag == Value::TAG_STRING && v.str_val.ptr) {
+                Value owned = copy_value_arena(v);
                 lit = sql_parser::make_node(arena_, sql_parser::NodeType::NODE_LITERAL_STRING,
-                                             v.str_val);
+                                             owned.str_val);
             } else if (v.tag == Value::TAG_DOUBLE) {
                 char buf[64];
                 int n = snprintf(buf, sizeof(buf), "%g", v.double_val);
@@ -2267,6 +2321,19 @@ private:
         }
 
         return new_in;
+    }
+
+    sql_parser::AstNode* make_false_pred() {
+        sql_parser::AstNode* eq = sql_parser::make_node(
+            arena_, sql_parser::NodeType::NODE_BINARY_OP,
+            sql_parser::StringRef{"=", 1});
+        eq->add_child(sql_parser::make_node(
+            arena_, sql_parser::NodeType::NODE_LITERAL_INT,
+            sql_parser::StringRef{"0", 1}));
+        eq->add_child(sql_parser::make_node(
+            arena_, sql_parser::NodeType::NODE_LITERAL_INT,
+            sql_parser::StringRef{"1", 1}));
+        return eq;
     }
 
     // Rewrite a WHERE expression by replacing the first IN (subquery) with IN (literals).
@@ -2286,7 +2353,7 @@ private:
                     if (!values.empty()) {
                         return build_in_list_from_values(where_expr, values);
                     }
-                    return where_expr;
+                    return make_false_pred();
                 }
             }
         }
@@ -2386,11 +2453,15 @@ private:
 
         PlanNode* dist_select = distribute_node(select_plan);
         ResultSet rs = execute_distributed_plan(dist_select);
+        if (!rs.ok) {
+            return fail_dml_owned(rs.error_message.empty()
+                ? "INSERT ... SELECT failed" : rs.error_message);
+        }
 
         if (rs.rows.empty()) {
-            // No rows to insert -- return a no-op
-            // Just return the original plan (which will do nothing since select_source is null)
-            return plan;
+            const auto& sl = shards_.get_shards(table->table_name);
+            if (sl.empty()) return fail_dml("table not in shard map");
+            return make_noop_update(table, sl[0].backend_name.c_str());
         }
 
         // Determine target shards for each row

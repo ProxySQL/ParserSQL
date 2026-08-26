@@ -9,6 +9,7 @@
 #include <vector>
 #include <unordered_map>
 #include <algorithm>
+#include <cstdlib>
 
 namespace sql_engine {
 
@@ -43,7 +44,7 @@ struct ShardRange {
 // Used by LIST strategy. Each entry maps a single key value to a shard
 // index. Key may be int or string, but a single TableShardConfig must
 // stay one or the other (mixed lists are not supported). Lookups that
-// miss every entry fall back to shard 0.
+// miss every entry is unroutable (try_* returns false).
 struct ShardListEntry {
     bool is_int = true;
     int64_t int_val = 0;
@@ -132,9 +133,17 @@ public:
             case RoutingStrategy::HASH:
                 out = fnv1a_int64(value) % n;
                 return true;
-            case RoutingStrategy::RANGE:
-                out = shard_index_for_int(table_name, value);
+            case RoutingStrategy::RANGE: {
+                if (cfg->ranges.empty()) return false;
+                for (const auto& r : cfg->ranges) {
+                    if (value <= r.upper_inclusive) {
+                        out = clamp_index(r.shard_index, n);
+                        return true;
+                    }
+                }
+                out = clamp_index(cfg->ranges.back().shard_index, n);
                 return true;
+            }
             case RoutingStrategy::LIST:
                 for (const auto& e : cfg->list) {
                     if (e.is_int && e.int_val == value) {
@@ -154,9 +163,13 @@ public:
         if (!cfg || cfg->shards.empty()) return false;
         size_t n = cfg->shards.size();
         switch (cfg->strategy) {
-            case RoutingStrategy::HASH:
+            case RoutingStrategy::HASH: {
+                int64_t as_int = 0;
+                if (parse_full_int(val, val_len, as_int))
+                    return try_shard_index_for_int(table_name, as_int, out);
                 out = fnv1a_bytes(reinterpret_cast<const uint8_t*>(val), val_len) % n;
                 return true;
+            }
             case RoutingStrategy::RANGE:
                 return false;
             case RoutingStrategy::LIST:
@@ -204,60 +217,19 @@ public:
         return true;
     }
 
-    // Determine which shard index a value maps to. Dispatches on the
-    // configured RoutingStrategy. Returns 0 if the table is unknown or
-    // has no shards — prefer try_shard_index_for_* which fails closed.
+    // Prefer try_shard_index_for_*. These return SIZE_MAX if unroutable.
     size_t shard_index_for_int(sql_parser::StringRef table_name, int64_t value) const {
-        const TableShardConfig* cfg = lookup(table_name);
-        if (!cfg || cfg->shards.empty()) return 0;
-        size_t n = cfg->shards.size();
-        switch (cfg->strategy) {
-            case RoutingStrategy::HASH:
-                return fnv1a_int64(value) % n;
-            case RoutingStrategy::RANGE: {
-                if (cfg->ranges.empty()) return 0;
-                for (const auto& r : cfg->ranges) {
-                    if (value <= r.upper_inclusive) {
-                        return clamp_index(r.shard_index, n);
-                    }
-                }
-                // Above all upper bounds: fall through to last shard.
-                return clamp_index(cfg->ranges.back().shard_index, n);
-            }
-            case RoutingStrategy::LIST:
-                for (const auto& e : cfg->list) {
-                    if (e.is_int && e.int_val == value) {
-                        return clamp_index(e.shard_index, n);
-                    }
-                }
-                return 0;
-        }
-        return 0;
+        size_t out = 0;
+        if (!try_shard_index_for_int(table_name, value, out)) return static_cast<size_t>(-1);
+        return out;
     }
 
     size_t shard_index_for_string(sql_parser::StringRef table_name,
                                    const char* val, uint32_t val_len) const {
-        const TableShardConfig* cfg = lookup(table_name);
-        if (!cfg || cfg->shards.empty()) return 0;
-        size_t n = cfg->shards.size();
-        switch (cfg->strategy) {
-            case RoutingStrategy::HASH:
-                return fnv1a_bytes(reinterpret_cast<const uint8_t*>(val), val_len) % n;
-            case RoutingStrategy::RANGE:
-                // RANGE is integer-keyed only. Fall back to scatter-friendly
-                // shard 0 rather than producing a misleading single-shard
-                // route from a string key.
-                return 0;
-            case RoutingStrategy::LIST:
-                for (const auto& e : cfg->list) {
-                    if (!e.is_int && e.str_val.size() == val_len &&
-                        std::memcmp(e.str_val.data(), val, val_len) == 0) {
-                        return clamp_index(e.shard_index, n);
-                    }
-                }
-                return 0;
-        }
-        return 0;
+        size_t out = 0;
+        if (!try_shard_index_for_string(table_name, val, val_len, out))
+            return static_cast<size_t>(-1);
+        return out;
     }
 
     RoutingStrategy routing_strategy(sql_parser::StringRef table_name) const {
@@ -355,6 +327,18 @@ private:
 
     static size_t clamp_index(size_t idx, size_t n) {
         return idx < n ? idx : (n == 0 ? 0 : n - 1);
+    }
+
+    static bool parse_full_int(const char* val, uint32_t val_len, int64_t& out) {
+        if (!val || val_len == 0 || val_len > 20) return false;
+        char buf[24];
+        std::memcpy(buf, val, val_len);
+        buf[val_len] = '\0';
+        char* end = nullptr;
+        long long n = std::strtoll(buf, &end, 10);
+        if (!end || end != buf + val_len) return false;
+        out = static_cast<int64_t>(n);
+        return true;
     }
 
     static void split_keys(const std::string& spec, std::vector<std::string>& out) {

@@ -43,6 +43,9 @@ struct ResultSet {
     // extending their lifetime to match this ResultSet.
     std::vector<std::shared_ptr<void>> backing_lifetimes;
 
+    bool ok = true;
+    std::string error_message;
+
     ResultSet() = default;
     ~ResultSet() {
         for (auto* arr : owned_value_arrays) ::operator delete(arr);
@@ -55,8 +58,11 @@ struct ResultSet {
           column_count(o.column_count),
           owned_value_arrays(std::move(o.owned_value_arrays)),
           owned_strings(std::move(o.owned_strings)),
-          backing_lifetimes(std::move(o.backing_lifetimes)) {
+          backing_lifetimes(std::move(o.backing_lifetimes)),
+          ok(o.ok),
+          error_message(std::move(o.error_message)) {
         o.column_count = 0;
+        o.ok = true;
     }
 
     ResultSet& operator=(ResultSet&& o) noexcept {
@@ -68,7 +74,10 @@ struct ResultSet {
             owned_value_arrays = std::move(o.owned_value_arrays);
             owned_strings = std::move(o.owned_strings);
             backing_lifetimes = std::move(o.backing_lifetimes);
+            ok = o.ok;
+            error_message = std::move(o.error_message);
             o.column_count = 0;
+            o.ok = true;
         }
         return *this;
     }
@@ -79,6 +88,13 @@ struct ResultSet {
 
     size_t row_count() const { return rows.size(); }
     bool empty() const { return rows.empty(); }
+
+    static ResultSet fail(const char* msg) {
+        ResultSet rs;
+        rs.ok = false;
+        rs.error_message = msg ? msg : "query failed";
+        return rs;
+    }
 
     // Allocate a heap-owned row and append it to rows. Returns a reference
     // to the Row (which points into owned_value_arrays).

@@ -385,7 +385,8 @@ static const std::string& backend_for_int_key(
 {
     StringRef t{table, static_cast<uint32_t>(std::strlen(table))};
     if (!map.has_table(t) || map.get_shards(t).empty()) return fallback.front();
-    size_t idx = map.shard_index_for_int(t, key);
+    size_t idx = 0;
+    if (!map.try_shard_index_for_int(t, key, idx)) return fallback.front();
     return map.get_shards(t)[idx].backend_name;
 }
 

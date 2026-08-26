@@ -30,7 +30,8 @@ public:
             uint8_t* order_dirs,
             uint16_t order_count,
             int64_t limit,                                 // -1 = no limit
-            bool distinct)
+            bool distinct,
+            bool for_update = false)
     {
         sql_parser::StringBuilder sb(arena_, 512);
 
@@ -91,6 +92,8 @@ public:
             sb.append(buf, n);
         }
 
+        if (for_update) sb.append(" FOR UPDATE");
+
         return sb.finish();
     }
 
@@ -98,12 +101,16 @@ public:
             const TableInfo* left,
             const TableInfo* right,
             const sql_parser::AstNode* on_expr,
-            const sql_parser::AstNode* where_expr)
+            const sql_parser::AstNode* where_expr,
+            uint8_t join_type = 0)
     {
         sql_parser::StringBuilder sb(arena_, 512);
         sb.append("SELECT * FROM ");
         if (left) sb.append(left->table_name.ptr, left->table_name.len);
-        sb.append(" JOIN ");
+        if (join_type == 1) sb.append(" LEFT JOIN ");
+        else if (join_type == 2) sb.append(" RIGHT JOIN ");
+        else if (join_type == 3) sb.append(" FULL JOIN ");
+        else sb.append(" JOIN ");
         if (right) sb.append(right->table_name.ptr, right->table_name.len);
         if (on_expr) {
             sb.append(" ON ");
