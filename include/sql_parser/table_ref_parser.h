@@ -135,8 +135,8 @@ public:
         }
 
         // Set join type as value (covers the span from first modifier to JOIN)
-        StringRef join_type{join_type_start.ptr,
-            static_cast<uint32_t>((join_type_end.ptr + join_type_end.len) - join_type_start.ptr)};
+        StringRef join_type = arena_.allocate_upper(StringRef{join_type_start.ptr,
+            static_cast<uint32_t>((join_type_end.ptr + join_type_end.len) - join_type_start.ptr)});
         join->value_ptr = join_type.ptr;
         join->value_len = join_type.len;
 

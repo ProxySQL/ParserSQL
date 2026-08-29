@@ -41,6 +41,24 @@ using SubqueryParseCallback = AstNode*(*)(Tokenizer<D>&, Arena&);
 template <Dialect D>
 class ExpressionParser {
 public:
+    // Keyword operators are stored under their canonical spelling.
+    static StringRef canonical_op(const Token& op) {
+        switch (op.type) {
+            case TokenType::TK_AND:    return StringRef{"AND", 3};
+            case TokenType::TK_OR:     return StringRef{"OR", 2};
+            case TokenType::TK_XOR:    return StringRef{"XOR", 3};
+            case TokenType::TK_NOT:    return StringRef{"NOT", 3};
+            case TokenType::TK_IS:     return StringRef{"IS", 2};
+            case TokenType::TK_IN:     return StringRef{"IN", 2};
+            case TokenType::TK_LIKE:   return StringRef{"LIKE", 4};
+            case TokenType::TK_REGEXP: return StringRef{"REGEXP", 6};
+            case TokenType::TK_DIV:    return StringRef{"DIV", 3};
+            case TokenType::TK_MOD:    return StringRef{"MOD", 3};
+            case TokenType::TK_BETWEEN: return StringRef{"BETWEEN", 7};
+            default:                   return op.text;
+        }
+    }
+
     ExpressionParser(Tokenizer<D>& tokenizer, Arena& arena)
         : tok_(tokenizer), arena_(arena) {}
 
@@ -120,7 +138,14 @@ private:
             }
             case TokenType::TK_NULL: {
                 tok_.skip();
-                return make_node_from_token(arena_, NodeType::NODE_LITERAL_NULL, t);
+                {
+                    // Keep the source span lossless, but store the keyword under
+                    // its canonical spelling.
+                    AstNode* null_node =
+                        make_node_from_token(arena_, NodeType::NODE_LITERAL_NULL, t);
+                    if (null_node) null_node->set_value(StringRef{"NULL", 4});
+                    return null_node;
+                }
             }
             case TokenType::TK_TRUE:
             case TokenType::TK_FALSE: {
@@ -186,7 +211,7 @@ private:
                 tok_.skip();
                 AstNode* operand = parse(Precedence::UNARY);
                 if (!operand) return nullptr;
-                AstNode* node = make_node(arena_, NodeType::NODE_UNARY_OP, t.text);
+                AstNode* node = make_node(arena_, NodeType::NODE_UNARY_OP, canonical_op(t));
                 set_span_through_node_(node, t.source, operand);
                 node->add_child(operand);
                 return node;
@@ -196,7 +221,7 @@ private:
                 tok_.skip();
                 AstNode* operand = parse(Precedence::UNARY);
                 if (!operand) return nullptr;
-                AstNode* node = make_node(arena_, NodeType::NODE_UNARY_OP, t.text);
+                AstNode* node = make_node(arena_, NodeType::NODE_UNARY_OP, canonical_op(t));
                 set_span_through_node_(node, t.source, operand);
                 node->add_child(operand);
                 return node;
@@ -205,7 +230,7 @@ private:
                 tok_.skip();
                 AstNode* operand = parse(Precedence::NOT);
                 if (!operand) return nullptr;
-                AstNode* node = make_node(arena_, NodeType::NODE_UNARY_OP, t.text);
+                AstNode* node = make_node(arena_, NodeType::NODE_UNARY_OP, canonical_op(t));
                 set_span_through_node_(node, t.source, operand);
                 node->add_child(operand);
                 return node;
@@ -326,7 +351,16 @@ private:
         // Check for function call: name(
         if (tok_.peek().type == TokenType::TK_LPAREN) {
             tok_.skip();  // consume (
-            AstNode* func = make_node(arena_, NodeType::NODE_FUNCTION_CALL, name_token.text);
+            // Function names are case-insensitive, so store them under a canonical spelling.
+            StringRef func_name = name_token.text;
+            if constexpr (D == Dialect::MySQL) {
+                // MySQL folds all function names up:
+                func_name = arena_.allocate_upper(func_name);
+            } else if (!token_was_delimited_(name_token)) {
+                // PostgreSQL folds undelimited function names down:
+                func_name = arena_.allocate_lower(func_name);
+            }
+            AstNode* func = make_node(arena_, NodeType::NODE_FUNCTION_CALL, func_name);
             // CAST uses `CAST(expr AS type)` rather than a comma-separated
             // argument list. Model it as a function call so consumers can
             // reject or handle the expression without leaving valid input
@@ -449,14 +483,14 @@ private:
                     tok_.skip();
                     AstNode* in_node = parse_in(left);
                     // Wrap in NOT
-                    AstNode* not_node = make_node(arena_, NodeType::NODE_UNARY_OP, op.text);
+                    AstNode* not_node = make_node(arena_, NodeType::NODE_UNARY_OP, canonical_op(op));
                     not_node->add_child(in_node);
                     return not_node;
                 }
                 if (actual_op.type == TokenType::TK_BETWEEN) {
                     tok_.skip();
                     AstNode* between_node = parse_between(left);
-                    AstNode* not_node = make_node(arena_, NodeType::NODE_UNARY_OP, op.text);
+                    AstNode* not_node = make_node(arena_, NodeType::NODE_UNARY_OP, canonical_op(op));
                     not_node->add_child(between_node);
                     return not_node;
                 }
@@ -464,10 +498,10 @@ private:
                     actual_op.type == TokenType::TK_REGEXP) {
                     tok_.skip();
                     AstNode* right = parse(prec);
-                    AstNode* like_node = make_node(arena_, NodeType::NODE_BINARY_OP, actual_op.text);
+                    AstNode* like_node = make_node(arena_, NodeType::NODE_BINARY_OP, canonical_op(actual_op));
                     like_node->add_child(left);
                     if (right) like_node->add_child(right);
-                    AstNode* not_node = make_node(arena_, NodeType::NODE_UNARY_OP, op.text);
+                    AstNode* not_node = make_node(arena_, NodeType::NODE_UNARY_OP, canonical_op(op));
                     not_node->add_child(like_node);
                     return not_node;
                 }
@@ -511,7 +545,7 @@ private:
                 // Standard binary operator
                 AstNode* right = parse(prec);
                 if (!right) return left;
-                AstNode* node = make_node(arena_, NodeType::NODE_BINARY_OP, op.text);
+                AstNode* node = make_node(arena_, NodeType::NODE_BINARY_OP, canonical_op(op));
                 node->add_child(left);
                 node->add_child(right);
                 return node;
@@ -758,7 +792,9 @@ private:
                 Token dir = tok_.peek();
                 if (dir.type == TokenType::TK_ASC || dir.type == TokenType::TK_DESC) {
                     tok_.skip();
-                    item->add_child(make_node(arena_, NodeType::NODE_IDENTIFIER, dir.text));
+                    item->add_child(make_node(arena_, NodeType::NODE_IDENTIFIER,
+                    dir.type == TokenType::TK_ASC ? StringRef{"ASC", 3}
+                                                  : StringRef{"DESC", 4}));
                 }
                 ord->add_child(item);
                 if (tok_.peek().type == TokenType::TK_COMMA) tok_.skip();
