@@ -238,7 +238,9 @@ private:
             Token dir = tok_.peek();
             if (dir.type == TokenType::TK_ASC || dir.type == TokenType::TK_DESC) {
                 tok_.skip();
-                item->add_child(make_node(arena_, NodeType::NODE_IDENTIFIER, dir.text));
+                item->add_child(make_node(arena_, NodeType::NODE_IDENTIFIER,
+                    dir.type == TokenType::TK_ASC ? StringRef{"ASC", 3}
+                                                  : StringRef{"DESC", 4}));
             }
 
             order_by->add_child(item);

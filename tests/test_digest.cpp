@@ -119,6 +119,14 @@ TEST_F(MySQLDigestTest, KeywordsUppercased) {
               "SELECT * FROM t WHERE id = ?");
 }
 
+TEST_F(MySQLDigestTest, KeywordsUppercasedFromAst) {
+    EXPECT_EQ(normalized("select a from t where a = 1 and b = 2"),
+              "SELECT a FROM t WHERE a = ? AND b = ?");
+    EXPECT_EQ(normalized("select 1 union select 2"), "SELECT ? UNION SELECT ?");
+    EXPECT_EQ(normalized("select a from t order by a desc"),
+              "SELECT a FROM t ORDER BY a DESC");
+}
+
 // ========== Token-level fallback for Tier 2 ==========
 
 TEST_F(MySQLDigestTest, TokenLevelInsert) {
@@ -225,6 +233,16 @@ static const DigestTestCase digest_bulk_cases[] = {
     {"SELECT a FROM t WHERE id = 1", "SELECT b FROM t WHERE id = 1", false, "different columns"},
     {"SELECT * FROM t WHERE a = 1", "SELECT * FROM t WHERE b = 1", false, "different where cols"},
     {"SELECT * FROM t ORDER BY a", "SELECT * FROM t ORDER BY b", false, "different order"},
+    // Keyword casing must not change the digest ...
+    {"SELECT 1 UNION SELECT 2", "SELECT 1 union SELECT 2", true, "union keyword casing"},
+    {"SELECT a FROM t WHERE a = 1 AND b = 2", "SELECT a FROM t WHERE a = 1 and b = 2", true, "AND keyword casing"},
+    {"SELECT a FROM t ORDER BY a DESC", "SELECT a FROM t ORDER BY a desc", true, "DESC keyword casing"},
+    {"SELECT DISTINCT a FROM t", "SELECT distinct a FROM t", true, "DISTINCT keyword casing"},
+    {"SELECT a FROM t1 INNER JOIN t2 ON t1.a = t2.b", "SELECT a FROM t1 inner join t2 ON t1.a = t2.b", true, "join type casing"},
+    {"SELECT COUNT(*) FROM t", "SELECT count(*) FROM t", true, "function name casing"},
+    // ... but identifier casing must.
+    {"SELECT a FROM MyTable", "SELECT a FROM mytable", false, "table name case is significant"},
+    {"SELECT MyCol FROM t", "SELECT mycol FROM t", false, "column name case is significant"},
 };
 
 TEST(MySQLDigestBulk, HashConsistency) {
@@ -278,6 +296,19 @@ class PgSQLDigestTest : public ::testing::Test {
 protected:
     Parser<Dialect::PostgreSQL> parser;
 
+    // AST-based digest (parses SQL, invalidates previous arena allocations)
+    StableDigest digest_ast(const char* sql) {
+        auto r = parser.parse(sql, strlen(sql));
+        Digest<Dialect::PostgreSQL> digest(parser.arena());
+        DigestResult dr;
+        if (r.ast) {
+            dr = digest.compute(r.ast);
+        } else {
+            dr = digest.compute(sql, strlen(sql));
+        }
+        return StableDigest{std::string(dr.normalized.ptr, dr.normalized.len), dr.hash};
+    }
+
     StableDigest digest_token(const char* sql) {
         parser.reset();
         Digest<Dialect::PostgreSQL> digest(parser.arena());
@@ -289,6 +320,24 @@ protected:
         return digest_token(sql).normalized;
     }
 };
+
+// ========== Function name canonicalization ==========
+
+TEST_F(PgSQLDigestTest, UndelimitedFunctionNamesFold) {
+    auto lower = digest_ast("SELECT myfunc(a) FROM t");
+    auto upper = digest_ast("SELECT MYFUNC(a) FROM t");
+    EXPECT_EQ(lower.normalized, "SELECT myfunc(a) FROM t");
+    EXPECT_EQ(upper.normalized, "SELECT myfunc(a) FROM t");
+    EXPECT_EQ(lower.hash, upper.hash);
+}
+
+TEST_F(PgSQLDigestTest, DelimitedFunctionNameKeepsItsOwnSpelling) {
+    // PostgreSQL folds undelimited names down, so "MYFUNC" is a different function.
+    auto undelimited = digest_ast("SELECT myfunc(a) FROM t");
+    auto delimited = digest_ast("SELECT \"MYFUNC\"(a) FROM t");
+    EXPECT_EQ(delimited.normalized, "SELECT MYFUNC(a) FROM t");
+    EXPECT_NE(undelimited.hash, delimited.hash);
+}
 
 TEST_F(PgSQLDigestTest, BasicDigest) {
     EXPECT_EQ(normalized_token("SELECT * FROM users WHERE id = 42"),

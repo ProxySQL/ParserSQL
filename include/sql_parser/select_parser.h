@@ -123,11 +123,14 @@ private:
             if (t.type == TokenType::TK_DISTINCT || t.type == TokenType::TK_ALL) {
                 if (!opts) opts = make_node(arena_, NodeType::NODE_SELECT_OPTIONS);
                 tok_.skip();
-                opts->add_child(make_node(arena_, NodeType::NODE_IDENTIFIER, t.text));
+                opts->add_child(make_node(arena_, NodeType::NODE_IDENTIFIER,
+                    t.type == TokenType::TK_DISTINCT ? StringRef{"DISTINCT", 8}
+                                                     : StringRef{"ALL", 3}));
             } else if (t.type == TokenType::TK_SQL_CALC_FOUND_ROWS) {
                 if (!opts) opts = make_node(arena_, NodeType::NODE_SELECT_OPTIONS);
                 tok_.skip();
-                opts->add_child(make_node(arena_, NodeType::NODE_IDENTIFIER, t.text));
+                opts->add_child(make_node(arena_, NodeType::NODE_IDENTIFIER,
+                    StringRef{"SQL_CALC_FOUND_ROWS", 19}));
             } else {
                 break;
             }
@@ -298,7 +301,9 @@ private:
             Token dir = tok_.peek();
             if (dir.type == TokenType::TK_ASC || dir.type == TokenType::TK_DESC) {
                 tok_.skip();
-                item->add_child(make_node(arena_, NodeType::NODE_IDENTIFIER, dir.text));
+                item->add_child(make_node(arena_, NodeType::NODE_IDENTIFIER,
+                    dir.type == TokenType::TK_ASC ? StringRef{"ASC", 3}
+                                                  : StringRef{"DESC", 4}));
             }
 
             order_by->add_child(item);
@@ -349,7 +354,10 @@ private:
 
         tok_.skip(); // consume FOR
         Token strength = tok_.next_token(); // UPDATE or SHARE
-        lock->add_child(make_node(arena_, NodeType::NODE_IDENTIFIER, strength.text));
+        lock->add_child(make_node(arena_, NodeType::NODE_IDENTIFIER,
+                        strength.type == TokenType::TK_UPDATE ? StringRef{"UPDATE", 6}
+                        : strength.type == TokenType::TK_SHARE ? StringRef{"SHARE", 5}
+                        : strength.text));
 
         // Optional: OF table_list
         if (tok_.peek().type == TokenType::TK_OF) {

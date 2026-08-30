@@ -73,7 +73,10 @@ public:
                 AstNode* lock = make_node(arena_, NodeType::NODE_LOCKING_CLAUSE);
                 if (lock) {
                     Token strength = tok_.next_token();
-                    lock->add_child(make_node(arena_, NodeType::NODE_IDENTIFIER, strength.text));
+                    lock->add_child(make_node(arena_, NodeType::NODE_IDENTIFIER,
+                        strength.type == TokenType::TK_UPDATE ? StringRef{"UPDATE", 6}
+                        : strength.type == TokenType::TK_SHARE ? StringRef{"SHARE", 5}
+                        : strength.text));
                     result->add_child(lock);
                 }
             }
@@ -124,7 +127,11 @@ private:
 
             // Consume the set operator
             tok_.skip();
-            StringRef op_text = t.text;
+            StringRef op_text =
+                t.type == TokenType::TK_UNION     ? StringRef{"UNION", 5}
+                : t.type == TokenType::TK_INTERSECT ? StringRef{"INTERSECT", 9}
+                : t.type == TokenType::TK_EXCEPT    ? StringRef{"EXCEPT", 6}
+                                                    : t.text;
 
             // Check for optional ALL
             uint16_t flags = 0;
@@ -226,7 +233,11 @@ private:
             if (prec == 0 || prec <= min_prec) break;
 
             tok_.skip();
-            StringRef op_text = t.text;
+            StringRef op_text =
+                t.type == TokenType::TK_UNION     ? StringRef{"UNION", 5}
+                : t.type == TokenType::TK_INTERSECT ? StringRef{"INTERSECT", 9}
+                : t.type == TokenType::TK_EXCEPT    ? StringRef{"EXCEPT", 6}
+                                                    : t.text;
 
             uint16_t flags = 0;
             if (tok_.peek().type == TokenType::TK_ALL) {
@@ -278,7 +289,9 @@ private:
             Token dir = tok_.peek();
             if (dir.type == TokenType::TK_ASC || dir.type == TokenType::TK_DESC) {
                 tok_.skip();
-                item->add_child(make_node(arena_, NodeType::NODE_IDENTIFIER, dir.text));
+                item->add_child(make_node(arena_, NodeType::NODE_IDENTIFIER,
+                    dir.type == TokenType::TK_ASC ? StringRef{"ASC", 3}
+                                                  : StringRef{"DESC", 4}));
             }
 
             order_by->add_child(item);
