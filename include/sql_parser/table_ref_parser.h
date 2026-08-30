@@ -109,14 +109,32 @@ public:
     }
 
     // Parse a JOIN clause
+    // Build canonicalized "<A> <B> ..." in the arena.
+    StringRef build_join_type(const StringRef* parts, int count) {
+        if (count <= 0) return StringRef{nullptr, 0};
+        size_t total = static_cast<size_t>(count - 1);
+        for (int i = 0; i < count; ++i) total += parts[i].len;
+        char* buf = static_cast<char*>(arena_.allocate(total));
+        if (!buf) return StringRef{nullptr, 0};
+        size_t off = 0;
+        for (int i = 0; i < count; ++i) {
+            if (i) buf[off++] = ' ';
+            for (uint32_t j = 0; j < parts[i].len; ++j) {
+                const char c = parts[i].ptr[j];
+                buf[off++] = (c >= 'a' && c <= 'z') ? static_cast<char>(c - 32) : c;
+            }
+        }
+        return StringRef{buf, static_cast<uint32_t>(total)};
+    }
+
     AstNode* parse_join(AstNode* /* left_ref */) {
         AstNode* join = make_node(arena_, NodeType::NODE_JOIN_CLAUSE);
         if (!join) return nullptr;
 
         // Consume join type tokens
+        StringRef parts[8];
+        int part_count = 0;
         Token t = tok_.peek();
-        StringRef join_type_start = t.text;
-        StringRef join_type_end = t.text;
 
         // Optional: NATURAL, LEFT, RIGHT, FULL, INNER, OUTER, CROSS
         while (t.type == TokenType::TK_NATURAL || t.type == TokenType::TK_LEFT ||
@@ -124,19 +142,17 @@ public:
                t.type == TokenType::TK_INNER || t.type == TokenType::TK_OUTER ||
                t.type == TokenType::TK_CROSS) {
             tok_.skip();
-            join_type_end = t.text;
+            if (part_count < 8) parts[part_count++] = t.text;
             t = tok_.peek();
         }
 
         // Expect JOIN keyword
         if (t.type == TokenType::TK_JOIN) {
-            join_type_end = t.text;
+            if (part_count < 8) parts[part_count++] = t.text;
             tok_.skip();
         }
 
-        // Set join type as value (covers the span from first modifier to JOIN)
-        StringRef join_type = arena_.allocate_upper(StringRef{join_type_start.ptr,
-            static_cast<uint32_t>((join_type_end.ptr + join_type_end.len) - join_type_start.ptr)});
+        StringRef join_type = build_join_type(parts, part_count);
         join->value_ptr = join_type.ptr;
         join->value_len = join_type.len;
 

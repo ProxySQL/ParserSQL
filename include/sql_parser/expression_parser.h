@@ -7,6 +7,7 @@
 #include "sql_parser/ast.h"
 #include "sql_parser/arena.h"
 #include "sql_parser/user_variable.h"
+#include <cstring>
 
 namespace sql_parser {
 
@@ -83,6 +84,24 @@ public:
     }
 
 private:
+    // Build canonicalized "@name", "@@name" or "@@scope.name" in the arena.
+    StringRef build_at_identifier_(const char* prefix, const Token& name,
+                                   const Token* qualified) {
+        const size_t prefix_len = std::strlen(prefix);
+        size_t total = prefix_len + name.text.len;
+        if (qualified) total += 1 + qualified->text.len;
+        char* buf = static_cast<char*>(arena_.allocate(total));
+        if (!buf) return StringRef{nullptr, 0};
+        size_t off = 0;
+        std::memcpy(buf + off, prefix, prefix_len); off += prefix_len;
+        std::memcpy(buf + off, name.text.ptr, name.text.len); off += name.text.len;
+        if (qualified) {
+            buf[off++] = '.';
+            std::memcpy(buf + off, qualified->text.ptr, qualified->text.len);
+        }
+        return StringRef{buf, static_cast<uint32_t>(total)};
+    }
+
     Tokenizer<D>& tok_;
     Arena& arena_;
     SubqueryParseCallback<D> subquery_cb_ = nullptr;
@@ -178,11 +197,8 @@ private:
                 // User variable: @name
                 tok_.skip();
                 Token name = tok_.next_token();
-                // Build @name as a single COLUMN_REF with combined text
-                // value_ptr points to @ in original input, len covers @name
-                StringRef full{t.text.ptr,
-                    static_cast<uint32_t>((name.text.ptr + name.text.len) - t.text.ptr)};
-                return make_node(arena_, NodeType::NODE_COLUMN_REF, full);
+                return make_node(arena_, NodeType::NODE_COLUMN_REF,
+                    build_at_identifier_("@", name, nullptr));
             }
             case TokenType::TK_USER_VARIABLE: {
                 tok_.skip();
@@ -192,19 +208,16 @@ private:
                 // System variable: @@name or @@scope.name
                 tok_.skip();
                 Token name = tok_.next_token();
-                StringRef full{t.text.ptr,
-                    static_cast<uint32_t>((name.text.ptr + name.text.len) - t.text.ptr)};
-                AstNode* node = make_node(arena_, NodeType::NODE_COLUMN_REF, full);
                 // Check for @@scope.name
+                Token qualified;
+                const Token* qualified_ptr = nullptr;
                 if (tok_.peek().type == TokenType::TK_DOT) {
                     tok_.skip();
-                    Token var_name = tok_.next_token();
-                    full = StringRef{t.text.ptr,
-                        static_cast<uint32_t>((var_name.text.ptr + var_name.text.len) - t.text.ptr)};
-                    node->value_ptr = full.ptr;
-                    node->value_len = full.len;
+                    qualified = tok_.next_token();
+                    qualified_ptr = &qualified;
                 }
-                return node;
+                return make_node(arena_, NodeType::NODE_COLUMN_REF,
+                    build_at_identifier_("@@", name, qualified_ptr));
             }
             case TokenType::TK_MINUS: {
                 // Unary minus
