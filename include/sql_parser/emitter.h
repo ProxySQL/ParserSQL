@@ -54,7 +54,8 @@ private:
             case NodeType::NODE_WHERE_CLAUSE:    emit_where_clause(node); break;
             case NodeType::NODE_GROUP_BY_CLAUSE: emit_group_by(node); break;
             case NodeType::NODE_HAVING_CLAUSE:   emit_having(node); break;
-            case NodeType::NODE_ORDER_BY_CLAUSE: emit_order_by(node); break;
+            case NodeType::NODE_ORDER_BY_CLAUSE:
+            case NodeType::NODE_AGGREGATE_ORDER_BY: emit_order_by(node); break;
             case NodeType::NODE_ORDER_BY_ITEM:   emit_order_by_item(node); break;
             case NodeType::NODE_LIMIT_CLAUSE:    emit_limit(node); break;
             case NodeType::NODE_LOCKING_CLAUSE:  emit_locking(node); break;
@@ -107,6 +108,9 @@ private:
             case NodeType::NODE_STAR_EXCEPT:  emit_star_except(node); break;
             case NodeType::NODE_STAR_REPLACE: emit_star_replace(node); break;
             case NodeType::NODE_REPLACE_ITEM: emit_replace_item(node); break;
+
+            case NodeType::NODE_CTE: emit_cte(node); break;
+            case NodeType::NODE_CTE_COLUMNS: emit_list(node, ", "); break;
 
             // ---- Compound query ----
             case NodeType::NODE_COMPOUND_QUERY:  emit_compound_query(node); break;
@@ -1277,6 +1281,33 @@ private:
         if (child) emit_node(child);
     }
 
+    void emit_cte(const AstNode* node) {
+        sb_.append("WITH ");
+        if (node->flags & FLAG_CTE_RECURSIVE) sb_.append("RECURSIVE ");
+        const AstNode* child = node->first_child;
+        bool first = true;
+        for (; child && child->type == NodeType::NODE_CTE_DEFINITION; child = child->next_sibling) {
+            if (!first) sb_.append(", ");
+            first = false;
+            emit_identifier(child);
+            const AstNode* body = child->first_child;
+            const AstNode* columns = body ? body->next_sibling : nullptr;
+            if (columns && columns->type == NodeType::NODE_CTE_COLUMNS) {
+                sb_.append_char('(');
+                emit_node(columns);
+                sb_.append_char(')');
+            }
+            sb_.append(" AS ");
+            if (child->flags & FLAG_CTE_MATERIALIZED) sb_.append("MATERIALIZED ");
+            else if (child->flags & FLAG_CTE_NOT_MATERIALIZED) sb_.append("NOT MATERIALIZED ");
+            sb_.append_char('(');
+            emit_node(body);
+            sb_.append_char(')');
+        }
+        sb_.append_char(' ');
+        emit_node(child);
+    }
+
     void emit_function_call(const AstNode* node) {
         const AstNode* arg = node->first_child;
         if (node->flags & FLAG_FUNCTION_TABLE) {
@@ -1284,13 +1315,26 @@ private:
             arg = arg ? arg->next_sibling : nullptr;
         } else emit_value(node);
         sb_.append_char('(');
+        if (node->flags & FLAG_FUNCTION_DISTINCT) sb_.append("DISTINCT ");
+        else if (node->flags & FLAG_FUNCTION_ALL) sb_.append("ALL ");
         bool first = true;
+        const AstNode* order = nullptr;
         for (; arg; arg = arg->next_sibling) {
+            if (arg->type == NodeType::NODE_AGGREGATE_ORDER_BY) {
+                order = arg;
+                continue;
+            }
             if (!first) sb_.append(", ");
             first = false;
             emit_node(arg);
         }
+        if (order && !(node->flags & FLAG_FUNCTION_WITHIN_GROUP)) emit_node(order);
         sb_.append_char(')');
+        if (order && (node->flags & FLAG_FUNCTION_WITHIN_GROUP)) {
+            sb_.append(" WITHIN GROUP (ORDER BY ");
+            emit_list(order, ", ");
+            sb_.append_char(')');
+        }
     }
 
     void emit_is_null(const AstNode* node) {

@@ -276,3 +276,182 @@ TEST(PgExpressions, RejectsMalformedNamedArguments) {
     ASSERT_TRUE(r.full_input);
     EXPECT_EQ(emit_pg(parser, r.ast), valid);
 }
+
+TEST(PgExpressions, QualifiedCallsAndAggregateModifiersRoundTrip) {
+    const std::pair<const char*, const char*> cases[] = {
+        {"SELECT pg_catalog.abs(-1)", "SELECT pg_catalog.abs(-1)"},
+        {"SELECT \"Schema\".\"Func\"(x => 2)", "SELECT \"Schema\".\"Func\"(x => 2)"},
+        {"SELECT count(DISTINCT x)", "SELECT count(DISTINCT x)"},
+        {"SELECT sum(ALL x)", "SELECT sum(ALL x)"},
+        {"SELECT array_agg(DISTINCT x ORDER BY x DESC NULLS FIRST)", "SELECT array_agg(DISTINCT x ORDER BY x DESC NULLS FIRST)"},
+        {"SELECT string_agg(x, ',' ORDER BY x, y DESC NULLS LAST)", "SELECT string_agg(x, ',' ORDER BY x, y DESC NULLS LAST)"},
+        {"SELECT percentile_cont(0.5) WITHIN GROUP (ORDER BY x DESC)", "SELECT percentile_cont(0.5) WITHIN GROUP (ORDER BY x DESC)"},
+        {"SELECT rank() WITHIN GROUP (ORDER BY x) FILTER (WHERE x > 0)", "SELECT rank() WITHIN GROUP (ORDER BY x) FILTER (WHERE x > 0)"},
+        {"SELECT pg_catalog.sum(ALL x) FILTER (WHERE x > 0) OVER ()", "SELECT pg_catalog.sum(ALL x) FILTER (WHERE x > 0) OVER ()"},
+    };
+    for (auto c : cases) {
+        SCOPED_TRACE(c.first);
+        Parser<Dialect::PostgreSQL> parser;
+        auto r = parser.parse(c.first, std::strlen(c.first));
+        ASSERT_EQ(r.status, ParseResult::OK);
+        ASSERT_TRUE(r.full_input);
+        EXPECT_EQ(emit_pg(parser, r.ast), c.second);
+        Parser<Dialect::PostgreSQL> second;
+        auto sql = emit_pg(parser, r.ast);
+        auto rr = second.parse(sql.data(), sql.size());
+        ASSERT_TRUE(rr.full_input);
+        EXPECT_EQ(emit_pg(second, rr.ast), sql);
+        sql_engine::InMemoryCatalog catalog;
+        Arena arena;
+        sql_engine::PlanBuilder<Dialect::PostgreSQL> builder(catalog, arena);
+        EXPECT_EQ(builder.build(r.ast), nullptr);
+    }
+}
+
+TEST(PgExpressions, RejectsMalformedAggregateAndCallSyntax) {
+    for (const char* sql : {"SELECT f(1", "SELECT f(1,)", "SELECT count(DISTINCT)",
+         "SELECT count(ALL)", "SELECT count(DISTINCT *)", "SELECT sum(ALL *)",
+         "SELECT f(ORDER BY x)", "SELECT f(x ORDER x)", "SELECT f(x ORDER BY)",
+         "SELECT f(x ORDER BY y NULLS)", "SELECT f(x ORDER BY y,)",
+         "SELECT f(x) WITHIN GROUP ()", "SELECT f(x) WITHIN (ORDER BY y)",
+         "SELECT f(DISTINCT x) WITHIN GROUP (ORDER BY y)",
+         "SELECT f(x ORDER BY y) WITHIN GROUP (ORDER BY z)",
+         "SELECT s.(1)", "SELECT s.1(2)"}) {
+        SCOPED_TRACE(sql);
+        Parser<Dialect::PostgreSQL> parser;
+        auto r = parser.parse(sql, std::strlen(sql));
+        EXPECT_FALSE(r.status == ParseResult::OK && r.full_input);
+    }
+}
+
+TEST(PgExpressions, AggregateOrderingConstantsAreParametersNotOrdinals) {
+    const char* sql = "SELECT array_agg(DISTINCT x ORDER BY 1), percentile_cont(0.5) WITHIN GROUP (ORDER BY 2) FROM t ORDER BY 1";
+    Parser<Dialect::PostgreSQL> parser;
+    auto r = parser.parse(sql, std::strlen(sql));
+    ASSERT_EQ(r.status, ParseResult::OK);
+    ASSERT_TRUE(r.full_input);
+    Arena output;
+    auto p = parameterize_ast<Dialect::PostgreSQL>(r, output);
+    ASSERT_TRUE(p.ok());
+    ASSERT_EQ(p.parameters.size(), 3u);
+    EXPECT_EQ(emit_pg(parser, p.ast), "SELECT array_agg(DISTINCT x ORDER BY $1), percentile_cont($2) WITHIN GROUP (ORDER BY $3) FROM t ORDER BY 1");
+}
+
+TEST(PgExpressions, CteColumnListsAndQueryBodiesRoundTrip) {
+    const char* queries[] = {
+        "WITH t(x, y) AS (VALUES (1, 2), (3, 4)) SELECT x FROM t",
+        "WITH RECURSIVE t(n) AS (VALUES (1) UNION ALL SELECT n + 1 FROM t WHERE n < 3) SELECT n FROM t",
+        "WITH \"T\"(\"X\") AS MATERIALIZED (SELECT 1) TABLE \"T\"",
+        "WITH t AS NOT MATERIALIZED (TABLE source) SELECT * FROM t",
+        "WITH t(x) AS (WITH s(y) AS (VALUES (1)) SELECT y FROM s) SELECT x FROM t",
+        "WITH t(x) AS (SELECT 1), u(y) AS (TABLE t) VALUES (2)",
+        "SELECT * FROM (VALUES (1, 2), (3, 4)) AS t(x, y)",
+        "SELECT * FROM LATERAL (WITH t(x) AS (VALUES (1)) SELECT x FROM t) AS q",
+        "SELECT (SELECT 1 UNION ALL SELECT 2)",
+    };
+    for (const char* sql : queries) {
+        SCOPED_TRACE(sql);
+        Parser<Dialect::PostgreSQL> parser;
+        auto r = parser.parse(sql, std::strlen(sql));
+        ASSERT_EQ(r.status, ParseResult::OK);
+        ASSERT_TRUE(r.full_input);
+        auto emitted = emit_pg(parser, r.ast);
+        EXPECT_EQ(emitted, sql);
+        Parser<Dialect::PostgreSQL> second;
+        auto rr = second.parse(emitted.data(), emitted.size());
+        ASSERT_EQ(rr.status, ParseResult::OK);
+        ASSERT_TRUE(rr.full_input);
+        EXPECT_EQ(emit_pg(second, rr.ast), emitted);
+    }
+}
+
+TEST(PgExpressions, RejectsMalformedCtes) {
+    for (const char* sql : {"WITH t() AS (SELECT 1) SELECT 1", "WITH t(x,) AS (SELECT 1) SELECT 1",
+         "WITH t(x AS (SELECT 1) SELECT 1", "WITH t (SELECT 1) SELECT 1",
+         "WITH t AS SELECT 1", "WITH t AS () SELECT 1", "WITH t AS (SELECT 1)",
+         "WITH t AS MATERIALIZED SELECT 1", "WITH t AS NOT (SELECT 1) SELECT 1",
+         "WITH t AS (SELECT 1 SELECT 2", "WITH t AS (SELECT 1), SELECT 2"}) {
+        SCOPED_TRACE(sql);
+        Parser<Dialect::PostgreSQL> parser;
+        auto r = parser.parse(sql, std::strlen(sql));
+        EXPECT_FALSE(r.status == ParseResult::OK && r.full_input);
+    }
+}
+
+TEST(PgExpressions, CteStructurePreservesBodyColumnsAndMaterialization) {
+    const char* sql = "WITH t(x, \"Y\") AS NOT MATERIALIZED (VALUES (1, 2)) SELECT * FROM t";
+    Parser<Dialect::PostgreSQL> parser;
+    auto r = parser.parse(sql, std::strlen(sql));
+    ASSERT_EQ(r.status, ParseResult::OK);
+    ASSERT_TRUE(r.full_input);
+    ASSERT_EQ(r.ast->type, NodeType::NODE_CTE);
+    auto* def = r.ast->first_child;
+    ASSERT_NE(def, nullptr);
+    EXPECT_EQ(def->type, NodeType::NODE_CTE_DEFINITION);
+    ASSERT_NE(def->first_child, nullptr);
+    EXPECT_EQ(def->first_child->type, NodeType::NODE_COMPOUND_QUERY);
+    ASSERT_NE(def->first_child->next_sibling, nullptr);
+    EXPECT_EQ(def->first_child->next_sibling->first_child->value(), (StringRef{"x", 1}));
+    sql_engine::InMemoryCatalog catalog;
+    Arena arena;
+    sql_engine::PlanBuilder<Dialect::PostgreSQL> builder(catalog, arena);
+    EXPECT_EQ(builder.build(r.ast), nullptr);
+}
+
+TEST(PgExpressions, MalformedSubqueriesReportErrorsWithoutCrashing) {
+    for (const char* sql : {"SELECT EXISTS (SELECT 1", "SELECT EXISTS (WITH t AS () SELECT 1)",
+         "SELECT EXISTS (VALUES (1,))", "SELECT (SELECT 1", "SELECT x IN (SELECT 1",
+         "SELECT * FROM (WITH t AS () SELECT 1) AS q"}) {
+        SCOPED_TRACE(sql);
+        Parser<Dialect::PostgreSQL> parser;
+        auto r = parser.parse(sql, std::strlen(sql));
+        EXPECT_FALSE(r.status == ParseResult::OK && r.full_input);
+    }
+}
+
+TEST(PgExpressions, AggregateAndSubqueryGrammarBoundaries) {
+    for (const char* sql : {"SELECT f(ALL 0.5) WITHIN GROUP (ORDER BY x)",
+         "SELECT f(*) WITHIN GROUP (ORDER BY x)",
+         "SELECT (SELECT x FROM t ORDER BY x NULLS FIRST)",
+         "WITH t AS (SELECT x FROM s ORDER BY x NULLS LAST) SELECT * FROM t"}) {
+        SCOPED_TRACE(sql);
+        Parser<Dialect::PostgreSQL> parser;
+        auto r = parser.parse(sql, std::strlen(sql));
+        ASSERT_EQ(r.status, ParseResult::OK);
+        ASSERT_TRUE(r.full_input);
+        EXPECT_EQ(emit_pg(parser, r.ast), sql);
+    }
+    for (const char* sql : {"SELECT count(* ORDER BY x)", "SELECT f(*, x)", "SELECT f(x, *)", "SELECT f(DISTINCT 1, *)",
+         "SELECT count(x ORDER BY *)", "SELECT f(x) WITHIN GROUP (ORDER BY *)",
+         "SELECT (VALUES (1) ORDER BY 2 +)", "SELECT (TABLE t LIMIT 1 +)",
+         "WITH a AS (SELECT 1) WITH b AS (SELECT 2) SELECT 3"}) {
+        SCOPED_TRACE(sql);
+        Parser<Dialect::PostgreSQL> parser;
+        auto r = parser.parse(sql, std::strlen(sql));
+        EXPECT_FALSE(r.status == ParseResult::OK && r.full_input);
+    }
+}
+
+TEST(PgExpressions, RejectsLocalExecutionOfUnsupportedCteBodies) {
+    for (const char* sql : {"WITH t AS (VALUES (1)) SELECT 2",
+         "WITH t AS (WITH u AS (SELECT 1) SELECT * FROM u) SELECT 2",
+         "SELECT (WITH t AS (SELECT 1) SELECT * FROM t)"}) {
+        SCOPED_TRACE(sql);
+        Parser<Dialect::PostgreSQL> parser;
+        auto r = parser.parse(sql, std::strlen(sql));
+        ASSERT_EQ(r.status, ParseResult::OK);
+        ASSERT_TRUE(r.full_input);
+        sql_engine::InMemoryCatalog catalog;
+        Arena arena;
+        sql_engine::PlanBuilder<Dialect::PostgreSQL> builder(catalog, arena);
+        EXPECT_EQ(builder.build(r.ast), nullptr);
+    }
+}
+
+TEST(PgExpressions, CteNamesPreserveEmbeddedQuotes) {
+    const char* sql = "WITH \"a\"\"b\" AS (SELECT 1) SELECT * FROM \"a\"\"b\"";
+    Parser<Dialect::PostgreSQL> parser;
+    auto r = parser.parse(sql, std::strlen(sql));
+    ASSERT_TRUE(r.full_input);
+    EXPECT_EQ(emit_pg(parser, r.ast), sql);
+}

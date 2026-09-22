@@ -63,11 +63,18 @@ static constexpr uint16_t FLAG_QUERY_PARENTHESIZED = 0x01;
 static constexpr uint16_t FLAG_TABLE_ONLY = 0x01;
 static constexpr uint16_t FLAG_TABLE_INHERIT = 0x02;
 static constexpr uint16_t FLAG_FUNCTION_TABLE = 0x01;
+static constexpr uint16_t FLAG_FUNCTION_DISTINCT = 0x02;
+static constexpr uint16_t FLAG_FUNCTION_ALL = 0x04;
+static constexpr uint16_t FLAG_FUNCTION_QUALIFIED = 0x08;
+static constexpr uint16_t FLAG_FUNCTION_WITHIN_GROUP = 0x10;
 // On binary/unary expressions: PostgreSQL operation without local engine support.
 static constexpr uint16_t FLAG_PG_OPERATOR = 0x01;
 static constexpr uint16_t FLAG_WINDOW_BETWEEN = 0x01;
 static constexpr uint16_t FLAG_ORDER_NULLS = 0x01;
 static constexpr uint16_t FLAG_LIMIT_COMMA = 0x01;
+static constexpr uint16_t FLAG_CTE_RECURSIVE = 0x01;
+static constexpr uint16_t FLAG_CTE_MATERIALIZED = 0x02;
+static constexpr uint16_t FLAG_CTE_NOT_MATERIALIZED = 0x04;
 
 // -- Flags for NODE_IDENTIFIER / NODE_COLUMN_REF --
 // Set when the identifier was source-delimited (backtick `name` for MySQL,
@@ -267,6 +274,8 @@ enum class NodeType : uint16_t {
     NODE_TYPE_CAST,            // expression, NODE_TYPE_NAME; canonical CAST emission
     NODE_TYPE_NAME,            // validated type syntax, including modifiers/bounds
     NODE_NAMED_ARGUMENT,       // value=argument name; one expression child
+    NODE_AGGREGATE_ORDER_BY,   // ORDER_BY_ITEM children; constants are not ordinals
+    NODE_CTE_COLUMNS,          // identifier children; follows body in CTE_DEFINITION
 };
 
 } // namespace sql_parser

@@ -39,9 +39,9 @@ enum class Precedence : uint8_t {
 };
 
 // Callback type for parsing subqueries inside expressions.
-// When set, called instead of skip_to_matching_paren when (SELECT ...) is encountered.
-// The tokenizer is positioned ON the SELECT keyword (not yet consumed).
-// The callback should consume SELECT and parse the full statement, returning its AST.
+// When set, called instead of skip_to_matching_paren for a recognized query.
+// The tokenizer is positioned ON the query's leading keyword (not yet consumed).
+// The callback consumes the complete query and returns its AST.
 // The closing ')' should NOT be consumed by the callback.
 template <Dialect D>
 using SubqueryParseCallback = AstNode*(*)(Tokenizer<D>&, Arena&);
@@ -56,6 +56,11 @@ public:
     // Set a callback for parsing subqueries. When set and SELECT is encountered
     // inside parens, calls it instead of skipping.
     void set_subquery_callback(SubqueryParseCallback<D> cb) { subquery_cb_ = cb; }
+
+    static bool starts_query(TokenType type) {
+        return type == TokenType::TK_SELECT || (D == Dialect::PostgreSQL &&
+            (type == TokenType::TK_WITH || type == TokenType::TK_VALUES || type == TokenType::TK_TABLE));
+    }
 
     static bool keyword(const Token& token, const char* word) {
         return token.source.ptr == token.text.ptr &&
@@ -160,7 +165,10 @@ private:
             // Callback parses from current position (on SELECT keyword).
             // It should consume everything up to but NOT including ')'.
             AstNode* inner = subquery_cb_(tok_, arena_);
-            if (!inner && require_complete_operands_) return syntax_error();
+            if (!inner && (D == Dialect::PostgreSQL || require_complete_operands_)) return syntax_error();
+            if constexpr (D == Dialect::PostgreSQL) {
+                if (tok_.peek().type != TokenType::TK_RPAREN) return syntax_error();
+            }
             if (inner) node->add_child(inner);
             // Consume the closing ')'
             if (tok_.peek().type == TokenType::TK_RPAREN) tok_.skip();
@@ -334,8 +342,9 @@ private:
                 if (tok_.peek().type == TokenType::TK_LPAREN) {
                     tok_.skip();
                     // We expect SELECT inside
-                    if (tok_.peek().type == TokenType::TK_SELECT) {
+                    if (starts_query(tok_.peek().type)) {
                         AstNode* node = parse_subquery_inner();
+                        if (!node) return nullptr;
                         // Mark as EXISTS subquery via flags
                         node->flags = 1; // 1 = EXISTS context
                         return node;
@@ -380,7 +389,7 @@ private:
             case TokenType::TK_LPAREN: {
                 tok_.skip();
                 // Could be subquery: (SELECT ...)
-                if (tok_.peek().type == TokenType::TK_SELECT) {
+                if (starts_query(tok_.peek().type)) {
                     AstNode* node = parse_subquery_inner();
                     return parse_postfix(node);
                 }
@@ -440,6 +449,37 @@ private:
             static_cast<uint32_t>(end.ptr + end.len - start.ptr)});
     }
 
+    AstNode* parse_aggregate_order() {
+        tok_.skip(); // ORDER
+        if (tok_.peek().type != TokenType::TK_BY) return syntax_error();
+        tok_.skip();
+        AstNode* order = make_node(arena_, NodeType::NODE_AGGREGATE_ORDER_BY);
+        while (true) {
+            AstNode* value = parse_complete();
+            if (!value || value->type == NodeType::NODE_ASTERISK) return syntax_error();
+            AstNode* item = make_node(arena_, NodeType::NODE_ORDER_BY_ITEM);
+            item->add_child(value);
+            Token direction = tok_.peek();
+            if (direction.type == TokenType::TK_ASC || direction.type == TokenType::TK_DESC) {
+                tok_.skip();
+                item->add_child(make_node(arena_, NodeType::NODE_IDENTIFIER, direction.text));
+            }
+            if (keyword(tok_.peek(), "NULLS")) {
+                tok_.skip();
+                Token placement = tok_.peek();
+                if (!keyword(placement, "FIRST") && !keyword(placement, "LAST")) return syntax_error();
+                tok_.skip();
+                item->flags |= FLAG_ORDER_NULLS;
+                item->add_child(make_node(arena_, NodeType::NODE_IDENTIFIER,
+                    keyword(placement, "FIRST") ? StringRef{"NULLS FIRST", 11} : StringRef{"NULLS LAST", 10}));
+            }
+            order->add_child(item);
+            if (tok_.peek().type != TokenType::TK_COMMA) break;
+            tok_.skip();
+        }
+        return order;
+    }
+
     AstNode* parse_identifier_or_function(const Token& name_token) {
         if constexpr (D == Dialect::PostgreSQL) {
             if (keyword(name_token, "CAST") && tok_.peek().type == TokenType::TK_LPAREN) {
@@ -453,10 +493,33 @@ private:
                 return make_cast(value, type);
             }
         }
+        StringRef function_name = name_token.source.empty() ? name_token.text : name_token.source;
+        bool qualified_function = false;
+        if constexpr (D == Dialect::PostgreSQL) {
+            // Probe dotted names without consuming a column reference. Keep the
+            // source spelling so quoted components and intervening comments survive.
+            if (tok_.peek().type == TokenType::TK_DOT) {
+                auto lookahead = tok_;
+                StringRef span = function_name;
+                while (lookahead.peek().type == TokenType::TK_DOT) {
+                    lookahead.skip();
+                    Token field = lookahead.next_token();
+                    if (!pg_column_label(field)) break;
+                    span.len = static_cast<uint32_t>(field.source.ptr + field.source.len - span.ptr);
+                    if (lookahead.peek().type == TokenType::TK_LPAREN) {
+                        tok_ = lookahead;
+                        function_name = span;
+                        qualified_function = true;
+                        break;
+                    }
+                }
+            }
+        }
         // Check for function call: name(
         if (tok_.peek().type == TokenType::TK_LPAREN) {
             tok_.skip();  // consume (
-            AstNode* func = make_node(arena_, NodeType::NODE_FUNCTION_CALL, name_token.source.empty() ? name_token.text : name_token.source);
+            AstNode* func = make_node(arena_, NodeType::NODE_FUNCTION_CALL, function_name,
+                qualified_function ? FLAG_FUNCTION_QUALIFIED : 0);
             // CAST uses `CAST(expr AS type)` rather than a comma-separated
             // argument list. Model it as a function call so consumers can
             // reject or handle the expression without leaving valid input
@@ -475,14 +538,30 @@ private:
                 if (tok_.peek().type == TokenType::TK_RPAREN) tok_.skip();
                 return func;
             }
+            // Aggregate modifiers precede a nonempty expression list.
+            if constexpr (D == Dialect::PostgreSQL) {
+                Token modifier = tok_.peek();
+                if (modifier.type == TokenType::TK_DISTINCT || modifier.type == TokenType::TK_ALL) {
+                    func->flags |= modifier.type == TokenType::TK_DISTINCT
+                        ? FLAG_FUNCTION_DISTINCT : FLAG_FUNCTION_ALL;
+                    tok_.skip();
+                    if (tok_.peek().type == TokenType::TK_RPAREN || tok_.peek().type == TokenType::TK_ASTERISK)
+                        return syntax_error();
+                }
+            }
             // Parse argument list
             if (tok_.peek().type != TokenType::TK_RPAREN) {
                 while (true) {
-                    AstNode* arg = parse_argument();
+                    AstNode* arg = parse_argument(D == Dialect::PostgreSQL);
                     if constexpr (D == Dialect::PostgreSQL) {
                         if (!arg) return syntax_error();
                     }
                     if (arg) func->add_child(arg);
+                    if constexpr (D == Dialect::PostgreSQL) {
+                        if (arg && arg->type == NodeType::NODE_ASTERISK &&
+                            (func->first_child != arg || tok_.peek().type != TokenType::TK_RPAREN))
+                            return syntax_error();
+                    }
                     if (tok_.peek().type == TokenType::TK_COMMA) {
                         tok_.skip();
                     } else {
@@ -490,10 +569,32 @@ private:
                     }
                 }
             }
-            if (tok_.peek().type == TokenType::TK_RPAREN) {
-                tok_.skip();
-            }
             if constexpr (D == Dialect::PostgreSQL) {
+                if (tok_.peek().type == TokenType::TK_ORDER) {
+                    AstNode* order = parse_aggregate_order();
+                    if (!order) return nullptr;
+                    func->add_child(order);
+                }
+                if (tok_.peek().type != TokenType::TK_RPAREN) return syntax_error();
+            }
+            if (tok_.peek().type == TokenType::TK_RPAREN) tok_.skip();
+            if constexpr (D == Dialect::PostgreSQL) {
+                if (keyword(tok_.peek(), "WITHIN")) {
+                    if (func->flags & FLAG_FUNCTION_DISTINCT) return syntax_error();
+                    for (auto* child = func->first_child; child; child = child->next_sibling)
+                        if (child->type == NodeType::NODE_AGGREGATE_ORDER_BY) return syntax_error();
+                    tok_.skip();
+                    if (!keyword(tok_.peek(), "GROUP")) return syntax_error();
+                    tok_.skip();
+                    if (tok_.peek().type != TokenType::TK_LPAREN) return syntax_error();
+                    tok_.skip();
+                    if (tok_.peek().type != TokenType::TK_ORDER) return syntax_error();
+                    AstNode* order = parse_aggregate_order();
+                    if (!order || tok_.peek().type != TokenType::TK_RPAREN) return syntax_error();
+                    tok_.skip();
+                    func->flags |= FLAG_FUNCTION_WITHIN_GROUP;
+                    func->add_child(order);
+                }
                 if (keyword(tok_.peek(), "FILTER")) {
                     tok_.skip();
                     if (tok_.peek().type != TokenType::TK_LPAREN) return syntax_error();
@@ -714,8 +815,9 @@ private:
         node->add_child(left);
         if (tok_.peek().type == TokenType::TK_LPAREN) {
             tok_.skip();
-            if (tok_.peek().type == TokenType::TK_SELECT) {
+            if (starts_query(tok_.peek().type)) {
                 AstNode* sq = parse_subquery_inner();
+                if (!sq) return nullptr;
                 node->add_child(sq);
             } else {
                 // Expression roots are single, unattached nodes. Keep the tail
@@ -822,7 +924,7 @@ private:
         tok_.skip();
         if (tok_.peek().type == TokenType::TK_LPAREN) {
             tok_.skip();
-            if (tok_.peek().type == TokenType::TK_SELECT) {
+            if (starts_query(tok_.peek().type)) {
                 const char* close = skip_to_matching_paren();
                 const char* end = close ? close + 1 : tok_.input_end();
                 return make_node(arena_, NodeType::NODE_IDENTIFIER,

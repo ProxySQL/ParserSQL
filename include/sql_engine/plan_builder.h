@@ -52,13 +52,30 @@ public:
         return nullptr;
     }
 
+    static bool supports_query_features(const sql_parser::AstNode* ast) {
+        return ast && !has_unsupported_query_feature(ast);
+    }
+
 private:
     const Catalog& catalog_;
     sql_parser::Arena& arena_;
 
-    static bool has_unsupported_query_feature(const sql_parser::AstNode* node) {
+    static bool has_unsupported_query_feature(const sql_parser::AstNode* node, bool root = true) {
         using sql_parser::NodeType;
         switch (node->type) {
+            case NodeType::NODE_CTE:
+                // Nested WITH requires its own materialization scope, which
+                // neither build_cte nor the subquery executor implements.
+                if (!root || (node->flags & sql_parser::FLAG_CTE_RECURSIVE)) return true;
+                break;
+            case NodeType::NODE_CTE_DEFINITION:
+                if (node->flags & (sql_parser::FLAG_CTE_MATERIALIZED |
+                    sql_parser::FLAG_CTE_NOT_MATERIALIZED)) return true;
+                break;
+            case NodeType::NODE_CTE_COLUMNS:
+            case NodeType::NODE_TABLE_QUERY:
+            case NodeType::NODE_VALUES_CLAUSE:
+                return true;
             case NodeType::NODE_BINARY_OP:
             case NodeType::NODE_UNARY_OP:
                 if (node->flags & sql_parser::FLAG_PG_OPERATOR) return true;
@@ -66,6 +83,7 @@ private:
             case NodeType::NODE_NAMED_ARGUMENT:
             case NodeType::NODE_TYPE_CAST:
             case NodeType::NODE_DISTINCT_ON:
+            case NodeType::NODE_AGGREGATE_ORDER_BY:
             case NodeType::NODE_AGGREGATE_FILTER:
             case NodeType::NODE_LATERAL:
             case NodeType::NODE_WINDOW_CLAUSE:
@@ -73,7 +91,9 @@ private:
             case NodeType::NODE_WINDOW_FRAME:
                 return true;
             case NodeType::NODE_FUNCTION_CALL:
-                if (node->flags & sql_parser::FLAG_FUNCTION_TABLE) return true;
+                if (node->flags & (sql_parser::FLAG_FUNCTION_TABLE | sql_parser::FLAG_FUNCTION_DISTINCT |
+                    sql_parser::FLAG_FUNCTION_ALL | sql_parser::FLAG_FUNCTION_QUALIFIED |
+                    sql_parser::FLAG_FUNCTION_WITHIN_GROUP)) return true;
                 break;
             case NodeType::NODE_ORDER_BY_ITEM:
                 if (node->flags & sql_parser::FLAG_ORDER_NULLS) return true;
@@ -81,7 +101,7 @@ private:
             default: break;
         }
         for (const auto* child = node->first_child; child; child = child->next_sibling)
-            if (has_unsupported_query_feature(child)) return true;
+            if (has_unsupported_query_feature(child, false)) return true;
         return false;
     }
 

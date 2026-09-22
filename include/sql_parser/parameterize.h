@@ -91,6 +91,7 @@ inline bool supported_node(const AstNode& node) {
         case NodeType::NODE_WHERE_CLAUSE:
         case NodeType::NODE_GROUP_BY_CLAUSE:
         case NodeType::NODE_HAVING_CLAUSE:
+        case NodeType::NODE_AGGREGATE_ORDER_BY:
         case NodeType::NODE_ORDER_BY_CLAUSE:
         case NodeType::NODE_ORDER_BY_ITEM:
         case NodeType::NODE_LIMIT_CLAUSE:

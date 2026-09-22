@@ -1172,7 +1172,13 @@ ParseResult Parser<D>::parse_with() {
     ParseResult r;
     r.stmt_type = StmtType::SELECT;
 
-    // WITH keyword already consumed by classifier
+    // WITH keyword already consumed by classifier.
+    if constexpr (D == Dialect::PostgreSQL) {
+        r.ast = parse_pg_with(tokenizer_, arena_);
+        r.status = r.ast ? ParseResult::OK : ParseResult::ERROR;
+        scan_to_end(r);
+        return r;
+    }
     AstNode* cte = make_node(arena_, NodeType::NODE_CTE);
     if (!cte) { r.status = ParseResult::ERROR; return r; }
 

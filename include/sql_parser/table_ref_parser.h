@@ -71,11 +71,15 @@ public:
         // Subquery: (SELECT ...)
         if (t.type == TokenType::TK_LPAREN) {
             tok_.skip();
-            if (tok_.peek().type == TokenType::TK_SELECT) {
+            if (ExpressionParser<D>::starts_query(tok_.peek().type)) {
                 AstNode* subq = nullptr;
                 if (subquery_cb_) {
                     subq = make_node(arena_, NodeType::NODE_SUBQUERY);
                     AstNode* inner = subquery_cb_(tok_, arena_);
+                    if constexpr (D == Dialect::PostgreSQL) {
+                        if (!inner || tok_.peek().type != TokenType::TK_RPAREN)
+                            return expr_parser_.syntax_error();
+                    }
                     if (inner) subq->add_child(inner);
                     if (tok_.peek().type == TokenType::TK_RPAREN) tok_.skip();
                 } else {

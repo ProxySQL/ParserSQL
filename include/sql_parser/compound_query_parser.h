@@ -210,6 +210,18 @@ private:
                 item->add_child(make_node(arena_, NodeType::NODE_IDENTIFIER, dir.text));
             }
 
+            if constexpr (D == Dialect::PostgreSQL) {
+                if (ExpressionParser<D>::keyword(tok_.peek(), "NULLS")) {
+                    tok_.skip();
+                    Token placement = tok_.peek();
+                    bool first = ExpressionParser<D>::keyword(placement, "FIRST");
+                    if (!first && !ExpressionParser<D>::keyword(placement, "LAST")) return nullptr;
+                    tok_.skip();
+                    item->flags |= FLAG_ORDER_NULLS;
+                    item->add_child(make_node(arena_, NodeType::NODE_IDENTIFIER,
+                        first ? StringRef{"NULLS FIRST", 11} : StringRef{"NULLS LAST", 10}));
+                }
+            }
             order_by->add_child(item);
 
             if (tok_.peek().type == TokenType::TK_COMMA) {

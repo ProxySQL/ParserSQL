@@ -21,10 +21,10 @@ transformation. They support normal SQL emission and digest generation.
 PostgreSQL still performs name resolution, type checking, window inheritance
 validation and other semantic checks.
 
-The new clauses remain bounded by the existing expression/subquery grammar.
-In particular, LATERAL currently uses the simple SELECT subquery callback;
-WITH/VALUES/compound derived-query operands and interval-valued frame offsets
-are not covered by this change.
+The new clauses remain bounded by the existing expression grammar. PostgreSQL
+subqueries now share compound-query parsing, including SELECT, TABLE, VALUES and
+WITH operands in derived tables and LATERAL. Interval-valued frame offsets remain
+outside the supported expression subset.
 
 Window expressions previously disappeared from emitted SQL and digests because
 their AST nodes had no emitter handlers. They now appear correctly. Digest
@@ -71,6 +71,39 @@ expression-valued type modifiers, every keyword in an unquoted type-name
 position, interval prefix-literal qualifiers, or the remaining full expression
 and DDL grammar. These additions improve the native ParserSQL implementation;
 there is no PostgreSQL runtime fallback or production library dependency.
+
+## Qualified calls, aggregates and CTEs
+
+Expression calls accept schema-qualified names, including quoted components.
+Aggregate calls preserve `DISTINCT`/`ALL`, in-call `ORDER BY` (including direction
+and NULLS placement), and `WITHIN GROUP (ORDER BY ...)`. FILTER and OVER can
+follow the supported aggregate forms. This is syntactic parsing; PostgreSQL
+still checks aggregate signatures and semantic restrictions.
+
+`NODE_FUNCTION_CALL` retains ordinary argument children and node-specific flags
+for qualification, DISTINCT, ALL and WITHIN GROUP. An appended
+`NODE_AGGREGATE_ORDER_BY` child contains `NODE_ORDER_BY_ITEM` children. Its sort
+expressions are values, not SELECT output ordinals: parameterization binds a
+literal `1` inside `array_agg(x ORDER BY 1)` but preserves the query-level
+`ORDER BY 1`. Malformed calls and missing closing delimiters report errors.
+
+PostgreSQL CTE definitions accept output-column lists, `[NOT] MATERIALIZED`,
+SELECT/TABLE/VALUES/compound bodies and nested WITH queries. RECURSIVE is retained
+in the AST and emitted SQL; it does not enable recursive local execution.
+The definition body remains its first child, followed by `NODE_CTE_COLUMNS`
+when present. CTE names and column names preserve quoting. The CTE emitter
+reconstructs the complete WITH clause and main query.
+
+The local engine rejects qualified calls, aggregate modifiers/ordering,
+recursive/nested CTEs, CTE output-column lists, materialization hints and
+VALUES/TABLE query bodies before CTE materialization. These additions do not extend CTE parameterization, which
+continues to return an unsupported-context error.
+
+Remaining gaps include data-modifying CTEs and main statements, SEARCH/CYCLE,
+special EXTRACT/SUBSTRING forms, AT TIME ZONE, advanced grouping, and broader
+SQL/JSON, XML and DDL grammar. See PostgreSQL's
+[aggregate syntax](https://www.postgresql.org/docs/18/sql-expressions.html#SYNTAX-AGGREGATES)
+and [WITH queries](https://www.postgresql.org/docs/18/queries-with.html).
 
 ## Multiple statements
 
