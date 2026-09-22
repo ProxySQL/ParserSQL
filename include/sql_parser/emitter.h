@@ -80,6 +80,7 @@ private:
             // ---- Compound query ----
             case NodeType::NODE_COMPOUND_QUERY:  emit_compound_query(node); break;
             case NodeType::NODE_SET_OPERATION:   emit_set_operation(node); break;
+            case NodeType::NODE_TABLE_QUERY:     emit_table_query(node); break;
 
             // ---- DELETE statement ----
             case NodeType::NODE_DELETE_STMT:          emit_delete_stmt(node); break;
@@ -1048,7 +1049,20 @@ private:
 
     // ---- Compound query ----
 
+    void emit_table_query(const AstNode* node) {
+        sb_.append("TABLE ");
+        if (node->flags & FLAG_TABLE_ONLY) sb_.append("ONLY ");
+        const AstNode* name = node->first_child;
+        if (!name) return;
+        emit_node(name);
+        if (node->flags & FLAG_TABLE_INHERIT) sb_.append(" *");
+        for (const AstNode* clause = name->next_sibling; clause; clause = clause->next_sibling) {
+            emit_node(clause);
+        }
+    }
+
     void emit_compound_query(const AstNode* node) {
+        if (node->flags & FLAG_QUERY_PARENTHESIZED) sb_.append_char('(');
         for (const AstNode* child = node->first_child; child; child = child->next_sibling) {
             if (child->type == NodeType::NODE_SET_OPERATION) {
                 emit_set_operation(child);
@@ -1057,6 +1071,7 @@ private:
                 emit_node(child);
             }
         }
+        if (node->flags & FLAG_QUERY_PARENTHESIZED) sb_.append_char(')');
     }
 
     void emit_set_operation(const AstNode* node) {

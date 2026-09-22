@@ -41,8 +41,9 @@ using SubqueryParseCallback = AstNode*(*)(Tokenizer<D>&, Arena&);
 template <Dialect D>
 class ExpressionParser {
 public:
-    ExpressionParser(Tokenizer<D>& tokenizer, Arena& arena)
-        : tok_(tokenizer), arena_(arena) {}
+    ExpressionParser(Tokenizer<D>& tokenizer, Arena& arena,
+                     bool require_complete_operands = false)
+        : tok_(tokenizer), arena_(arena), require_complete_operands_(require_complete_operands) {}
 
     // Set a callback for parsing subqueries. When set and SELECT is encountered
     // inside parens, calls it instead of skipping.
@@ -51,14 +52,22 @@ public:
     // Parse an expression with minimum precedence 0
     AstNode* parse(Precedence min_prec = Precedence::NONE) {
         AstNode* left = parse_atom();
-        if (!left) return nullptr;
+        if (!left) {
+            operand_error_ = true;
+            return nullptr;
+        }
+        if (require_complete_operands_ && operand_error_) return nullptr;
 
         while (true) {
             Precedence prec = infix_precedence(tok_.peek().type);
             if (prec <= min_prec) break;
 
             left = parse_infix(left, prec);
-            if (!left) return nullptr;
+            if (!left) {
+                operand_error_ = true;
+                return nullptr;
+            }
+            if (require_complete_operands_ && operand_error_) return nullptr;
         }
 
         return left;
@@ -68,6 +77,10 @@ private:
     Tokenizer<D>& tok_;
     Arena& arena_;
     SubqueryParseCallback<D> subquery_cb_ = nullptr;
+    // Existing callers tolerate partially understood PostgreSQL operators.
+    // VALUES requires complete operands rather than silently dropping an operator.
+    bool require_complete_operands_;
+    bool operand_error_ = false;
 
     // Parse a subquery: if callback is set, use it; otherwise skip.
     // The tokenizer is positioned right after '(' and on the SELECT keyword.
@@ -471,8 +484,8 @@ private:
                     not_node->add_child(like_node);
                     return not_node;
                 }
-                // Standalone NOT in infix position — shouldn't happen, return left
-                return left;
+                // Standalone NOT is incomplete in an operand-checked context.
+                return require_complete_operands_ ? nullptr : left;
             }
             case TokenType::TK_IS: {
                 // IS [NOT] NULL
@@ -497,7 +510,7 @@ private:
                     node->add_child(make_node(arena_, NodeType::NODE_LITERAL_INT, val.text));
                     return node;
                 }
-                return left;
+                return require_complete_operands_ ? nullptr : left;
             }
             case TokenType::TK_IN:
                 return parse_in(left);
@@ -510,7 +523,7 @@ private:
             default: {
                 // Standard binary operator
                 AstNode* right = parse(prec);
-                if (!right) return left;
+                if (!right) return require_complete_operands_ ? nullptr : left;
                 AstNode* node = make_node(arena_, NodeType::NODE_BINARY_OP, op.text);
                 node->add_child(left);
                 node->add_child(right);

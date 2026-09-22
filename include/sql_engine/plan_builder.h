@@ -606,7 +606,11 @@ private:
         const sql_parser::AstNode* set_op_node = find_child(compound_ast, sql_parser::NodeType::NODE_SET_OPERATION);
         if (set_op_node) {
             current = build_set_op(set_op_node);
+        } else if (compound_ast->first_child) {
+            // Parenthesized operands preserve their own ORDER BY/LIMIT scope.
+            current = build(compound_ast->first_child);
         }
+        if (!current) return nullptr;
 
         // Trailing ORDER BY
         const sql_parser::AstNode* order_by = find_child(compound_ast, sql_parser::NodeType::NODE_ORDER_BY_CLAUSE);
@@ -679,6 +683,7 @@ private:
             }
         }
 
+        if (!node->left || !node->right) return nullptr;
         return node;
     }
 };

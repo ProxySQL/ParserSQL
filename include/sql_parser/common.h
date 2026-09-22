@@ -58,6 +58,10 @@ inline int ci_cmp(const char* a, uint32_t alen, const char* b, uint8_t blen) {
 
 // -- Flags for NODE_SET_OPERATION --
 static constexpr uint16_t FLAG_SET_OP_ALL = 0x01;
+// Parenthesized query expressions retain grouping during SQL emission.
+static constexpr uint16_t FLAG_QUERY_PARENTHESIZED = 0x01;
+static constexpr uint16_t FLAG_TABLE_ONLY = 0x01;
+static constexpr uint16_t FLAG_TABLE_INHERIT = 0x02;
 
 // -- Flags for NODE_IDENTIFIER / NODE_COLUMN_REF --
 // Set when the identifier was source-delimited (backtick `name` for MySQL,
@@ -237,6 +241,7 @@ enum class NodeType : uint16_t {
     NODE_USER_VARIABLE,
     NODE_LITERAL_HEX,
     NODE_LITERAL_BIT,
+    NODE_TABLE_QUERY,           // PostgreSQL TABLE [ONLY] relation [*]
 };
 
 } // namespace sql_parser
