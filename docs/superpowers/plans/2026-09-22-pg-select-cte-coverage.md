@@ -51,4 +51,10 @@ materialization behavior. Do not equate complete parsing with AST equivalence.
   PostgreSQL AST pairs match after source locations are removed.
 - Independent final review: no outstanding findings after 20 targeted grammar
   checks and three CTE physical-table shadowing reproductions.
-- Correctness snapshot refresh and PR publication follow the grammar commit.
+- Refreshed 51,415 correctness rows and 26,159 CI fixtures. Full compatibility
+  verification matches the baseline and passes all selected cases; 87 harness
+  unit tests pass. Independent replay agrees on every classification/status/AST
+  result and remaining input modulo the replay wrapper's added whitespace.
+- Reran the previous 46 PostgreSQL AST round trips as well as the 24 new pairs:
+  all 70 match after source locations are removed. Benchmark files remain local.
+- Publish these commits by updating the already-authorized PR #67.
