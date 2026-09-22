@@ -35,6 +35,13 @@ public:
     }
 
 private:
+    AstNode* make_identifier(const Token& token, NodeType type = NodeType::NODE_IDENTIFIER) {
+        AstNode* node = make_node_from_token(arena_, type, token);
+        if (node && token.type == TokenType::TK_IDENTIFIER && token.source.ptr != token.text.ptr)
+            node->flags |= FLAG_IDENT_DELIMITED;
+        return node;
+    }
+
     Tokenizer<D>& tok_;
     Arena& arena_;
     ExpressionParser<D> expr_parser_;
@@ -194,11 +201,11 @@ private:
             tok_.skip();
             Token actual_col = tok_.next_token();
             AstNode* qname = make_node(arena_, NodeType::NODE_QUALIFIED_NAME);
-            qname->add_child(make_node(arena_, NodeType::NODE_IDENTIFIER, col.text));
-            qname->add_child(make_node(arena_, NodeType::NODE_IDENTIFIER, actual_col.text));
+            qname->add_child(make_identifier(col));
+            qname->add_child(make_identifier(actual_col));
             item->add_child(qname);
         } else {
-            item->add_child(make_node(arena_, NodeType::NODE_COLUMN_REF, col.text));
+            item->add_child(make_identifier(col, NodeType::NODE_COLUMN_REF));
         }
 
         // = sign
@@ -281,7 +288,8 @@ private:
             if (next.type == TokenType::TK_AS) {
                 tok_.skip();
                 Token alias_name = tok_.next_token();
-                ret->add_child(make_node(arena_, NodeType::NODE_ALIAS, alias_name.text));
+                ret->add_child(make_node(arena_, NodeType::NODE_ALIAS,
+                    alias_name.source.empty() ? alias_name.text : alias_name.source));
             }
 
             if (tok_.peek().type == TokenType::TK_COMMA) {
