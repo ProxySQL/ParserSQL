@@ -181,16 +181,17 @@ private:
         Token t = tok_.peek();
         if constexpr (D == Dialect::PostgreSQL) {
             if (PgTypeParser::name_token(t) && !keyword(t, "INTERVAL")) {
-                auto lookahead = tok_;
-                lookahead.skip();
-                const Token next = lookahead.peek();
+                // Consume the name once. Ordinary references use the real
+                // tokenizer's cached next token rather than rescanning a copy.
+                tok_.skip();
+                const Token next = tok_.peek();
                 // Avoid scanning a complete type for ordinary column references.
                 if (next.type == TokenType::TK_STRING || next.type == TokenType::TK_LPAREN ||
                     next.type == TokenType::TK_DOT || keyword(t, "TIMESTAMP") ||
                     keyword(t, "TIME") || keyword(t, "DOUBLE") || keyword(t, "CHARACTER") ||
                     keyword(t, "CHAR") || keyword(t, "NCHAR") || keyword(t, "NATIONAL") || keyword(t, "BIT")) {
-                    lookahead = tok_;
-                    StringRef type = PgTypeParser(lookahead).parse(false, true);
+                    auto lookahead = tok_;
+                    StringRef type = PgTypeParser(lookahead).parse(false, true, &t);
                     if (!type.empty() && lookahead.peek().type == TokenType::TK_STRING) {
                         Token literal = lookahead.next_token();
                         tok_ = lookahead;
@@ -198,6 +199,7 @@ private:
                         return make_cast(value, type);
                     }
                 }
+                return parse_identifier_or_function(t);
             }
         }
 

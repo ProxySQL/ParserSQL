@@ -22,10 +22,11 @@ public:
             token.type == TokenType::TK_DATA || token.type == TokenType::TK_SCHEMA;
     }
 
-    StringRef parse(bool arrays = true, bool constant = false) {
-        Token first = tok_.peek();
+    StringRef parse(bool arrays = true, bool constant = false, const Token* leading = nullptr) {
+        Token first = leading ? *leading : tok_.peek();
         if (!name_token(first)) return {};
-        take();
+        if (leading) last_ = first.source;
+        else take();
         bool qualified = false;
         while (tok_.peek().type == TokenType::TK_DOT) {
             qualified = true;
