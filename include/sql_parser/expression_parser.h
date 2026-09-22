@@ -542,9 +542,15 @@ private:
                 AstNode* sq = parse_subquery_inner();
                 node->add_child(sq);
             } else {
+                // Expression roots are single, unattached nodes. Keep the tail
+                // locally so appending N IN-list values takes O(N), not O(N^2).
+                AstNode* tail = left;
                 while (true) {
                     AstNode* val = parse();
-                    if (val) node->add_child(val);
+                    if (val) {
+                        tail->next_sibling = val;
+                        tail = val;
+                    }
                     if (tok_.peek().type == TokenType::TK_COMMA) {
                         tok_.skip();
                     } else {

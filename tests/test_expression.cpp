@@ -1,6 +1,7 @@
 #include <gtest/gtest.h>
 #include "sql_parser/parser.h"
 #include "sql_parser/expression_parser.h"
+#include "sql_parser/emitter.h"
 
 using namespace sql_parser;
 
@@ -290,6 +291,81 @@ TEST_F(ExpressionTest, InList) {
     int count = 0;
     for (AstNode* c = node->first_child; c; c = c->next_sibling) ++count;
     EXPECT_EQ(count, 4);
+}
+
+template <Dialect D>
+static void check_large_in_list() {
+    // Cross arena blocks and inspect every value: appending must neither drop
+    // elements nor reorder/overwrite the left-hand expression or list tail.
+    constexpr int count = 3000;
+    std::string sql = "key_col IN (";
+    for (int i = 0; i < count; ++i) {
+        if (i) sql += ", ";
+        sql += std::to_string(i);
+    }
+    sql += ")";
+    Arena arena;
+    Tokenizer<D> tok;
+    tok.reset(sql.data(), sql.size());
+    ExpressionParser<D> parser(tok, arena);
+    AstNode* node = parser.parse();
+    ASSERT_NE(node, nullptr);
+    ASSERT_EQ(node->type, NodeType::NODE_IN_LIST);
+    ASSERT_NE(node->first_child, nullptr);
+    EXPECT_EQ(std::string(node->first_child->value_ptr, node->first_child->value_len), "key_col");
+    const AstNode* value = node->first_child->next_sibling;
+    for (int i = 0; i < count; ++i) {
+        ASSERT_NE(value, nullptr) << "Missing item " << i;
+        EXPECT_EQ(value->type, NodeType::NODE_LITERAL_INT);
+        EXPECT_EQ(std::string(value->value_ptr, value->value_len), std::to_string(i));
+        value = value->next_sibling;
+    }
+    EXPECT_EQ(value, nullptr);
+    EXPECT_EQ(tok.peek().type, TokenType::TK_EOF);
+    Emitter<D> emitter(arena);
+    emitter.emit(node);
+    StringRef result = emitter.result();
+    EXPECT_EQ(std::string(result.ptr, result.len), sql);
+}
+
+TEST(InListAppend, LargeMySQLListRetainsEveryValue) {
+    check_large_in_list<Dialect::MySQL>();
+}
+
+TEST(InListAppend, LargePostgreSQLListRetainsEveryValue) {
+    check_large_in_list<Dialect::PostgreSQL>();
+}
+
+template <Dialect D>
+static void check_nested_in_lists() {
+    const char* cases[] = {
+        "x IN (1)",
+        "x NOT IN (1, NULL, f(2, 3), 4 + 5)",
+        "(x, y) IN ((1, 2), (3, 4))",
+        "x IN (1, (y IN (2, 3)), 4)",
+        "x IN (SELECT y FROM t WHERE z IN (2, 3))",
+    };
+    Parser<D> parser;
+    for (const char* expression : cases) {
+        const std::string sql = std::string("SELECT * FROM t WHERE ") + expression;
+        SCOPED_TRACE(sql);
+        auto result = parser.parse(sql.data(), sql.size());
+        ASSERT_EQ(result.status, ParseResult::OK);
+        ASSERT_TRUE(result.full_input);
+        ASSERT_NE(result.ast, nullptr);
+        Emitter<D> emitter(parser.arena());
+        emitter.emit(result.ast);
+        StringRef emitted = emitter.result();
+        EXPECT_EQ(std::string(emitted.ptr, emitted.len), sql);
+    }
+}
+
+TEST(InListAppend, NestedMySQLListsAndSubqueryRoundTrip) {
+    check_nested_in_lists<Dialect::MySQL>();
+}
+
+TEST(InListAppend, NestedPostgreSQLListsAndSubqueryRoundTrip) {
+    check_nested_in_lists<Dialect::PostgreSQL>();
 }
 
 TEST_F(ExpressionTest, FunctionCall) {
