@@ -561,7 +561,10 @@ ParseResult Parser<D>::parse_call() {
         ExpressionParser<D> expr_parser(tokenizer_, arena_);
         if (tokenizer_.peek().type != TokenType::TK_RPAREN) {
             while (true) {
-                AstNode* arg = expr_parser.parse();
+                AstNode* arg = expr_parser.parse_argument();
+                if constexpr (D == Dialect::PostgreSQL) {
+                    if (!arg) { expr_parser.syntax_error(); break; }
+                }
                 if (arg) root->add_child(arg);
                 if (tokenizer_.peek().type == TokenType::TK_COMMA) {
                     tokenizer_.skip();

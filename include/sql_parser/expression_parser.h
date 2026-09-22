@@ -7,6 +7,8 @@
 #include "sql_parser/ast.h"
 #include "sql_parser/arena.h"
 #include "sql_parser/user_variable.h"
+#include "sql_parser/pg_type_parser.h"
+#include "sql_parser/pg_identifier.h"
 
 namespace sql_parser {
 
@@ -17,13 +19,19 @@ enum class Precedence : uint8_t {
     XOR,           // XOR
     AND,           // AND
     NOT,           // NOT (prefix)
+    PG_IS,
+    PG_COMPARISON,
+    PG_PREDICATE,
     COMPARISON,    // =, <, >, <=, >=, !=, <>, IS, LIKE, IN, BETWEEN
+    PG_OPERATOR,
     BIT_OR,        // |
     BIT_XOR,       // ^
     BIT_AND,       // &
     SHIFT,         // <<, >>
     ADDITION,      // +, -
     MULTIPLICATION,// *, /, %
+    EXPONENT,
+    COLLATION,
     UNARY,         // - (prefix), NOT
     POSTFIX,       // IS NULL, IS NOT NULL
     CALL,          // function()
@@ -83,6 +91,10 @@ public:
             return nullptr;
         }
         if (require_complete_operands_ && operand_error_) return nullptr;
+        if constexpr (D == Dialect::PostgreSQL) {
+            left = parse_postfix(left);
+            if (!left) return nullptr;
+        }
 
         while (true) {
             Precedence prec = infix_precedence(tok_.peek().type);
@@ -94,9 +106,40 @@ public:
                 return nullptr;
             }
             if (require_complete_operands_ && operand_error_) return nullptr;
+            if constexpr (D == Dialect::PostgreSQL) {
+                if (tok_.peek().type == TokenType::TK_DOUBLE_COLON) {
+                    left = parse_postfix(left);
+                    if (!left) return nullptr;
+                }
+            }
         }
 
         return left;
+    }
+
+    // Named arguments are only valid inside function/procedure argument lists.
+    AstNode* parse_argument(bool complete = false) {
+        if constexpr (D == Dialect::PostgreSQL) {
+            Token name = tok_.peek();
+            {
+                auto lookahead = tok_;
+                lookahead.skip();
+                Token separator = lookahead.peek();
+                if (separator.type == TokenType::TK_NAMED_ARGUMENT || separator.type == TokenType::TK_COLON_EQUAL) {
+                    if (!pg_type_function_name(name)) return syntax_error();
+                    lookahead.skip();
+                    tok_ = lookahead;
+                    AstNode* value = parse_complete();
+                    if (!value) return syntax_error();
+                    AstNode* node = make_node(arena_, NodeType::NODE_NAMED_ARGUMENT,
+                        name.source.empty() ? name.text : name.source);
+                    if (!node) return syntax_error();
+                    node->add_child(value);
+                    return node;
+                }
+            }
+        }
+        return complete ? parse_complete() : parse();
     }
 
 private:
@@ -136,6 +179,27 @@ private:
     // Parse a primary expression (atom)
     AstNode* parse_atom() {
         Token t = tok_.peek();
+        if constexpr (D == Dialect::PostgreSQL) {
+            if (PgTypeParser::name_token(t) && !keyword(t, "INTERVAL")) {
+                auto lookahead = tok_;
+                lookahead.skip();
+                const Token next = lookahead.peek();
+                // Avoid scanning a complete type for ordinary column references.
+                if (next.type == TokenType::TK_STRING || next.type == TokenType::TK_LPAREN ||
+                    next.type == TokenType::TK_DOT || keyword(t, "TIMESTAMP") ||
+                    keyword(t, "TIME") || keyword(t, "DOUBLE") || keyword(t, "CHARACTER") ||
+                    keyword(t, "CHAR") || keyword(t, "NCHAR") || keyword(t, "NATIONAL") || keyword(t, "BIT")) {
+                    lookahead = tok_;
+                    StringRef type = PgTypeParser(lookahead).parse(false, true);
+                    if (!type.empty() && lookahead.peek().type == TokenType::TK_STRING) {
+                        Token literal = lookahead.next_token();
+                        tok_ = lookahead;
+                        AstNode* value = make_node_from_token(arena_, NodeType::NODE_LITERAL_STRING, literal);
+                        return make_cast(value, type);
+                    }
+                }
+            }
+        }
 
         switch (t.type) {
             case TokenType::TK_INTEGER: {
@@ -220,6 +284,18 @@ private:
                     node->value_len = full.len;
                 }
                 return node;
+            }
+            case TokenType::TK_PG_OPERATOR: {
+                if constexpr (D == Dialect::PostgreSQL) {
+                    tok_.skip();
+                    AstNode* operand = parse_complete(Precedence::PG_OPERATOR);
+                    if (!operand) return syntax_error();
+                    AstNode* node = make_node(arena_, NodeType::NODE_UNARY_OP, t.text, FLAG_PG_OPERATOR);
+                    if (!node) return syntax_error();
+                    node->add_child(operand);
+                    return node;
+                }
+                return nullptr;
             }
             case TokenType::TK_MINUS: {
                 // Unary minus
@@ -363,6 +439,18 @@ private:
     }
 
     AstNode* parse_identifier_or_function(const Token& name_token) {
+        if constexpr (D == Dialect::PostgreSQL) {
+            if (keyword(name_token, "CAST") && tok_.peek().type == TokenType::TK_LPAREN) {
+                tok_.skip();
+                AstNode* value = parse_complete();
+                if (!value || tok_.peek().type != TokenType::TK_AS) return syntax_error();
+                tok_.skip();
+                StringRef type = PgTypeParser(tok_).parse();
+                if (type.empty() || tok_.peek().type != TokenType::TK_RPAREN) return syntax_error();
+                tok_.skip();
+                return make_cast(value, type);
+            }
+        }
         // Check for function call: name(
         if (tok_.peek().type == TokenType::TK_LPAREN) {
             tok_.skip();  // consume (
@@ -371,7 +459,7 @@ private:
             // argument list. Model it as a function call so consumers can
             // reject or handle the expression without leaving valid input
             // unconsumed.
-            if (name_token.text.equals_ci("CAST", 4)) {
+            if (D == Dialect::MySQL && name_token.text.equals_ci("CAST", 4)) {
                 AstNode* arg = parse();
                 if (!arg || tok_.peek().type != TokenType::TK_AS) return func;
                 func->add_child(arg);
@@ -388,7 +476,10 @@ private:
             // Parse argument list
             if (tok_.peek().type != TokenType::TK_RPAREN) {
                 while (true) {
-                    AstNode* arg = parse();
+                    AstNode* arg = parse_argument();
+                    if constexpr (D == Dialect::PostgreSQL) {
+                        if (!arg) return syntax_error();
+                    }
                     if (arg) func->add_child(arg);
                     if (tok_.peek().type == TokenType::TK_COMMA) {
                         tok_.skip();
@@ -460,6 +551,22 @@ private:
     // Infix precedence for a token type.
     // Returns NONE if not an infix operator (stops the Pratt loop).
     static Precedence infix_precedence(TokenType type) {
+        if constexpr (D == Dialect::PostgreSQL) {
+            switch (type) {
+                case TokenType::TK_PG_OPERATOR: return Precedence::PG_OPERATOR;
+                case TokenType::TK_CARET: return Precedence::EXPONENT;
+                case TokenType::TK_COLLATE: return Precedence::COLLATION;
+                case TokenType::TK_IS: return Precedence::PG_IS;
+                case TokenType::TK_EQUAL: case TokenType::TK_NOT_EQUAL:
+                case TokenType::TK_LESS: case TokenType::TK_GREATER:
+                case TokenType::TK_LESS_EQUAL: case TokenType::TK_GREATER_EQUAL:
+                    return Precedence::PG_COMPARISON;
+                case TokenType::TK_IN: case TokenType::TK_BETWEEN:
+                case TokenType::TK_LIKE: case TokenType::TK_NOT:
+                    return Precedence::PG_PREDICATE;
+                default: break;
+            }
+        }
         switch (type) {
             case TokenType::TK_OR:             return Precedence::OR;
             case TokenType::TK_XOR:            return Precedence::XOR;
@@ -499,6 +606,26 @@ private:
         Token op = tok_.next_token();
 
         switch (op.type) {
+            case TokenType::TK_COLLATE: {
+                if constexpr (D == Dialect::PostgreSQL) {
+                    Token name = tok_.peek();
+                    if (name.type != TokenType::TK_IDENTIFIER) return syntax_error();
+                    tok_.skip();
+                    StringRef span = name.source;
+                    while (tok_.peek().type == TokenType::TK_DOT) {
+                        tok_.skip();
+                        Token field = tok_.peek();
+                        if (field.type != TokenType::TK_IDENTIFIER) return syntax_error();
+                        tok_.skip();
+                        span.len = static_cast<uint32_t>(field.source.ptr + field.source.len - span.ptr);
+                    }
+                    AstNode* node = make_node(arena_, NodeType::NODE_BINARY_OP, StringRef{"COLLATE", 7}, FLAG_PG_OPERATOR);
+                    node->add_child(left);
+                    node->add_child(make_node(arena_, NodeType::NODE_TYPE_NAME, span));
+                    return node;
+                }
+                return nullptr;
+            }
             case TokenType::TK_NOT: {
                 // NOT IN / NOT BETWEEN / NOT LIKE / NOT REGEXP — compound negated infix
                 Token actual_op = tok_.peek();
@@ -566,9 +693,12 @@ private:
                 return parse_member_of(left, op, prec);
             default: {
                 // Standard binary operator
-                AstNode* right = parse(prec);
-                if (!right) return require_complete_operands_ ? nullptr : left;
-                AstNode* node = make_node(arena_, NodeType::NODE_BINARY_OP, op.text);
+                const bool pg_operator = D == Dialect::PostgreSQL &&
+                    (op.type == TokenType::TK_PG_OPERATOR || op.type == TokenType::TK_CARET);
+                AstNode* right = pg_operator ? parse_complete(prec) : parse(prec);
+                if (!right) return pg_operator ? syntax_error() : (require_complete_operands_ ? nullptr : left);
+                AstNode* node = make_node(arena_, NodeType::NODE_BINARY_OP, op.text,
+                    pg_operator ? FLAG_PG_OPERATOR : 0);
                 node->add_child(left);
                 node->add_child(right);
                 return node;
@@ -748,10 +878,29 @@ private:
         return parse_postfix(arr);
     }
 
-    // Handle postfix operators: .field, [index]
+    AstNode* make_cast(AstNode* value, StringRef type) {
+        AstNode* node = make_node(arena_, NodeType::NODE_TYPE_CAST);
+        AstNode* name = make_node(arena_, NodeType::NODE_TYPE_NAME, type);
+        if (!node || !name) return syntax_error();
+        node->add_child(value);
+        node->add_child(name);
+        return node;
+    }
+
+    // Handle postfix operators: ::type, .field, [index]
     AstNode* parse_postfix(AstNode* expr) {
         while (true) {
             Token t = tok_.peek();
+            if constexpr (D == Dialect::PostgreSQL) {
+                if (t.type == TokenType::TK_DOUBLE_COLON) {
+                    tok_.skip();
+                    StringRef type = PgTypeParser(tok_).parse();
+                    if (type.empty()) return syntax_error();
+                    expr = make_cast(expr, type);
+                    if (!expr) return nullptr;
+                    continue;
+                }
+            }
             if (t.type == TokenType::TK_DOT) {
                 // Field access: (expr).field or (expr).*
                 tok_.skip();

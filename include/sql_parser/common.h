@@ -63,6 +63,8 @@ static constexpr uint16_t FLAG_QUERY_PARENTHESIZED = 0x01;
 static constexpr uint16_t FLAG_TABLE_ONLY = 0x01;
 static constexpr uint16_t FLAG_TABLE_INHERIT = 0x02;
 static constexpr uint16_t FLAG_FUNCTION_TABLE = 0x01;
+// On binary/unary expressions: PostgreSQL operation without local engine support.
+static constexpr uint16_t FLAG_PG_OPERATOR = 0x01;
 static constexpr uint16_t FLAG_WINDOW_BETWEEN = 0x01;
 static constexpr uint16_t FLAG_ORDER_NULLS = 0x01;
 static constexpr uint16_t FLAG_LIMIT_COMMA = 0x01;
@@ -262,6 +264,9 @@ enum class NodeType : uint16_t {
     NODE_WINDOW_FRAME,         // value=ROWS/RANGE/GROUPS; bounds then exclusion
     NODE_WINDOW_BOUND,         // value=PRECEDING/FOLLOWING/CURRENT ROW/...; offset child
     NODE_WINDOW_EXCLUSION,     // value=CURRENT ROW/GROUP/TIES/NO OTHERS
+    NODE_TYPE_CAST,            // expression, NODE_TYPE_NAME; canonical CAST emission
+    NODE_TYPE_NAME,            // validated type syntax, including modifiers/bounds
+    NODE_NAMED_ARGUMENT,       // value=argument name; one expression child
 };
 
 } // namespace sql_parser

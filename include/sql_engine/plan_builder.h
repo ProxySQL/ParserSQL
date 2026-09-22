@@ -59,6 +59,12 @@ private:
     static bool has_unsupported_query_feature(const sql_parser::AstNode* node) {
         using sql_parser::NodeType;
         switch (node->type) {
+            case NodeType::NODE_BINARY_OP:
+            case NodeType::NODE_UNARY_OP:
+                if (node->flags & sql_parser::FLAG_PG_OPERATOR) return true;
+                break;
+            case NodeType::NODE_NAMED_ARGUMENT:
+            case NodeType::NODE_TYPE_CAST:
             case NodeType::NODE_DISTINCT_ON:
             case NodeType::NODE_AGGREGATE_FILTER:
             case NodeType::NODE_LATERAL:

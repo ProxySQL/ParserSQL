@@ -97,6 +97,9 @@ inline bool supported_node(const AstNode& node) {
         case NodeType::NODE_LOCKING_CLAUSE:
         case NodeType::NODE_ALIAS:
         case NodeType::NODE_EXPRESSION:
+        case NodeType::NODE_NAMED_ARGUMENT:
+        case NodeType::NODE_TYPE_CAST:
+        case NodeType::NODE_TYPE_NAME:
         case NodeType::NODE_BINARY_OP:
         case NodeType::NODE_UNARY_OP:
         case NodeType::NODE_LITERAL_INT:

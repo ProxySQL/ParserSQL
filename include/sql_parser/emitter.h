@@ -141,6 +141,19 @@ private:
             case NodeType::NODE_ALIAS:           emit_alias(node); break;
             case NodeType::NODE_QUALIFIED_NAME:  emit_qualified_name(node); break;
 
+            case NodeType::NODE_TYPE_CAST:
+                sb_.append("CAST(");
+                if (node->first_child) {
+                    emit_node(node->first_child);
+                    sb_.append(" AS ");
+                    if (node->first_child->next_sibling) emit_node(node->first_child->next_sibling);
+                }
+                sb_.append_char(')'); break;
+            case NodeType::NODE_TYPE_NAME: emit_value(node); break;
+            case NodeType::NODE_NAMED_ARGUMENT:
+                emit_value(node); sb_.append(" => ");
+                if (node->first_child) emit_node(node->first_child);
+                break;
             // ---- Expressions ----
             case NodeType::NODE_BINARY_OP:       emit_binary_op(node); break;
             case NodeType::NODE_UNARY_OP:        emit_unary_op(node); break;
@@ -1258,7 +1271,9 @@ private:
 
         emit_value(node);
         // Add space for keyword operators like NOT, no space for - or +
-        if (node->value_len > 1) sb_.append_char(' ');
+        if (node->value_len > 1 || (D == Dialect::PostgreSQL &&
+            ((node->flags & FLAG_PG_OPERATOR) || (child && child->type == NodeType::NODE_UNARY_OP))))
+            sb_.append_char(' ');
         if (child) emit_node(child);
     }
 

@@ -129,7 +129,7 @@ public:
                 tok_.skip();
                 if (tok_.peek().type != TokenType::TK_RPAREN) {
                     while (true) {
-                        AstNode* arg = expr_parser_.parse_complete();
+                        AstNode* arg = expr_parser_.parse_argument(true);
                         if (!arg) return expr_parser_.syntax_error();
                         func->add_child(arg);
                         if (tok_.peek().type != TokenType::TK_COMMA) break;

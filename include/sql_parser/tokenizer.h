@@ -497,6 +497,57 @@ private:
                           static_cast<uint32_t>(cursor_ - source_start));
     }
 
+    static bool pg_operator_char(char c) {
+        switch (c) {
+            case '~': case '!': case '@': case '#': case '^': case '&': case '|':
+            case '`': case '?': case '+': case '-': case '*': case '/': case '%':
+            case '<': case '>': case '=': return true;
+            default: return false;
+        }
+    }
+
+    Token scan_pg_operator() {
+        const char* start = cursor_;
+        while (cursor_ < end_ && pg_operator_char(*cursor_)) {
+            if ((*cursor_ == '/' && peek_char(1) == '*') ||
+                (*cursor_ == '-' && peek_char(1) == '-')) break;
+            ++cursor_;
+        }
+        // SQL operators followed by a sign form separate tokens, except when
+        // a non-SQL operator character makes the whole name unambiguous.
+        if (cursor_ - start > 1 && (cursor_[-1] == '+' || cursor_[-1] == '-')) {
+            bool special = false;
+            for (const char* p = start; p < cursor_ - 1; ++p)
+                if (std::strchr("~!@#^&|`?%", *p)) { special = true; break; }
+            if (!special)
+                while (cursor_ - start > 1 && (cursor_[-1] == '+' || cursor_[-1] == '-')) --cursor_;
+        }
+        const uint32_t len = static_cast<uint32_t>(cursor_ - start);
+        TokenType type = TokenType::TK_PG_OPERATOR;
+        if (len >= 64) type = TokenType::TK_ERROR;
+        else if (len == 1) {
+            switch (*start) {
+                case '+': type = TokenType::TK_PLUS; break;
+                case '-': type = TokenType::TK_MINUS; break;
+                case '*': type = TokenType::TK_ASTERISK; break;
+                case '/': type = TokenType::TK_SLASH; break;
+                case '%': type = TokenType::TK_PERCENT; break;
+                case '^': type = TokenType::TK_CARET; break;
+                case '=': type = TokenType::TK_EQUAL; break;
+                case '<': type = TokenType::TK_LESS; break;
+                case '>': type = TokenType::TK_GREATER; break;
+                default: break;
+            }
+        } else if (len == 2) {
+            if (start[0] == '<' && start[1] == '=') type = TokenType::TK_LESS_EQUAL;
+            else if (start[0] == '>' && start[1] == '=') type = TokenType::TK_GREATER_EQUAL;
+            else if ((start[0] == '<' && start[1] == '>') || (start[0] == '!' && start[1] == '='))
+                type = TokenType::TK_NOT_EQUAL;
+            else if (start[0] == '=' && start[1] == '>') type = TokenType::TK_NAMED_ARGUMENT;
+        }
+        return make_token(type, start, len);
+    }
+
     Token scan_token() {
         skip_whitespace_and_comments();
 
@@ -557,6 +608,10 @@ private:
         // Backtick identifier (MySQL only)
         if constexpr (D == Dialect::MySQL) {
             if (c == '`') return scan_backtick_identifier();
+        }
+
+        if constexpr (D == Dialect::PostgreSQL) {
+            if (pg_operator_char(c)) return scan_pg_operator();
         }
 
         // @ and @@
@@ -622,9 +677,7 @@ private:
             if (c == '<' && c2 == '>') { auto s = cursor_; cursor_ += 2; return make_token(TokenType::TK_NOT_EQUAL, s, 2); }
             if (c == '|' && c2 == '|') { auto s = cursor_; cursor_ += 2; return make_token(TokenType::TK_DOUBLE_PIPE, s, 2); }
 
-            if constexpr (D == Dialect::MySQL) {
-                if (c == ':' && c2 == '=') { auto s = cursor_; cursor_ += 2; return make_token(TokenType::TK_COLON_EQUAL, s, 2); }
-            }
+            if (c == ':' && c2 == '=') { auto s = cursor_; cursor_ += 2; return make_token(TokenType::TK_COLON_EQUAL, s, 2); }
 
             if constexpr (D == Dialect::PostgreSQL) {
                 if (c == ':' && c2 == ':') { auto s = cursor_; cursor_ += 2; return make_token(TokenType::TK_DOUBLE_COLON, s, 2); }

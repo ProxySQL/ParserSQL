@@ -275,8 +275,8 @@ TEST(AstParameterize, PreservesBinaryCastTypeSubtree) {
     EXPECT_EQ(result.parameters.size(), 1u);
 }
 
-TEST(AstParameterize, RejectsCastFunctionsCteAndOpaqueIntervals) {
-    for (const char* sql : {"SELECT CAST(1 AS integer)", "WITH q AS (SELECT 1) SELECT * FROM q", "SELECT INTERVAL '1' DAY"}) {
+TEST(AstParameterize, RejectsCteAndOpaqueIntervals) {
+    for (const char* sql : {"WITH q AS (SELECT 1) SELECT * FROM q", "SELECT INTERVAL '1' DAY"}) {
         SCOPED_TRACE(sql);
         Parser<Dialect::PostgreSQL> parser;
         auto parsed = parse(parser, sql);
@@ -436,13 +436,15 @@ TEST(AstParameterize, PreservesDatetimePrecisionSyntaxConstants) {
     EXPECT_EQ(text(result.parameters[0].value), "7");
 }
 
-TEST(AstParameterize, RejectsTypedLiteralMisparsedAsStringAlias) {
+TEST(AstParameterize, BindsTypedLiteralAsCastInsteadOfStringAlias) {
     Parser<Dialect::PostgreSQL> parser;
     auto parsed = parse(parser, "SELECT TIMESTAMP '2020-01-01'");
     Arena arena;
     auto result = parameterize_ast<Dialect::PostgreSQL>(parsed, arena);
-    EXPECT_EQ(result.error, AstError::UnsupportedContext);
-    EXPECT_EQ(result.ast, nullptr);
+    ASSERT_TRUE(result.ok());
+    ASSERT_EQ(result.parameters.size(), 1u);
+    EXPECT_EQ(text(result.parameters[0].value), "2020-01-01");
+    EXPECT_EQ(emit(result.ast, arena), "SELECT CAST($1 AS TIMESTAMP)");
 }
 
 TEST(AstParameterize, MysqlCommaLimitUsesCountThenOffsetAndRejectsOriginalBinds) {
