@@ -111,15 +111,20 @@ CURRENT_TIME, LOCALTIME, and LOCALTIMESTAMP remains a syntax constant. MySQL als
 preserves precision arguments of NOW, CURTIME, SYSDATE, UTC_TIME, and
 UTC_TIMESTAMP; these ordinary function names retain bindable arguments in
 PostgreSQL. Quoted function names retain bindable arguments in both dialects.
-Aggregate FILTER predicates and window frame offsets are bindable. A manually constructed binary `::` AST is supported; this does not
-extend the parser's existing cast grammar.
+Aggregate FILTER predicates and window frame offsets are bindable. PostgreSQL
+casts and type-prefixed string literals now produce `NODE_TYPE_CAST` with an
+expression child and a `NODE_TYPE_NAME` leaf. Cast values are bindable; type
+modifiers and array bounds remain intact. Named function argument values are
+bindable while their names remain intact. Manually constructed binary `::`
+ASTs retain their existing support.
 
 Unsupported roots and contexts return `UnsupportedRoot` or `UnsupportedContext`
 with no AST or partial mapping. These include SET/transaction/COPY/DDL/other
 utility statements, SELECT INTO, CTEs, generic function-shaped CAST nodes,
 opaque subquery/interval fragments, and unknown future node types. PostgreSQL
-string-shaped aliases are rejected, including typed string literals currently
-misparsed as aliases (for example, `SELECT TIMESTAMP '2020-01-01'`). These
+string-shaped aliases are rejected. Supported type-prefixed literals such as
+`SELECT TIMESTAMP '2020-01-01'` now parameterize as casts instead of being
+misparsed as aliases. These
 restrictions reflect contexts where replacing literals or the current emitter
 would not produce reliable executable SQL. Parameterization does not change the
 existing digest API.

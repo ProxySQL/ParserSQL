@@ -31,6 +31,47 @@ their AST nodes had no emitter handlers. They now appear correctly. Digest
 strings/hashes for affected queries change as a consequence. Quoted identifiers
 and PostgreSQL string-source boundaries are also preserved more accurately.
 
+## PostgreSQL expression grammar
+
+The expression parser now supports `expr::type`, `CAST(expr AS type)`, chained
+casts and type-prefixed string literals such as `DATE '2026-09-22'`. Types can
+have quoted/schema-qualified names, numeric modifiers, array dimensions and
+multiword builtin syntax (`double precision`, `character varying`, timestamp
+with/without time zone, and interval field ranges in cast types).
+
+`NODE_TYPE_CAST` has an expression child followed by a `NODE_TYPE_NAME` leaf.
+The leaf retains validated type spelling, including modifiers and bounds; those
+numbers are syntax constants rather than values to parameterize. SQL emission
+uses canonical `CAST` syntax. For unqualified CHAR/BIT prefix constants without
+a length, emission uses `pg_catalog.bpchar`/`pg_catalog.bit` to preserve their
+unconstrained length rather than introducing CAST's implicit length one.
+Type leaves are not decomposed into independently editable modifiers.
+
+PostgreSQL symbolic operators are lexed as complete names. This includes JSON
+`->`, `->>`, `@>`, `?`, `@?`, regex `~`/`~*`/`!~`, array/range operators and
+extension operators such as `<->`. Prefix operators, exponentiation and generic
+binary operators follow PostgreSQL precedence, including its differences from
+MySQL. Operator comments and adjacent unary signs keep their lexical boundaries.
+`COLLATE` retains its collation name, including quoted/qualified names.
+
+Function, table-function and CALL arguments support `name => expression` and
+`name := expression`. `NODE_NAMED_ARGUMENT` retains the argument name and an
+expression child; emission uses `=>`. PostgreSQL's keyword restrictions apply to
+unquoted argument names. Quoted names remain valid. Parameterization binds the
+argument values and preserves names.
+
+The local planner rejects casts, named arguments, collation and operators whose
+PostgreSQL behavior it cannot execute. Parser acceptance does not resolve type
+names, operators or function overloads, and does not validate catalog semantics.
+Consumers must also handle the appended node/token kinds. `?` is a PostgreSQL
+operator; MySQL continues to tokenize it as an anonymous bind marker.
+
+This phase does not cover qualified `OPERATOR(schema.op)` syntax, arbitrary
+expression-valued type modifiers, every keyword in an unquoted type-name
+position, interval prefix-literal qualifiers, or the remaining full expression
+and DDL grammar. These additions improve the native ParserSQL implementation;
+there is no PostgreSQL runtime fallback or production library dependency.
+
 ## Multiple statements
 
 ```cpp
