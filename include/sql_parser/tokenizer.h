@@ -324,8 +324,9 @@ private:
                           start, len);
     }
 
-    Token scan_single_quoted_string() {
+    Token scan_single_quoted_string(bool escape_prefix = false) {
         const char* source_start = cursor_;
+        if (escape_prefix) ++cursor_;
         ++cursor_;  // skip opening quote
         const char* content_start = cursor_;
         while (cursor_ < end_) {
@@ -337,7 +338,7 @@ private:
                 }
                 break;  // end of string
             }
-            if (*cursor_ == '\\') {
+            if (*cursor_ == '\\' && (D == Dialect::MySQL || escape_prefix)) {
                 ++cursor_;  // skip escaped char
                 if (cursor_ < end_) ++cursor_;
             } else {
@@ -461,7 +462,13 @@ private:
         const char* open_pos = cursor_;
         ++cursor_;  // skip opening quote
         const char* content_start = cursor_;
-        while (cursor_ < end_ && *cursor_ != '"') ++cursor_;
+        while (cursor_ < end_) {
+            if (*cursor_ == '"') {
+                if (cursor_ + 1 < end_ && cursor_[1] == '"') { cursor_ += 2; continue; }
+                break;
+            }
+            ++cursor_;
+        }
         if (cursor_ >= end_) {
             return make_token(TokenType::TK_ERROR, open_pos, 1);
         }
@@ -471,22 +478,23 @@ private:
                           static_cast<uint32_t>(cursor_ - open_pos));
     }
 
-    // PostgreSQL: $$...$$ dollar-quoted string
-    Token scan_dollar_string() {
-        // We're at the first $. Simple form: $$content$$
-        cursor_ += 2;  // skip opening $$
+    // PostgreSQL dollar quotes preserve their complete delimiter for emission.
+    Token scan_dollar_string(uint32_t delimiter_len = 2) {
+        const char* source_start = cursor_;
+        cursor_ += delimiter_len;
         const char* content_start = cursor_;
         while (cursor_ < end_) {
-            if (*cursor_ == '$' && peek_char(1) == '$') {
+            if (*cursor_ == '$' && static_cast<size_t>(end_ - cursor_) >= delimiter_len &&
+                std::memcmp(cursor_, source_start, delimiter_len) == 0) {
                 uint32_t len = static_cast<uint32_t>(cursor_ - content_start);
-                cursor_ += 2;  // skip closing $$
-                return make_token(TokenType::TK_STRING, content_start, len);
+                cursor_ += delimiter_len;
+                return make_token(TokenType::TK_STRING, content_start, len, source_start,
+                                  static_cast<uint32_t>(cursor_ - source_start));
             }
             ++cursor_;
         }
-        // Unterminated — return what we have
-        uint32_t len = static_cast<uint32_t>(cursor_ - content_start);
-        return make_token(TokenType::TK_STRING, content_start, len);
+        return make_token(TokenType::TK_ERROR, source_start,
+                          static_cast<uint32_t>(cursor_ - source_start));
     }
 
     Token scan_token() {
@@ -511,6 +519,11 @@ private:
             if (c == '0' && (peek_char(1) == 'b' || peek_char(1) == 'B')) {
                 return scan_prefixed_base_literal(false);
             }
+        }
+
+        if constexpr (D == Dialect::PostgreSQL) {
+            if ((c == 'E' || c == 'e') && peek_char(1) == '\'')
+                return scan_single_quoted_string(true);
         }
 
         // Identifiers and keywords
@@ -576,12 +589,19 @@ private:
                     uint32_t len = static_cast<uint32_t>(cursor_ - start);
                     return make_token(TokenType::TK_DOLLAR_NUM, start, len);
                 }
-                // $<letter|underscore>... is NOT a valid PG token at this
-                // position -- it looks like a parameter placeholder but is
-                // syntactically invalid (placeholders must be numeric, e.g.
-                // $1). Emit TK_ERROR so the caller can fail cleanly with
-                // ParseResult::ERROR instead of returning PARTIAL with a
-                // null AST and confusing downstream consumers.
+                const char* tag_end = cursor_ + 1;
+                if (tag_end < end_ && ((*tag_end >= 'a' && *tag_end <= 'z') ||
+                    (*tag_end >= 'A' && *tag_end <= 'Z') || *tag_end == '_' ||
+                    static_cast<unsigned char>(*tag_end) >= 128)) {
+                    ++tag_end;
+                    while (tag_end < end_ && ((*tag_end >= 'a' && *tag_end <= 'z') ||
+                        (*tag_end >= 'A' && *tag_end <= 'Z') ||
+                        (*tag_end >= '0' && *tag_end <= '9') || *tag_end == '_' ||
+                        static_cast<unsigned char>(*tag_end) >= 128)) ++tag_end;
+                    if (tag_end < end_ && *tag_end == '$')
+                        return scan_dollar_string(static_cast<uint32_t>(tag_end + 1 - cursor_));
+                }
+                // A dollar sign outside a quoted delimiter or parameter is invalid.
                 {
                     const char* start = cursor_;
                     ++cursor_;  // consume $ so error offset is precise

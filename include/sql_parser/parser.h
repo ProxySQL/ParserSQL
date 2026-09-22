@@ -31,6 +31,12 @@ public:
     // statement metadata when parsing succeeds.
     ParseResult parse(const char* sql, size_t len);
 
+    // Parse every nonempty statement, preserving each result and source span.
+    // No arena reset between statements; all returned ASTs remain valid until
+    // the next parse/parse_all/reset call. This is SQL framing, not COPY data
+    // payload or procedural-body parsing. An empty batch is successful.
+    BatchParseResult parse_all(const char* sql, size_t len);
+
     // Reset the arena. Call after each query is fully processed.
     void reset();
 

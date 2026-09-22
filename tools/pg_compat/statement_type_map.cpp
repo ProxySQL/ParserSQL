@@ -92,7 +92,7 @@ namespace pg_compat {
     SIMPLE(PG_QUERY__NODE__NODE_DROP_USER_MAPPING_STMT, Equivalent, DROP) \
     SIMPLE(PG_QUERY__NODE__NODE_REASSIGN_OWNED_STMT, Equivalent, ALTER) \
     SIMPLE(PG_QUERY__NODE__NODE_CONSTRAINTS_SET_STMT, Equivalent, SET) \
-    SIMPLE(PG_QUERY__NODE__NODE_COPY_STMT, NoEquivalent, UNKNOWN) \
+    SIMPLE(PG_QUERY__NODE__NODE_COPY_STMT, Equivalent, COPY) \
     SIMPLE(PG_QUERY__NODE__NODE_MERGE_STMT, NoEquivalent, UNKNOWN) \
     SIMPLE(PG_QUERY__NODE__NODE_VACUUM_STMT, NoEquivalent, UNKNOWN) \
     SIMPLE(PG_QUERY__NODE__NODE_NOTIFY_STMT, NoEquivalent, UNKNOWN) \
@@ -136,8 +136,9 @@ StatementTypeMapping map_transaction_stmt(const PgQuery__Node& node) {
     case PG_QUERY__TRANSACTION_STMT_KIND__TRANS_STMT_ROLLBACK_PREPARED:
         return {MappingKind::Equivalent, StmtType::ROLLBACK};
     case PG_QUERY__TRANSACTION_STMT_KIND__TRANS_STMT_SAVEPOINT:
-    case PG_QUERY__TRANSACTION_STMT_KIND__TRANS_STMT_RELEASE:
         return {MappingKind::Equivalent, StmtType::SAVEPOINT};
+    case PG_QUERY__TRANSACTION_STMT_KIND__TRANS_STMT_RELEASE:
+        return {MappingKind::Equivalent, StmtType::RELEASE_SAVEPOINT};
     case PG_QUERY__TRANSACTION_STMT_KIND__TRANS_STMT_PREPARE:
         return {MappingKind::Equivalent, StmtType::PREPARE};
     default:
@@ -290,6 +291,10 @@ const char* stmt_type_name(sql_parser::StmtType type) {
         return "CALL";
     case StmtType::DO_STMT:
         return "DO";
+    case StmtType::COPY:
+        return "COPY";
+    case StmtType::RELEASE_SAVEPOINT:
+        return "RELEASE_SAVEPOINT";
     }
 #if defined(__clang__) || defined(__GNUC__)
 #pragma GCC diagnostic pop

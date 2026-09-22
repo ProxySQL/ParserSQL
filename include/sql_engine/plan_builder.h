@@ -38,7 +38,7 @@ public:
     // Build a logical plan from a parsed statement AST.
     // Returns nullptr for non-SELECT statements.
     PlanNode* build(const sql_parser::AstNode* stmt_ast) {
-        if (!stmt_ast) return nullptr;
+        if (!stmt_ast || has_unsupported_query_feature(stmt_ast)) return nullptr;
 
         if (stmt_ast->type == sql_parser::NodeType::NODE_SELECT_STMT) {
             return build_select(stmt_ast);
@@ -55,6 +55,29 @@ public:
 private:
     const Catalog& catalog_;
     sql_parser::Arena& arena_;
+
+    static bool has_unsupported_query_feature(const sql_parser::AstNode* node) {
+        using sql_parser::NodeType;
+        switch (node->type) {
+            case NodeType::NODE_DISTINCT_ON:
+            case NodeType::NODE_AGGREGATE_FILTER:
+            case NodeType::NODE_LATERAL:
+            case NodeType::NODE_WINDOW_CLAUSE:
+            case NodeType::NODE_WINDOW_REFERENCE:
+            case NodeType::NODE_WINDOW_FRAME:
+                return true;
+            case NodeType::NODE_FUNCTION_CALL:
+                if (node->flags & sql_parser::FLAG_FUNCTION_TABLE) return true;
+                break;
+            case NodeType::NODE_ORDER_BY_ITEM:
+                if (node->flags & sql_parser::FLAG_ORDER_NULLS) return true;
+                break;
+            default: break;
+        }
+        for (const auto* child = node->first_child; child; child = child->next_sibling)
+            if (has_unsupported_query_feature(child)) return true;
+        return false;
+    }
 
     // Helper: find first child of given type
     static const sql_parser::AstNode* find_child(const sql_parser::AstNode* node,

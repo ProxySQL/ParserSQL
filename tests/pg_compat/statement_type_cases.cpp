@@ -154,7 +154,7 @@ void test_default_and_simple_mappings() {
         {PG_QUERY__NODE__NODE_DROP_USER_MAPPING_STMT, MappingKind::Equivalent, StmtType::DROP},
         {PG_QUERY__NODE__NODE_REASSIGN_OWNED_STMT, MappingKind::Equivalent, StmtType::ALTER},
         {PG_QUERY__NODE__NODE_CONSTRAINTS_SET_STMT, MappingKind::Equivalent, StmtType::SET},
-        {PG_QUERY__NODE__NODE_COPY_STMT, MappingKind::NoEquivalent, StmtType::UNKNOWN},
+        {PG_QUERY__NODE__NODE_COPY_STMT, MappingKind::Equivalent, StmtType::COPY},
         {PG_QUERY__NODE__NODE_MERGE_STMT, MappingKind::NoEquivalent, StmtType::UNKNOWN},
         {PG_QUERY__NODE__NODE_VACUUM_STMT, MappingKind::NoEquivalent, StmtType::UNKNOWN},
         {PG_QUERY__NODE__NODE_NOTIFY_STMT, MappingKind::NoEquivalent, StmtType::UNKNOWN},
@@ -207,7 +207,7 @@ void test_transaction_mappings() {
         {PG_QUERY__TRANSACTION_STMT_KIND__TRANS_STMT_ROLLBACK_TO, StmtType::ROLLBACK},
         {PG_QUERY__TRANSACTION_STMT_KIND__TRANS_STMT_ROLLBACK_PREPARED, StmtType::ROLLBACK},
         {PG_QUERY__TRANSACTION_STMT_KIND__TRANS_STMT_SAVEPOINT, StmtType::SAVEPOINT},
-        {PG_QUERY__TRANSACTION_STMT_KIND__TRANS_STMT_RELEASE, StmtType::SAVEPOINT},
+        {PG_QUERY__TRANSACTION_STMT_KIND__TRANS_STMT_RELEASE, StmtType::RELEASE_SAVEPOINT},
         {PG_QUERY__TRANSACTION_STMT_KIND__TRANS_STMT_PREPARE, StmtType::PREPARE},
     };
 

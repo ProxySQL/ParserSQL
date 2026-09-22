@@ -7,6 +7,7 @@
 #include "sql_parser/insert_parser.h"
 #include "sql_parser/update_parser.h"
 #include "sql_parser/delete_parser.h"
+#include "sql_parser/pg_utility_parser.h"
 
 namespace sql_parser {
 
@@ -37,6 +38,55 @@ ParseResult Parser<D>::parse(const char* sql, size_t len) {
 }
 
 template <Dialect D>
+BatchParseResult Parser<D>::parse_all(const char* sql, size_t len) {
+    arena_.reset();
+    BatchParseResult batch;
+    size_t cursor = 0;
+    while (cursor < len) {
+        Tokenizer<D> scanner;
+        scanner.reset(sql + cursor, len - cursor);
+        Token first = scanner.next_token();
+        if (first.type == TokenType::TK_SEMICOLON) {
+            cursor = static_cast<size_t>(first.source.ptr - sql) + first.source.len;
+            continue;
+        }
+        if (first.type == TokenType::TK_EOF && !scanner.has_error()) break;
+
+        const char* start = first.type == TokenType::TK_EOF && scanner.has_error()
+            ? scanner.error_source().ptr : first.source.ptr;
+        if (!start) start = sql + cursor;
+        Token last = first;
+        while (last.type != TokenType::TK_EOF && last.type != TokenType::TK_SEMICOLON)
+            last = scanner.next_token();
+        const char* end = last.type == TokenType::TK_SEMICOLON
+            ? last.source.ptr + last.source.len : sql + len;
+        ParsedStatement statement;
+        statement.offset = static_cast<uint32_t>(start - sql);
+        statement.source = StringRef{start, static_cast<uint32_t>(end - start)};
+        if (scanner.has_error()) {
+            statement.result.status = ParseResult::ERROR;
+            statement.result.remaining = scanner.error_source();
+            statement.result.error.message = StringRef{"Invalid SQL token", 17};
+            statement.result.error.offset = scanner.error_source().ptr
+                ? static_cast<uint32_t>(scanner.error_source().ptr - sql) : statement.offset;
+        } else {
+            tokenizer_.reset(start, static_cast<size_t>(end - start));
+            statement.result = classify_and_dispatch();
+            statement.result.has_user_variables = scanner.has_user_variables();
+            if (!statement.result.ok() || !statement.result.full_input) {
+                StringRef error = tokenizer_.error_source();
+                const char* at = error.ptr ? error.ptr : statement.result.remaining.ptr;
+                statement.result.error.offset = at
+                    ? static_cast<uint32_t>(at - sql) : statement.offset;
+            }
+        }
+        batch.statements.push_back(statement);
+        cursor = static_cast<size_t>(end - sql);
+    }
+    return batch;
+}
+
+template <Dialect D>
 ParseResult Parser<D>::classify_and_dispatch() {
     Token first = tokenizer_.next_token();
 
@@ -45,6 +95,24 @@ ParseResult Parser<D>::classify_and_dispatch() {
         r.status = ParseResult::ERROR;
         r.stmt_type = StmtType::UNKNOWN;
         return r;
+    }
+
+    if constexpr (D == Dialect::PostgreSQL) {
+        if (first.type == TokenType::TK_IDENTIFIER && PgUtilityParser::word(first, "COPY")) {
+            PgUtilityParser utility(tokenizer_, arena_);
+            ParseResult r = utility.copy();
+            scan_to_end(r);
+            return r;
+        }
+        if (((first.type == TokenType::TK_IDENTIFIER || first.type == TokenType::TK_END) &&
+            (PgUtilityParser::word(first, "RELEASE") || PgUtilityParser::word(first, "END") ||
+             PgUtilityParser::word(first, "ABORT"))) ||
+            (first.type == TokenType::TK_PREPARE && tokenizer_.peek().type == TokenType::TK_TRANSACTION)) {
+            PgUtilityParser utility(tokenizer_, arena_);
+            ParseResult r = utility.transaction(first);
+            scan_to_end(r);
+            return r;
+        }
     }
 
     switch (first.type) {
@@ -894,6 +962,12 @@ ParseResult Parser<D>::extract_replace(const Token& /* first */) {
 
 template <Dialect D>
 ParseResult Parser<D>::extract_transaction(const Token& first) {
+    if constexpr (D == Dialect::PostgreSQL) {
+        PgUtilityParser utility(tokenizer_, arena_);
+        ParseResult result = utility.transaction(first);
+        scan_to_end(result);
+        return result;
+    }
     ParseResult r;
     r.status = ParseResult::OK;
 

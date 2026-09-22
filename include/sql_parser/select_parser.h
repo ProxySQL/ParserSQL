@@ -14,10 +14,11 @@ namespace sql_parser {
 template <Dialect D>
 class SelectParser {
 public:
-    SelectParser(Tokenizer<D>& tokenizer, Arena& arena, bool compound_mode = false)
-        : tok_(tokenizer), arena_(arena), expr_parser_(tokenizer, arena),
+    SelectParser(Tokenizer<D>& tokenizer, Arena& arena, bool compound_mode = false,
+                 bool require_complete_operands = false)
+        : tok_(tokenizer), arena_(arena), expr_parser_(tokenizer, arena, require_complete_operands),
           table_ref_parser_(tokenizer, arena, expr_parser_),
-          compound_mode_(compound_mode) {}
+          compound_mode_(compound_mode), require_complete_operands_(require_complete_operands) {}
 
     // Propagate subquery callback to internal expression and table ref parsers
     void set_subquery_callback(SubqueryParseCallback<D> cb) {
@@ -71,6 +72,29 @@ public:
             if (having) root->add_child(having);
         }
 
+        if constexpr (D == Dialect::PostgreSQL) {
+            if (ExpressionParser<D>::keyword(tok_.peek(), "WINDOW")) {
+                tok_.skip();
+                AstNode* windows = make_node(arena_, NodeType::NODE_WINDOW_CLAUSE);
+                while (true) {
+                    Token name = tok_.peek();
+                    if (name.type != TokenType::TK_IDENTIFIER) return expr_parser_.syntax_error();
+                    tok_.skip();
+                    if (tok_.peek().type != TokenType::TK_AS) return expr_parser_.syntax_error();
+                    tok_.skip();
+                    AstNode* spec = expr_parser_.parse_window_spec();
+                    if (!spec) return nullptr;
+                    AstNode* definition = make_node(arena_, NodeType::NODE_WINDOW_DEFINITION,
+                        name.source.empty() ? name.text : name.source);
+                    definition->add_child(spec);
+                    windows->add_child(definition);
+                    if (tok_.peek().type != TokenType::TK_COMMA) break;
+                    tok_.skip();
+                }
+                root->add_child(windows);
+            }
+        }
+
         // In compound_mode, stop before ORDER BY / LIMIT so the compound
         // query parser can claim them as applying to the compound result.
         if (!compound_mode_) {
@@ -104,6 +128,8 @@ public:
             }
         }
 
+        if (require_complete_operands_ && expr_parser_.has_operand_error())
+            return expr_parser_.syntax_error();
         return root;
     }
 
@@ -113,6 +139,7 @@ private:
     ExpressionParser<D> expr_parser_;
     TableRefParser<D> table_ref_parser_;
     bool compound_mode_;
+    bool require_complete_operands_;
 
     // ---- SELECT options ----
 
@@ -123,6 +150,25 @@ private:
             if (t.type == TokenType::TK_DISTINCT || t.type == TokenType::TK_ALL) {
                 if (!opts) opts = make_node(arena_, NodeType::NODE_SELECT_OPTIONS);
                 tok_.skip();
+                if constexpr (D == Dialect::PostgreSQL) {
+                    if (t.type == TokenType::TK_DISTINCT && tok_.peek().type == TokenType::TK_ON) {
+                        tok_.skip();
+                        if (tok_.peek().type != TokenType::TK_LPAREN) return expr_parser_.syntax_error();
+                        tok_.skip();
+                        AstNode* on = make_node(arena_, NodeType::NODE_DISTINCT_ON);
+                        while (true) {
+                            AstNode* expr = expr_parser_.parse_complete();
+                            if (!expr) return expr_parser_.syntax_error();
+                            on->add_child(expr);
+                            if (tok_.peek().type != TokenType::TK_COMMA) break;
+                            tok_.skip();
+                        }
+                        if (tok_.peek().type != TokenType::TK_RPAREN) return expr_parser_.syntax_error();
+                        tok_.skip();
+                        opts->add_child(on);
+                        break;
+                    }
+                }
                 opts->add_child(make_node(arena_, NodeType::NODE_IDENTIFIER, t.text));
             } else if (t.type == TokenType::TK_SQL_CALC_FOUND_ROWS) {
                 if (!opts) opts = make_node(arena_, NodeType::NODE_SELECT_OPTIONS);
@@ -141,6 +187,23 @@ private:
         AstNode* list = make_node(arena_, NodeType::NODE_SELECT_ITEM_LIST);
         if (!list) return nullptr;
 
+        if (require_complete_operands_) {
+            // PostgreSQL permits SELECT with an empty target list. Do not turn
+            // its clause boundary into a failed expression operand.
+            Token t = tok_.peek();
+            switch (t.type) {
+                case TokenType::TK_FROM: case TokenType::TK_WHERE:
+                case TokenType::TK_GROUP: case TokenType::TK_HAVING:
+                case TokenType::TK_ORDER: case TokenType::TK_LIMIT:
+                case TokenType::TK_FOR: case TokenType::TK_RPAREN:
+                case TokenType::TK_EOF: case TokenType::TK_SEMICOLON:
+                case TokenType::TK_UNION: case TokenType::TK_INTERSECT:
+                case TokenType::TK_EXCEPT:
+                    return list;
+                default: break;
+            }
+            if (ExpressionParser<D>::keyword(t, "WINDOW")) return list;
+        }
         while (true) {
             AstNode* item = parse_select_item();
             if (!item) break;
@@ -231,12 +294,12 @@ private:
         if (next.type == TokenType::TK_AS) {
             tok_.skip();
             Token alias_name = tok_.next_token();
-            AstNode* alias = make_node(arena_, NodeType::NODE_ALIAS, alias_name.text);
+            AstNode* alias = make_node(arena_, NodeType::NODE_ALIAS, alias_name.source.empty() ? alias_name.text : alias_name.source);
             item->add_child(alias);
-        } else if (TableRefParser<D>::is_alias_start(next.type)) {
+        } else if (TableRefParser<D>::is_alias_token(next)) {
             // Implicit alias (no AS keyword): SELECT expr alias_name
             tok_.skip();
-            AstNode* alias = make_node(arena_, NodeType::NODE_ALIAS, next.text);
+            AstNode* alias = make_node(arena_, NodeType::NODE_ALIAS, next.source.empty() ? next.text : next.source);
             item->add_child(alias);
         }
         return item;
@@ -330,7 +393,10 @@ private:
             // MySQL: LIMIT offset, count
             tok_.skip();
             AstNode* count = expr_parser_.parse();
+            limit->flags |= FLAG_LIMIT_COMMA;
+            limit->first_child = nullptr;
             if (count) limit->add_child(count);
+            if (first) limit->add_child(first);
         }
 
         if constexpr (D == Dialect::PostgreSQL) {

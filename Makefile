@@ -51,6 +51,9 @@ TEST_SRCS = $(TEST_DIR)/test_main.cpp \
             $(TEST_DIR)/test_update.cpp \
             $(TEST_DIR)/test_delete.cpp \
             $(TEST_DIR)/test_compound.cpp \
+            $(TEST_DIR)/test_pg_query_features.cpp \
+            $(TEST_DIR)/test_pg_utilities.cpp \
+            $(TEST_DIR)/test_parse_all.cpp \
             $(TEST_DIR)/test_digest.cpp \
             $(TEST_DIR)/test_misc_stmts.cpp \
             $(TEST_DIR)/test_value.cpp \

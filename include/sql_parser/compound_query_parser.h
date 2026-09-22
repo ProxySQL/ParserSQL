@@ -8,8 +8,10 @@ namespace sql_parser {
 template <Dialect D>
 class CompoundQueryParser {
 public:
-    CompoundQueryParser(Tokenizer<D>& tokenizer, Arena& arena)
-        : tok_(tokenizer), arena_(arena), expr_parser_(tokenizer, arena) {}
+    CompoundQueryParser(Tokenizer<D>& tokenizer, Arena& arena,
+                        bool require_complete_operands = false)
+        : tok_(tokenizer), arena_(arena), expr_parser_(tokenizer, arena, require_complete_operands),
+          require_complete_operands_(require_complete_operands) {}
 
     void set_subquery_callback(SubqueryParseCallback<D> cb) {
         subquery_cb_ = cb;
@@ -19,7 +21,8 @@ public:
     // The classifier normally consumes SELECT. Pass the consumed keyword for
     // TABLE/VALUES/'(', or TK_EOF to start at an unconsumed query operand.
     AstNode* parse(TokenType first = TokenType::TK_SELECT) {
-        const bool require_operands = first == TokenType::TK_VALUES || first == TokenType::TK_TABLE;
+        const bool require_operands = require_complete_operands_ ||
+            first == TokenType::TK_VALUES || first == TokenType::TK_TABLE;
         AstNode* result = parse_compound_expr(0, first);
         if (!result) return nullptr;
         if (result->type == NodeType::NODE_SET_OPERATION ||
@@ -62,6 +65,7 @@ private:
     Arena& arena_;
     ExpressionParser<D> expr_parser_;
     SubqueryParseCallback<D> subquery_cb_ = nullptr;
+    bool require_complete_operands_;
 
     static int get_set_op_precedence(TokenType type) {
         switch (type) {
@@ -111,7 +115,7 @@ private:
             return group;
         }
         if (first == TokenType::TK_SELECT) {
-            SelectParser<D> select(tok_, arena_, true);
+            SelectParser<D> select(tok_, arena_, true, require_complete_operands_);
             select.set_subquery_callback(subquery_cb_);
             return select.parse();
         }
@@ -239,7 +243,9 @@ private:
             tok_.skip();
             AstNode* count = expressions.parse();
             if (!count) return nullptr;
-            limit->add_child(count);
+            limit->flags |= FLAG_LIMIT_COMMA;
+            limit->first_child = count;
+            count->next_sibling = first;
         }
 
         return limit;

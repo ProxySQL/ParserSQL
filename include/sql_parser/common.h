@@ -62,6 +62,10 @@ static constexpr uint16_t FLAG_SET_OP_ALL = 0x01;
 static constexpr uint16_t FLAG_QUERY_PARENTHESIZED = 0x01;
 static constexpr uint16_t FLAG_TABLE_ONLY = 0x01;
 static constexpr uint16_t FLAG_TABLE_INHERIT = 0x02;
+static constexpr uint16_t FLAG_FUNCTION_TABLE = 0x01;
+static constexpr uint16_t FLAG_WINDOW_BETWEEN = 0x01;
+static constexpr uint16_t FLAG_ORDER_NULLS = 0x01;
+static constexpr uint16_t FLAG_LIMIT_COMMA = 0x01;
 
 // -- Flags for NODE_IDENTIFIER / NODE_COLUMN_REF --
 // Set when the identifier was source-delimited (backtick `name` for MySQL,
@@ -104,6 +108,8 @@ enum class StmtType : uint8_t {
     DESCRIBE,
     CALL,
     DO_STMT,
+    COPY,
+    RELEASE_SAVEPOINT,
 };
 
 // -- AST node types --
@@ -242,6 +248,20 @@ enum class NodeType : uint16_t {
     NODE_LITERAL_HEX,
     NODE_LITERAL_BIT,
     NODE_TABLE_QUERY,           // PostgreSQL TABLE [ONLY] relation [*]
+    NODE_TRANSACTION_STMT,
+    NODE_TRANSACTION_OPTION,
+    NODE_COPY_STMT,
+    NODE_COPY_OPTION,
+    NODE_COPY_ENDPOINT,
+    NODE_DISTINCT_ON,           // expression children, inside SELECT_OPTIONS
+    NODE_AGGREGATE_FILTER,      // function, predicate
+    NODE_LATERAL,               // child TABLE_REF
+    NODE_WINDOW_CLAUSE,        // WINDOW_DEFINITION children
+    NODE_WINDOW_DEFINITION,    // value=name, child WINDOW_SPEC
+    NODE_WINDOW_REFERENCE,     // value=name, standalone OVER or inside spec
+    NODE_WINDOW_FRAME,         // value=ROWS/RANGE/GROUPS; bounds then exclusion
+    NODE_WINDOW_BOUND,         // value=PRECEDING/FOLLOWING/CURRENT ROW/...; offset child
+    NODE_WINDOW_EXCLUSION,     // value=CURRENT ROW/GROUP/TIES/NO OTHERS
 };
 
 } // namespace sql_parser

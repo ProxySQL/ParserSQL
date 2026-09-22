@@ -34,6 +34,8 @@ private:
 
     void emit_node(const AstNode* node) {
         switch (node->type) {
+            case NodeType::NODE_TRANSACTION_STMT: emit_transaction_stmt(node); break;
+            case NodeType::NODE_COPY_STMT: emit_copy_stmt(node); break;
             // ---- SET statement ----
             case NodeType::NODE_SET_STMT:     emit_set_stmt(node); break;
             case NodeType::NODE_SET_NAMES:    emit_set_names(node); break;
@@ -57,6 +59,35 @@ private:
             case NodeType::NODE_LIMIT_CLAUSE:    emit_limit(node); break;
             case NodeType::NODE_LOCKING_CLAUSE:  emit_locking(node); break;
             case NodeType::NODE_INTO_CLAUSE:     emit_into(node); break;
+
+            case NodeType::NODE_DISTINCT_ON:
+                sb_.append("DISTINCT ON ("); emit_list(node, ", "); sb_.append_char(')'); break;
+            case NodeType::NODE_AGGREGATE_FILTER:
+                emit_node(node->first_child); sb_.append(" FILTER (WHERE ");
+                emit_node(node->first_child->next_sibling); sb_.append_char(')'); break;
+            case NodeType::NODE_LATERAL:
+                sb_.append("LATERAL "); emit_node(node->first_child); break;
+            case NodeType::NODE_WINDOW_FUNCTION:
+                emit_node(node->first_child); sb_.append(" OVER ");
+                emit_node(node->first_child->next_sibling); break;
+            case NodeType::NODE_WINDOW_SPEC:
+                sb_.append_char('('); emit_list(node, " "); sb_.append_char(')'); break;
+            case NodeType::NODE_WINDOW_PARTITION:
+                sb_.append("PARTITION BY "); emit_list(node, ", "); break;
+            case NodeType::NODE_WINDOW_ORDER:
+                sb_.append("ORDER BY "); emit_list(node, ", "); break;
+            case NodeType::NODE_WINDOW_CLAUSE:
+                sb_.append(" WINDOW "); emit_list(node, ", "); break;
+            case NodeType::NODE_WINDOW_DEFINITION:
+                emit_value(node); sb_.append(" AS "); emit_node(node->first_child); break;
+            case NodeType::NODE_WINDOW_REFERENCE:
+                emit_value(node); break;
+            case NodeType::NODE_WINDOW_FRAME: emit_window_frame(node); break;
+            case NodeType::NODE_WINDOW_BOUND:
+                if (node->first_child) { emit_node(node->first_child); sb_.append_char(' '); }
+                emit_value(node); break;
+            case NodeType::NODE_WINDOW_EXCLUSION:
+                sb_.append("EXCLUDE "); emit_value(node); break;
 
             // ---- INSERT statement ----
             case NodeType::NODE_INSERT_STMT:     emit_insert_stmt(node); break;
@@ -138,10 +169,11 @@ private:
             case NodeType::NODE_LITERAL_BIT:
                 if (mode_ == EmitMode::DIGEST) { sb_.append_char('?'); break; }
                 emit_value(node); break;
-            case NodeType::NODE_LITERAL_NULL:
             case NodeType::NODE_COLUMN_REF:
-            case NodeType::NODE_ASTERISK:
             case NodeType::NODE_IDENTIFIER:
+                emit_identifier(node); break;
+            case NodeType::NODE_LITERAL_NULL:
+            case NodeType::NODE_ASTERISK:
                 emit_value(node); break;
 
             case NodeType::NODE_LITERAL_STRING:
@@ -153,8 +185,100 @@ private:
         }
     }
 
+    void emit_list(const AstNode* node, const char* separator) {
+        for (const AstNode* child = node->first_child; child; child = child->next_sibling) {
+            if (child != node->first_child) sb_.append(separator);
+            emit_node(child);
+        }
+    }
+
+    void emit_window_frame(const AstNode* node) {
+        emit_value(node);
+        sb_.append(node->flags & FLAG_WINDOW_BETWEEN ? " BETWEEN " : " ");
+        const AstNode* bound = node->first_child;
+        emit_node(bound);
+        bound = bound ? bound->next_sibling : nullptr;
+        if (node->flags & FLAG_WINDOW_BETWEEN) {
+            sb_.append(" AND "); emit_node(bound);
+            bound = bound ? bound->next_sibling : nullptr;
+        }
+        if (bound) { sb_.append_char(' '); emit_node(bound); }
+    }
+
+    void emit_identifier(const AstNode* node) {
+        if (!(node->flags & FLAG_IDENT_DELIMITED)) { emit_value(node); return; }
+        if (!node->source().empty()) {
+            sb_.append(node->source_ptr, node->source_len);
+            return;
+        }
+        const char quote = D == Dialect::PostgreSQL ? '"' : '`';
+        sb_.append_char(quote);
+        for (uint32_t i = 0; i < node->value_len; ++i) {
+            sb_.append_char(node->value_ptr[i]);
+            if (node->value_ptr[i] == quote) sb_.append_char(quote);
+        }
+        sb_.append_char(quote);
+    }
+
     void emit_value(const AstNode* node) {
         sb_.append(node->value_ptr, node->value_len);
+    }
+
+    void emit_utility_value(const AstNode* node) {
+        // Utility values are syntax constants. Keep source string quoting,
+        // including E'...' and dollar quotes, even in digest mode.
+        if (node->type == NodeType::NODE_LITERAL_STRING && !node->source().empty()) {
+            sb_.append(node->source_ptr, node->source_len);
+        } else emit_node(node);
+    }
+
+    void emit_transaction_stmt(const AstNode* node) {
+        emit_value(node);
+        for (const AstNode* child = node->first_child; child; child = child->next_sibling) {
+            sb_.append_char(' ');
+            emit_utility_value(child);
+        }
+    }
+
+    void emit_copy_stmt(const AstNode* node) {
+        sb_.append("COPY ", 5);
+        const AstNode* child = node->first_child;
+        if (!child) return;
+        emit_node(child);
+        child = child->next_sibling;
+        if (child && child->type == NodeType::NODE_INSERT_COLUMNS) {
+            sb_.append_char(' ');
+            emit_node(child);
+            child = child->next_sibling;
+        }
+        sb_.append_char(' ');
+        emit_value(node);
+        sb_.append_char(' ');
+        if (!child || child->type != NodeType::NODE_COPY_ENDPOINT) return;
+        if (!child->value().equals_ci("FILE", 4)) emit_value(child);
+        if (child->first_child) {
+            if (child->value().equals_ci("PROGRAM", 7)) sb_.append_char(' ');
+            emit_utility_value(child->first_child);
+        }
+        child = child->next_sibling;
+        if (child && child->type == NodeType::NODE_COPY_OPTION) {
+            sb_.append(" WITH (", 7);
+            bool first = true;
+            while (child && child->type == NodeType::NODE_COPY_OPTION) {
+                if (!first) sb_.append(", ", 2);
+                emit_value(child);
+                if (child->first_child) {
+                    sb_.append_char(' ');
+                    emit_utility_value(child->first_child);
+                }
+                first = false;
+                child = child->next_sibling;
+            }
+            sb_.append_char(')');
+        }
+        if (child && child->type == NodeType::NODE_WHERE_CLAUSE) {
+            emit_node(child);
+        }
     }
 
     void emit_user_variable(const AstNode* node) {
@@ -182,6 +306,13 @@ private:
     }
 
     void emit_string_literal(const AstNode* node) {
+        if constexpr (D == Dialect::PostgreSQL) {
+            if (!node->source().empty() &&
+                (node->source_ptr[0] == 'E' || node->source_ptr[0] == 'e' || node->source_ptr[0] == '$')) {
+                sb_.append(node->source_ptr, node->source_len);
+                return;
+            }
+        }
         sb_.append_char('\'');
         sb_.append(node->value_ptr, node->value_len);
         sb_.append_char('\'');
@@ -356,6 +487,9 @@ private:
         if (mode_ == EmitMode::DIGEST) return;  // skip aliases in digest mode
         sb_.append(" AS ");
         emit_value(node);
+        if (node->first_child) {
+            sb_.append_char('('); emit_list(node, ", "); sb_.append_char(')');
+        }
     }
 
     void emit_qualified_name(const AstNode* node) {
@@ -430,7 +564,7 @@ private:
         const AstNode* expr = node->first_child;
         if (expr) emit_node(expr);
         const AstNode* dir = expr ? expr->next_sibling : nullptr;
-        if (dir) {
+        for (; dir; dir = dir->next_sibling) {
             sb_.append_char(' ');
             emit_node(dir);
         }
@@ -1129,10 +1263,14 @@ private:
     }
 
     void emit_function_call(const AstNode* node) {
-        emit_value(node);
+        const AstNode* arg = node->first_child;
+        if (node->flags & FLAG_FUNCTION_TABLE) {
+            emit_node(arg);
+            arg = arg ? arg->next_sibling : nullptr;
+        } else emit_value(node);
         sb_.append_char('(');
         bool first = true;
-        for (const AstNode* arg = node->first_child; arg; arg = arg->next_sibling) {
+        for (; arg; arg = arg->next_sibling) {
             if (!first) sb_.append(", ");
             first = false;
             emit_node(arg);
@@ -1294,9 +1432,13 @@ private:
     void emit_field_access(const AstNode* node) {
         const AstNode* expr = node->first_child;
         const AstNode* field = expr ? expr->next_sibling : nullptr;
-        sb_.append_char('(');
-        if (expr) emit_node(expr);
-        sb_.append(").");
+        if (expr && expr->type == NodeType::NODE_EXPRESSION) emit_node(expr);
+        else {
+            sb_.append_char('(');
+            if (expr) emit_node(expr);
+            sb_.append_char(')');
+        }
+        sb_.append_char('.');
         if (field) emit_node(field);
     }
 

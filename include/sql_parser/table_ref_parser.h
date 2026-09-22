@@ -25,7 +25,7 @@ public:
         if (!from) return nullptr;
 
         // First table reference
-        AstNode* table_ref = parse_table_reference();
+        AstNode* table_ref = parse_table_reference(true);
         if (table_ref) from->add_child(table_ref);
 
         // Additional table refs (comma join) or explicit JOINs
@@ -34,7 +34,7 @@ public:
             if (t.type == TokenType::TK_COMMA) {
                 // Comma join: FROM t1, t2
                 tok_.skip();
-                AstNode* next_ref = parse_table_reference();
+                AstNode* next_ref = parse_table_reference(true);
                 if (next_ref) from->add_child(next_ref);
             } else if (is_join_start(t.type)) {
                 // Explicit JOIN
@@ -51,8 +51,22 @@ public:
     }
 
     // Parse a single table reference (simple name, qualified name, subquery)
-    AstNode* parse_table_reference() {
+    AstNode* parse_table_reference(bool from_context = false) {
         Token t = tok_.peek();
+
+        if constexpr (D == Dialect::PostgreSQL) {
+            if (from_context && ExpressionParser<D>::keyword(t, "LATERAL")) {
+                tok_.skip();
+                AstNode* ref = parse_table_reference(true);
+                if (!ref || !ref->first_child ||
+                    (ref->first_child->type != NodeType::NODE_SUBQUERY &&
+                     ref->first_child->type != NodeType::NODE_FUNCTION_CALL))
+                    return expr_parser_.syntax_error();
+                AstNode* lateral = make_node(arena_, NodeType::NODE_LATERAL);
+                lateral->add_child(ref);
+                return lateral;
+            }
+        }
 
         // Subquery: (SELECT ...)
         if (t.type == TokenType::TK_LPAREN) {
@@ -78,11 +92,11 @@ public:
                 // Optional alias
                 AstNode* ref = make_node(arena_, NodeType::NODE_TABLE_REF);
                 ref->add_child(subq);
-                parse_optional_alias(ref);
+                parse_optional_alias(ref, from_context);
                 return ref;
             }
             // Parenthesized table reference -- parse inner
-            AstNode* inner = parse_table_reference();
+            AstNode* inner = parse_table_reference(from_context);
             if (tok_.peek().type == TokenType::TK_RPAREN) tok_.skip();
             return inner;
         }
@@ -96,15 +110,39 @@ public:
             tok_.skip();
             Token table_name = tok_.next_token();
             AstNode* qname = make_node(arena_, NodeType::NODE_QUALIFIED_NAME);
-            qname->add_child(make_node(arena_, NodeType::NODE_IDENTIFIER, name.text));
-            qname->add_child(make_node(arena_, NodeType::NODE_IDENTIFIER, table_name.text));
+            qname->add_child(make_identifier(name));
+            qname->add_child(make_identifier(table_name));
             ref->add_child(qname);
         } else {
-            ref->add_child(make_node(arena_, NodeType::NODE_IDENTIFIER, name.text));
+            ref->add_child(make_identifier(name));
+        }
+
+        if constexpr (D == Dialect::PostgreSQL) {
+            if (from_context && tok_.peek().type == TokenType::TK_LPAREN) {
+                // Table functions retain a structured name (including schema).
+                AstNode* name_node = ref->first_child;
+                AstNode* func = make_node(arena_, NodeType::NODE_FUNCTION_CALL);
+                func->flags = FLAG_FUNCTION_TABLE; // first child is the function name
+                ref->first_child = nullptr;
+                ref->add_child(func);
+                func->add_child(name_node);
+                tok_.skip();
+                if (tok_.peek().type != TokenType::TK_RPAREN) {
+                    while (true) {
+                        AstNode* arg = expr_parser_.parse_complete();
+                        if (!arg) return expr_parser_.syntax_error();
+                        func->add_child(arg);
+                        if (tok_.peek().type != TokenType::TK_COMMA) break;
+                        tok_.skip();
+                    }
+                }
+                if (tok_.peek().type != TokenType::TK_RPAREN) return expr_parser_.syntax_error();
+                tok_.skip();
+            }
         }
 
         // Optional alias
-        parse_optional_alias(ref);
+        parse_optional_alias(ref, from_context);
         return ref;
     }
 
@@ -141,7 +179,7 @@ public:
         join->value_len = join_type.len;
 
         // Right table reference
-        AstNode* right_ref = parse_table_reference();
+        AstNode* right_ref = parse_table_reference(true);
         if (right_ref) join->add_child(right_ref);
 
         // Join condition: ON expr or USING (col_list)
@@ -172,15 +210,35 @@ public:
     }
 
     // Parse optional alias (AS name or implicit alias)
-    void parse_optional_alias(AstNode* parent) {
+    void parse_optional_alias(AstNode* parent, bool from_context = false) {
         Token t = tok_.peek();
+        AstNode* alias = nullptr;
         if (t.type == TokenType::TK_AS) {
             tok_.skip();
-            Token alias_name = tok_.next_token();
-            parent->add_child(make_node(arena_, NodeType::NODE_ALIAS, alias_name.text));
-        } else if (is_alias_start(t.type)) {
+            t = tok_.next_token();
+            if (!is_alias_start(t.type)) { expr_parser_.syntax_error(); return; }
+            alias = make_node(arena_, NodeType::NODE_ALIAS, t.source.empty() ? t.text : t.source);
+        } else if (is_alias_token(t)) {
             tok_.skip();
-            parent->add_child(make_node(arena_, NodeType::NODE_ALIAS, t.text));
+            alias = make_node(arena_, NodeType::NODE_ALIAS, t.source.empty() ? t.text : t.source);
+        }
+        if (!alias) return;
+        parent->add_child(alias);
+        if constexpr (D == Dialect::PostgreSQL) {
+            if (from_context && tok_.peek().type == TokenType::TK_LPAREN) {
+                tok_.skip();
+                while (true) {
+                    Token column = tok_.peek();
+                    if (column.type != TokenType::TK_IDENTIFIER) { expr_parser_.syntax_error(); return; }
+                    tok_.skip();
+                    alias->add_child(make_node(arena_, NodeType::NODE_IDENTIFIER,
+                        column.source.empty() ? column.text : column.source));
+                    if (tok_.peek().type != TokenType::TK_COMMA) break;
+                    tok_.skip();
+                }
+                if (tok_.peek().type != TokenType::TK_RPAREN) { expr_parser_.syntax_error(); return; }
+                tok_.skip();
+            }
         }
     }
 
@@ -190,6 +248,15 @@ public:
                type == TokenType::TK_LEFT || type == TokenType::TK_RIGHT ||
                type == TokenType::TK_FULL || type == TokenType::TK_OUTER ||
                type == TokenType::TK_CROSS || type == TokenType::TK_NATURAL;
+    }
+
+    static bool is_alias_token(const Token& token) {
+        if constexpr (D == Dialect::PostgreSQL) {
+            if (ExpressionParser<D>::keyword(token, "WINDOW") ||
+                ExpressionParser<D>::keyword(token, "FILTER") ||
+                ExpressionParser<D>::keyword(token, "LATERAL")) return false;
+        }
+        return is_alias_start(token.type);
     }
 
     // Check if a token can start an implicit alias (identifier-like, not a clause keyword)
@@ -245,6 +312,13 @@ public:
     }
 
 private:
+    AstNode* make_identifier(const Token& token) {
+        AstNode* node = make_node_from_token(arena_, NodeType::NODE_IDENTIFIER, token);
+        if (node && token.type == TokenType::TK_IDENTIFIER && token.source.ptr != token.text.ptr)
+            node->flags |= FLAG_IDENT_DELIMITED;
+        return node;
+    }
+
     Tokenizer<D>& tok_;
     Arena& arena_;
     ExpressionParser<D>& expr_parser_;
