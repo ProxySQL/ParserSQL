@@ -164,7 +164,7 @@ void test_default_and_simple_mappings() {
         {PG_QUERY__NODE__NODE_CLOSE_PORTAL_STMT, MappingKind::NoEquivalent, StmtType::UNKNOWN},
         {PG_QUERY__NODE__NODE_COMMENT_STMT, MappingKind::NoEquivalent, StmtType::UNKNOWN},
         {PG_QUERY__NODE__NODE_DECLARE_CURSOR_STMT, MappingKind::NoEquivalent, StmtType::UNKNOWN},
-        {PG_QUERY__NODE__NODE_DEFINE_STMT, MappingKind::NoEquivalent, StmtType::UNKNOWN},
+        {PG_QUERY__NODE__NODE_DEFINE_STMT, MappingKind::Equivalent, StmtType::CREATE},
         {PG_QUERY__NODE__NODE_DISCARD_STMT, MappingKind::NoEquivalent, StmtType::UNKNOWN},
         {PG_QUERY__NODE__NODE_FETCH_STMT, MappingKind::NoEquivalent, StmtType::UNKNOWN},
         {PG_QUERY__NODE__NODE_IMPORT_FOREIGN_SCHEMA_STMT, MappingKind::NoEquivalent, StmtType::UNKNOWN},

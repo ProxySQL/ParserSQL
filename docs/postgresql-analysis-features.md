@@ -139,11 +139,25 @@ RETURNING and behavior options, table columns, serialization and default
 expressions. Their new node kinds support traversal and SQL reconstruction;
 parameterization remains conservative about unsupported contexts.
 
-Coverage is still a subset of PostgreSQL. Remaining examples include CREATE
-TYPE/DOMAIN/SEQUENCE, embedded CREATE SCHEMA elements, CREATE DATABASE options,
-most non-table ALTER commands, unquoted SQL function bodies, exclusion
-constraints, less common DDL options, assignment slices,
-full ON CONFLICT index-inference options, and `IS JSON` predicates. PostgreSQL remains responsible
+Additional expression forms include `VARIADIC` arguments, array slices,
+`ILIKE`/`SIMILAR TO` and `ESCAPE`, SQL `POSITION`/`OVERLAY`, `IS JSON` predicates,
+and `ORDER BY ... USING` in queries, aggregates and windows. PostgreSQL bit and
+hexadecimal literals preserve their prefixes. Nested joins, join USING aliases,
+`TABLESAMPLE ... REPEATABLE`, `ROWS FROM`, row-lock strengths/targets/wait policies,
+and `SELECT INTO` have explicit AST nodes. EXPLAIN retains grouped options and
+propagates its inner statement's completion and error status. Unsupported local
+execution is guarded; parameterization conservatively rejects the new contexts.
+
+Object DDL includes CREATE/ALTER DOMAIN, shell/composite/enum/range/base TYPE
+forms, CREATE/ALTER SEQUENCE, routine properties and SET/RESET clauses,
+object renaming/ownership/schema changes, and additional DROP families.
+Defaults, constraints, names and options remain traversable AST components.
+
+Coverage is still a subset of PostgreSQL. Remaining examples include embedded
+CREATE SCHEMA elements, CREATE DATABASE options, other object-specific ALTER
+commands, aggregate/operator definitions, roles, comments, cursors, unquoted SQL
+function bodies, exclusion constraints, less common DDL options, assignment
+slices and full ON CONFLICT index-inference options. PostgreSQL remains responsible
 for name resolution, types, privileges and semantic checks. Corpus acceptance
 alone does not establish grammar parity or round-trip equivalence for every
 accepted statement.

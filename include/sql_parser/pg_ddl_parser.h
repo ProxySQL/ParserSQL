@@ -136,8 +136,34 @@ private:
         ExpressionParser<Dialect::PostgreSQL> parser(tok_, arena_, true);
         parser.set_subquery_callback(callback_);
         AstNode* n = parser.parse_complete(minimum);
-        if (!n) fail();
+        if (!n || n->type == NodeType::NODE_ASTERISK) { fail(); return nullptr; }
         return n;
+    }
+    static bool restricted_default_operand(const AstNode* n) {
+        if (!n || n->type == NodeType::NODE_ASTERISK || n->type == NodeType::NODE_IS_NULL ||
+            n->type == NodeType::NODE_IS_NOT_NULL || n->type == NodeType::NODE_IN_LIST ||
+            n->type == NodeType::NODE_BETWEEN || n->type == NodeType::NODE_PG_TIME_ZONE ||
+            n->type == NodeType::NODE_PG_QUANTIFIED_OPERAND) return false;
+        if (n->type == NodeType::NODE_BINARY_OP || n->type == NodeType::NODE_UNARY_OP || n->type == NodeType::NODE_TYPE_CAST) {
+            for (const char* op : {"NOT", "AND", "OR", "COLLATE", "LIKE", "ILIKE", "SIMILAR TO"})
+                if (n->value().equals_ci(op, static_cast<uint32_t>(std::strlen(op)))) return false;
+            for (const AstNode* c = n->first_child; c; c = c->next_sibling)
+                if (!restricted_default_operand(c)) return false;
+        }
+        return true; // Parentheses/functions contain independent full expressions.
+    }
+    AstNode* default_expr() {
+        ExpressionParser<Dialect::PostgreSQL> parser(tok_, arena_, true);
+        parser.set_subquery_callback(callback_);
+        AstNode* n = parser.parse_json_xml_restricted();
+        if (!restricted_default_operand(n)) { fail(); return nullptr; }
+        return n;
+    }
+    bool string_start() {
+        if (at(TokenType::TK_STRING)) return true;
+        if (!is("E")) return false;
+        auto look = tok_; Token prefix = look.next_token(); const Token& literal = look.peek();
+        return literal.type == TokenType::TK_STRING && prefix.source.ptr + prefix.source.len == literal.source.ptr;
     }
     AstNode* string_literal() {
         if (is("E")) {
@@ -184,7 +210,7 @@ private:
         return list;
     }
     void option_value(AstNode* option) {
-        if (at(TokenType::TK_STRING) || is("E")) { add(option, string_literal()); return; }
+        if (string_start()) { add(option, string_literal()); return; }
         if (at(TokenType::TK_PLUS) || at(TokenType::TK_MINUS)) syntax(option);
         Token t = tok_.peek();
         if (t.type == TokenType::TK_INTEGER || t.type == TokenType::TK_FLOAT || pg_column_label(t)) syntax(option);
@@ -245,9 +271,11 @@ private:
         } else if (table && take("FOREIGN", c)) {
             require("KEY", c); add(c, names()); references(c);
         } else if (!table && is("REFERENCES")) references(c);
-        else if (!table && take("NOT", c)) require("NULL", c);
+        else if (!table && take("NOT", c)) {
+            require("NULL", c); if (take("NO", c)) require("INHERIT", c);
+        }
         else if (!table && take("NULL", c)) {}
-        else if (!table && take("DEFAULT", c)) add(c, expr(Precedence::PG_PREDICATE));
+        else if (!table && take("DEFAULT", c)) add(c, default_expr());
         else if (!table && take("GENERATED", c)) {
             bool always = take("ALWAYS", c);
             if (!always) { require("BY", c); require("DEFAULT", c); }
@@ -261,6 +289,13 @@ private:
             }
         } else fail();
         deferrability(c);
+        if (!table) {
+            if (!take("ENFORCED", c) && is("NOT")) {
+                auto look = tok_; look.skip();
+                if (word(look.peek(), "ENFORCED")) { syntax(c); require("ENFORCED", c); }
+            }
+            deferrability(c);
+        }
         return c;
     }
     void identity_options(AstNode* parent) {
@@ -310,6 +345,339 @@ private:
         require(TokenType::TK_RPAREN);
         return list;
     }
+    // Object DDL uses the same explicit clause/list nodes as table DDL.
+    // NonReservedWord includes both PostgreSQL identifier keyword categories.
+    static bool nonreserved(const Token& t) {
+        return pg_column_name(t) || pg_type_function_name(t);
+    }
+    AstNode* nonreserved_name() {
+        if (!nonreserved(tok_.peek())) { fail(); return nullptr; }
+        return token_node(NodeType::NODE_IDENTIFIER, tok_.next_token());
+    }
+    void numeric(AstNode* parent) {
+        if (at(TokenType::TK_PLUS) || at(TokenType::TK_MINUS)) syntax(parent);
+        Token t = tok_.peek();
+        if (t.type != TokenType::TK_INTEGER && t.type != TokenType::TK_FLOAT) { fail(); return; }
+        add(parent, token_node(t.type == TokenType::TK_INTEGER ? NodeType::NODE_LITERAL_INT : NodeType::NODE_LITERAL_FLOAT, tok_.next_token()));
+    }
+    bool numeric_start() {
+        return at(TokenType::TK_PLUS) || at(TokenType::TK_MINUS) || at(TokenType::TK_INTEGER) || at(TokenType::TK_FLOAT);
+    }
+    AstNode* simple_type() {
+        ExpressionParser<Dialect::PostgreSQL> parser(tok_, arena_, true);
+        parser.set_subquery_callback(callback_);
+        StringRef text = parser.parse_type_name(false);
+        if (text.empty()) { fail(); return nullptr; }
+        auto* n = make_node(arena_, NodeType::NODE_TYPE_NAME, text);
+        if (!n) fail();
+        return n;
+    }
+    AstNode* variable_name() {
+        auto* first = identifier();
+        if (!at(TokenType::TK_DOT)) return first;
+        auto* qualified = node(NodeType::NODE_QUALIFIED_NAME); add(qualified, first);
+        while (!failed_ && take(TokenType::TK_DOT)) add(qualified, identifier());
+        return qualified;
+    }
+    void variable_value(AstNode* parent) {
+        if (string_start()) add(parent, string_literal());
+        else if (numeric_start()) numeric(parent);
+        else if (!take("TRUE", parent) && !take("FALSE", parent) && !take("ON", parent)) add(parent, nonreserved_name());
+    }
+    void routine_setting(AstNode* parent, bool reset) {
+        auto look = tok_; look.skip(); const Token next = look.peek();
+        if (reset) {
+            if (take("ALL", parent)) return;
+            if (is("TIME") && word(next, "ZONE")) { syntax(parent); require("ZONE", parent); return; }
+            if (is("SESSION") && word(next, "AUTHORIZATION")) { syntax(parent); require("AUTHORIZATION", parent); return; }
+            if (is("TRANSACTION") && word(next, "ISOLATION")) { syntax(parent); require("ISOLATION", parent); require("LEVEL", parent); return; }
+            add(parent, variable_name()); return;
+        }
+        // Generic GUC names may also be the first word of a special SET form.
+        bool generic = next.type == TokenType::TK_DOT || next.type == TokenType::TK_EQUAL ||
+            word(next, "TO") || word(next, "FROM");
+        if (!generic) {
+        if (take("TIME", parent)) {
+            require("ZONE", parent);
+            if (take("LOCAL", parent) || take("DEFAULT", parent)) return;
+            if (is("INTERVAL")) {
+                // zone_value permits qualifiers whose mask contains only HOUR/MINUTE.
+                auto* interval = expr();
+                if (!interval || interval->type != NodeType::NODE_PG_INTERVAL) { fail(); return; }
+                auto* amount = interval->first_child;
+                auto* qualifier = amount ? amount->next_sibling : nullptr;
+                if (qualifier && !qualifier->value().equals_ci("HOUR", 4) &&
+                    !qualifier->value().equals_ci("HOUR TO MINUTE", 14) &&
+                    !qualifier->value().equals_ci("MINUTE", 6)) { fail(); return; }
+                add(parent, interval);
+            } else if (numeric_start()) numeric(parent);
+            else if (string_start()) add(parent, string_literal());
+            else if (at(TokenType::TK_IDENTIFIER)) add(parent, identifier());
+            else fail();
+            return;
+        }
+        if (take("SCHEMA", parent)) { add(parent, string_literal()); return; }
+        if (take("NAMES", parent)) {
+            if (string_start()) add(parent, string_literal());
+            else take("DEFAULT", parent);
+            return;
+        }
+        if (take("ROLE", parent)) {
+            if (string_start()) add(parent, string_literal());
+            else add(parent, nonreserved_name());
+            return;
+        }
+        if (take("SESSION", parent)) {
+            require("AUTHORIZATION", parent);
+            if (!take("DEFAULT", parent)) {
+                if (string_start()) add(parent, string_literal());
+                else add(parent, nonreserved_name());
+            }
+            return;
+        }
+        if (take("XML", parent)) {
+            require("OPTION", parent); if (!take("DOCUMENT", parent)) require("CONTENT", parent); return;
+        }
+        if (take("TRANSACTION", parent)) {
+            require("SNAPSHOT", parent); add(parent, string_literal()); return;
+        }
+        }
+        add(parent, variable_name());
+        if (take("FROM", parent)) { require("CURRENT", parent); return; }
+        if (!take("TO", parent)) {
+            require(TokenType::TK_EQUAL); add(parent, node(NodeType::NODE_PG_DDL_SYNTAX, "="));
+        }
+        if (take("DEFAULT", parent)) return;
+        auto* values = node(NodeType::NODE_PG_DDL_LIST); if (values) values->flags = 1;
+        do { auto* value = clause(); variable_value(value); add(values, value); }
+        while (!failed_ && take(TokenType::TK_COMMA));
+        add(parent, values);
+    }
+    bool routine_property(AstNode* parent) {
+        auto* c = clause();
+        if (take("IMMUTABLE", c) || take("STABLE", c) || take("VOLATILE", c) ||
+            take("STRICT", c) || take("LEAKPROOF", c)) {}
+        else if (take("NOT", c)) require("LEAKPROOF", c);
+        else if (take("CALLED", c)) { require("ON", c); require("NULL", c); require("INPUT", c); }
+        else if (take("RETURNS", c)) { require("NULL", c); require("ON", c); require("NULL", c); require("INPUT", c); }
+        else if (take("EXTERNAL", c) || is("SECURITY")) {
+            require("SECURITY", c); if (!take("DEFINER", c)) require("INVOKER", c);
+        } else if (take("COST", c) || take("ROWS", c)) numeric(c);
+        else if (take("SUPPORT", c)) add(c, name());
+        else if (take("PARALLEL", c)) add(c, identifier());
+        else if (take("SET", c)) routine_setting(c, false);
+        else if (take("RESET", c)) routine_setting(c, true);
+        else return false;
+        add(parent, c); return true;
+    }
+    // Name-only changes are standalone statements, not property-list entries.
+    bool object_identity(AstNode* root, bool schema = true, bool owner = true) {
+        if (take("RENAME", root)) { require("TO", root); add(root, identifier()); return true; }
+        if (owner && take("OWNER", root)) { require("TO", root); role(root); return true; }
+        auto look = tok_; look.skip();
+        if (schema && is("SET") && word(look.peek(), "SCHEMA")) {
+            look.skip();
+            if (look.peek().type == TokenType::TK_STRING || look.peek().type == TokenType::TK_EQUAL ||
+                look.peek().type == TokenType::TK_DOT ||
+                word(look.peek(), "TO") || word(look.peek(), "FROM")) return false; // routine GUC syntax
+            syntax(root); require("SCHEMA", root); add(root, identifier()); return true;
+        }
+        return false;
+    }
+    void alter_routine(AstNode* root) {
+        // function_with_argtypes permits omitted signatures and both keyword categories.
+        auto* function = nonreserved_name();
+        if (at(TokenType::TK_DOT)) {
+            auto* qualified = node(NodeType::NODE_QUALIFIED_NAME); add(qualified, function);
+            while (!failed_ && take(TokenType::TK_DOT)) add(qualified, identifier(true));
+            function = qualified;
+        }
+        add(root, function);
+        if (at(TokenType::TK_LPAREN)) add(root, arguments(false));
+        if (object_identity(root)) return;
+        if (take("NO", root) || is("DEPENDS")) {
+            require("DEPENDS", root); require("ON", root); require("EXTENSION", root); add(root, identifier()); return;
+        }
+        bool had = false;
+        while (!failed_ && routine_property(root)) had = true;
+        if (!had) fail();
+        take("RESTRICT", root);
+    }
+    void create_domain(AstNode* root) {
+        add(root, name()); take("AS", root); add(root, type());
+        while (!failed_) {
+            if (take("COLLATE", root)) add(root, name());
+            else if (constraint_start() || is("NOT") || is("NULL") || is("DEFAULT") || is("GENERATED") || is("REFERENCES"))
+                add(root, constraint(false));
+            else break;
+        }
+    }
+    void alter_domain(AstNode* root) {
+        add(root, name());
+        if (is("RENAME")) {
+            syntax(root);
+            if (take("CONSTRAINT", root)) add(root, identifier());
+            require("TO", root); add(root, identifier()); return;
+        }
+        if (object_identity(root)) return;
+        if (take("SET", root)) {
+            if (take("DEFAULT", root)) add(root, expr());
+            else { require("NOT", root); require("NULL", root); }
+        } else if (take("DROP", root)) {
+            if (take("CONSTRAINT", root)) { if_exists(root); add(root, identifier()); behavior(root); }
+            else if (take("NOT", root)) require("NULL", root);
+            else require("DEFAULT", root);
+        } else if (take("VALIDATE", root)) { require("CONSTRAINT", root); add(root, identifier()); }
+        else if (take("ADD", root)) {
+            if (take("CONSTRAINT", root)) add(root, identifier());
+            if (take("CHECK", root)) {
+                add(root, expression_group());
+                // ConstraintAttributeSpec allows these CHECK attributes in either order.
+                unsigned seen = 0;
+                while (!failed_ && (is("NOT") || is("NO"))) {
+                    bool valid = take("NOT", root);
+                    unsigned bit = valid ? 1 : 2;
+                    if (seen & bit) { fail(); break; } seen |= bit;
+                    if (valid) require("VALID", root);
+                    else { require("NO", root); require("INHERIT", root); }
+                }
+            } else { require("NOT", root); require("NULL", root); }
+        } else fail();
+    }
+    AstNode* type_attribute() {
+        auto* attribute = clause(); add(attribute, identifier()); add(attribute, type());
+        if (take("COLLATE", attribute)) add(attribute, name());
+        return attribute;
+    }
+    static bool operator_symbol(const Token& t) {
+        switch (t.type) {
+            case TokenType::TK_PG_OPERATOR: case TokenType::TK_PLUS: case TokenType::TK_MINUS:
+            case TokenType::TK_ASTERISK: case TokenType::TK_SLASH: case TokenType::TK_PERCENT:
+            case TokenType::TK_CARET: case TokenType::TK_LESS: case TokenType::TK_GREATER:
+            case TokenType::TK_EQUAL: case TokenType::TK_LESS_EQUAL: case TokenType::TK_GREATER_EQUAL:
+            case TokenType::TK_NOT_EQUAL: return true;
+            default: return false;
+        }
+    }
+    void definition_value(AstNode* parent) {
+        if (string_start()) { add(parent, string_literal()); return; }
+        if (numeric_start()) { numeric(parent); return; }
+        if (take("NONE", parent)) return;
+        if (take("OPERATOR", parent)) {
+            require(TokenType::TK_LPAREN);
+            auto* op = node(NodeType::NODE_PG_DDL_LIST);
+            while (!failed_ && pg_column_name(tok_.peek())) {
+                add(op, identifier()); require(TokenType::TK_DOT); add(op, node(NodeType::NODE_PG_DDL_SYNTAX, "."));
+            }
+            if (operator_symbol(tok_.peek())) syntax(op); else fail();
+            require(TokenType::TK_RPAREN); add(parent, op); return;
+        }
+        if (operator_symbol(tok_.peek())) { syntax(parent); return; }
+        if (take("SETOF", parent)) { add(parent, type()); return; }
+        if (is("DOUBLE")) {
+            auto look = tok_; look.skip();
+            if (!word(look.peek(), "PRECISION")) { add(parent, identifier()); return; }
+        }
+        if (PgTypeParser::name_token(tok_.peek())) { add(parent, type()); return; }
+        // reserved_keyword is an explicit def_arg production.
+        if (pg_column_label(tok_.peek()) && !nonreserved(tok_.peek())) syntax(parent);
+        else fail();
+    }
+    AstNode* definition() {
+        require(TokenType::TK_LPAREN);
+        auto* list = node(NodeType::NODE_PG_DDL_LIST);
+        do {
+            auto* item = clause(); add(item, identifier(true));
+            if (take(TokenType::TK_EQUAL)) {
+                add(item, node(NodeType::NODE_PG_DDL_SYNTAX, "=")); definition_value(item);
+            }
+            add(list, item);
+        } while (!failed_ && take(TokenType::TK_COMMA));
+        require(TokenType::TK_RPAREN); return list;
+    }
+    void create_type(AstNode* root) {
+        add(root, name());
+        if (take("AS", root)) {
+            if (take("RANGE", root)) { add(root, definition()); return; }
+            bool enumeration = take("ENUM", root);
+            require(TokenType::TK_LPAREN);
+            auto* list = node(NodeType::NODE_PG_DDL_LIST);
+            if (!at(TokenType::TK_RPAREN)) {
+                do { add(list, enumeration ? string_literal() : type_attribute()); }
+                while (!failed_ && take(TokenType::TK_COMMA));
+            }
+            require(TokenType::TK_RPAREN); add(root, list);
+        } else if (at(TokenType::TK_LPAREN)) add(root, definition());
+    }
+    void alter_type(AstNode* root) {
+        add(root, name());
+        if (take("RENAME", root)) {
+            if (take("VALUE", root)) { add(root, string_literal()); require("TO", root); add(root, string_literal()); }
+            else if (take("ATTRIBUTE", root)) { add(root, identifier()); require("TO", root); add(root, identifier()); behavior(root); }
+            else { require("TO", root); add(root, identifier()); }
+            return;
+        }
+        if (object_identity(root)) return;
+        if (take("SET", root)) { add(root, definition()); return; }
+        auto look = tok_; look.skip();
+        if (is("ADD") && word(look.peek(), "VALUE")) {
+            syntax(root); require("VALUE", root); if_exists(root, true); add(root, string_literal());
+            if (take("BEFORE", root) || take("AFTER", root)) add(root, string_literal());
+            return;
+        }
+        auto* commands = node(NodeType::NODE_PG_DDL_LIST); if (commands) commands->flags = 1;
+        do {
+            auto* c = clause();
+            if (take("ADD", c)) { require("ATTRIBUTE", c); add(c, type_attribute()); }
+            else if (take("DROP", c)) { require("ATTRIBUTE", c); if_exists(c); add(c, identifier()); }
+            else if (take("ALTER", c)) {
+                require("ATTRIBUTE", c); add(c, identifier());
+                if (take("SET", c)) require("DATA", c);
+                require("TYPE", c); add(c, type());
+                if (take("COLLATE", c)) add(c, name());
+            } else fail();
+            behavior(c); add(commands, c);
+        } while (!failed_ && take(TokenType::TK_COMMA));
+        add(root, commands);
+    }
+    bool sequence_option(AstNode* root) {
+        auto* c = clause();
+        if (take("AS", c)) add(c, simple_type());
+        else if (take("CACHE", c) || take("MINVALUE", c) || take("MAXVALUE", c)) numeric(c);
+        else if (take("INCREMENT", c)) { take("BY", c); numeric(c); }
+        else if (take("START", c)) { take("WITH", c); numeric(c); }
+        else if (take("RESTART", c)) { if (take("WITH", c) || numeric_start()) numeric(c); }
+        else if (take("NO", c)) { if (!take("MINVALUE", c) && !take("MAXVALUE", c)) require("CYCLE", c); }
+        else if (take("CYCLE", c) || take("LOGGED", c) || take("UNLOGGED", c)) {}
+        else if (take("OWNED", c)) { require("BY", c); add(c, name()); }
+        else if (take("SEQUENCE", c)) { require("NAME", c); add(c, name()); }
+        else return false;
+        add(root, c); return true;
+    }
+    void create_sequence(AstNode* root) {
+        if_exists(root, true); add(root, name(true));
+        while (!failed_ && sequence_option(root)) {}
+    }
+    void alter_sequence(AstNode* root) {
+        if_exists(root); add(root, name(true));
+        if (object_identity(root)) return;
+        if (take("SET", root)) {
+            if (!take("LOGGED", root)) require("UNLOGGED", root);
+            return;
+        }
+        bool had = false;
+        while (!failed_ && sequence_option(root)) had = true;
+        if (!had) fail();
+    }
+    void alter_identity_object(AstNode* root, bool qualified, bool schema, bool owner, bool missing, bool columns = false) {
+        if (missing) if_exists(root);
+        add(root, qualified ? name(true) : identifier());
+        if (columns && take("RENAME", root)) {
+            if (!take("TO", root)) { take("COLUMN", root); add(root, identifier()); require("TO", root); }
+            add(root, identifier()); return;
+        }
+        if (!object_identity(root, schema, owner)) fail();
+    }
     void create(AstNode* root) {
         bool replace = take("OR", root);
         if (replace) require("REPLACE", root);
@@ -325,6 +693,9 @@ private:
         else if (take("TRIGGER", root) && !temporary && !unlogged && !unique && !materialized && !(replace && constraint_trigger)) create_trigger(root, constraint_trigger);
         else if (take("SCHEMA", root) && !replace && !temporary && !unlogged && !unique && !materialized && !constraint_trigger) create_schema(root);
         else if (take("DATABASE", root) && !replace && !temporary && !unlogged && !unique && !materialized && !constraint_trigger) add(root, identifier());
+        else if (take("DOMAIN", root) && !replace && !temporary && !unlogged && !unique && !materialized && !constraint_trigger) create_domain(root);
+        else if (take("TYPE", root) && !replace && !temporary && !unlogged && !unique && !materialized && !constraint_trigger) create_type(root);
+        else if (take("SEQUENCE", root) && !replace && !unique && !materialized && !constraint_trigger) create_sequence(root);
         else fail();
     }
     void create_schema(AstNode* root) {
@@ -595,7 +966,17 @@ private:
             do { add(commands, alter_table_command()); }
             while (!failed_ && !standalone && take(TokenType::TK_COMMA));
             add(root, commands);
-        } else fail();
+        } else if (take("FUNCTION", root) || take("PROCEDURE", root) || take("ROUTINE", root)) alter_routine(root);
+        else if (take("DOMAIN", root)) alter_domain(root);
+        else if (take("TYPE", root)) alter_type(root);
+        else if (take("SEQUENCE", root)) alter_sequence(root);
+        else if (take("SCHEMA", root) || take("DATABASE", root)) alter_identity_object(root, false, false, true, false);
+        else if (take("VIEW", root)) alter_identity_object(root, true, true, true, true, true);
+        else if (take("MATERIALIZED", root)) { require("VIEW", root); alter_identity_object(root, true, true, true, true, true); }
+        else if (take("INDEX", root)) alter_identity_object(root, true, false, true, true);
+        else if (take("COLLATION", root) || take("CONVERSION", root) || take("STATISTICS", root))
+            alter_identity_object(root, true, true, true, false);
+        else fail();
     }
     AstNode* alter_table_command() {
         auto* c = clause();
@@ -674,21 +1055,31 @@ private:
     }
     void drop(AstNode* root) {
         bool routine = false, trigger = false, index = false;
-        bool database = false, roles = false, schema = false;
+        bool database = false, roles = false, schema = false, type_name = false;
         if (take("MATERIALIZED", root)) require("VIEW", root);
         else if (take("FUNCTION", root) || take("PROCEDURE", root) || take("ROUTINE", root)) routine = true;
-        else if (take("TRIGGER", root) || take("RULE", root)) trigger = true;
+        else if (take("TRIGGER", root) || take("RULE", root) || take("POLICY", root)) trigger = true;
         else if (take("INDEX", root)) index = true;
         else if (take("DATABASE", root)) database = true;
         else if (take("SCHEMA", root)) schema = true;
         else if (take("ROLE", root) || take("USER", root)) roles = true;
-        else if (!take("TABLE", root) && !take("VIEW", root) && !take("SEQUENCE", root) &&
-            !take("TYPE", root) && !take("DOMAIN", root)) { fail(); return; }
+        else if (take("TYPE", root) || take("DOMAIN", root)) type_name = true;
+        else if (take("COLLATION", root) || take("CONVERSION", root) || take("STATISTICS", root)) {}
+        else if (take("TEXT", root)) {
+            require("SEARCH", root);
+            if (!take("PARSER", root) && !take("DICTIONARY", root) && !take("TEMPLATE", root)) require("CONFIGURATION", root);
+        } else if (take("FOREIGN", root)) {
+            if (!take("TABLE", root)) { require("DATA", root); require("WRAPPER", root); schema = true; }
+        } else if (take("ACCESS", root)) { require("METHOD", root); schema = true; }
+        else if (take("EVENT", root)) { require("TRIGGER", root); schema = true; }
+        else if (take("PROCEDURAL", root)) { require("LANGUAGE", root); schema = true; }
+        else if (take("EXTENSION", root) || take("LANGUAGE", root) || take("PUBLICATION", root) || take("SERVER", root)) schema = true;
+        else if (!take("TABLE", root) && !take("VIEW", root) && !take("SEQUENCE", root)) { fail(); return; }
         if (index) take("CONCURRENTLY", root);
         if_exists(root);
         auto* list = node(NodeType::NODE_PG_DDL_LIST); if (list) list->flags = 1;
         do {
-            auto* item = clause(); add(item, database || roles || schema || trigger ? identifier() : name(true));
+            auto* item = clause(); add(item, type_name ? type() : database || roles || schema || trigger ? identifier() : name(true));
             if (routine && at(TokenType::TK_LPAREN)) add(item, arguments(false));
             add(list, item);
         } while (!failed_ && !trigger && !database && take(TokenType::TK_COMMA));

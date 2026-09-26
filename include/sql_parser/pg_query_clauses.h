@@ -46,6 +46,154 @@ public:
     PgQueryClauses(Tokenizer<D>& tok, Arena& arena, ExpressionParser<D>& expr)
         : tok_(tok), arena_(arena), expr_(expr) {}
 
+    AstNode* explain_options() {
+        auto* options = make_node(arena_, NodeType::NODE_EXPLAIN_OPTIONS);
+        if (!options) return expr_.syntax_error();
+        options->flags = 1;
+        auto lookahead = tok_; lookahead.skip();
+        if (tok_.peek().type == TokenType::TK_LPAREN &&
+            !ExpressionParser<D>::starts_query(lookahead.peek().type) &&
+            lookahead.peek().type != TokenType::TK_LPAREN) {
+            tok_.skip();
+            while (true) {
+                auto key = tok_.peek();
+                if (!pg_column_name(key) && !pg_type_function_name(key) &&
+                    !word("ANALYZE") && !word("ANALYSE")) return expr_.syntax_error();
+                tok_.skip();
+                auto spelling = key.source.empty() ? key.text : key.source;
+                if (ExpressionParser<D>::keyword(key, "ANALYSE")) spelling = {"ANALYZE", 7};
+                auto* option = make_node(arena_, NodeType::NODE_PG_EXPLAIN_OPTION, spelling);
+                if (!option) return expr_.syntax_error();
+                auto value = tok_.peek();
+                if (value.type != TokenType::TK_COMMA && value.type != TokenType::TK_RPAREN) {
+                    AstNode* arg = nullptr;
+                    if (value.type == TokenType::TK_INTEGER || value.type == TokenType::TK_FLOAT ||
+                        value.type == TokenType::TK_PLUS || value.type == TokenType::TK_MINUS) {
+                        arg = expr_.parse_complete(Precedence::UNARY);
+                        if (!arg || (arg->type != NodeType::NODE_LITERAL_INT && arg->type != NodeType::NODE_LITERAL_FLOAT &&
+                            !(arg->type == NodeType::NODE_UNARY_OP && arg->first_child &&
+                              (arg->first_child->type == NodeType::NODE_LITERAL_INT ||
+                               arg->first_child->type == NodeType::NODE_LITERAL_FLOAT)))) return expr_.syntax_error();
+                    } else if (value.type == TokenType::TK_STRING) {
+                        tok_.skip(); arg = make_node_from_token(arena_, NodeType::NODE_LITERAL_STRING, value);
+                    } else if (pg_column_name(value) || pg_type_function_name(value) ||
+                               word("TRUE") || word("FALSE") || word("ON")) {
+                        tok_.skip(); arg = make_node_from_token(arena_, NodeType::NODE_IDENTIFIER, value,
+                            value.type == TokenType::TK_IDENTIFIER && value.source.ptr != value.text.ptr ? FLAG_IDENT_DELIMITED : 0);
+                    } else return expr_.syntax_error();
+                    if (!arg) return expr_.syntax_error();
+                    option->add_child(arg);
+                }
+                options->add_child(option);
+                if (tok_.peek().type != TokenType::TK_COMMA) break;
+                tok_.skip();
+            }
+            if (tok_.peek().type != TokenType::TK_RPAREN) return expr_.syntax_error();
+            tok_.skip();
+        } else {
+            if (word("ANALYZE") || word("ANALYSE")) {
+                tok_.skip(); auto* option = make_node(arena_, NodeType::NODE_PG_EXPLAIN_OPTION, {"ANALYZE", 7});
+                if (!option) return expr_.syntax_error();
+                options->add_child(option);
+            }
+            if (word("VERBOSE")) {
+                tok_.skip(); auto* option = make_node(arena_, NodeType::NODE_PG_EXPLAIN_OPTION, {"VERBOSE", 7});
+                if (!option) return expr_.syntax_error();
+                options->add_child(option);
+            }
+        }
+        return options;
+    }
+
+    AstNode* into() {
+        tok_.skip(); // INTO
+        StringRef persistence;
+        if (word("LOCAL") || word("GLOBAL")) {
+            tok_.skip();
+            if (!word("TEMP") && !word("TEMPORARY")) return expr_.syntax_error();
+        }
+        if (word("TEMP") || word("TEMPORARY")) { tok_.skip(); persistence = {"TEMPORARY ", 10}; }
+        else if (word("UNLOGGED")) { tok_.skip(); persistence = {"UNLOGGED ", 9}; }
+        if (word("TABLE")) tok_.skip();
+        auto* node = make_node(arena_, NodeType::NODE_PG_SELECT_INTO, persistence);
+        auto* name = make_node(arena_, NodeType::NODE_QUALIFIED_NAME);
+        if (!node || !name) return expr_.syntax_error();
+        auto token = tok_.next_token();
+        if (!pg_column_name(token)) return expr_.syntax_error();
+        unsigned parts = 0;
+        while (true) {
+            if (++parts > 3) return expr_.syntax_error();
+            auto* part = make_node_from_token(arena_, NodeType::NODE_IDENTIFIER, token,
+                token.type == TokenType::TK_IDENTIFIER && token.source.ptr != token.text.ptr ? FLAG_IDENT_DELIMITED : 0);
+            if (!part) return expr_.syntax_error();
+            name->add_child(part);
+            if (tok_.peek().type != TokenType::TK_DOT) break;
+            tok_.skip(); token = tok_.next_token();
+            if (!pg_column_label(token)) return expr_.syntax_error();
+        }
+        node->add_child(name); return node;
+    }
+
+    bool tail(AstNode* query) {
+        // PostgreSQL permits the locking list before or after pagination.
+        // Keep each list contiguous, as required by select_limit grammar.
+        const bool locks_first = word("FOR");
+        if (locks_first && !locking(query)) return false;
+        if (!pagination(query)) return false;
+        if (!locks_first && !locking(query)) return false;
+        return true;
+    }
+    bool locking(AstNode* query) {
+        while (word("FOR")) {
+            tok_.skip();
+            StringRef strength;
+            if (word("UPDATE")) { tok_.skip(); strength = {"UPDATE", 6}; }
+            else if (word("SHARE")) { tok_.skip(); strength = {"SHARE", 5}; }
+            else if (word("NO")) {
+                tok_.skip(); if (!word("KEY")) { expr_.syntax_error(); return false; }
+                tok_.skip(); if (!word("UPDATE")) { expr_.syntax_error(); return false; }
+                tok_.skip(); strength = {"NO KEY UPDATE", 13};
+            } else if (word("KEY")) {
+                tok_.skip(); if (!word("SHARE")) { expr_.syntax_error(); return false; }
+                tok_.skip(); strength = {"KEY SHARE", 9};
+            } else { expr_.syntax_error(); return false; }
+            auto* lock = make_node(arena_, NodeType::NODE_PG_ROW_LOCK, strength);
+            if (!lock) { expr_.syntax_error(); return false; }
+            if (word("OF")) {
+                tok_.skip();
+                while (true) {
+                    auto token = tok_.next_token();
+                    if (!pg_column_name(token)) { expr_.syntax_error(); return false; }
+                    auto* rel = make_node(arena_, NodeType::NODE_QUALIFIED_NAME);
+                    auto* part = make_node_from_token(arena_, NodeType::NODE_IDENTIFIER, token,
+                token.type == TokenType::TK_IDENTIFIER && token.source.ptr != token.text.ptr ? FLAG_IDENT_DELIMITED : 0);
+                    if (!rel || !part) { expr_.syntax_error(); return false; }
+                    rel->add_child(part);
+                    unsigned parts = 1;
+                    while (tok_.peek().type == TokenType::TK_DOT) {
+                        if (++parts > 3) { expr_.syntax_error(); return false; }
+                        tok_.skip(); token = tok_.next_token();
+                        if (!pg_column_label(token)) { expr_.syntax_error(); return false; }
+                        part = make_node_from_token(arena_, NodeType::NODE_IDENTIFIER, token,
+                token.type == TokenType::TK_IDENTIFIER && token.source.ptr != token.text.ptr ? FLAG_IDENT_DELIMITED : 0);
+                        if (!part) { expr_.syntax_error(); return false; }
+                        rel->add_child(part);
+                    }
+                    lock->add_child(rel);
+                    if (tok_.peek().type != TokenType::TK_COMMA) break;
+                    tok_.skip();
+                }
+            }
+            if (word("NOWAIT")) { tok_.skip(); lock->flags = 1; }
+            else if (word("SKIP")) {
+                tok_.skip(); if (!word("LOCKED")) { expr_.syntax_error(); return false; }
+                tok_.skip(); lock->flags = 2;
+            }
+            query->add_child(lock);
+        }
+        return true;
+    }
+
     AstNode* grouping(bool nested = true) {
         Token token = tok_.peek();
         auto lookahead = tok_;

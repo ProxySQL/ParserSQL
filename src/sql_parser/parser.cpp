@@ -414,6 +414,37 @@ ParseResult Parser<D>::parse_explain(bool is_describe) {
         return r;
     }
 
+    if constexpr (D == Dialect::PostgreSQL) {
+        ExpressionParser<D> expr(tokenizer_, arena_, true);
+        auto* options = PgQueryClauses<D>(tokenizer_, arena_, expr).explain_options();
+        if (!options) { r.status = ParseResult::ERROR; scan_to_end(r); return r; }
+        if (options->first_child) root->add_child(options);
+        auto first = tokenizer_.peek().type;
+        if (!ExpressionParser<D>::starts_query(first) && first != TokenType::TK_LPAREN &&
+            first != TokenType::TK_INSERT && first != TokenType::TK_UPDATE &&
+            first != TokenType::TK_DELETE && !ExpressionParser<D>::keyword(tokenizer_.peek(), "MERGE") &&
+            first != TokenType::TK_CREATE && first != TokenType::TK_EXECUTE) {
+            r.status = ParseResult::ERROR; scan_to_end(r); return r;
+        }
+        ParseResult inner = classify_and_dispatch();
+        if (first == TokenType::TK_CREATE && inner.ast) {
+            bool table = false, materialized = false, query = false;
+            for (const auto* child = inner.ast->first_child; child; child = child->next_sibling) {
+                if (child->type == NodeType::NODE_PG_DDL_SYNTAX) {
+                    table |= child->value().equals_ci("TABLE", 5);
+                    materialized |= child->value().equals_ci("MATERIALIZED", 12);
+                }
+                query |= child->type == NodeType::NODE_SELECT_STMT || child->type == NodeType::NODE_COMPOUND_QUERY ||
+                    child->type == NodeType::NODE_CTE || child->type == NodeType::NODE_TABLE_QUERY;
+            }
+            if ((!table && !materialized) || !query) inner.status = ParseResult::ERROR;
+        }
+        root->add_child(inner.ast);
+        r.status = inner.status; r.ast = root;
+        r.full_input = inner.full_input; r.remaining = inner.remaining;
+        return r;
+    }
+
     // EXPLAIN [ANALYZE] [VERBOSE] [FORMAT = ...] inner_stmt  (MySQL)
     // EXPLAIN [ANALYZE] [VERBOSE] [(options)] inner_stmt     (PostgreSQL)
 
@@ -509,9 +540,10 @@ ParseResult Parser<D>::parse_explain(bool is_describe) {
         if (inner.ast) {
             root->add_child(inner.ast);
         }
-        r.status = ParseResult::OK;
+        r.status = inner.status;
         r.ast = root;
-        // remaining is already handled by inner parse
+        r.full_input = inner.full_input;
+        // Preserve the inner statement's completion and error state.
         r.remaining = inner.remaining;
         return r;
     }

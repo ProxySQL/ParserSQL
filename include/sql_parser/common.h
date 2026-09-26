@@ -310,6 +310,24 @@ enum class NodeType : uint16_t {
     // PG_GAPS_JSON_XML_NODES
     NODE_PG_JSON_XML,
     NODE_PG_JSON_XML_SYNTAX,
+    // PG_CONT_EXPRESSION_NODES
+    NODE_PG_VARIADIC_ARGUMENT, // one value or named-argument child; final call argument
+    NODE_PG_ARRAY_SLICE,       // base, optional lower/upper; flags 1/2 mark bounds
+    NODE_PG_PATTERN_PREDICATE, // value=operator; subject, pattern, optional escape
+    NODE_PG_POSITION,          // needle, haystack
+    NODE_PG_OVERLAY,           // source, replacement, start, optional length; flag 1=plain call
+    NODE_PG_JSON_PREDICATE,    // validated IS [NOT] JSON suffix; one expression child
+    // PG_CONT_QUERY_NODES
+    NODE_PG_EXPLAIN_OPTION,
+    NODE_PG_JOIN_TREE,
+    NODE_PG_TABLE_GROUP,
+    NODE_PG_JOIN_USING,
+    NODE_PG_TABLESAMPLE,
+    NODE_PG_ROWS_FROM,
+    NODE_PG_SORT_USING,
+    NODE_PG_SELECT_INTO,
+    NODE_PG_ROW_LOCK,
+
 };
 
 } // namespace sql_parser

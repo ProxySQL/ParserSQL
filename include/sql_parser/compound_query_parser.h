@@ -44,14 +44,14 @@ public:
             result->add_child(order);
         }
         if constexpr (D == Dialect::PostgreSQL) {
-            if (!PgQueryClauses<D>(tok_, arena_, expr_parser_).pagination(result)) return nullptr;
+            if (!PgQueryClauses<D>(tok_, arena_, expr_parser_).tail(result)) return nullptr;
         } else if (tok_.peek().type == TokenType::TK_LIMIT) {
             tok_.skip();
             AstNode* limit = parse_limit(require_operands);
             if (!limit || !limit->first_child) return nullptr;
             result->add_child(limit);
         }
-        if (result->type == NodeType::NODE_SELECT_STMT &&
+        if (D == Dialect::MySQL && result->type == NodeType::NODE_SELECT_STMT &&
             tok_.peek().type == TokenType::TK_FOR) {
             tok_.skip();
             AstNode* lock = make_node(arena_, NodeType::NODE_LOCKING_CLAUSE);
@@ -222,6 +222,11 @@ private:
             }
 
             if constexpr (D == Dialect::PostgreSQL) {
+                if (dir.type == TokenType::TK_USING) {
+                    auto* op = expressions.parse_sort_operator();
+                    if (!op) return nullptr;
+                    item->add_child(op);
+                }
                 if (ExpressionParser<D>::keyword(tok_.peek(), "NULLS")) {
                     tok_.skip();
                     Token placement = tok_.peek();
@@ -229,8 +234,10 @@ private:
                     if (!first && !ExpressionParser<D>::keyword(placement, "LAST")) return nullptr;
                     tok_.skip();
                     item->flags |= FLAG_ORDER_NULLS;
-                    item->add_child(make_node(arena_, NodeType::NODE_IDENTIFIER,
-                        first ? StringRef{"NULLS FIRST", 11} : StringRef{"NULLS LAST", 10}));
+                    auto* nulls = make_node(arena_, NodeType::NODE_IDENTIFIER,
+                        first ? StringRef{"NULLS FIRST", 11} : StringRef{"NULLS LAST", 10});
+                    if (!nulls) return nullptr;
+                    item->add_child(nulls);
                 }
             }
             order_by->add_child(item);

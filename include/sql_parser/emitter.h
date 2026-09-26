@@ -197,6 +197,56 @@ private:
                 if (mode_ == EmitMode::DIGEST) { sb_.append_char('?'); break; }
                 emit_string_literal(node); break;
 
+            // PG_CONT_EXPRESSION_DISPATCH
+            case NodeType::NODE_PG_VARIADIC_ARGUMENT:
+                sb_.append("VARIADIC "); emit_node(node->first_child); break;
+            case NodeType::NODE_PG_ARRAY_SLICE:
+            case NodeType::NODE_PG_PATTERN_PREDICATE:
+            case NodeType::NODE_PG_POSITION:
+            case NodeType::NODE_PG_OVERLAY:
+            case NodeType::NODE_PG_JSON_PREDICATE:
+                emit_pg_continuation_expression(node); break;
+            // PG_CONT_QUERY_DISPATCH
+            case NodeType::NODE_PG_EXPLAIN_OPTION:
+                emit_value(node);
+                if (node->first_child) { sb_.append_char(' '); emit_node(node->first_child); }
+                break;
+            case NodeType::NODE_PG_JOIN_TREE: emit_pg_join_tree(node); break;
+            case NodeType::NODE_PG_TABLE_GROUP:
+                sb_.append_char('('); emit_node(node->first_child); sb_.append_char(')'); break;
+            case NodeType::NODE_PG_JOIN_USING:
+                sb_.append("USING (");
+                for (const auto* col = node->first_child; col; col = col->next_sibling) {
+                    if (col != node->first_child) sb_.append(", ");
+                    emit_node(col);
+                }
+                sb_.append_char(')');
+                if (!node->value().empty()) { sb_.append(" AS "); emit_value(node); }
+                break;
+            case NodeType::NODE_PG_TABLESAMPLE: emit_pg_tablesample(node); break;
+            case NodeType::NODE_PG_ROWS_FROM:
+                sb_.append("ROWS FROM (");
+                for (const auto* item = node->first_child; item; item = item->next_sibling) {
+                    if (item != node->first_child) sb_.append(", ");
+                    emit_node(item);
+                }
+                sb_.append_char(')'); break;
+            case NodeType::NODE_PG_SORT_USING:
+                sb_.append("USING "); emit_value(node); break;
+            case NodeType::NODE_PG_SELECT_INTO:
+                sb_.append(" INTO "); emit_value(node); emit_node(node->first_child); break;
+            case NodeType::NODE_PG_ROW_LOCK:
+                sb_.append(" FOR "); emit_value(node);
+                if (node->first_child) {
+                    sb_.append(" OF ");
+                    for (const auto* rel = node->first_child; rel; rel = rel->next_sibling) {
+                        if (rel != node->first_child) sb_.append(", ");
+                        emit_node(rel);
+                    }
+                }
+                if (node->flags == 1) sb_.append(" NOWAIT");
+                if (node->flags == 2) sb_.append(" SKIP LOCKED");
+                break;
             // PG_GAPS_EXPRESSION_DISPATCH
             case NodeType::NODE_PG_EXTRACT:
             case NodeType::NODE_PG_SUBSTRING:
@@ -245,6 +295,63 @@ private:
             case NodeType::NODE_PG_JSON_XML_SYNTAX: emit_value(node); break;
             default:
                 emit_value(node); break;
+        }
+    }
+
+    // PG_CONT_EXPRESSION_EMITTER
+    void emit_pg_continuation_expression(const AstNode* node) {
+        const AstNode* first = node->first_child;
+        if (node->type == NodeType::NODE_PG_ARRAY_SLICE) {
+            emit_node(first); sb_.append_char('[');
+            const AstNode* bound = first ? first->next_sibling : nullptr;
+            if (node->flags & 1) { emit_node(bound); bound = bound ? bound->next_sibling : nullptr; }
+            sb_.append_char(':');
+            if (node->flags & 2) emit_node(bound);
+            sb_.append_char(']');
+        } else if (node->type == NodeType::NODE_PG_PATTERN_PREDICATE) {
+            emit_node(first); sb_.append_char(' '); emit_value(node); sb_.append_char(' ');
+            const AstNode* pattern = first ? first->next_sibling : nullptr;
+            emit_node(pattern);
+            if (pattern && pattern->next_sibling) {
+                sb_.append(" ESCAPE "); emit_node(pattern->next_sibling);
+            }
+        } else if (node->type == NodeType::NODE_PG_JSON_PREDICATE) {
+            emit_node(first); sb_.append_char(' '); emit_value(node);
+        } else if (node->type == NodeType::NODE_PG_POSITION) {
+            sb_.append("POSITION("); emit_node(first); sb_.append(" IN ");
+            emit_node(first ? first->next_sibling : nullptr); sb_.append_char(')');
+        } else {
+            sb_.append("OVERLAY(");
+            if (node->flags & 1) emit_list(node, ", ");
+            else {
+                const AstNode* replacement = first ? first->next_sibling : nullptr;
+                const AstNode* start = replacement ? replacement->next_sibling : nullptr;
+                emit_node(first); sb_.append(" PLACING "); emit_node(replacement);
+                sb_.append(" FROM "); emit_node(start);
+                if (start && start->next_sibling) { sb_.append(" FOR "); emit_node(start->next_sibling); }
+            }
+            sb_.append_char(')');
+        }
+    }
+    // PG_CONT_QUERY_EMITTER
+    void emit_pg_join_tree(const AstNode* node) {
+        const auto* left = node->first_child;
+        const auto* right = left->next_sibling;
+        const auto* qual = right->next_sibling;
+        sb_.append_char('('); emit_node(left); sb_.append_char(' ');
+        emit_value(node); sb_.append_char(' '); emit_node(right);
+        if (qual) {
+            sb_.append(qual->type == NodeType::NODE_PG_JOIN_USING ? " " : " ON ");
+            emit_node(qual);
+        }
+        sb_.append_char(')');
+    }
+    void emit_pg_tablesample(const AstNode* node) {
+        const auto* name = node->first_child;
+        const auto* args = name->next_sibling;
+        sb_.append(" TABLESAMPLE "); emit_node(name); emit_node(args);
+        if (args->next_sibling) {
+            sb_.append(" REPEATABLE ("); emit_node(args->next_sibling); sb_.append_char(')');
         }
     }
 
@@ -1220,7 +1327,7 @@ private:
             }
         }
 
-        if (!has_inner_stmt && !has_options) {
+        if (D == Dialect::MySQL && !has_inner_stmt && !has_options) {
             sb_.append("DESCRIBE");
         } else {
             sb_.append("EXPLAIN");
@@ -1233,6 +1340,11 @@ private:
     }
 
     void emit_explain_options(const AstNode* node) {
+        if constexpr (D == Dialect::PostgreSQL) {
+            if (node->flags & 1) {
+                sb_.append_char('('); emit_list(node, ", "); sb_.append_char(')'); return;
+            }
+        }
         bool first = true;
         for (const AstNode* child = node->first_child; child; child = child->next_sibling) {
             if (!first) sb_.append_char(' ');
@@ -1687,7 +1799,10 @@ private:
     void emit_field_access(const AstNode* node) {
         const AstNode* expr = node->first_child;
         const AstNode* field = expr ? expr->next_sibling : nullptr;
-        if (expr && expr->type == NodeType::NODE_EXPRESSION) emit_node(expr);
+        if (expr && (expr->type == NodeType::NODE_EXPRESSION ||
+            (D == Dialect::PostgreSQL && (expr->type == NodeType::NODE_COLUMN_REF ||
+             expr->type == NodeType::NODE_QUALIFIED_NAME || expr->type == NodeType::NODE_ARRAY_SUBSCRIPT ||
+             expr->type == NodeType::NODE_PG_ARRAY_SLICE || expr->type == NodeType::NODE_FIELD_ACCESS)))) emit_node(expr);
         else {
             sb_.append_char('(');
             if (expr) emit_node(expr);

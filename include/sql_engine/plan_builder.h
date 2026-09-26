@@ -69,6 +69,29 @@ private:
                                                bool dml_values = false) {
         using sql_parser::NodeType;
         switch (node->type) {
+            // PG_CONT_EXPRESSION_GUARD
+            case NodeType::NODE_LITERAL_BIT:
+            case NodeType::NODE_LITERAL_HEX:
+                if constexpr (D == sql_parser::Dialect::PostgreSQL) return true;
+                break;
+            case NodeType::NODE_PG_VARIADIC_ARGUMENT:
+            case NodeType::NODE_PG_ARRAY_SLICE:
+            case NodeType::NODE_PG_PATTERN_PREDICATE:
+            case NodeType::NODE_PG_POSITION:
+            case NodeType::NODE_PG_OVERLAY:
+            case NodeType::NODE_PG_JSON_PREDICATE:
+                return true;
+            // PG_CONT_QUERY_GUARD
+            case NodeType::NODE_PG_EXPLAIN_OPTION:
+            case NodeType::NODE_PG_JOIN_TREE:
+            case NodeType::NODE_PG_TABLE_GROUP:
+            case NodeType::NODE_PG_JOIN_USING:
+            case NodeType::NODE_PG_TABLESAMPLE:
+            case NodeType::NODE_PG_ROWS_FROM:
+            case NodeType::NODE_PG_SORT_USING:
+            case NodeType::NODE_PG_SELECT_INTO:
+            case NodeType::NODE_PG_ROW_LOCK:
+                return true;
             // PG_GAPS_EXPRESSION_GUARD
             case NodeType::NODE_PG_EXTRACT:
             case NodeType::NODE_PG_SUBSTRING:

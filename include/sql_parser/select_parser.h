@@ -42,7 +42,13 @@ public:
         AstNode* items = parse_select_item_list();
         if (items) root->add_child(items);
 
-        // INTO (before FROM in some MySQL variants -- skip for now, handle after FROM)
+        if constexpr (D == Dialect::PostgreSQL) {
+            if (tok_.peek().type == TokenType::TK_INTO) {
+                auto* into = PgQueryClauses<D>(tok_, arena_, expr_parser_).into();
+                if (!into) return expr_parser_.syntax_error();
+                root->add_child(into);
+            }
+        }
 
         // FROM clause
         if (tok_.peek().type == TokenType::TK_FROM) {
@@ -112,7 +118,7 @@ public:
 
             // LIMIT clause
             if constexpr (D == Dialect::PostgreSQL) {
-                if (!PgQueryClauses<D>(tok_, arena_, expr_parser_).pagination(root)) return nullptr;
+                if (!PgQueryClauses<D>(tok_, arena_, expr_parser_).tail(root)) return nullptr;
             } else if (tok_.peek().type == TokenType::TK_LIMIT) {
                 tok_.skip();
                 AstNode* limit = parse_limit();
@@ -120,7 +126,7 @@ public:
             }
 
             // FOR UPDATE / FOR SHARE (locking)
-            if (tok_.peek().type == TokenType::TK_FOR) {
+            if (D == Dialect::MySQL && tok_.peek().type == TokenType::TK_FOR) {
                 AstNode* lock = parse_locking();
                 if (lock) root->add_child(lock);
             }
@@ -198,7 +204,7 @@ private:
             // its clause boundary into a failed expression operand.
             Token t = tok_.peek();
             switch (t.type) {
-                case TokenType::TK_FROM: case TokenType::TK_WHERE:
+                case TokenType::TK_INTO: case TokenType::TK_FROM: case TokenType::TK_WHERE:
                 case TokenType::TK_GROUP: case TokenType::TK_HAVING:
                 case TokenType::TK_ORDER: case TokenType::TK_LIMIT:
                 case TokenType::TK_OFFSET: case TokenType::TK_FETCH:
@@ -249,7 +255,16 @@ private:
 
         if (is_star) {
             Token next = tok_.peek();
-            if (next.type == TokenType::TK_EXCEPT) {
+            auto look = tok_; look.skip();
+            bool except_columns = look.peek().type == TokenType::TK_LPAREN;
+            if (except_columns) {
+                look.skip();
+                except_columns = !ExpressionParser<D>::starts_query(look.peek().type) &&
+                    look.peek().type != TokenType::TK_LPAREN;
+            }
+            // Preserve ParserSQL's explicit star-column extension while
+            // allowing PostgreSQL EXCEPT query operands to reach the set parser.
+            if (next.type == TokenType::TK_EXCEPT && (D == Dialect::MySQL || except_columns)) {
                 tok_.skip();
                 AstNode* except_node = make_node(arena_, NodeType::NODE_STAR_EXCEPT);
                 except_node->add_child(expr);
@@ -295,6 +310,10 @@ private:
         }
 
         item->add_child(expr);
+
+        if constexpr (D == Dialect::PostgreSQL) {
+            if (expr->type == NodeType::NODE_ASTERISK) return item;
+        }
 
         // Optional alias: AS name, or just name (implicit alias)
         Token next = tok_.peek();
@@ -380,6 +399,23 @@ private:
                 item->add_child(make_node(arena_, NodeType::NODE_IDENTIFIER, dir.text));
             }
 
+            if constexpr (D == Dialect::PostgreSQL) {
+                if (dir.type == TokenType::TK_USING) {
+                    auto* op = expr_parser_.parse_sort_operator();
+                    if (!op) return nullptr;
+                    item->add_child(op);
+                }
+                if (ExpressionParser<D>::keyword(tok_.peek(), "NULLS")) {
+                    tok_.skip(); auto placement = tok_.peek();
+                    bool first = ExpressionParser<D>::keyword(placement, "FIRST");
+                    if (!first && !ExpressionParser<D>::keyword(placement, "LAST")) return expr_parser_.syntax_error();
+                    tok_.skip(); item->flags |= FLAG_ORDER_NULLS;
+                    auto* nulls = make_node(arena_, NodeType::NODE_IDENTIFIER,
+                        first ? StringRef{"NULLS FIRST", 11} : StringRef{"NULLS LAST", 10});
+                    if (!nulls) return expr_parser_.syntax_error();
+                    item->add_child(nulls);
+                }
+            }
             order_by->add_child(item);
 
             if (tok_.peek().type == TokenType::TK_COMMA) {
