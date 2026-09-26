@@ -15,7 +15,8 @@ public:
 
     static bool handles(const Token& first) {
         for (const char* keyword : {"DECLARE", "FETCH", "MOVE", "CLOSE", "PREPARE", "EXECUTE",
-                "DEALLOCATE", "LISTEN", "NOTIFY", "UNLISTEN", "DISCARD", "CHECKPOINT"})
+                "DEALLOCATE", "LISTEN", "NOTIFY", "UNLISTEN", "DISCARD", "CHECKPOINT",
+                "REINDEX", "CLUSTER", "REFRESH", "LOCK"})
             if (word(first, keyword)) return true;
         return false;
     }
@@ -53,6 +54,14 @@ public:
             result.stmt_type = StmtType::DISCARD;
             if (!take("ALL", root) && !take("TEMP", root) && !take("TEMPORARY", root) &&
                     !take("PLANS", root) && !take("SEQUENCES", root)) fail();
+        } else if (word(first, "REINDEX")) {
+            result.stmt_type = StmtType::REINDEX; reindex(root);
+        } else if (word(first, "CLUSTER")) {
+            result.stmt_type = StmtType::CLUSTER; cluster(root);
+        } else if (word(first, "REFRESH")) {
+            result.stmt_type = StmtType::REFRESH_MATERIALIZED_VIEW; refresh(root);
+        } else if (word(first, "LOCK")) {
+            result.stmt_type = StmtType::LOCK; lock(root);
         } else if (word(first, "CHECKPOINT")) result.stmt_type = StmtType::CHECKPOINT;
         else fail();
         if (!at(TokenType::TK_EOF) && !at(TokenType::TK_SEMICOLON)) fail();
@@ -104,6 +113,166 @@ private:
         Token token = tok_.peek();
         if (!pg_column_name(token)) { fail(); return nullptr; }
         tok_.skip(); return token_node(NodeType::NODE_IDENTIFIER, token);
+    }
+    bool terminal() { return at(TokenType::TK_EOF) || at(TokenType::TK_SEMICOLON); }
+    static bool nonreserved(const Token& token) {
+        return pg_column_name(token) || pg_type_function_name(token);
+    }
+    AstNode* qualified_name() {
+        AstNode* name = node(NodeType::NODE_PG_DDL_CLAUSE);
+        add(name, identifier());
+        unsigned parts = 1;
+        while (!failed_ && at(TokenType::TK_DOT)) {
+            syntax(name);
+            if (++parts > 3 || !pg_column_label(tok_.peek())) { fail(); break; }
+            add(name, token_node(NodeType::NODE_IDENTIFIER, tok_.next_token()));
+        }
+        return name;
+    }
+    static unsigned numeric_digit(char c) {
+        return c >= '0' && c <= '9' ? static_cast<unsigned>(c - '0') :
+            c >= 'a' && c <= 'f' ? static_cast<unsigned>(c - 'a' + 10) :
+            c >= 'A' && c <= 'F' ? static_cast<unsigned>(c - 'A' + 10) : 16;
+    }
+    static bool numeric_digits(const char*& p, const char* end, unsigned base) {
+        if (p == end || numeric_digit(*p) >= base) return false;
+        ++p;
+        while (p < end) {
+            if (numeric_digit(*p) < base) ++p;
+            else if (*p == '_' && p + 1 < end && numeric_digit(p[1]) < base) p += 2;
+            else break;
+        }
+        return true;
+    }
+    void numeric_option(AstNode* option) {
+        if (at(TokenType::TK_PLUS) || at(TokenType::TK_MINUS)) syntax(option);
+        Token value = tok_.peek();
+        const char* begin = value.source.ptr;
+        const char* end = tok_.input_end();
+        const char* p = begin;
+        if (!p || p == end) { fail(); return; }
+        bool floating = false;
+        unsigned base = 10;
+        if (end - p >= 2 && p[0] == '0') {
+            if (p[1] == 'x' || p[1] == 'X') base = 16;
+            else if (p[1] == 'o' || p[1] == 'O') base = 8;
+            else if (p[1] == 'b' || p[1] == 'B') base = 2;
+        }
+        if (base != 10) {
+            p += 2;
+            if (p < end && *p == '_') ++p;
+            if (!numeric_digits(p, end, base)) { fail(); return; }
+        } else {
+            bool digits = numeric_digits(p, end, 10);
+            if (p < end && *p == '.') {
+                floating = true; ++p;
+                digits = numeric_digits(p, end, 10) || digits;
+            }
+            if (!digits) { fail(); return; }
+            if (p < end && (*p == 'e' || *p == 'E')) {
+                floating = true; ++p;
+                if (p < end && (*p == '+' || *p == '-')) ++p;
+                if (!numeric_digits(p, end, 10)) { fail(); return; }
+            }
+        }
+        // Consume the source span because the shared tokenizer splits PG base
+        // prefixes and digit separators into adjacent tokens.
+        while (!failed_ && tok_.peek().source.ptr < p) {
+            Token part = tok_.next_token();
+            if (part.type == TokenType::TK_ERROR || part.source.ptr + part.source.len > p) fail();
+        }
+        value.source = value.text = {begin, static_cast<uint32_t>(p - begin)};
+        add(option, token_node(floating ? NodeType::NODE_LITERAL_FLOAT : NodeType::NODE_LITERAL_INT, value));
+    }
+    bool option_string_start() {
+        if (at(TokenType::TK_STRING)) return true;
+        if (!is("E")) return false;
+        auto look = tok_;
+        Token prefix = look.next_token();
+        Token literal = look.peek();
+        return literal.type == TokenType::TK_STRING &&
+            prefix.source.ptr + prefix.source.len == literal.source.ptr;
+    }
+    void utility_options(AstNode* root) {
+        require(TokenType::TK_LPAREN);
+        AstNode* list = node(NodeType::NODE_PG_DDL_LIST);
+        do {
+            AstNode* option = node(NodeType::NODE_PG_DDL_CLAUSE);
+            Token key = tok_.peek();
+            if (!nonreserved(key) && !is("ANALYZE") && !is("ANALYSE")) { fail(); break; }
+            add(option, token_node(NodeType::NODE_IDENTIFIER, tok_.next_token()));
+            if (!at(TokenType::TK_COMMA) && !at(TokenType::TK_RPAREN)) {
+                Token value = tok_.peek();
+                if (value.type == TokenType::TK_INTEGER || value.type == TokenType::TK_FLOAT ||
+                        value.type == TokenType::TK_DOT || value.type == TokenType::TK_PLUS ||
+                        value.type == TokenType::TK_MINUS) numeric_option(option);
+                else if (option_string_start()) add(option, string_literal());
+                else if (nonreserved(value) || is("TRUE") || is("FALSE") || is("ON"))
+                    add(option, token_node(NodeType::NODE_IDENTIFIER, tok_.next_token()));
+                else fail();
+            }
+            add(list, option);
+        } while (!failed_ && take(TokenType::TK_COMMA));
+        require(TokenType::TK_RPAREN);
+        add(root, list);
+    }
+    void reindex(AstNode* root) {
+        if (at(TokenType::TK_LPAREN)) utility_options(root);
+        if (take("INDEX", root) || take("TABLE", root)) {
+            take("CONCURRENTLY", root); add(root, qualified_name());
+        } else if (take("SCHEMA", root)) {
+            take("CONCURRENTLY", root); add(root, identifier());
+        } else if (take("DATABASE", root) || take("SYSTEM", root)) {
+            take("CONCURRENTLY", root);
+            if (!terminal()) add(root, identifier());
+        } else fail();
+    }
+    void cluster(AstNode* root) {
+        const bool options = at(TokenType::TK_LPAREN);
+        if (options) utility_options(root); else take("VERBOSE", root);
+        if (terminal()) return;
+        auto look = tok_; look.skip();
+        if (!options && word(look.peek(), "ON")) {
+            add(root, identifier()); require("ON", root); add(root, qualified_name());
+        } else {
+            add(root, qualified_name());
+            if (take("USING", root)) add(root, identifier());
+        }
+    }
+    void refresh(AstNode* root) {
+        require("MATERIALIZED", root); require("VIEW", root);
+        take("CONCURRENTLY", root); add(root, qualified_name());
+        if (take("WITH", root)) { take("NO", root); require("DATA", root); }
+    }
+    void lock(AstNode* root) {
+        take("TABLE", root);
+        AstNode* relations = node(NodeType::NODE_PG_DDL_LIST);
+        if (relations) relations->flags = 1;
+        do {
+            AstNode* relation = node(NodeType::NODE_PG_DDL_CLAUSE);
+            if (take("ONLY", relation)) {
+                const bool parens = at(TokenType::TK_LPAREN);
+                if (parens) syntax(relation);
+                add(relation, qualified_name());
+                if (parens) {
+                    if (at(TokenType::TK_RPAREN)) syntax(relation); else fail();
+                }
+            } else {
+                add(relation, qualified_name());
+                if (at(TokenType::TK_ASTERISK)) syntax(relation);
+            }
+            add(relations, relation);
+        } while (!failed_ && take(TokenType::TK_COMMA));
+        add(root, relations);
+        if (take("IN", root)) {
+            if (take("ACCESS", root) || take("ROW", root)) {
+                if (!take("SHARE", root)) require("EXCLUSIVE", root);
+            } else if (take("SHARE", root)) {
+                if (take("UPDATE", root) || take("ROW", root)) require("EXCLUSIVE", root);
+            } else require("EXCLUSIVE", root);
+            require("MODE", root);
+        }
+        take("NOWAIT", root);
     }
     void declare_cursor(AstNode* root) {
         add(root, identifier());

@@ -134,6 +134,9 @@ enum class StmtType : uint8_t {
     DISCARD,
     CHECKPOINT,
     IMPORT_FOREIGN_SCHEMA,
+    REINDEX,
+    CLUSTER,
+    REFRESH_MATERIALIZED_VIEW,
 };
 
 // -- AST node types --

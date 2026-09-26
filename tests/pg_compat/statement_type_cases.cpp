@@ -160,7 +160,7 @@ void test_default_and_simple_mappings() {
         {PG_QUERY__NODE__NODE_LISTEN_STMT, MappingKind::Equivalent, StmtType::LISTEN},
         {PG_QUERY__NODE__NODE_UNLISTEN_STMT, MappingKind::Equivalent, StmtType::UNLISTEN},
         {PG_QUERY__NODE__NODE_CHECK_POINT_STMT, MappingKind::Equivalent, StmtType::CHECKPOINT},
-        {PG_QUERY__NODE__NODE_CLUSTER_STMT, MappingKind::NoEquivalent, StmtType::UNKNOWN},
+        {PG_QUERY__NODE__NODE_CLUSTER_STMT, MappingKind::Equivalent, StmtType::CLUSTER},
         {PG_QUERY__NODE__NODE_CLOSE_PORTAL_STMT, MappingKind::Equivalent, StmtType::CLOSE},
         {PG_QUERY__NODE__NODE_COMMENT_STMT, MappingKind::Equivalent, StmtType::COMMENT},
         {PG_QUERY__NODE__NODE_DECLARE_CURSOR_STMT, MappingKind::Equivalent, StmtType::DECLARE_CURSOR},
@@ -168,8 +168,8 @@ void test_default_and_simple_mappings() {
         {PG_QUERY__NODE__NODE_DISCARD_STMT, MappingKind::Equivalent, StmtType::DISCARD},
         {PG_QUERY__NODE__NODE_IMPORT_FOREIGN_SCHEMA_STMT, MappingKind::Equivalent, StmtType::IMPORT_FOREIGN_SCHEMA},
         {PG_QUERY__NODE__NODE_LOAD_STMT, MappingKind::NoEquivalent, StmtType::UNKNOWN},
-        {PG_QUERY__NODE__NODE_REFRESH_MAT_VIEW_STMT, MappingKind::NoEquivalent, StmtType::UNKNOWN},
-        {PG_QUERY__NODE__NODE_REINDEX_STMT, MappingKind::NoEquivalent, StmtType::UNKNOWN},
+        {PG_QUERY__NODE__NODE_REFRESH_MAT_VIEW_STMT, MappingKind::Equivalent, StmtType::REFRESH_MATERIALIZED_VIEW},
+        {PG_QUERY__NODE__NODE_REINDEX_STMT, MappingKind::Equivalent, StmtType::REINDEX},
         {PG_QUERY__NODE__NODE_SEC_LABEL_STMT, MappingKind::Equivalent, StmtType::SECURITY_LABEL},
     };
 
@@ -482,6 +482,9 @@ void test_stmt_type_names() {
         {StmtType::DISCARD, "DISCARD"},
         {StmtType::CHECKPOINT, "CHECKPOINT"},
         {StmtType::IMPORT_FOREIGN_SCHEMA, "IMPORT_FOREIGN_SCHEMA"},
+        {StmtType::REINDEX, "REINDEX"},
+        {StmtType::CLUSTER, "CLUSTER"},
+        {StmtType::REFRESH_MATERIALIZED_VIEW, "REFRESH_MATERIALIZED_VIEW"},
 
         {StmtType::VACUUM, "VACUUM"},
         {StmtType::ANALYZE, "ANALYZE"},

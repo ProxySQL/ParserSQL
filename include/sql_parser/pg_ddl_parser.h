@@ -235,6 +235,25 @@ private:
         require(TokenType::TK_RPAREN);
         return list;
     }
+    AstNode* table_options(bool qualified = true) {
+        require(TokenType::TK_LPAREN);
+        auto* list = node(NodeType::NODE_PG_DDL_LIST);
+        do {
+            auto* option = clause();
+            AstNode* key = identifier(true);
+            if (qualified && take(TokenType::TK_DOT)) {
+                auto* qualified_name = node(NodeType::NODE_QUALIFIED_NAME);
+                add(qualified_name, key); add(qualified_name, identifier(true)); key = qualified_name;
+            }
+            add(option, key);
+            if (take(TokenType::TK_EQUAL)) {
+                add(option, node(NodeType::NODE_PG_DDL_SYNTAX, "="));
+                definition_value(option);
+            }
+            add(list, option);
+        } while (!failed_ && take(TokenType::TK_COMMA));
+        require(TokenType::TK_RPAREN); return list;
+    }
     AstNode* generic_options(bool alter) {
         require("OPTIONS"); require(TokenType::TK_LPAREN);
         auto* list = node(NodeType::NODE_PG_DDL_LIST);
@@ -288,11 +307,52 @@ private:
             } else break;
         }
     }
-    void references(AstNode* c) {
+    // Table ConstraintAttributeSpec permits repeated identical attributes, but
+    // rejects conflicts and properties unsupported by the constraint kind.
+    void constraint_attributes(AstNode* c, bool deferred, bool enforced, bool valid, bool inherit) {
+        unsigned seen = 0;
+        while (!failed_) {
+            unsigned bit = 0;
+            if (take("DEFERRABLE", c)) bit = 1;
+            else if (take("INITIALLY", c)) {
+                if (take("DEFERRED", c)) bit = 4;
+                else { require("IMMEDIATE", c); bit = 8; }
+            } else if (take("NO", c)) { require("INHERIT", c); bit = 16; }
+            else if (take("ENFORCED", c)) bit = 32;
+            else if (is("NOT")) {
+                auto look = tok_; look.skip();
+                if (word(look.peek(), "DEFERRABLE")) { syntax(c); syntax(c); bit = 2; }
+                else if (word(look.peek(), "ENFORCED")) { syntax(c); syntax(c); bit = 64; }
+                else if (word(look.peek(), "VALID")) { syntax(c); syntax(c); bit = 128; }
+                else break;
+            } else break;
+            seen |= bit;
+            if ((seen & 3) == 3 || (seen & 12) == 12 || (seen & 96) == 96 ||
+                (seen & 6) == 6 || (!deferred && (seen & 5)) ||
+                (!enforced && (seen & 96)) || (!valid && (seen & 128)) ||
+                (!inherit && (seen & 16))) fail();
+        }
+    }
+    AstNode* constraint_columns(bool period) {
+        require(TokenType::TK_LPAREN);
+        auto* list = node(NodeType::NODE_PG_DDL_LIST);
+        do {
+            auto* item = clause();
+            auto look = tok_; look.skip();
+            bool last_period = period && list && list->first_child && is("PERIOD") &&
+                pg_column_name(look.peek()) && take("PERIOD", item);
+            add(item, identifier());
+            if (!period && take("WITHOUT", item)) { require("OVERLAPS", item); last_period = true; }
+            add(list, item);
+            if (last_period) break;
+        } while (!failed_ && take(TokenType::TK_COMMA));
+        require(TokenType::TK_RPAREN); return list;
+    }
+    void references(AstNode* c, bool period = false) {
         require("REFERENCES", c); add(c, name());
-        if (at(TokenType::TK_LPAREN)) add(c, names());
+        if (at(TokenType::TK_LPAREN)) add(c, period ? constraint_columns(true) : names());
         if (take("MATCH", c)) {
-            if (!take("FULL", c) && !take("PARTIAL", c)) require("SIMPLE", c);
+            if (!take("FULL", c)) require("SIMPLE", c);
         }
         unsigned actions = 0;
         while (take("ON", c) && !failed_) {
@@ -304,32 +364,53 @@ private:
             if (take("NO", c)) require("ACTION", c);
             else if (take("SET", c)) {
                 if (!take("NULL", c)) require("DEFAULT", c);
-                if (at(TokenType::TK_LPAREN)) add(c, names());
+                if (at(TokenType::TK_LPAREN)) { if (bit == 1) fail(); add(c, names()); }
             } else if (!take("CASCADE", c)) require("RESTRICT", c);
         }
     }
     bool constraint_start() {
-        return is("CONSTRAINT") || is("PRIMARY") || is("UNIQUE") || is("CHECK") || is("FOREIGN");
+        return is("CONSTRAINT") || is("PRIMARY") || is("UNIQUE") || is("CHECK") || is("FOREIGN") || is("EXCLUDE") || is("NOT");
     }
     AstNode* constraint(bool table) {
         auto* c = clause();
         if (take("CONSTRAINT", c)) add(c, identifier());
         bool primary_key = is("PRIMARY");
+        bool deferred = false, enforced = false, valid = false, inherit = false;
         if (take("CHECK", c)) {
             add(c, expression_group());
-            if (take("NO", c)) require("INHERIT", c);
+            enforced = valid = inherit = true;
+            if (!table && take("NO", c)) require("INHERIT", c);
+        } else if (table && take("NOT", c)) {
+            require("NULL", c); add(c, identifier()); valid = inherit = true;
+        } else if (table && take("EXCLUDE", c)) {
+            deferred = true;
+            if (take("USING", c)) add(c, identifier());
+            add(c, index_elements(false, true));
+            if (take("INCLUDE", c)) add(c, names());
+            if (take("WITH", c)) add(c, table_options(false));
+            if (take("USING", c)) { require("INDEX", c); require("TABLESPACE", c); add(c, identifier()); }
+            if (take("WHERE", c)) add(c, expression_group());
         } else if (take("PRIMARY", c) || take("UNIQUE", c)) {
             if (c && last(c) && last(c)->value().equals_ci("PRIMARY", 7)) require("KEY", c);
-            if (take("NULLS", c)) {
+            bool null_treatment = take("NULLS", c);
+            if (null_treatment) {
                 if (primary_key) fail();
                 take("NOT", c); require("DISTINCT", c);
             }
-            if (table) add(c, names());
-            if (take("INCLUDE", c)) add(c, names());
-            if (take("WITH", c)) add(c, options());
-            if (take("USING", c)) { require("INDEX", c); require("TABLESPACE", c); add(c, identifier()); }
+            deferred = true;
+            if (table && take("USING", c)) {
+                if (null_treatment) fail();
+                require("INDEX", c); add(c, identifier());
+            }
+            else {
+                if (table) add(c, constraint_columns(false));
+                if (take("INCLUDE", c)) add(c, names());
+                if (take("WITH", c)) add(c, table_options(false));
+                if (take("USING", c)) { require("INDEX", c); require("TABLESPACE", c); add(c, identifier()); }
+            }
         } else if (table && take("FOREIGN", c)) {
-            require("KEY", c); add(c, names()); references(c);
+            deferred = enforced = valid = true;
+            require("KEY", c); add(c, constraint_columns(true)); references(c, true);
         } else if (!table && is("REFERENCES")) references(c);
         else if (!table && take("NOT", c)) {
             require("NULL", c); if (take("NO", c)) require("INHERIT", c);
@@ -348,8 +429,9 @@ private:
                 if (!take("STORED", c)) take("VIRTUAL", c);
             }
         } else fail();
-        deferrability(c);
-        if (!table) {
+        if (table) constraint_attributes(c, deferred, enforced, valid, inherit);
+        else {
+            deferrability(c);
             if (!take("ENFORCED", c) && is("NOT")) {
                 auto look = tok_; look.skip();
                 if (word(look.peek(), "ENFORCED")) { syntax(c); require("ENFORCED", c); }
@@ -363,12 +445,7 @@ private:
         auto* group = node(NodeType::NODE_PG_DDL_LIST);
         auto* sequence = clause();
         while (!at(TokenType::TK_RPAREN) && !failed_) {
-            if (take("START", sequence)) { take("WITH", sequence); integer(sequence); }
-            else if (take("INCREMENT", sequence)) { take("BY", sequence); integer(sequence); }
-            else if (take("MINVALUE", sequence) || take("MAXVALUE", sequence) || take("CACHE", sequence)) integer(sequence);
-            else if (take("NO", sequence)) {
-                if (!take("MINVALUE", sequence) && !take("MAXVALUE", sequence)) require("CYCLE", sequence);
-            } else if (!take("CYCLE", sequence)) fail();
+            if (!sequence_option(sequence)) fail();
         }
         if (sequence && !sequence->first_child) fail();
         add(group, sequence); add(parent, group); require(TokenType::TK_RPAREN);
@@ -1275,9 +1352,15 @@ private:
     void create_table(AstNode* root) {
         if_exists(root, true); add(root, name(true));
         bool partition = take("PARTITION", root);
-        if (partition) { require("OF", root); add(root, name()); partition_bound(root); }
+        bool typed = !partition && take("OF", root);
+        if (partition || typed) {
+            if (partition) require("OF", root);
+            add(root, name());
+            if (at(TokenType::TK_LPAREN)) add(root, typed_table_elements());
+            if (partition) partition_bound(root);
+        }
         bool as_query = !at(TokenType::TK_LPAREN);
-        if (partition) as_query = false;
+        if (partition || typed) as_query = false;
         else if (!as_query) {
             auto look = tok_; look.skip();
             if (pg_column_name(look.peek())) {
@@ -1286,7 +1369,7 @@ private:
             }
             add(root, as_query ? names() : table_elements());
         }
-        if (take("INHERITS", root)) add(root, names(true, true));
+        if (!partition && !typed && take("INHERITS", root)) add(root, names(true, true));
         if (take("PARTITION", root)) {
             require("BY", root);
             if (!take("RANGE", root) && !take("LIST", root)) require("HASH", root);
@@ -1337,7 +1420,7 @@ private:
     void with_data(AstNode* root) {
         if (take("WITH", root)) { take("NO", root); require("DATA", root); }
     }
-    AstNode* index_elements(bool partition_key = false) {
+    AstNode* index_elements(bool partition_key = false, bool exclusion = false) {
         require(TokenType::TK_LPAREN);
         auto* list = node(NodeType::NODE_PG_DDL_LIST);
         do {
@@ -1350,18 +1433,47 @@ private:
                     if (!pg_column_label(look.peek())) break;
                     look.skip();
                 }
-                if (look.peek().type == TokenType::TK_LPAREN)
-                    add(e, expr(Precedence::COLLATION));
-                else add(e, identifier());
+                bool value_function = is("CURRENT_DATE") || is("CURRENT_TIME") || is("CURRENT_TIMESTAMP") ||
+                    is("LOCALTIME") || is("LOCALTIMESTAMP") || is("CURRENT_ROLE") || is("CURRENT_USER") ||
+                    is("SESSION_USER") || is("SYSTEM_USER") || is("USER") || is("CURRENT_CATALOG") || is("CURRENT_SCHEMA");
+                if (is("COLLATION") && word(look.peek(), "FOR")) {
+                    syntax(e); require("FOR", e); add(e, expression_group());
+                } else if (look.peek().type == TokenType::TK_LPAREN || value_function) {
+                    // func_expr_windowless ends at the application's argument
+                    // group (or SQL value keyword). The expression parser must
+                    // not consume unparenthesized casts, subscripts, or aggregate
+                    // suffixes that belong to a_expr rather than index_elem.
+                    if (look.peek().type == TokenType::TK_LPAREN) {
+                        unsigned depth = 0;
+                        do {
+                            auto token = look.next_token();
+                            if (token.type == TokenType::TK_LPAREN) ++depth;
+                            else if (token.type == TokenType::TK_RPAREN) --depth;
+                            else if (token.type == TokenType::TK_EOF) { fail(); break; }
+                        } while (depth && !failed_);
+                    }
+                    const char* end = look.peek().source.ptr;
+                    auto* function = expr(Precedence::COLLATION);
+                    if (tok_.peek().source.ptr != end) fail();
+                    add(e, function);
+                } else add(e, identifier());
             }
             if (take("COLLATE", e)) add(e, name());
-            if (pg_column_name(tok_.peek()) && !is("ASC") && !is("DESC") && !is("NULLS")) {
+            if (pg_column_name(tok_.peek()) && !is("ASC") && !is("DESC") && !is("NULLS") && !is("WITH")) {
                 add(e, name());
-                if (!partition_key && at(TokenType::TK_LPAREN)) add(e, options());
+                if (!partition_key && at(TokenType::TK_LPAREN)) add(e, table_options());
             }
             if (!partition_key) {
                 if (!take("ASC", e)) take("DESC", e);
                 if (take("NULLS", e)) { if (!take("FIRST", e)) require("LAST", e); }
+            }
+            if (exclusion) {
+                require("WITH", e);
+                if (take("OPERATOR", e)) {
+                    require(TokenType::TK_LPAREN);
+                    auto* group = node(NodeType::NODE_PG_DDL_LIST);
+                    add(group, operator_name()); add(e, group); require(TokenType::TK_RPAREN);
+                } else add(e, operator_name());
             }
             add(list, e);
         } while (!failed_ && take(TokenType::TK_COMMA));
@@ -1536,14 +1648,7 @@ private:
         } else if (take("SERVER", root)) alter_server(root);
         else if (take("USER", root)) user_mapping(root, false, false);
         else if (take("TABLE", root)) {
-            if_exists(root); take("ONLY", root); add(root, name(true));
-            if (at(TokenType::TK_ASTERISK)) syntax(root);
-            auto* commands = node(NodeType::NODE_PG_DDL_LIST); if (commands) commands->flags = 1;
-            auto look = tok_; look.skip();
-            bool standalone = is("RENAME") || (is("SET") && word(look.peek(), "SCHEMA"));
-            do { add(commands, alter_table_command()); }
-            while (!failed_ && !standalone && take(TokenType::TK_COMMA));
-            add(root, commands);
+            alter_table_like(root, true);
         } else if (take("FUNCTION", root) || take("PROCEDURE", root) || take("ROUTINE", root)) alter_routine(root);
         else if (take("AGGREGATE", root)) { add(root, parse_aggregate_signature()); if (!object_identity(root)) fail(); }
         else if (take("OPERATOR", root)) alter_operator(root);
@@ -1551,14 +1656,64 @@ private:
         else if (take("TYPE", root)) alter_type(root);
         else if (take("SEQUENCE", root)) alter_sequence(root);
         else if (take("SCHEMA", root) || take("DATABASE", root)) alter_identity_object(root, false, false, true, false);
-        else if (take("VIEW", root)) alter_identity_object(root, true, true, true, true, true);
-        else if (take("MATERIALIZED", root)) { require("VIEW", root); alter_identity_object(root, true, true, true, true, true); }
-        else if (take("INDEX", root)) alter_identity_object(root, true, false, true, true);
+        else if (take("VIEW", root)) alter_table_like(root, false);
+        else if (take("MATERIALIZED", root)) { require("VIEW", root); alter_table_like(root, false); }
+        else if (take("INDEX", root)) alter_table_like(root, false, true);
         else if (take("POLICY", root)) alter_policy(root);
         else if (take("STATISTICS", root)) alter_statistics(root);
         else if (take("COLLATION", root) || take("CONVERSION", root))
             alter_identity_object(root, true, true, true, false);
         else fail();
+    }
+    bool standalone_table_command() {
+        auto look = tok_; look.skip();
+        return is("RENAME") || is("ATTACH") || is("DETACH") ||
+            (is("SET") && word(look.peek(), "SCHEMA"));
+    }
+    void alter_table_like(AstNode* root, bool relation, bool index = false) {
+        bool missing = is("IF"); if_exists(root);
+        bool only = relation && take("ONLY", root);
+        if (only && take(TokenType::TK_LPAREN)) {
+            auto* group = node(NodeType::NODE_PG_DDL_LIST);
+            add(group, name(true)); require(TokenType::TK_RPAREN); add(root, group);
+        } else add(root, name(true));
+        if (relation && !only && at(TokenType::TK_ASTERISK)) syntax(root);
+        if (index && is("ATTACH")) {
+            if (missing) fail();
+            syntax(root); require("PARTITION", root); add(root, name()); return;
+        }
+        if (!relation && (is("ATTACH") || is("DETACH"))) { fail(); return; }
+        auto look = tok_; look.skip();
+        if (!relation && is("RENAME") && word(look.peek(), "CONSTRAINT")) { fail(); return; }
+        if (index && ((is("SET") && word(look.peek(), "SCHEMA")) ||
+                      (is("RENAME") && !word(look.peek(), "TO")))) { fail(); return; }
+        auto* commands = node(NodeType::NODE_PG_DDL_LIST); if (commands) commands->flags = 1;
+        bool standalone = standalone_table_command();
+        do {
+            if (commands && commands->first_child && standalone_table_command()) { fail(); break; }
+            add(commands, alter_table_command());
+        } while (!failed_ && !standalone && take(TokenType::TK_COMMA));
+        add(root, commands);
+    }
+    void statistics_target(AstNode* c) {
+        if (take("DEFAULT", c)) return;
+        if (at(TokenType::TK_PLUS) || at(TokenType::TK_MINUS)) syntax(c);
+        Token value;
+        if (!pg_integer_literal(tok_, value)) fail();
+        else add(c, token_node(NodeType::NODE_LITERAL_INT, value));
+    }
+    void identity_alter_options(AstNode* c, bool set_consumed = false) {
+        do {
+            if (!set_consumed && take("RESTART", c)) {
+                if (take("WITH", c) || numeric_start()) numeric(c);
+            } else {
+                if (!set_consumed) require("SET", c);
+                if (take("GENERATED", c)) {
+                    if (!take("ALWAYS", c)) { require("BY", c); require("DEFAULT", c); }
+                } else if (is("AS") || is("RESTART") || is("OWNED") || !sequence_option(c)) fail();
+            }
+            set_consumed = false;
+        } while (!failed_ && (is("SET") || is("RESTART")));
     }
     AstNode* alter_table_command() {
         auto* c = clause();
@@ -1566,14 +1721,46 @@ private:
         else if (take("ADD", c)) {
             if (constraint_start()) {
                 add(c, constraint(true));
-                if (take("NOT", c)) require("VALID", c);
             } else { take("COLUMN", c); if_exists(c, true); add(c, column()); }
         } else if (take("DROP", c)) {
             if (!take("CONSTRAINT", c)) take("COLUMN", c);
             if_exists(c); add(c, identifier()); behavior(c);
         } else if (take("ALTER", c)) {
-            take("COLUMN", c); add(c, identifier());
-            if (is("OPTIONS")) add(c, generic_options_clause(true));
+            if (take("CONSTRAINT", c)) {
+                add(c, identifier());
+                if (!take("INHERIT", c)) constraint_attributes(c, true, true, false, true);
+                return c;
+            }
+            take("COLUMN", c);
+            if (at(TokenType::TK_INTEGER)) {
+                Token value;
+                if (!pg_integer_literal(tok_, value)) fail();
+                else {
+                    uint32_t number = 0, base = 10, offset = 0;
+                    if (value.text.len > 2 && value.text.ptr[0] == '0') {
+                        char prefix = value.text.ptr[1];
+                        if (prefix == 'x' || prefix == 'X') base = 16;
+                        else if (prefix == 'o' || prefix == 'O') base = 8;
+                        else if (prefix == 'b' || prefix == 'B') base = 2;
+                        if (base != 10) offset = 2;
+                    }
+                    // pg_integer_literal already validated digits and int32 bounds.
+                    for (uint32_t i = offset; i < value.text.len; ++i) {
+                        char digit = value.text.ptr[i];
+                        if (digit == '_') continue;
+                        number = number * base + (digit >= '0' && digit <= '9' ? digit - '0' :
+                            digit >= 'a' && digit <= 'f' ? digit - 'a' + 10 : digit - 'A' + 10);
+                    }
+                    if (!number || number > 32767) fail();
+                    add(c, token_node(NodeType::NODE_LITERAL_INT, value));
+                }
+                require("SET", c); require("STATISTICS", c); statistics_target(c); return c;
+            }
+            add(c, identifier());
+            if (take("RESTART", c)) {
+                if (take("WITH", c) || numeric_start()) numeric(c);
+                if (is("SET") || is("RESTART")) identity_alter_options(c);
+            } else if (is("OPTIONS")) add(c, generic_options_clause(true));
             else if (take("TYPE", c)) {
                 add(c, type()); if (take("COLLATE", c)) add(c, name());
                 if (take("USING", c)) add(c, expr());
@@ -1583,13 +1770,15 @@ private:
                     if (take("USING", c)) add(c, expr());
                 } else if (take("DEFAULT", c)) add(c, expr());
                 else if (take("NOT", c)) require("NULL", c);
-                else if (take("STATISTICS", c)) integer(c);
+                else if (take("STATISTICS", c)) statistics_target(c);
+                else if (take("EXPRESSION", c)) { require("AS", c); add(c, expression_group()); }
                 else if (take("STORAGE", c)) {
-                    if (!take("PLAIN", c) && !take("EXTERNAL", c) && !take("EXTENDED", c)) require("MAIN", c);
+                    if (!take("DEFAULT", c)) add(c, identifier());
                 } else if (take("COMPRESSION", c)) { if (!take("DEFAULT", c)) add(c, identifier()); }
-                else if (at(TokenType::TK_LPAREN)) add(c, options());
-                else fail();
-            } else if (take("DROP", c)) {
+                else if (at(TokenType::TK_LPAREN)) add(c, table_options());
+                else identity_alter_options(c, true);
+            } else if (take("RESET", c)) add(c, table_options());
+            else if (take("DROP", c)) {
                 if (take("NOT", c)) require("NULL", c);
                 else if (take("IDENTITY", c) || take("EXPRESSION", c)) if_exists(c);
                 else require("DEFAULT", c);
@@ -1609,11 +1798,17 @@ private:
         else if (take("VALIDATE", c)) { require("CONSTRAINT", c); add(c, identifier()); }
         else if (take("SET", c)) {
             if (take("SCHEMA", c) || take("TABLESPACE", c)) add(c, identifier());
+            else if (take("ACCESS", c)) { require("METHOD", c); if (!take("DEFAULT", c)) add(c, identifier()); }
             else if (take("LOGGED", c) || take("UNLOGGED", c)) {}
             else if (take("WITHOUT", c)) require("CLUSTER", c);
-            else if (at(TokenType::TK_LPAREN)) add(c, options());
+            else if (at(TokenType::TK_LPAREN)) add(c, table_options());
             else fail();
-        } else if (take("RESET", c)) add(c, names());
+        } else if (take("RESET", c)) add(c, table_options());
+        else if (take("REPLICA", c)) {
+            require("IDENTITY", c);
+            if (take("USING", c)) { require("INDEX", c); add(c, identifier()); }
+            else if (!take("DEFAULT", c) && !take("FULL", c)) require("NOTHING", c);
+        }
         else if (take("ENABLE", c) || take("DISABLE", c)) {
             bool enable = c && last(c) && last(c)->value().equals_ci("ENABLE", 6);
             if (take("ROW", c)) { require("LEVEL", c); require("SECURITY", c); }
@@ -1626,7 +1821,8 @@ private:
         else if (take("NO", c)) {
             if (take("FORCE", c)) { require("ROW", c); require("LEVEL", c); require("SECURITY", c); }
             else { require("INHERIT", c); add(c, name()); }
-        } else if (take("INHERIT", c)) add(c, name());
+        } else if (take("INHERIT", c) || take("OF", c)) add(c, name());
+        else if (take("NOT", c)) require("OF", c);
         else if (take("CLUSTER", c)) { require("ON", c); add(c, identifier()); }
         else if (take("ATTACH", c)) {
             require("PARTITION", c); add(c, name()); partition_bound(c);

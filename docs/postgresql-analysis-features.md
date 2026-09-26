@@ -185,14 +185,32 @@ lists and schema/server names; its appended statement type is
 the shared PostgreSQL column-definition grammar on ordinary tables. Parsing
 does not connect to foreign servers or import database objects.
 
+Maintenance commands include REINDEX targets/options, modern and legacy CLUSTER,
+REFRESH MATERIALIZED VIEW with concurrency/data clauses, and LOCK with relation
+lists, ONLY/inheritance forms, lock modes and NOWAIT. Their names, options and
+literal operands remain structured command children. REINDEX, CLUSTER and
+REFRESH_MATERIALIZED_VIEW statement types are appended; LOCK reuses its existing
+type. Parsing does not perform maintenance or acquire database locks, and the
+local planner and parameterizer reject these command roots.
+
+Table constraints include EXCLUDE elements/operators, predicates and index
+options, temporal UNIQUE/PRIMARY KEY WITHOUT OVERLAPS and FOREIGN KEY PERIOD,
+and validated constraint attributes. ALTER supports constraint attributes,
+identity-sequence options and RESTART, generated expressions, REPLICA IDENTITY,
+and additional index/view/materialized-view actions. Typed-table and partition
+column options reuse the structured column grammar; ALTER OF/NOT OF is also
+supported. Expressions, names and options remain traversable, with unsupported
+execution and parameterization rejected.
+
 Coverage is still a subset of PostgreSQL. Remaining examples include embedded
 CREATE SCHEMA elements, CREATE DATABASE options, other object-specific ALTER
-commands, further ALTER TABLE/FOREIGN TABLE actions such as ALTER CONSTRAINT,
-publication DDL, rules, unquoted SQL function
-bodies, exclusion constraints, less common DDL options, assignment slices and
+commands, further ALTER TABLE/FOREIGN TABLE actions, publication DDL, rules,
+unquoted SQL function bodies, less common DDL options, assignment slices and
 full ON CONFLICT index-inference options. Less common equivalent type spellings
 in ordered variadic signatures, `%TYPE` definition arguments and modifying
-CTEs inside cursor queries are also not fully covered. PostgreSQL remains responsible
+CTEs inside cursor queries are also not fully covered. Shared lexical gaps include
+Unicode escape syntax, newline-concatenated strings and unquoted non-ASCII names.
+PostgreSQL remains responsible
 for name resolution, types, privileges and semantic checks. Corpus acceptance
 alone does not establish grammar parity or round-trip equivalence for every
 accepted statement.
