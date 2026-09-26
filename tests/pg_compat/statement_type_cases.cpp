@@ -156,22 +156,21 @@ void test_default_and_simple_mappings() {
         {PG_QUERY__NODE__NODE_CONSTRAINTS_SET_STMT, MappingKind::Equivalent, StmtType::SET},
         {PG_QUERY__NODE__NODE_COPY_STMT, MappingKind::Equivalent, StmtType::COPY},
         {PG_QUERY__NODE__NODE_MERGE_STMT, MappingKind::Equivalent, StmtType::MERGE},
-        {PG_QUERY__NODE__NODE_NOTIFY_STMT, MappingKind::NoEquivalent, StmtType::UNKNOWN},
-        {PG_QUERY__NODE__NODE_LISTEN_STMT, MappingKind::NoEquivalent, StmtType::UNKNOWN},
-        {PG_QUERY__NODE__NODE_UNLISTEN_STMT, MappingKind::NoEquivalent, StmtType::UNKNOWN},
-        {PG_QUERY__NODE__NODE_CHECK_POINT_STMT, MappingKind::NoEquivalent, StmtType::UNKNOWN},
+        {PG_QUERY__NODE__NODE_NOTIFY_STMT, MappingKind::Equivalent, StmtType::NOTIFY},
+        {PG_QUERY__NODE__NODE_LISTEN_STMT, MappingKind::Equivalent, StmtType::LISTEN},
+        {PG_QUERY__NODE__NODE_UNLISTEN_STMT, MappingKind::Equivalent, StmtType::UNLISTEN},
+        {PG_QUERY__NODE__NODE_CHECK_POINT_STMT, MappingKind::Equivalent, StmtType::CHECKPOINT},
         {PG_QUERY__NODE__NODE_CLUSTER_STMT, MappingKind::NoEquivalent, StmtType::UNKNOWN},
-        {PG_QUERY__NODE__NODE_CLOSE_PORTAL_STMT, MappingKind::NoEquivalent, StmtType::UNKNOWN},
-        {PG_QUERY__NODE__NODE_COMMENT_STMT, MappingKind::NoEquivalent, StmtType::UNKNOWN},
-        {PG_QUERY__NODE__NODE_DECLARE_CURSOR_STMT, MappingKind::NoEquivalent, StmtType::UNKNOWN},
+        {PG_QUERY__NODE__NODE_CLOSE_PORTAL_STMT, MappingKind::Equivalent, StmtType::CLOSE},
+        {PG_QUERY__NODE__NODE_COMMENT_STMT, MappingKind::Equivalent, StmtType::COMMENT},
+        {PG_QUERY__NODE__NODE_DECLARE_CURSOR_STMT, MappingKind::Equivalent, StmtType::DECLARE_CURSOR},
         {PG_QUERY__NODE__NODE_DEFINE_STMT, MappingKind::Equivalent, StmtType::CREATE},
-        {PG_QUERY__NODE__NODE_DISCARD_STMT, MappingKind::NoEquivalent, StmtType::UNKNOWN},
-        {PG_QUERY__NODE__NODE_FETCH_STMT, MappingKind::NoEquivalent, StmtType::UNKNOWN},
+        {PG_QUERY__NODE__NODE_DISCARD_STMT, MappingKind::Equivalent, StmtType::DISCARD},
         {PG_QUERY__NODE__NODE_IMPORT_FOREIGN_SCHEMA_STMT, MappingKind::NoEquivalent, StmtType::UNKNOWN},
         {PG_QUERY__NODE__NODE_LOAD_STMT, MappingKind::NoEquivalent, StmtType::UNKNOWN},
         {PG_QUERY__NODE__NODE_REFRESH_MAT_VIEW_STMT, MappingKind::NoEquivalent, StmtType::UNKNOWN},
         {PG_QUERY__NODE__NODE_REINDEX_STMT, MappingKind::NoEquivalent, StmtType::UNKNOWN},
-        {PG_QUERY__NODE__NODE_SEC_LABEL_STMT, MappingKind::NoEquivalent, StmtType::UNKNOWN},
+        {PG_QUERY__NODE__NODE_SEC_LABEL_STMT, MappingKind::Equivalent, StmtType::SECURITY_LABEL},
     };
 
     for (const auto& test_case : cases) {
@@ -415,6 +414,17 @@ void test_oracle_node_names() {
         "UNMAPPED_NODE_CASE") == 0);
 }
 
+void test_fetch_mapping() {
+    PgQuery__Node node{};
+    node.node_case = PG_QUERY__NODE__NODE_FETCH_STMT;
+    assert_mapping(pg_compat::expected_stmt_type(node), MappingKind::Unmapped, StmtType::UNKNOWN);
+    PgQuery__FetchStmt fetch{};
+    node.fetch_stmt = &fetch;
+    assert_mapping(pg_compat::expected_stmt_type(node), MappingKind::Equivalent, StmtType::FETCH);
+    fetch.ismove = true;
+    assert_mapping(pg_compat::expected_stmt_type(node), MappingKind::Equivalent, StmtType::MOVE);
+}
+
 void test_vacuum_mapping() {
     PgQuery__Node node{};
     node.node_case = PG_QUERY__NODE__NODE_VACUUM_STMT;
@@ -460,6 +470,18 @@ void test_stmt_type_names() {
         {StmtType::CALL, "CALL"},
         {StmtType::DO_STMT, "DO"},
         {StmtType::MERGE, "MERGE"},
+        {StmtType::COMMENT, "COMMENT"},
+        {StmtType::SECURITY_LABEL, "SECURITY_LABEL"},
+        {StmtType::DECLARE_CURSOR, "DECLARE_CURSOR"},
+        {StmtType::FETCH, "FETCH"},
+        {StmtType::MOVE, "MOVE"},
+        {StmtType::CLOSE, "CLOSE"},
+        {StmtType::LISTEN, "LISTEN"},
+        {StmtType::NOTIFY, "NOTIFY"},
+        {StmtType::UNLISTEN, "UNLISTEN"},
+        {StmtType::DISCARD, "DISCARD"},
+        {StmtType::CHECKPOINT, "CHECKPOINT"},
+
         {StmtType::VACUUM, "VACUUM"},
         {StmtType::ANALYZE, "ANALYZE"},
     };
@@ -485,5 +507,6 @@ int main() {
     test_oracle_node_names();
     test_stmt_type_names();
     test_vacuum_mapping();
+    test_fetch_mapping();
     return 0;
 }

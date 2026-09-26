@@ -58,6 +58,9 @@ TEST_SRCS = $(TEST_DIR)/test_main.cpp \
             $(TEST_DIR)/test_pg_query_continuation.cpp \
             $(TEST_DIR)/test_pg_expression_continuation.cpp \
             $(TEST_DIR)/test_pg_object_ddl.cpp \
+            $(TEST_DIR)/test_pg_definitions.cpp \
+            $(TEST_DIR)/test_pg_admin_commands.cpp \
+            $(TEST_DIR)/test_pg_session_commands.cpp \
             $(TEST_DIR)/test_pg_dml_extensions.cpp \
             $(TEST_DIR)/test_pg_ddl.cpp \
             $(TEST_DIR)/test_pg_json_xml.cpp \

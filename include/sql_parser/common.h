@@ -122,6 +122,17 @@ enum class StmtType : uint8_t {
     VACUUM,
     ANALYZE,
     MERGE,
+    COMMENT,
+    SECURITY_LABEL,
+    DECLARE_CURSOR,
+    FETCH,
+    MOVE,
+    CLOSE,
+    LISTEN,
+    NOTIFY,
+    UNLISTEN,
+    DISCARD,
+    CHECKPOINT,
 };
 
 // -- AST node types --
@@ -327,6 +338,7 @@ enum class NodeType : uint16_t {
     NODE_PG_SORT_USING,
     NODE_PG_SELECT_INTO,
     NODE_PG_ROW_LOCK,
+    NODE_PG_COMMAND_STMT, // validated command with structural operands/clauses
 
 };
 

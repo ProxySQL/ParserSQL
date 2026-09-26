@@ -9,6 +9,8 @@
 #include "sql_parser/delete_parser.h"
 #include "sql_parser/pg_utility_parser.h"
 #include "sql_parser/pg_ddl_parser.h"
+#include "sql_parser/pg_admin_parser.h"
+#include "sql_parser/pg_session_parser.h"
 
 namespace sql_parser {
 
@@ -100,6 +102,18 @@ ParseResult Parser<D>::classify_and_dispatch() {
 
     if constexpr (D == Dialect::PostgreSQL) {
         if (PgUtilityParser::word(first, "MERGE")) return parse_merge();
+        if (PgAdminParser::handles(first, tokenizer_)) {
+            ParseResult r = PgAdminParser(tokenizer_, arena_).parse(first);
+            scan_to_end(r); return r;
+        }
+        auto session_look = tokenizer_;
+        const bool prepare_transaction = first.type == TokenType::TK_PREPARE &&
+            session_look.next_token().type == TokenType::TK_TRANSACTION &&
+            session_look.peek().type != TokenType::TK_AS && session_look.peek().type != TokenType::TK_LPAREN;
+        if (PgSessionParser::handles(first) && !prepare_transaction) {
+            ParseResult r = PgSessionParser(tokenizer_, arena_).parse(first);
+            scan_to_end(r); return r;
+        }
         if (PgDdlParser::handles(first)) {
             PgDdlParser ddl(tokenizer_, arena_, &parse_subquery_select<D>);
             ParseResult r = ddl.parse(first);
@@ -423,6 +437,7 @@ ParseResult Parser<D>::parse_explain(bool is_describe) {
         if (!ExpressionParser<D>::starts_query(first) && first != TokenType::TK_LPAREN &&
             first != TokenType::TK_INSERT && first != TokenType::TK_UPDATE &&
             first != TokenType::TK_DELETE && !ExpressionParser<D>::keyword(tokenizer_.peek(), "MERGE") &&
+            !ExpressionParser<D>::keyword(tokenizer_.peek(), "DECLARE") &&
             first != TokenType::TK_CREATE && first != TokenType::TK_EXECUTE) {
             r.status = ParseResult::ERROR; scan_to_end(r); return r;
         }

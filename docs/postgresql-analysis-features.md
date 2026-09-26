@@ -153,11 +153,28 @@ forms, CREATE/ALTER SEQUENCE, routine properties and SET/RESET clauses,
 object renaming/ownership/schema changes, and additional DROP families.
 Defaults, constraints, names and options remain traversable AST components.
 
+Aggregate/operator definitions, operator classes/families, collation and text
+search definitions now have native productions, including matching supported
+ALTER/DROP forms. Role/user/group creation, options, membership, renaming and
+settings retain structured operands. COMMENT and SECURITY LABEL preserve object
+identities, routine/operator signatures and string or NULL values.
+
+Session commands include DECLARE/FETCH/MOVE/CLOSE, SQL PREPARE/EXECUTE/DEALLOCATE,
+LISTEN/NOTIFY/UNLISTEN, DISCARD and CHECKPOINT. `NODE_PG_COMMAND_STMT` contains
+validated names, clauses, literals and query bodies. New statement enum values
+are appended; unsupported local execution and parameterization are rejected.
+Fetching or declaring a cursor is parsed only; it does not open a connection or
+change a database session. Integer positions in the new role, cursor and
+operator-class productions validate PostgreSQL bounds, base prefixes and digit
+separators.
+
 Coverage is still a subset of PostgreSQL. Remaining examples include embedded
 CREATE SCHEMA elements, CREATE DATABASE options, other object-specific ALTER
-commands, aggregate/operator definitions, roles, comments, cursors, unquoted SQL
-function bodies, exclusion constraints, less common DDL options, assignment
-slices and full ON CONFLICT index-inference options. PostgreSQL remains responsible
+commands, foreign-table and policy/publication DDL, rules, unquoted SQL function
+bodies, exclusion constraints, less common DDL options, assignment slices and
+full ON CONFLICT index-inference options. Less common equivalent type spellings
+in ordered variadic signatures, `%TYPE` definition arguments and modifying
+CTEs inside cursor queries are also not fully covered. PostgreSQL remains responsible
 for name resolution, types, privileges and semantic checks. Corpus acceptance
 alone does not establish grammar parity or round-trip equivalence for every
 accepted statement.

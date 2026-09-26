@@ -95,27 +95,32 @@ namespace pg_compat {
     SIMPLE(PG_QUERY__NODE__NODE_COPY_STMT, Equivalent, COPY) \
     SIMPLE(PG_QUERY__NODE__NODE_MERGE_STMT, Equivalent, MERGE) \
     PAYLOAD(PG_QUERY__NODE__NODE_VACUUM_STMT, map_vacuum_stmt) \
-    SIMPLE(PG_QUERY__NODE__NODE_NOTIFY_STMT, NoEquivalent, UNKNOWN) \
-    SIMPLE(PG_QUERY__NODE__NODE_LISTEN_STMT, NoEquivalent, UNKNOWN) \
-    SIMPLE(PG_QUERY__NODE__NODE_UNLISTEN_STMT, NoEquivalent, UNKNOWN) \
-    SIMPLE(PG_QUERY__NODE__NODE_CHECK_POINT_STMT, NoEquivalent, UNKNOWN) \
+    SIMPLE(PG_QUERY__NODE__NODE_NOTIFY_STMT, Equivalent, NOTIFY) \
+    SIMPLE(PG_QUERY__NODE__NODE_LISTEN_STMT, Equivalent, LISTEN) \
+    SIMPLE(PG_QUERY__NODE__NODE_UNLISTEN_STMT, Equivalent, UNLISTEN) \
+    SIMPLE(PG_QUERY__NODE__NODE_CHECK_POINT_STMT, Equivalent, CHECKPOINT) \
     SIMPLE(PG_QUERY__NODE__NODE_CLUSTER_STMT, NoEquivalent, UNKNOWN) \
-    SIMPLE(PG_QUERY__NODE__NODE_CLOSE_PORTAL_STMT, NoEquivalent, UNKNOWN) \
-    SIMPLE(PG_QUERY__NODE__NODE_COMMENT_STMT, NoEquivalent, UNKNOWN) \
-    SIMPLE(PG_QUERY__NODE__NODE_DECLARE_CURSOR_STMT, NoEquivalent, UNKNOWN) \
+    SIMPLE(PG_QUERY__NODE__NODE_CLOSE_PORTAL_STMT, Equivalent, CLOSE) \
+    SIMPLE(PG_QUERY__NODE__NODE_COMMENT_STMT, Equivalent, COMMENT) \
+    SIMPLE(PG_QUERY__NODE__NODE_DECLARE_CURSOR_STMT, Equivalent, DECLARE_CURSOR) \
     SIMPLE(PG_QUERY__NODE__NODE_DEFINE_STMT, Equivalent, CREATE) \
-    SIMPLE(PG_QUERY__NODE__NODE_DISCARD_STMT, NoEquivalent, UNKNOWN) \
-    SIMPLE(PG_QUERY__NODE__NODE_FETCH_STMT, NoEquivalent, UNKNOWN) \
+    SIMPLE(PG_QUERY__NODE__NODE_DISCARD_STMT, Equivalent, DISCARD) \
+    PAYLOAD(PG_QUERY__NODE__NODE_FETCH_STMT, map_fetch_stmt) \
     SIMPLE(PG_QUERY__NODE__NODE_IMPORT_FOREIGN_SCHEMA_STMT, NoEquivalent, UNKNOWN) \
     SIMPLE(PG_QUERY__NODE__NODE_LOAD_STMT, NoEquivalent, UNKNOWN) \
     SIMPLE(PG_QUERY__NODE__NODE_REFRESH_MAT_VIEW_STMT, NoEquivalent, UNKNOWN) \
     SIMPLE(PG_QUERY__NODE__NODE_REINDEX_STMT, NoEquivalent, UNKNOWN) \
-    SIMPLE(PG_QUERY__NODE__NODE_SEC_LABEL_STMT, NoEquivalent, UNKNOWN) \
+    SIMPLE(PG_QUERY__NODE__NODE_SEC_LABEL_STMT, Equivalent, SECURITY_LABEL) \
     PAYLOAD(PG_QUERY__NODE__NODE_TRANSACTION_STMT, map_transaction_stmt) \
     PAYLOAD(PG_QUERY__NODE__NODE_GRANT_STMT, map_grant_stmt) \
     PAYLOAD(PG_QUERY__NODE__NODE_GRANT_ROLE_STMT, map_grant_role_stmt)
 
 namespace {
+
+StatementTypeMapping map_fetch_stmt(const PgQuery__Node& node) {
+    if (!node.fetch_stmt) return {};
+    return {MappingKind::Equivalent, node.fetch_stmt->ismove ? sql_parser::StmtType::MOVE : sql_parser::StmtType::FETCH};
+}
 
 StatementTypeMapping map_vacuum_stmt(const PgQuery__Node& node) {
     if (!node.vacuum_stmt) return {};
@@ -302,6 +307,17 @@ const char* stmt_type_name(sql_parser::StmtType type) {
         return "DO";
     case StmtType::COPY:
         return "COPY";
+    case StmtType::COMMENT: return "COMMENT";
+    case StmtType::SECURITY_LABEL: return "SECURITY_LABEL";
+    case StmtType::DECLARE_CURSOR: return "DECLARE_CURSOR";
+    case StmtType::CLOSE: return "CLOSE";
+    case StmtType::LISTEN: return "LISTEN";
+    case StmtType::NOTIFY: return "NOTIFY";
+    case StmtType::UNLISTEN: return "UNLISTEN";
+    case StmtType::DISCARD: return "DISCARD";
+    case StmtType::CHECKPOINT: return "CHECKPOINT";
+    case StmtType::FETCH: return "FETCH";
+    case StmtType::MOVE: return "MOVE";
     case StmtType::RELEASE_SAVEPOINT:
         return "RELEASE_SAVEPOINT";
     }

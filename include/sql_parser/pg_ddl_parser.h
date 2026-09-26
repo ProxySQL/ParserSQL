@@ -3,6 +3,7 @@
 
 #include "sql_parser/subquery_parse_callback.h"
 #include "sql_parser/parse_result.h"
+#include "sql_parser/pg_integer_literal.h"
 
 namespace sql_parser {
 
@@ -47,6 +48,28 @@ public:
         result.schema_name = schema_name_;
         result.status = failed_ || tok_.has_error() ? ParseResult::ERROR : ParseResult::OK;
         return result;
+    }
+
+    // Shared native subproductions used by COMMENT and role settings.
+    AstNode* parse_setting_clause() {
+        auto* c = clause();
+        bool reset = take("RESET", c);
+        if (!reset) require("SET", c);
+        routine_setting(c, reset);
+        return failed_ ? nullptr : c;
+    }
+    AstNode* parse_function_signature() {
+        auto* c = clause(); add(c, routine_name(true));
+        if (at(TokenType::TK_LPAREN)) add(c, arguments(false));
+        return failed_ ? nullptr : c;
+    }
+    AstNode* parse_aggregate_signature() {
+        auto* c = clause(); add(c, routine_name()); add(c, aggregate_arguments());
+        return failed_ ? nullptr : c;
+    }
+    AstNode* parse_operator_signature() {
+        auto* c = clause(); add(c, operator_name()); add(c, operator_arguments());
+        return failed_ ? nullptr : c;
     }
 
 private:
@@ -561,27 +584,48 @@ private:
     }
     void definition_value(AstNode* parent) {
         if (string_start()) { add(parent, string_literal()); return; }
-        if (numeric_start()) { numeric(parent); return; }
+        auto number = tok_;
+        if (number.peek().type == TokenType::TK_PLUS || number.peek().type == TokenType::TK_MINUS) number.skip();
+        if (number.peek().type == TokenType::TK_INTEGER || number.peek().type == TokenType::TK_FLOAT) { numeric(parent); return; }
         if (take("NONE", parent)) return;
         if (take("OPERATOR", parent)) {
             require(TokenType::TK_LPAREN);
             auto* op = node(NodeType::NODE_PG_DDL_LIST);
-            while (!failed_ && pg_column_name(tok_.peek())) {
-                add(op, identifier()); require(TokenType::TK_DOT); add(op, node(NodeType::NODE_PG_DDL_SYNTAX, "."));
-            }
-            if (operator_symbol(tok_.peek())) syntax(op); else fail();
+            add(op, operator_name());
             require(TokenType::TK_RPAREN); add(parent, op); return;
         }
         if (operator_symbol(tok_.peek())) { syntax(parent); return; }
-        if (take("SETOF", parent)) { add(parent, type()); return; }
+        if (take("SETOF", parent)) { add(parent, definition_type()); return; }
         if (is("DOUBLE")) {
             auto look = tok_; look.skip();
             if (!word(look.peek(), "PRECISION")) { add(parent, identifier()); return; }
         }
-        if (PgTypeParser::name_token(tok_.peek())) { add(parent, type()); return; }
+        if (PgTypeParser::name_token(tok_.peek()) || pg_type_function_name(tok_.peek())) { add(parent, definition_type()); return; }
         // reserved_keyword is an explicit def_arg production.
         if (pg_column_label(tok_.peek()) && !nonreserved(tok_.peek())) syntax(parent);
         else fail();
+    }
+    static bool definition_modifier(Tokenizer<Dialect::PostgreSQL>& tok, void* context) {
+        auto* owner = static_cast<PgDdlParser*>(context);
+        ExpressionParser<Dialect::PostgreSQL> parser(tok, owner->arena_, true);
+        parser.set_subquery_callback(owner->callback_);
+        auto* value = parser.parse_complete();
+        return value && value->type != NodeType::NODE_ASTERISK;
+    }
+    AstNode* definition_type() {
+        Token first = tok_.peek();
+        auto qualifier = tok_; qualifier.skip();
+        if (qualifier.peek().type == TokenType::TK_DOT && !pg_type_function_name(first)) { fail(); return nullptr; }
+        if (!PgTypeParser::name_token(first) && !pg_type_function_name(first)) { fail(); return nullptr; }
+        // Type/function keyword categories do not depend on the token enum.
+        // PostgreSQL accepts names such as DELETE as generic type names.
+        if (!PgTypeParser::name_token(first)) first.type = TokenType::TK_IDENTIFIER;
+        tok_.skip();
+        StringRef text = PgTypeParser(tok_, definition_modifier, this).parse(true, false, &first);
+        if (text.empty()) { fail(); return nullptr; }
+        auto* result = make_node(arena_, NodeType::NODE_TYPE_NAME, text);
+        if (!result) fail();
+        return result;
     }
     AstNode* definition() {
         require(TokenType::TK_LPAREN);
@@ -594,6 +638,267 @@ private:
             add(list, item);
         } while (!failed_ && take(TokenType::TK_COMMA));
         require(TokenType::TK_RPAREN); return list;
+    }
+    AstNode* routine_name(bool signature = false) {
+        Token first = tok_.peek();
+        auto look = tok_; look.skip();
+        bool qualified = look.peek().type == TokenType::TK_DOT;
+        if (!(qualified ? pg_column_name(first) : (signature && look.peek().type != TokenType::TK_LPAREN) ? nonreserved(first) : pg_type_function_name(first))) {
+            fail(); return nullptr;
+        }
+        tok_.skip();
+        AstNode* result = token_node(NodeType::NODE_IDENTIFIER, first);
+        if (qualified) {
+            auto* q = node(NodeType::NODE_QUALIFIED_NAME); add(q, result);
+            while (!failed_ && take(TokenType::TK_DOT)) add(q, identifier(true));
+            result = q;
+        }
+        return result;
+    }
+    AstNode* operator_name() {
+        auto* q = node(NodeType::NODE_QUALIFIED_NAME);
+        while (!failed_ && !operator_symbol(tok_.peek())) {
+            add(q, identifier()); require(TokenType::TK_DOT);
+        }
+        if (operator_symbol(tok_.peek())) syntax(q); else fail();
+        return q;
+    }
+    AstNode* operator_arguments() {
+        require(TokenType::TK_LPAREN);
+        auto* list = node(NodeType::NODE_PG_DDL_LIST);
+        bool left_none = take("NONE", list);
+        if (!left_none) add(list, type());
+        require(TokenType::TK_COMMA);
+        bool right_none = take("NONE", list);
+        if (!right_none) add(list, type());
+        if (left_none && right_none) fail();
+        require(TokenType::TK_RPAREN); return list;
+    }
+    AstNode* type_list() {
+        require(TokenType::TK_LPAREN);
+        auto* list = node(NodeType::NODE_PG_DDL_LIST);
+        do { add(list, type()); } while (!failed_ && take(TokenType::TK_COMMA));
+        require(TokenType::TK_RPAREN); return list;
+    }
+    StringRef function_type_text(Tokenizer<Dialect::PostgreSQL>& tok) {
+        Token begin = tok.peek();
+        if (word(tok.peek(), "SETOF")) tok.skip();
+        // func_type's column reference form is narrower than Typename.
+        auto look = tok;
+        if (pg_type_function_name(look.peek())) {
+            look.skip(); bool qualified = false;
+            while (look.peek().type == TokenType::TK_DOT) {
+                qualified = true; look.skip();
+                if (!pg_column_label(look.peek())) return {};
+                look.skip();
+            }
+            if (qualified && look.peek().type == TokenType::TK_PERCENT) {
+                look.skip();
+                if (!word(look.peek(), "TYPE")) return {};
+                Token end = look.next_token(); tok = look;
+                return {begin.source.ptr, static_cast<uint32_t>(end.source.ptr + end.source.len - begin.source.ptr)};
+            }
+        }
+        Token first = tok.peek();
+        auto qualifier = tok; qualifier.skip();
+        if (qualifier.peek().type == TokenType::TK_DOT && !pg_type_function_name(first)) return {};
+        if (!PgTypeParser::name_token(first) && !pg_type_function_name(first)) return {};
+        if (!PgTypeParser::name_token(first)) first.type = TokenType::TK_IDENTIFIER;
+        tok.skip();
+        StringRef parsed = PgTypeParser(tok, definition_modifier, this).parse(true, false, &first);
+        if (parsed.empty()) return {};
+        return {begin.source.ptr, static_cast<uint32_t>(parsed.ptr + parsed.len - begin.source.ptr)};
+    }
+    bool argument_mode(AstNode* arg, bool aggregate) {
+        if (take("IN", arg)) {
+            if (take("OUT", arg) && aggregate) fail();
+            return true;
+        }
+        if (take("VARIADIC", arg)) return true;
+        if (take("OUT", arg) || take("INOUT", arg)) {
+            if (aggregate) fail();
+            return true;
+        }
+        return false;
+    }
+    AstNode* routine_argument(bool definitions, bool aggregate) {
+        auto* arg = clause();
+        bool mode = argument_mode(arg, aggregate);
+        auto look = tok_;
+        StringRef possible = function_type_text(look);
+        bool just_type = !possible.empty() && (look.peek().type == TokenType::TK_COMMA ||
+            look.peek().type == TokenType::TK_RPAREN || word(look.peek(), "ORDER") ||
+            word(look.peek(), "DEFAULT") || look.peek().type == TokenType::TK_EQUAL);
+        if (!just_type) {
+            if (!pg_type_function_name(tok_.peek())) { fail(); return arg; }
+            add(arg, token_node(NodeType::NODE_IDENTIFIER, tok_.next_token()));
+            if (!mode) argument_mode(arg, aggregate);
+        }
+        StringRef spelling = function_type_text(tok_);
+        if (spelling.empty()) fail();
+        else add(arg, make_node(arena_, NodeType::NODE_TYPE_NAME, spelling));
+        if (definitions && (is("DEFAULT") || at(TokenType::TK_EQUAL))) {
+            syntax(arg); add(arg, expr());
+        }
+        return arg;
+    }
+    AstNode* aggregate_argument_list() {
+        auto* list = node(NodeType::NODE_PG_DDL_LIST); if (list) list->flags = 1;
+        do { add(list, routine_argument(false, true)); } while (!failed_ && take(TokenType::TK_COMMA));
+        return list;
+    }
+    static bool variadic_argument(const AstNode* arg) {
+        for (auto* c = arg ? arg->first_child : nullptr; c; c = c->next_sibling)
+            if (c->type == NodeType::NODE_PG_DDL_SYNTAX && c->value().equals_ci("VARIADIC", 8)) return true;
+        return false;
+    }
+    static bool same_argument_type(StringRef left, StringRef right) {
+        Tokenizer<Dialect::PostgreSQL> a, b;
+        a.reset(left.ptr, left.len); b.reset(right.ptr, right.len);
+        bool first = true;
+        while (true) {
+            Token x = a.next_token(), y = b.next_token();
+            bool x_quoted = x.source.ptr != x.text.ptr && x.type == TokenType::TK_IDENTIFIER;
+            bool y_quoted = y.source.ptr != y.text.ptr && y.type == TokenType::TK_IDENTIFIER;
+            if (first && !x_quoted && !y_quoted) {
+                // Canonical aliases emitted by PostgreSQL's builtin type grammar.
+                auto canonical = [](Token& t, Tokenizer<Dialect::PostgreSQL>& tok) {
+                    if (tok.peek().type == TokenType::TK_DOT) return;
+                    if (word(t, "INT")) t.text = {"integer", 7};
+                    else if (word(t, "DEC") || word(t, "DECIMAL")) t.text = {"numeric", 7};
+                    else if (word(t, "CHAR") || word(t, "CHARACTER")) {
+                        if (word(tok.peek(), "VARYING")) { tok.skip(); t.text = {"varchar", 7}; }
+                        else t.text = {"character", 9};
+                    }
+                };
+                canonical(x, a); canonical(y, b);
+            }
+            first = false;
+            if (x_quoted || y_quoted) {
+                if (x_quoted != y_quoted && !pg_type_function_name(x_quoted ? y : x)) return false;
+                if (x.text.len != y.text.len) return false;
+                for (uint32_t i = 0; i < x.text.len; ++i) {
+                    unsigned char xc = x.text.ptr[i], yc = y.text.ptr[i];
+                    if (!x_quoted && xc >= 'A' && xc <= 'Z') xc += 'a' - 'A';
+                    if (!y_quoted && yc >= 'A' && yc <= 'Z') yc += 'a' - 'A';
+                    if (xc != yc) return false;
+                }
+            } else if (x.type == TokenType::TK_STRING || y.type == TokenType::TK_STRING) {
+                if (x.text != y.text) return false;
+            } else if (!x.text.equals_ci(y.text.ptr, y.text.len)) return false;
+            if (x.type == TokenType::TK_EOF || y.type == TokenType::TK_EOF)
+                return x.type == y.type;
+        }
+    }
+    AstNode* aggregate_arguments() {
+        require(TokenType::TK_LPAREN);
+        auto* group = node(NodeType::NODE_PG_DDL_LIST);
+        if (at(TokenType::TK_ASTERISK)) syntax(group);
+        else {
+            auto* contents = clause();
+            AstNode* direct = nullptr;
+            if (!is("ORDER")) { direct = aggregate_argument_list(); add(contents, direct); }
+            if (take("ORDER", contents)) {
+                require("BY", contents);
+                auto* ordered = aggregate_argument_list(); add(contents, ordered);
+                // PostgreSQL validates duplicate VARIADIC ordered-set arguments
+                // during raw parsing, before catalog/type resolution.
+                auto* d = last(direct);
+                auto* o = ordered ? ordered->first_child : nullptr;
+                if (variadic_argument(d) && (!o || o->next_sibling || !variadic_argument(o) ||
+                    !last(d) || !last(o) || !same_argument_type(last(d)->value(), last(o)->value()))) fail();
+            }
+            add(group, contents);
+        }
+        require(TokenType::TK_RPAREN); return group;
+    }
+    void create_aggregate(AstNode* root) {
+        add(root, routine_name());
+        auto look = tok_; look.skip(); look.skip();
+        bool old_style = look.peek().type == TokenType::TK_EQUAL;
+        if (!old_style) { add(root, aggregate_arguments()); add(root, definition()); return; }
+        require(TokenType::TK_LPAREN);
+        auto* list = node(NodeType::NODE_PG_DDL_LIST);
+        do {
+            auto* item = clause();
+            if (!at(TokenType::TK_IDENTIFIER) || pg_keyword(tok_.peek())) fail();
+            add(item, identifier()); require("=", item); definition_value(item); add(list, item);
+        } while (!failed_ && take(TokenType::TK_COMMA));
+        require(TokenType::TK_RPAREN); add(root, list);
+    }
+    AstNode* opclass_items(bool dropping = false) {
+        auto* list = node(NodeType::NODE_PG_DDL_LIST); if (list) list->flags = 1;
+        do {
+            auto* item = clause();
+            if (!dropping && take("STORAGE", item)) add(item, type());
+            else {
+                bool op = take("OPERATOR", item);
+                if (!op) require("FUNCTION", item);
+                Token number;
+                if (pg_integer_literal(tok_, number)) add(item, token_node(NodeType::NODE_LITERAL_INT, number));
+                else fail();
+                if (dropping) add(item, type_list());
+                else if (op) {
+                    add(item, operator_name());
+                    if (at(TokenType::TK_LPAREN)) add(item, operator_arguments());
+                    if (take("FOR", item) && !take("SEARCH", item)) {
+                        require("ORDER", item); require("BY", item); add(item, name());
+                    }
+                } else {
+                    if (at(TokenType::TK_LPAREN)) add(item, type_list());
+                    add(item, parse_function_signature());
+                }
+            }
+            add(list, item);
+        } while (!failed_ && take(TokenType::TK_COMMA));
+        return list;
+    }
+    void create_collation(AstNode* root) {
+        if_exists(root, true); add(root, name());
+        if (take("FROM", root)) add(root, name());
+        else add(root, definition());
+    }
+    void create_text_search(AstNode* root) {
+        require("SEARCH", root);
+        if (!take("PARSER", root) && !take("DICTIONARY", root) && !take("TEMPLATE", root)) require("CONFIGURATION", root);
+        add(root, name()); add(root, definition());
+    }
+    void create_operator(AstNode* root) {
+        bool family = take("FAMILY", root);
+        if (family || take("CLASS", root)) {
+            add(root, name());
+            if (!family) { take("DEFAULT", root); require("FOR", root); require("TYPE", root); add(root, type()); }
+            require("USING", root); add(root, identifier());
+            if (!family) {
+                if (take("FAMILY", root)) add(root, name());
+                require("AS", root); add(root, opclass_items());
+            }
+        } else { add(root, operator_name()); add(root, definition()); }
+    }
+    void alter_operator(AstNode* root) {
+        bool family = take("FAMILY", root);
+        if (family || take("CLASS", root)) {
+            add(root, name()); require("USING", root); add(root, identifier());
+            if (object_identity(root)) return;
+            if (family && take("ADD", root)) add(root, opclass_items());
+            else if (family && take("DROP", root)) add(root, opclass_items(true));
+            else fail();
+        } else {
+            add(root, parse_operator_signature());
+            if (is("RENAME")) { fail(); return; }
+            if (object_identity(root)) return;
+            require("SET", root); add(root, definition());
+        }
+    }
+    void drop_definition(AstNode* root, bool aggregate) {
+        if (!aggregate && (take("CLASS", root) || take("FAMILY", root))) {
+            if_exists(root); add(root, name()); require("USING", root); add(root, identifier()); behavior(root); return;
+        }
+        if_exists(root);
+        auto* list = node(NodeType::NODE_PG_DDL_LIST); if (list) list->flags = 1;
+        do { add(list, aggregate ? parse_aggregate_signature() : parse_operator_signature()); }
+        while (!failed_ && take(TokenType::TK_COMMA));
+        add(root, list); behavior(root);
     }
     void create_type(AstNode* root) {
         add(root, name());
@@ -695,6 +1000,10 @@ private:
         else if (take("DATABASE", root) && !replace && !temporary && !unlogged && !unique && !materialized && !constraint_trigger) add(root, identifier());
         else if (take("DOMAIN", root) && !replace && !temporary && !unlogged && !unique && !materialized && !constraint_trigger) create_domain(root);
         else if (take("TYPE", root) && !replace && !temporary && !unlogged && !unique && !materialized && !constraint_trigger) create_type(root);
+        else if (take("AGGREGATE", root) && !temporary && !unlogged && !unique && !materialized && !constraint_trigger) create_aggregate(root);
+        else if (take("COLLATION", root) && !replace && !temporary && !unlogged && !unique && !materialized && !constraint_trigger) create_collation(root);
+        else if (take("TEXT", root) && !replace && !temporary && !unlogged && !unique && !materialized && !constraint_trigger) create_text_search(root);
+        else if (take("OPERATOR", root) && !replace && !temporary && !unlogged && !unique && !materialized && !constraint_trigger) create_operator(root);
         else if (take("SEQUENCE", root) && !replace && !unique && !materialized && !constraint_trigger) create_sequence(root);
         else fail();
     }
@@ -837,22 +1146,8 @@ private:
         require(TokenType::TK_LPAREN);
         auto* list = node(NodeType::NODE_PG_DDL_LIST);
         if (!at(TokenType::TK_RPAREN)) {
-            do {
-                auto* arg = clause();
-                if (!take("IN", arg) && !take("OUT", arg) && !take("INOUT", arg)) take("VARIADIC", arg);
-                // A type is followed by comma, ')' or DEFAULT. Otherwise the
-                // first ColId is the argument name and the following type is required.
-                auto look = tok_;
-                StringRef possible = PgTypeParser(look).parse();
-                bool just_type = !possible.empty() && (look.peek().type == TokenType::TK_COMMA ||
-                    look.peek().type == TokenType::TK_RPAREN || word(look.peek(), "DEFAULT") || look.peek().type == TokenType::TK_EQUAL);
-                if (!just_type) add(arg, identifier());
-                add(arg, type());
-                if (definitions && (is("DEFAULT") || at(TokenType::TK_EQUAL))) {
-                    syntax(arg); add(arg, expr());
-                }
-                add(list, arg);
-            } while (!failed_ && take(TokenType::TK_COMMA));
+            do { add(list, routine_argument(definitions, false)); }
+            while (!failed_ && take(TokenType::TK_COMMA));
         }
         require(TokenType::TK_RPAREN); return list;
     }
@@ -967,6 +1262,8 @@ private:
             while (!failed_ && !standalone && take(TokenType::TK_COMMA));
             add(root, commands);
         } else if (take("FUNCTION", root) || take("PROCEDURE", root) || take("ROUTINE", root)) alter_routine(root);
+        else if (take("AGGREGATE", root)) { add(root, parse_aggregate_signature()); if (!object_identity(root)) fail(); }
+        else if (take("OPERATOR", root)) alter_operator(root);
         else if (take("DOMAIN", root)) alter_domain(root);
         else if (take("TYPE", root)) alter_type(root);
         else if (take("SEQUENCE", root)) alter_sequence(root);
@@ -1054,6 +1351,8 @@ private:
         return c;
     }
     void drop(AstNode* root) {
+        if (take("AGGREGATE", root)) { drop_definition(root, true); return; }
+        if (take("OPERATOR", root)) { drop_definition(root, false); return; }
         bool routine = false, trigger = false, index = false;
         bool database = false, roles = false, schema = false, type_name = false;
         if (take("MATERIALIZED", root)) require("VIEW", root);

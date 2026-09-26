@@ -115,6 +115,7 @@ private:
                 if (!root) return true; // A modifying CTE must never be materialized as a query.
                 break;
             // PG_GAPS_DDL_GUARD
+            case NodeType::NODE_PG_COMMAND_STMT:
             case NodeType::NODE_PG_DDL_STMT:
             case NodeType::NODE_PG_DDL_CLAUSE:
             case NodeType::NODE_PG_DDL_LIST:

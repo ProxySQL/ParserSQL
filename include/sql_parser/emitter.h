@@ -270,6 +270,7 @@ private:
                 emit_node(node->first_child); sb_.append_char('.');
                 emit_node(node->first_child ? node->first_child->next_sibling : nullptr); break;
             // PG_GAPS_DDL_DISPATCH
+            case NodeType::NODE_PG_COMMAND_STMT:
             case NodeType::NODE_PG_DDL_STMT:
             case NodeType::NODE_PG_DDL_CLAUSE: emit_pg_ddl_clause(node); break;
             case NodeType::NODE_PG_DDL_LIST:

@@ -605,6 +605,13 @@ private:
             // Keywords that can appear as identifiers in expression context
             // (e.g., column names that happen to be keywords)
             default: {
+                if constexpr (D == Dialect::PostgreSQL) {
+                    auto look = tok_; look.skip();
+                    if (pg_type_function_name(t) && look.peek().type == TokenType::TK_LPAREN) {
+                        tok_.skip();
+                        return parse_identifier_or_function(t);
+                    }
+                }
                 if (is_keyword_as_identifier(t.type)) {
                     tok_.skip();
                     return parse_identifier_or_function(t);
