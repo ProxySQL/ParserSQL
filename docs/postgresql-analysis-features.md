@@ -168,9 +168,27 @@ change a database session. Integer positions in the new role, cursor and
 operator-class productions validate PostgreSQL bounds, base prefixes and digit
 separators.
 
+Policies retain permissive/restrictive mode, command and role lists, USING and
+WITH CHECK predicates, and ALTER/RENAME/DROP forms. Extended statistics retain
+their optional name and kinds, column/function/expression parameters and FROM
+relations, including aliases and joins. ALTER STATISTICS supports target,
+owner, schema and name changes. These are native structured DDL productions;
+they do not enable local policy enforcement or statistics collection.
+
+Foreign-object DDL includes wrappers and handler/validator options, servers,
+user mappings, foreign tables and IMPORT FOREIGN SCHEMA. CREATE option pairs
+and ALTER ADD/SET/DROP options retain names and string literals as AST children.
+Foreign tables support columns, inheritance and partition forms through the
+supported table/constraint grammar. IMPORT retains LIMIT TO/EXCEPT relation
+lists and schema/server names; its appended statement type is
+`IMPORT_FOREIGN_SCHEMA`. Column STORAGE, COMPRESSION and OPTIONS also follow
+the shared PostgreSQL column-definition grammar on ordinary tables. Parsing
+does not connect to foreign servers or import database objects.
+
 Coverage is still a subset of PostgreSQL. Remaining examples include embedded
 CREATE SCHEMA elements, CREATE DATABASE options, other object-specific ALTER
-commands, foreign-table and policy/publication DDL, rules, unquoted SQL function
+commands, further ALTER TABLE/FOREIGN TABLE actions such as ALTER CONSTRAINT,
+publication DDL, rules, unquoted SQL function
 bodies, exclusion constraints, less common DDL options, assignment slices and
 full ON CONFLICT index-inference options. Less common equivalent type spellings
 in ordered variadic signatures, `%TYPE` definition arguments and modifying

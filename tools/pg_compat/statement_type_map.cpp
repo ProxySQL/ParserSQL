@@ -106,7 +106,7 @@ namespace pg_compat {
     SIMPLE(PG_QUERY__NODE__NODE_DEFINE_STMT, Equivalent, CREATE) \
     SIMPLE(PG_QUERY__NODE__NODE_DISCARD_STMT, Equivalent, DISCARD) \
     PAYLOAD(PG_QUERY__NODE__NODE_FETCH_STMT, map_fetch_stmt) \
-    SIMPLE(PG_QUERY__NODE__NODE_IMPORT_FOREIGN_SCHEMA_STMT, NoEquivalent, UNKNOWN) \
+    SIMPLE(PG_QUERY__NODE__NODE_IMPORT_FOREIGN_SCHEMA_STMT, Equivalent, IMPORT_FOREIGN_SCHEMA) \
     SIMPLE(PG_QUERY__NODE__NODE_LOAD_STMT, NoEquivalent, UNKNOWN) \
     SIMPLE(PG_QUERY__NODE__NODE_REFRESH_MAT_VIEW_STMT, NoEquivalent, UNKNOWN) \
     SIMPLE(PG_QUERY__NODE__NODE_REINDEX_STMT, NoEquivalent, UNKNOWN) \
@@ -316,6 +316,7 @@ const char* stmt_type_name(sql_parser::StmtType type) {
     case StmtType::UNLISTEN: return "UNLISTEN";
     case StmtType::DISCARD: return "DISCARD";
     case StmtType::CHECKPOINT: return "CHECKPOINT";
+    case StmtType::IMPORT_FOREIGN_SCHEMA: return "IMPORT_FOREIGN_SCHEMA";
     case StmtType::FETCH: return "FETCH";
     case StmtType::MOVE: return "MOVE";
     case StmtType::RELEASE_SAVEPOINT:

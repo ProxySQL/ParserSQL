@@ -166,7 +166,7 @@ void test_default_and_simple_mappings() {
         {PG_QUERY__NODE__NODE_DECLARE_CURSOR_STMT, MappingKind::Equivalent, StmtType::DECLARE_CURSOR},
         {PG_QUERY__NODE__NODE_DEFINE_STMT, MappingKind::Equivalent, StmtType::CREATE},
         {PG_QUERY__NODE__NODE_DISCARD_STMT, MappingKind::Equivalent, StmtType::DISCARD},
-        {PG_QUERY__NODE__NODE_IMPORT_FOREIGN_SCHEMA_STMT, MappingKind::NoEquivalent, StmtType::UNKNOWN},
+        {PG_QUERY__NODE__NODE_IMPORT_FOREIGN_SCHEMA_STMT, MappingKind::Equivalent, StmtType::IMPORT_FOREIGN_SCHEMA},
         {PG_QUERY__NODE__NODE_LOAD_STMT, MappingKind::NoEquivalent, StmtType::UNKNOWN},
         {PG_QUERY__NODE__NODE_REFRESH_MAT_VIEW_STMT, MappingKind::NoEquivalent, StmtType::UNKNOWN},
         {PG_QUERY__NODE__NODE_REINDEX_STMT, MappingKind::NoEquivalent, StmtType::UNKNOWN},
@@ -481,6 +481,7 @@ void test_stmt_type_names() {
         {StmtType::UNLISTEN, "UNLISTEN"},
         {StmtType::DISCARD, "DISCARD"},
         {StmtType::CHECKPOINT, "CHECKPOINT"},
+        {StmtType::IMPORT_FOREIGN_SCHEMA, "IMPORT_FOREIGN_SCHEMA"},
 
         {StmtType::VACUUM, "VACUUM"},
         {StmtType::ANALYZE, "ANALYZE"},

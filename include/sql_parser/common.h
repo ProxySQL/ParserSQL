@@ -133,6 +133,7 @@ enum class StmtType : uint8_t {
     UNLISTEN,
     DISCARD,
     CHECKPOINT,
+    IMPORT_FOREIGN_SCHEMA,
 };
 
 // -- AST node types --
