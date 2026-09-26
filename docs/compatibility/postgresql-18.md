@@ -1,7 +1,7 @@
 # PostgreSQL 18 Compatibility
 
-Generated: 2026-09-26T18:01:36Z
-ParserSQL commit: `f7d8af489965f44b373480d1aaf9b8c9c72e960e`
+Generated: 2026-09-26T19:39:11Z
+ParserSQL commit: `19d77ca74da02966c9112df41ae008bfca6246f1`
 libpg_query previous: `17-latest` `815abf77660ca3c38511e3f5af7777b31764c1d5` (PostgreSQL 17.7)
 libpg_query target: `18-latest` `9ab9951b7021adcc6d25d261d5016ca0b83726b8` (PostgreSQL 18.4)
 
@@ -9,12 +9,12 @@ libpg_query target: `18-latest` `9ab9951b7021adcc6d25d261d5016ca0b83726b8` (Post
 
 | Result | Count |
 | --- | --- |
-| DEEP_SUPPORTED | 48313 |
+| DEEP_SUPPORTED | 49120 |
 | CLASSIFIED_ONLY | 0 |
 | PARTIAL | 52 |
-| ERROR | 2302 |
-| TRAILING_INPUT | 458 |
-| TYPE_MISMATCH | 290 |
+| ERROR | 1542 |
+| TRAILING_INPUT | 423 |
+| TYPE_MISMATCH | 278 |
 
 ## PG18 Backlog
 
@@ -133,96 +133,10 @@ libpg_query target: `18-latest` `9ab9951b7021adcc6d25d261d5016ca0b83726b8` (Post
 | ERROR | PG_QUERY__NODE__NODE_ALTER_EXTENSION_STMT | d42c5d15d10dd18fb16f1c04 | -- New function pg_stat_statement_info, and new function -- and view for pg_stat_statements introduced in 1.9 AlTER EXTENSION pg_stat_statements UPDATE TO '1.9' |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_EXTENSION_STMT | d5d40ba3cc1eb435690f8a07 | -- Move to new version 1.1. ALTER EXTENSION pg_walinspect UPDATE TO '1.1' |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_EXTENSION_STMT | f964e6f9c4acc3b16ebbd5fa | -- brin_page_items() added a new "empty" flag in 1.12, make sure we detect -- an old function definition ALTER EXTENSION pageinspect UPDATE TO '1.11' |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_FDW_STMT | 047c074cc536916514e5f1e9 | -- ERROR ALTER FOREIGN DATA WRAPPER foo HANDLER test_fdw_handler |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_FDW_STMT | 19172feda99fd118d4a1787a | -- ERROR ALTER FOREIGN DATA WRAPPER foo OPTIONS (gotcha 'true') |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_FDW_STMT | 19614de4a47f91f2a6bcfb71 | -- should preserve dependency on test_fdw_handler ALTER FOREIGN DATA WRAPPER test_fdw VALIDATOR postgresql_fdw_validator |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_FDW_STMT | 2a3ec4daa447e086022c544a | -- No option is allowed to be specified at foreign data wrapper level ALTER FOREIGN DATA WRAPPER postgres_fdw OPTIONS (nonexistent 'fdw') |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_FDW_STMT | 2b321434d7bdb9ca5a3c6f40 | -- ERROR ALTER FOREIGN DATA WRAPPER foo HANDLER test_fdw_handler HANDLER anything |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_FDW_STMT | 3aae3a5298ca71bf6bac82a1 | ALTER FOREIGN DATA WRAPPER foo OPTIONS (b '4') |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_FDW_STMT | 42143b6f1d1b54044ad60437 | -- ALTER FOREIGN DATA WRAPPER ALTER FOREIGN DATA WRAPPER foo OPTIONS (nonexistent 'fdw') |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_FDW_STMT | 4578b01c636c13abbf8465f6 | -- ERROR ALTER FOREIGN DATA WRAPPER foo OPTIONS (DROP c) |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_FDW_STMT | 5488d8e69fa77dc38ce7037a | -- ERROR ALTER FOREIGN DATA WRAPPER foo NO VALIDATOR |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_FDW_STMT | 591f256f969e930d8d3fa72d | -- ERROR ALTER FOREIGN DATA WRAPPER foo OPTIONS (ADD x '1', DROP x) |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_FDW_STMT | 8a964076727a3b05d26aad12 | -- force_not_null is not allowed to be specified at any foreign object level: ALTER FOREIGN DATA WRAPPER file_fdw OPTIONS (ADD force_not_null '*') |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_FDW_STMT | 8f8f2965f0049d9d7ebb117f | ALTER FOREIGN DATA WRAPPER foo OPTIONS (ADD d '5') |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_FDW_STMT | b4929718d9af444681ecb408 | ALTER FOREIGN DATA WRAPPER foo OPTIONS (ADD e '6') |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_FDW_STMT | ce54fdd920490c087084bf2a | -- ERROR -- force_null is not allowed to be specified at any foreign object level: ALTER FOREIGN DATA WRAPPER file_fdw OPTIONS (ADD force_null '*') |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_FDW_STMT | daaacbd3f36e0a91c80bc647 | -- ERROR ALTER FOREIGN DATA WRAPPER foo VALIDATOR bar |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_FDW_STMT | db7f212eebe83c919d6d2521 | -- HANDLER related checks ALTER FOREIGN DATA WRAPPER foo HANDLER invalid_fdw_handler |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_FDW_STMT | e0d6876d0ceda5cdecfa79d6 | ALTER FOREIGN DATA WRAPPER foo VALIDATOR postgresql_fdw_validator |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_FDW_STMT | ee020bf22c2a4dbdfe9546b5 | -- should fail ALTER FOREIGN DATA WRAPPER dblink_fdw OPTIONS (nonexistent 'fdw') |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_FDW_STMT | fd6d2c34984c32f400ed0254 | ALTER FOREIGN DATA WRAPPER foo OPTIONS (SET c '4') |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_FOREIGN_SERVER_STMT | 00248bd552e1607b5386b276 | -- ERROR ALTER SERVER file_server OPTIONS (ADD force_null '*') |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_FOREIGN_SERVER_STMT | 0f812c61c1eec0941e1c5c96 | -- postgres_fdw.application_name overrides application_name option -- of a server object if both settings are present. ALTER SERVER loopback2 OPTIONS (SET application_name 'fdw_wrong') |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_FOREIGN_SERVER_STMT | 1684a9dd38261b520f176246 | -- should work ALTER SERVER loopback OPTIONS (SET dbname 'no such database') |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_FOREIGN_SERVER_STMT | 18218984c02016b0b33d2f4c | ALTER SERVER loopback2 OPTIONS (ADD async_capable 'true') |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_FOREIGN_SERVER_STMT | 19465fffec8081d9bb20b853 | -- ERROR option validation ALTER SERVER s8 OPTIONS (connect_timeout '30', SET dbname 'db1', DROP host) |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_FOREIGN_SERVER_STMT | 1b8939db5808002aebb68536 | ALTER SERVER loopback2 OPTIONS (DROP async_capable) |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_FOREIGN_SERVER_STMT | 1e3bd9b98e42c11a00d920c9 | ALTER SERVER loopback2 OPTIONS (DROP parallel_abort) |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_FOREIGN_SERVER_STMT | 1fcaba6a07efc52fede0e7b0 | ALTER SERVER loopback2 OPTIONS (DROP parallel_commit) |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_FOREIGN_SERVER_STMT | 20dbaed68e0ce2f4a95b038c | ALTER SERVER loopback OPTIONS (ADD fdw_startup_cost '10000.0') |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_FOREIGN_SERVER_STMT | 21dd3fd3ca79dcbd27e09f7e | -- 0 -- 'truncatable' option ALTER SERVER loopback OPTIONS (ADD truncatable 'false') |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_FOREIGN_SERVER_STMT | 26325383e07faef7f30ff726 | ALTER SERVER s6 VERSION '0.5' |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_FOREIGN_SERVER_STMT | 2e0c67e80e5a939cca73eefd | -- ERROR ALTER SERVER s9 VERSION '1.1' |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_FOREIGN_SERVER_STMT | 3fb061c42d512333f07f4ad5 | ALTER SERVER loopback OPTIONS (SET keep_connections 'on') |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_FOREIGN_SERVER_STMT | 473a90d7bcbffefef88f165b | ALTER SERVER loopback OPTIONS (SET analyze_sampling 'random') |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_FOREIGN_SERVER_STMT | 4bc6b2c9d9556665fdf022e8 | ALTER SERVER loopback OPTIONS (SET analyze_sampling 'system') |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_FOREIGN_SERVER_STMT | 4f4a791748bc0d91fa51f9f5 | ALTER SERVER s8 OPTIONS (foo '1') |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_FOREIGN_SERVER_STMT | 5480a35b053bd2d2f2e0dcae | ALTER SERVER loopback OPTIONS (ADD async_capable 'true') |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_FOREIGN_SERVER_STMT | 58fc4dd4c541c633fc730def | ALTER SERVER loopback2 OPTIONS (ADD parallel_abort 'true') |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_FOREIGN_SERVER_STMT | 63bde991c336a5a1e0f33c69 | -- Adjust fdw_startup_cost so that we get an unordered path in the Append. ALTER SERVER loopback2 OPTIONS (ADD fdw_startup_cost '0.00') |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_FOREIGN_SERVER_STMT | 6403451ee0a9e41398867455 | ALTER SERVER loopback OPTIONS (DROP fdw_startup_cost) |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_FOREIGN_SERVER_STMT | 684ca81ae2786564cba837bc | ALTER SERVER fdtest OPTIONS (ADD oauth_client_id 'myID') |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_FOREIGN_SERVER_STMT | 6ae6b12d2b70cea3ace473be | ALTER SERVER loopback OPTIONS (analyze_sampling 'invalid') |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_FOREIGN_SERVER_STMT | 71f302efc10413350d364040 | -- We don't allow batch insert when there are any WCO constraints ALTER SERVER loopback OPTIONS (ADD batch_size '10') |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_FOREIGN_SERVER_STMT | 73b6948233355748d81adf92 | ALTER SERVER testserver1 OPTIONS (ADD oauth_client_id 'myID') |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_FOREIGN_SERVER_STMT | 78c4aa206c3853500416f27d | ALTER SERVER loopback2 OPTIONS (DROP fdw_startup_cost) |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_FOREIGN_SERVER_STMT | 78cff72e3def74f035432637 | ALTER SERVER loopback2 OPTIONS (ADD parallel_commit 'true') |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_FOREIGN_SERVER_STMT | 7b9a6feb63bf9a4b1fcf7a3f | ALTER SERVER loopback OPTIONS (DROP parallel_abort) |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_FOREIGN_SERVER_STMT | 8210e0d1d13b19f702a86121 | ALTER SERVER s3 OPTIONS ("tns name" 'orcl', port '1521') |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_FOREIGN_SERVER_STMT | 83b2bd4b50989edc9e0e9241 | -- Error, invalid list syntax ALTER SERVER testserver1 OPTIONS (ADD extensions 'foo; bar') |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_FOREIGN_SERVER_STMT | 84153e80883e629d20fe1144 | -- ERROR ALTER SERVER s0 OPTIONS (a '1') |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_FOREIGN_SERVER_STMT | 86199166637c4039ec843f47 | ALTER SERVER batch10 OPTIONS( SET batch_size '20' ) |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_FOREIGN_SERVER_STMT | 87881f30b0b1126d77326570 | alter server loopback options (drop fdw_tuple_cost) |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_FOREIGN_SERVER_STMT | 87c554f959503a51c96f9b03 | ALTER SERVER s9 VERSION '1.2' |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_FOREIGN_SERVER_STMT | 88059535310b4f6282503389 | -- Test %c (session ID) and %C (cluster name) escape sequences. ALTER SERVER loopback2 OPTIONS (SET application_name 'fdw_%C%c') |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_FOREIGN_SERVER_STMT | 8c1c50105424a0eafcce09b7 | ALTER SERVER testserver1 OPTIONS (DROP extensions) |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_FOREIGN_SERVER_STMT | 8cd6ba5ceb7d572889c25526 | -- =================================================================== -- test parallel commit and parallel abort -- =================================================================== ALTER SERVER... |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_FOREIGN_SERVER_STMT | 8fc2ac61c50c493f66d9dc61 | -- Now this will be pushed as sort operator is part of the extension. alter server loopback options (add fdw_tuple_cost '0.5') |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_FOREIGN_SERVER_STMT | 917ae882230ab58f56bfe22d | ALTER SERVER loopback OPTIONS (SET application_name 'fdw_conn_check') |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_FOREIGN_SERVER_STMT | 9711163f05e9f2111b955c0f | ALTER SERVER loopback OPTIONS (SET analyze_sampling 'bernoulli') |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_FOREIGN_SERVER_STMT | a0238dc6693cfeb2d2b97dc5 | -- Connections are not closed at the end of the alter and drop statements. -- That's because the connections are in midst of this xact, -- they are just marked as invalid in pgfdw_inval_callback. A... |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_FOREIGN_SERVER_STMT | a07a86ec8ccde5f9dd3f73b5 | ALTER SERVER loopback OPTIONS (ADD extensions 'postgres_fdw') |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_FOREIGN_SERVER_STMT | a2d044c3d27135f0c2298acd | -- ERROR ALTER SERVER s4 VERSION '0.5' |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_FOREIGN_SERVER_STMT | a6a2e083484cb4c3d6500fe3 | alter server loopback options (set extensions 'postgres_fdw') |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_FOREIGN_SERVER_STMT | a9ce12e1d01d6e0cdb04c9a5 | ALTER SERVER s6 OPTIONS (DROP host, DROP dbname) |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_FOREIGN_SERVER_STMT | ae59be629210c78344fd9e06 | ALTER SERVER s1 VERSION '1.1' |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_FOREIGN_SERVER_STMT | b1eda69f9b5706578db6985e | ALTER SERVER loopback OPTIONS (DROP async_capable) |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_FOREIGN_SERVER_STMT | ba0b22316613d2a0b591a3be | -- =================================================================== -- reestablish new connection -- =================================================================== -- Change application_nam... |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_FOREIGN_SERVER_STMT | bacae19c6c43738cffa5d552 | -- =================================================================== -- Test foreign server level option keep_connections -- =================================================================== --... |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_FOREIGN_SERVER_STMT | bb51cb15c885910c427ab9c3 | -- error ALTER SERVER loopback OPTIONS (DROP truncatable) |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_FOREIGN_SERVER_STMT | c10af4c10346e5a777ee7f0d | ALTER SERVER loopback OPTIONS (DROP parallel_commit) |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_FOREIGN_SERVER_STMT | c51ca4987598db73ed930b75 | -- OAuth options are not allowed in either context ALTER SERVER testserver1 OPTIONS (ADD oauth_issuer 'https://example.com') |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_FOREIGN_SERVER_STMT | c85888be60aedf8ad2c1e4a4 | ALTER SERVER loopback OPTIONS (analyze_sampling 'auto') |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_FOREIGN_SERVER_STMT | d0b4096e49dea979581b6e36 | ALTER SERVER s2 VERSION '1.1' |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_FOREIGN_SERVER_STMT | d17989310dc8e82d394ca49d | -- Test copy tuple routing with the batch_size option enabled alter server loopback options (add batch_size '2') |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_FOREIGN_SERVER_STMT | d4a7e772b6f3f810d61e6c5c | -- If we add a password to the connstr it'll fail, because we don't allow passwords -- in connstrs only in user mappings. ALTER SERVER loopback_nopw OPTIONS (ADD password 'dummypw') |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_FOREIGN_SERVER_STMT | d7c9be99b005d8a22ce3c590 | ALTER SERVER loopback OPTIONS (ADD parallel_abort 'true') |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_FOREIGN_SERVER_STMT | dfb5ae36634a61bcdadbb034 | ALTER SERVER loopback OPTIONS (DROP extensions) |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_FOREIGN_SERVER_STMT | e76c7503313ce1de5a26dc1c | -- OK but gets a warning ALTER SERVER testserver1 OPTIONS (ADD extensions 'foo, bar') |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_FOREIGN_SERVER_STMT | e79241986dfe12d7c4167bd6 | -- ERROR ALTER SERVER s1 VERSION '1.0' OPTIONS (servername 's1') |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_FOREIGN_SERVER_STMT | e7bc251753101dd4d0eeab14 | ALTER SERVER loopback OPTIONS (SET analyze_sampling 'off') |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_FOREIGN_SERVER_STMT | eaca1428d3f6aebf008ff7d9 | -- ERROR ALTER SERVER file_server OPTIONS (ADD force_not_null '*') |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_FOREIGN_SERVER_STMT | eca7fcb2fada3e5952a8b4bd | -- =================================================================== -- tests for validator -- =================================================================== -- requiressl and some other par... |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_FOREIGN_SERVER_STMT | ed8cf5f602a1f41d3a079c3d | ALTER SERVER loopback OPTIONS (DROP batch_size) |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_FOREIGN_SERVER_STMT | f41fa8374ae236379a8943a7 | -- OAuth options are not allowed in either context ALTER SERVER fdtest OPTIONS (ADD oauth_issuer 'https://example.com') |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_FOREIGN_SERVER_STMT | f680b2fc2fa7892b0b5e90b8 | -- Specify escape sequences in application_name option of a server -- object so as to test that they are replaced with status information -- expectedly. Note that we are also relying on ALTER SERVE... |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_FOREIGN_SERVER_STMT | f94d1097754301568cbbffdd | ALTER SERVER fetch101 OPTIONS( SET fetch_size '202' ) |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_OBJECT_DEPENDS_STMT | 18e509e3cd96932c8456c335 | ALTER TRIGGER c ON a NO DEPENDS ON EXTENSION test_ext5 |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_OBJECT_DEPENDS_STMT | 2b59e5a92d86388c8e737591 | ALTER INDEX e NO DEPENDS ON EXTENSION test_ext5 |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_OBJECT_DEPENDS_STMT | 2b5d948d0cd85a66849feb45 | ALTER MATERIALIZED VIEW d NO DEPENDS ON EXTENSION test_ext5 |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_OBJECT_SCHEMA_STMT | 1a9fca0f4fc59c377ab6f112 | alter text search dictionary alter1.dict set schema alter2 |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_OBJECT_SCHEMA_STMT | 1fadefd4c35cb05f15d44392 | ALTER FOREIGN TABLE ft1 SET SCHEMA foreign_schema |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_OBJECT_SCHEMA_STMT | 62f7d98330ed9a6c80ea0d99 | alter text search configuration alter1.cfg set schema alter2 |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_OBJECT_SCHEMA_STMT | 68280e3f1ab63b45075b59e1 | -- OK ALTER TEXT SEARCH DICTIONARY alt_ts_dict2 SET SCHEMA alt_nsp2 |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_OBJECT_SCHEMA_STMT | 68ba9cbce584d849f45cccbe | ALTER EXTENSION test_ext_req_schema1 SET SCHEMA test_s_dep2 |
@@ -232,14 +146,10 @@ libpg_query target: `18-latest` `9ab9951b7021adcc6d25d261d5016ca0b83726b8` (Post
 | ERROR | PG_QUERY__NODE__NODE_ALTER_OBJECT_SCHEMA_STMT | 7db34571a4815782eca861c7 | alter text search template alter1.tmpl set schema alter2 |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_OBJECT_SCHEMA_STMT | 95ec766ddd4497ee4e9bf6dc | -- failed (no role membership) ALTER TEXT SEARCH CONFIGURATION alt_ts_conf3 SET SCHEMA alt_nsp2 |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_OBJECT_SCHEMA_STMT | 96bdcfe198e6dcea4cf92394 | -- OK ALTER TEXT SEARCH TEMPLATE alt_ts_temp2 SET SCHEMA alt_nsp2 |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_OBJECT_SCHEMA_STMT | ba61c828ba749fbb931cf3dc | ALTER FOREIGN TABLE IF EXISTS doesnt_exist_ft1 SET SCHEMA foreign_schema |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_OBJECT_SCHEMA_STMT | ba679985f036fb6643561da6 | alter text search parser alter1.prs set schema alter2 |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_OBJECT_SCHEMA_STMT | c1394783bb0fc00034ed9e03 | -- OK ALTER TEXT SEARCH PARSER alt_ts_prs2 SET SCHEMA alt_nsp2 |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_OBJECT_SCHEMA_STMT | e046d1da15fab51157064ef8 | -- fails, as function dep_req1 is not in the same schema as the extension. ALTER EXTENSION test_ext_req_schema1 SET SCHEMA test_func_dep3 |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_OBJECT_SCHEMA_STMT | e4e6defef5a9da4bf0f99299 | -- OK ALTER TEXT SEARCH CONFIGURATION alt_ts_conf2 SET SCHEMA alt_nsp2 |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_OWNER_STMT | 0098c4db66442d27906e9d84 | ALTER SERVER s5 OWNER TO regress_test_role |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_OWNER_STMT | 05c4f5f5846707dc0b5bd0a0 | -- ERROR ALTER FOREIGN DATA WRAPPER foo OWNER TO regress_unprivileged_role |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_OWNER_STMT | 0a3d9a926cc6654239a65165 | -- ERROR ALTER FOREIGN DATA WRAPPER foo OWNER TO regress_test_role_super |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_OWNER_STMT | 0aad23f5ec8975bb521c9a96 | -- OK ALTER TEXT SEARCH DICTIONARY alt_ts_dict2 OWNER TO regress_alter_generic_user2 |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_OWNER_STMT | 0c652d3ce4311d9351da3c68 | ALTER LARGE OBJECT 42 OWNER TO regress_lo_user |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_OWNER_STMT | 0ea429243c94fee57d13dccf | -- failed (no role membership) ALTER TEXT SEARCH CONFIGURATION alt_ts_conf2 OWNER TO regress_alter_generic_user3 |
@@ -248,38 +158,18 @@ libpg_query target: `18-latest` `9ab9951b7021adcc6d25d261d5016ca0b83726b8` (Post
 | ERROR | PG_QUERY__NODE__NODE_ALTER_OWNER_STMT | 2ab4ce8ef03aeb4da3e627cb | -- OK ALTER TEXT SEARCH DICTIONARY alt_ts_dict3 OWNER TO regress_alter_generic_user2 |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_OWNER_STMT | 2d66fd5974d4db698550c9bd | -- OK ALTER LANGUAGE alt_lang2 OWNER TO regress_alter_generic_user2 |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_OWNER_STMT | 376e3cc7f09178008bb201f4 | -- fail - new owner must be superuser ALTER PUBLICATION testpub4 owner to regress_publication_user2 |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_OWNER_STMT | 3ceb6b6f63ca27b0add2eefa | -- ERROR ALTER SERVER s4 OWNER TO regress_unprivileged_role |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_OWNER_STMT | 46cead7e1d7d6a4fd2223db2 | ALTER PUBLICATION testpub_default OWNER TO regress_publication_user2 |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_OWNER_STMT | 475702bab91eec3b0f674048 | -- failed (no role membership) ALTER TEXT SEARCH DICTIONARY alt_ts_dict2 OWNER TO regress_alter_generic_user3 |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_OWNER_STMT | 5d8921c2eeb8afba57f829b6 | ALTER SERVER s6 OWNER TO regress_test_indirect |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_OWNER_STMT | 7391864a658a90f4b429c0a8 | ALTER PUBLICATION testpub4 OWNER TO regress_publication_user3 |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_OWNER_STMT | 73b8068dfab5b0ff92a616af | ALTER SERVER s1 OWNER TO regress_test_role2 |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_OWNER_STMT | 82f2d0aff03eadd2985e9f86 | -- OK ALTER LANGUAGE alt_lang2 OWNER TO regress_alter_generic_user3 |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_OWNER_STMT | 8a16296c4a104ae3a460eac9 | -- ERROR ALTER SERVER s1 OWNER TO regress_test_role |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_OWNER_STMT | a7b1564e95fff784a9c92816 | -- alter owner to non-superuser should fail alter event trigger regress_event_trigger owner to regress_evt_user |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_OWNER_STMT | b62968d72ce23ed1a99af009 | -- fail ALTER PUBLICATION testpub4 owner to regress_publication_user |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_OWNER_STMT | b7d3730f1728dddea0bca4dc | ALTER SERVER t1 OWNER TO regress_test_indirect |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_OWNER_STMT | cc1ec095333dc0e314357740 | ALTER TABLESPACE regress_tblspace OWNER TO regress_tablespace_user1 |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_OWNER_STMT | d49d3de35fcb0c0250b0c1f9 | -- we cannot give the subscription away to some random user ALTER SUBSCRIPTION regress_testsub OWNER TO regress_subscription_user |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_OWNER_STMT | e113052ee1882331d5450db7 | ALTER SERVER s1 OWNER TO regress_test_indirect |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_OWNER_STMT | e4fda3ff57b1adaf4f4b1aaa | -- ok, we're a superuser ALTER SUBSCRIPTION regress_testsub OWNER TO regress_subscription_user2 |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_OWNER_STMT | e5403659a6603a00fa31d15e | -- OK ALTER TEXT SEARCH CONFIGURATION alt_ts_conf2 OWNER TO regress_alter_generic_user2 |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_OWNER_STMT | f4dd8052b59add969a5a7eb0 | -- failed (not owner) ALTER LANGUAGE alt_lang3 OWNER TO regress_alter_generic_user2 |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_OWNER_STMT | f945f931b9f44de868c616d6 | -- OK ALTER TEXT SEARCH CONFIGURATION alt_ts_conf3 OWNER TO regress_alter_generic_user2 |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_POLICY_STMT | 03c34d867c391c8e5b21b318 | ALTER POLICY pp1 ON part_document USING (dauthor = current_user) |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_POLICY_STMT | 0ca5a8f1042a0a4e2703e030 | ALTER POLICY dep_p1 ON dep1 USING (true) |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_POLICY_STMT | 1ad7924cffa1612fc425d9ef | ALTER POLICY p2 ON s2 USING (x in (select a from s1 where b like '%d2%')) |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_POLICY_STMT | 1beb4b9d545eee77dba9c001 | ALTER POLICY r2 ON rec2 USING (a = (SELECT x FROM rec1v WHERE y = b)) |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_POLICY_STMT | 1c4129d3d7cd625382e40c46 | ALTER POLICY r1 ON rec1 USING (x = (SELECT a FROM rec2v WHERE b = y)) |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_POLICY_STMT | 27f36121a9d907fe05e7d9ea | -- fail -- only owner can change policies ALTER POLICY p1 ON document USING (true) |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_POLICY_STMT | 3ab82b0dedacbed9d67ed635 | ALTER POLICY p1 ON event_trigger_test USING (TRUE) |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_POLICY_STMT | 4d12d9dd38e8ac2e734f9069 | -- only owner can change policies ALTER POLICY pp1 ON part_document USING (true) |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_POLICY_STMT | a47d397429669e66e0bd3de8 | ALTER POLICY p2 ON s2 USING (x % 2 = 0) |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_POLICY_STMT | a739c070c223e972990a3206 | ALTER POLICY r1 ON rec1 USING (x = (SELECT a FROM rec2 WHERE b = y)) |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_POLICY_STMT | bb82d62a724c0852a69d3659 | ALTER POLICY p1 ON s1 USING (a in (select x from v2)) |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_POLICY_STMT | be9d1d75fabf1751405c6681 | ALTER POLICY p ON tbl1 TO regress_rls_frank USING (true) |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_POLICY_STMT | db12b172e3afb20c78a82ac6 | ALTER POLICY p1 ON document USING (dauthor = current_user) |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_POLICY_STMT | e2af95052de99a5622698de5 | ALTER POLICY dep_p1 ON dep1 TO regress_rls_bob,regress_rls_carol |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_PUBLICATION_STMT | 02943481957998163dc52eda | -- error: duplicates not allowed in column list ALTER PUBLICATION testpub_fortable ADD TABLE testpub_tbl5 (a, a) |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_PUBLICATION_STMT | 06a2ecc2f0bf2982fce48151 | ALTER PUBLICATION testpub6 SET TABLE rf_tbl_abcd_pk WHERE (b > 99) |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_PUBLICATION_STMT | 0790346d643b7715ec42cafc | ALTER PUBLICATION testpub6 SET TABLE rf_tbl_abcd_pk (a, b, c) |
@@ -383,9 +273,6 @@ libpg_query target: `18-latest` `9ab9951b7021adcc6d25d261d5016ca0b83726b8` (Post
 | ERROR | PG_QUERY__NODE__NODE_ALTER_PUBLICATION_STMT | fc3cb3903bca7dab8f30ea24 | ALTER PUBLICATION testpub_fortable SET TABLE testpub_tbl5 (a, a) |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_PUBLICATION_STMT | fc92f39efcf15148dc964260 | -- remove partitioned table's row filter ALTER PUBLICATION testpub6 SET TABLE rf_tbl_abcd_part_pk |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_PUBLICATION_STMT | ffc44839d983b9a73fee56ab | -- fail - can't add to for all tables publication ALTER PUBLICATION testpub_foralltables SET TABLE pub_test.testpub_nopk |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_STATS_STMT | b34cb709a7bba7cc63818e8b | ALTER STATISTICS ab1_a_b_stats SET STATISTICS -1 |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_STATS_STMT | df29e492735ebc0c47cbfab8 | ALTER STATISTICS IF EXISTS ab1_a_b_stats SET STATISTICS 0 |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_STATS_STMT | f0c908229cdcebe45417e5ff | -- setting statistics target 0 skips the statistics, without printing any message, so check catalog ALTER STATISTICS ab1_a_b_stats SET STATISTICS 0 |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_SUBSCRIPTION_STMT | 1335807b4a4beb8c4d3786d2 | -- fail ALTER SUBSCRIPTION regress_doesnotexist CONNECTION 'dbname=regress_doesnotexist2' |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_SUBSCRIPTION_STMT | 180c3905588453cf06b49567 | -- ok - add two publications into subscription ALTER SUBSCRIPTION regress_testsub ADD PUBLICATION testpub1, testpub2 WITH (refresh = false) |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_SUBSCRIPTION_STMT | 2b09d4a12d8414d7ed952928 | -- fail ALTER SUBSCRIPTION regress_testsub SKIP (lsn = '0/0') |
@@ -465,16 +352,13 @@ libpg_query target: `18-latest` `9ab9951b7021adcc6d25d261d5016ca0b83726b8` (Post
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 0319aaf73edefc9839eadbe1 | -- try additional syntax ALTER TABLE fktable ALTER CONSTRAINT fktable_fk_fkey NOT DEFERRABLE |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 0349daccc7588273fad7efc9 | ALTER TABLE fktable ALTER CONSTRAINT fktable_fk_fkey NOT ENFORCED |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 035553052559b33df7a2c470 | ALTER TABLE s.x ADD CONSTRAINT e2rows EXCLUDE USING btree ((s.index_this_expr(y, s.const())) COLLATE s.coll WITH s.=) USING INDEX TABLESPACE regress_create_idx_tblspace WHERE (s.index_row_if(y)) |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 03f6935befd7b9ae47b30db2 | ALTER FOREIGN TABLE IF EXISTS doesnt_exist_ft1 OPTIONS (DROP delimiter, SET quote '~', ADD escape '@') |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 0465f263fbc5c71c4cc191b1 | ALTER INDEX dummy_test_idx SET (option_int = 'val3') |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 05ce1f60f52d76a3418a26be | ALTER INDEX dummy_test_idx SET (option_real = true) |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 0665a6ffe05ba12fe90fd07f | ALTER TABLE gtest25 ADD COLUMN b int GENERATED ALWAYS AS (a * 2) STORED, ALTER COLUMN b SET EXPRESSION AS (a * 3) |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 069b31f81beae46ed1099297 | ALTER TABLE testpub_rf_tbl7 ALTER COLUMN y SET EXPRESSION AS (x * testpub_rf_func2()) |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 06a795d72f238f0ff7865c54 | ALTER TABLE itest7 ALTER COLUMN a RESTART |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 06bd3678b382603235c9e44f | ALTER INDEX dummy_test_idx SET (option_bool = 1) |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 06cb619bb32ed7c029c9a792 | ALTER FOREIGN TABLE ft1 DROP c11 |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 08757c9475ac905c106f96cb | ALTER TABLE testpub_tbl5 REPLICA IDENTITY USING INDEX testpub_tbl5_b_key |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 0886ee8847ceace5f6e06f6c | ALTER FOREIGN TABLE ft1 ALTER COLUMN c1 OPTIONS (column_name 'C 1') |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 0ace9654c03b8100ab39dd55 | -- This triggers an update of pg_index.indisreplident for parted_replica_idx. alter table only parted_replica_tab_1 replica identity using index parted_replica_idx_1 |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 0b3c37c46e6e9c13a11150f0 | -- fail alter index idxpart_1_idx attach partition idxpart1_1_idx |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 0b4aefd4db98b920439661fc | ALTER INDEX dummy_test_idx SET (option_bool = 'val4') |
@@ -493,26 +377,20 @@ libpg_query target: `18-latest` `9ab9951b7021adcc6d25d261d5016ca0b83726b8` (Post
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 13691398dbd9feaad050eea9 | ALTER VIEW regtest_view SET (security_barrier) |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 151788c79a9bce5fb0088cb1 | ALTER TABLE fktable ALTER CONSTRAINT fktable_fk_fkey DEFERRABLE INITIALLY IMMEDIATE |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 151b92a104e5ca9634402719 | ALTER INDEX concur_reindex_part_index ATTACH PARTITION concur_reindex_part_index_0 |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 15cdce4a2814358865ed9a96 | ALTER FOREIGN TABLE ft1 ALTER COLUMN c8 SET DATA TYPE text |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 160708f679a6e1284abf6658 | -- Disable batch inserting into foreign tables with BEFORE ROW INSERT triggers -- even if the batch_size option is enabled. ALTER FOREIGN TABLE ftable OPTIONS ( SET batch_size '10' ) |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 167451de2a3ab73144d5a910 | ALTER FOREIGN TABLE agg_csv INHERIT agg |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 168fb72c9698b507a682c424 | ALTER TABLE ATACC1 ADD NOT NULL a NO INHERIT |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 1738948d41fb7ffef83c3557 | alter index idxpart2_a_idx attach partition idxpart22_a_idx |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 17a3ce0e126e8ae06da9af79 | ALTER TABLE rf_tbl_abcd_nopk REPLICA IDENTITY USING INDEX idx_abcd_nopk_c |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 17bc016b7d6ce4d64092b763 | ALTER TABLE ataddindex ADD PRIMARY KEY USING INDEX ataddindexi0, ALTER f1 TYPE BIGINT |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 17e665fbdd654a91cc03a9b4 | -- succeeds ALTER TABLE attmp3 ADD CONSTRAINT b_greater_than_ten_not_enforced CHECK (b > 10) NOT ENFORCED |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 181145abe757874c0086aac5 | ---- -- Make sure non index cases work ---- ALTER TABLE test_replica_identity REPLICA IDENTITY DEFAULT |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 1848d477923da3e9cc61b858 | ALTER FOREIGN TABLE foreign_stats ADD COLUMN b integer DEFAULT 1 |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 189157cdfc9f8b69e9e12b75 | ALTER TABLE tt2 OF tt_t0 |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 19890b32624319e47b21fd3a | -- Check ALTER ALTER INDEX reloptions_test_idx SET (fillfactor=40) |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 1acc9c73fb38144fe61d5818 | ALTER VIEW rw_view1 ALTER COLUMN bb SET DEFAULT 'View default' |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 1afbe892d09c8181a7f08163 | ALTER FOREIGN TABLE text_csv ALTER COLUMN word3 OPTIONS (force_not_null 'true') |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 1b8fa7452fdc598e02a0e11f | ALTER TABLE temporal_fk_rng2rng ADD CONSTRAINT temporal_fk_rng2rng_fk FOREIGN KEY (parent_id, PERIOD valid_at) REFERENCES temporal_rng ON UPDATE RESTRICT |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 1d633ae3accc43b33a5ac790 | alter table test_storage alter a set storage default |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 1dae06b0c6e78b2547c804cc | ALTER TABLE fk_notpartitioned_fk ADD CONSTRAINT fk_notpartitioned_fk_a_b_fkey2 FOREIGN KEY (a, b) REFERENCES fk_partitioned_pk NOT ENFORCED |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 1dc2f9c7583bb8d6714fa287 | alter table idxpart add exclude USING GIST (a with =, b with &&) |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 1dd2407f1d4df35c929f289a | ALTER TABLE FKTABLE ALTER CONSTRAINT fkdd2 DEFERRABLE INITIALLY DEFERRED |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 1def6391805041234c04b18a | ALTER FOREIGN TABLE ft1 ALTER COLUMN c8 OPTIONS (SET p2 'V2', DROP p1) |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 1fdbc5bbdc459ac9f7986afd | alter table inh_nn2 alter constraint inh_nn1_f2_not_null no inherit |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 202ad492828b44839cedb398 | ALTER TABLE temporal_fk2_mltrng2mltrng ADD CONSTRAINT temporal_fk2_mltrng2mltrng_fk FOREIGN KEY (parent_id1, parent_id2, PERIOD valid_at) REFERENCES temporal_mltrng2 (id1, id2, PERIOD valid_at) |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 20c74e53c04b349d2426218f | ALTER INDEX dummy_test_idx RESET (option_int) |
@@ -524,32 +402,24 @@ libpg_query target: `18-latest` `9ab9951b7021adcc6d25d261d5016ca0b83726b8` (Post
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 23afcbd3bd2d6307a114b395 | ALTER INDEX concur_reindex_part_index ATTACH PARTITION concur_reindex_part_index_10 |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 23be1e20f2c1221081970a08 | ALTER TABLE temporal_fk_mltrng2mltrng ADD CONSTRAINT temporal_fk_mltrng2mltrng_fk FOREIGN KEY (parent_id, PERIOD valid_at) REFERENCES temporal_mltrng (id, PERIOD valid_at) |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 25a8b9978ecac7fcd072d495 | ALTER INDEX dummy_test_idx SET (option_string_null = NULL) |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 27163aa1d868ed6847d14d9d | -- c2positive ALTER FOREIGN TABLE ft1 DROP CONSTRAINT ft1_c2positive |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 273b221d3011d17cc4b09d6e | -- constraints other than not-null are not supported alter table inh_nn1 alter constraint inh_nn1_f1_check inherit |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 2813717510a2f146d7ddb8df | ALTER INDEX dummy_test_idx RESET (option_real) |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 28221787bd8889a6ad488a94 | -- -- partitioned FK referenced updates CASCADE -- ALTER TABLE temporal_partitioned_fk_mltrng2mltrng DROP CONSTRAINT temporal_partitioned_fk_mltrng2mltrng_fk, ADD CONSTRAINT temporal_partitioned_fk... |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 28fbe3af4b65e6c1df83eabb | alter table cwi_test add primary key using index cwi_test_a_idx |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 29737b96fe94f04b1e9a17bf | ALTER TABLE notnull_tbl1 ADD NOT NULL a NOT VALID, ADD NOT NULL b NOT VALID |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 29965512ee4bd5954a8ad8f1 | ALTER FOREIGN TABLE IF EXISTS doesnt_exist_ft1 ADD COLUMN c7 integer NOT NULL |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 29a28919c1bb4d952794f7ef | -- ERROR ALTER FOREIGN TABLE ft2 ADD CONSTRAINT fd_pt1chk2 CHECK (c2 <> '') |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 2a0ec8383b0fdbee7b4cc843 | ALTER TABLE fk_notpartitioned_fk ALTER CONSTRAINT fk_notpartitioned_fk_a_b_fkey2 ENFORCED |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 2a292f5bf6ad80f9acb80a69 | ALTER TABLE temporal_fk_rng2rng ADD CONSTRAINT temporal_fk_rng2rng_fk FOREIGN KEY (parent_id, PERIOD valid_at) REFERENCES temporal_rng ON UPDATE NO ACTION |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 2b3d45cd9f4dc790e92819c1 | ALTER TABLE testpub_tbl_both_filters REPLICA IDENTITY USING INDEX testpub_tbl_both_filters_pkey |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 2bf309323b734a0722eae7cb | ALTER TABLE notnull_chld0 ADD CONSTRAINT nn_chld0 NOT NULL a not valid |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 2c0c30c66898ef857fa58d76 | ALTER TABLE reloptions_test RESET (toast.autovacuum_vacuum_cost_delay) |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 2c8253fd3f4c521f202eb5e0 | ALTER FOREIGN TABLE IF EXISTS doesnt_exist_ft1 ADD COLUMN c10 integer OPTIONS (p1 'v1') |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 2d4b53a2d0f828b8a721b499 | -- Rebuild the index using a different fillfactor ALTER INDEX hash_split_index SET (fillfactor = 10) |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 2dea23fa2eb1840be13c743e | ALTER TABLE cnn_pk ADD CONSTRAINT cnn_primarykey PRIMARY KEY USING INDEX cnn_uq |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 2e1fd11fc3349d7da11984fe | ALTER TABLE ref ALTER CONSTRAINT ref_f1_f2_fkey DEFERRABLE INITIALLY DEFERRED |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 2e7eb0fd5f2866514ab2ed81 | ALTER TABLE temporal_fk_mltrng2mltrng ALTER CONSTRAINT temporal_fk_mltrng2mltrng_fk DEFERRABLE INITIALLY DEFERRED |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 2e82fcafad028172600bbccb | ALTER FOREIGN TABLE ft1 OPTIONS (SET table_name 'T 0') |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 2e9cab523d73531ae65571b5 | ALTER FOREIGN TABLE IF EXISTS doesnt_exist_ft1 ADD c11 integer |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 2ed3f98adc8bb0bd4983b090 | alter index idxpart_pkey attach partition idxpart0_pkey |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 2fba96be4d610afefe1288b5 | ALTER VIEW view_stats ALTER COLUMN a SET DEFAULT 2 |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 2fcb24ee13de89cbc67ba64d | ALTER FOREIGN TABLE ft4 OPTIONS (ADD use_remote_estimate 'true') |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 2fd825652cc330b0595ae8b0 | -- invalid ALTER VIEW rw_view1 SET (check_option=local) |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 305bfd07992f3bb65b0233d0 | alter index idxpart_expr_idx attach partition idxpart2_expr_idx |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 30665db7de949719bbb50518 | ALTER FOREIGN TABLE IF EXISTS doesnt_exist_ft1 ALTER COLUMN c6 SET NOT NULL |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 31387fef237b77474e2b5e52 | alter table constr_parent2 add not null a not valid |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 31e15803d78d7790a8652903 | ALTER TABLE unique_tbl ALTER CONSTRAINT unique_tbl_i_key ENFORCED |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 32ded5bad682b81ad572c4f5 | ALTER INDEX t_a_idx ATTACH PARTITION tp_pkey |
@@ -558,16 +428,10 @@ libpg_query target: `18-latest` `9ab9951b7021adcc6d25d261d5016ca0b83726b8` (Post
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 34ecbccfdf12debb9356a48b | ALTER TABLE atnotnull1 ADD COLUMN b INT, ADD NOT NULL b |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 35e4bfbf168786d2934c6a4e | ALTER INDEX dummy_test_idx SET (option_real = 'val5') |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 373e6905cea0507392528973 | alter index idxpart_a_b_idx attach partition idxpart1_tst1 |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 374ad812e6ab218b04cf10e2 | -- ERROR ALTER FOREIGN TABLE ft1 DROP CONSTRAINT ft1_c9_check |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 376da0ac318df263cc732c4f | ALTER FOREIGN TABLE IF EXISTS doesnt_exist_ft1 ADD COLUMN c6 integer |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 38621497535540ffc416915e | ALTER FOREIGN TABLE ft1 ALTER COLUMN c8 SET STORAGE PLAIN |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 38a84bf0bbe153096af5b183 | -- fail, partial index ALTER TABLE test_replica_identity REPLICA IDENTITY USING INDEX test_replica_identity_partial |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 38b2992740998c2df3e555a8 | alter table attbl replica identity using index pk_attbl |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 3911111a5791550e10b3803b | ALTER FOREIGN TABLE ft4 OPTIONS (SET use_remote_estimate 'false') |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 3a0551eb4b94f57386607809 | ALTER FOREIGN TABLE ft1 ADD COLUMN c9 integer |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 3a50269694d17736264df285 | -- Case 2. REPLICA IDENTITY FULL ALTER TABLE rf_tbl_abcd_pk REPLICA IDENTITY FULL |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 3a9cd422a95a76e7303fea33 | -- error ALTER TABLE notnull_tbl1 ADD CONSTRAINT nn NOT NULL a NOT VALID |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 3ad3cc0f5570beba5b629260 | ALTER FOREIGN TABLE ft1 OPTIONS (schema_name 'S 1', table_name 'T 1') |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 3b476cbee2da81c62f57099c | ALTER TABLE temporal3 ADD COLUMN valid_at daterange, ADD CONSTRAINT temporal3_uq UNIQUE (id, valid_at WITHOUT OVERLAPS) |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 3bae0176f727d20f9d58eae4 | ALTER INDEX dummy_test_idx SET (option_real = 3.2) |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 3c0240f62e94b2be99910336 | ALTER TABLE temporal_fk2_rng2rng ADD CONSTRAINT temporal_fk2_rng2rng_fk FOREIGN KEY (parent_id1, parent_id2, PERIOD valid_at) REFERENCES temporal_rng2 (id1, id2, PERIOD valid_at) |
@@ -575,13 +439,9 @@ libpg_query target: `18-latest` `9ab9951b7021adcc6d25d261d5016ca0b83726b8` (Post
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 3d3f5b7ed3b7d9730369ede2 | -- Changing it back to ENFORCED will recreate the necessary FK triggers -- that are deferrable and initially deferred ALTER TABLE FKTABLE ALTER CONSTRAINT fktable_fk_fkey ENFORCED |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 3da0e1c87fb3b79f6f52ebb0 | ALTER TABLE temporal_fk_rng2rng ALTER CONSTRAINT temporal_fk_rng2rng_fk DEFERRABLE INITIALLY DEFERRED |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 3e7ce882156ad7f860eeec81 | -- OK alter index idxpart_a_b_idx attach partition idxpart1_a_b_idx |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 3fa0b9349ded1832ed80159f | ALTER FOREIGN TABLE IF EXISTS doesnt_exist_ft1 ALTER COLUMN c7 DROP NOT NULL |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 4043f2b990ebae6281af1a5d | -- notice -- Change the expression ALTER TABLE gtest29 ALTER COLUMN b SET EXPRESSION AS (a * 3) |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 40f18bff081db6c09819e941 | -- fails ALTER TABLE pitest2_p1 ALTER COLUMN f3 SET INCREMENT BY 2 |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 4155419c9cd3dcc8b06c1536 | ALTER FOREIGN TABLE ft1 ADD COLUMN c6 integer |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 41ea983a45ad6b4088060d07 | alter table cnn_uq add unique using index cnn_uq_idx |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 4399e7df0eaaa72363aa6394 | ALTER FOREIGN TABLE IF EXISTS doesnt_exist_ft1 DROP COLUMN c9 |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 43e0b37a95431d1a5ae4bcaf | -- ERROR ALTER FOREIGN TABLE fd_pt2_1 ALTER c2 SET NOT NULL |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 440adcfb9c12250ac10a400b | ALTER FOREIGN TABLE ft1 ALTER CONSTRAINT ft1_c9_check DEFERRABLE |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 445b6b6a01b1d5c9326aff5c | ALTER TABLE tt5 OF tt_t0 |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 4467932c160bcc5986e7e4ec | -- should fail ALTER VIEW rw_view2 RESET (check_option) |
@@ -593,10 +453,8 @@ libpg_query target: `18-latest` `9ab9951b7021adcc6d25d261d5016ca0b83726b8` (Post
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 480ef2e4c12db09f08c10ad6 | -- alter generation expression of parent and all its children altogether ALTER TABLE gtest_parent ALTER COLUMN f3 SET EXPRESSION AS (f2 * 2) |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 482046f94766e5fc7cfb1496 | ALTER INDEX dummy_test_idx SET (option_real = 4) |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 48bc18cac9074a38e81f606b | -- alter only parent's and one child's generation expression ALTER TABLE ONLY gtest_parent ALTER COLUMN f3 SET EXPRESSION AS (f2 * 4) |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 48d87cce436ff723f34f2399 | ALTER FOREIGN TABLE ft2 ALTER COLUMN c1 OPTIONS (column_name 'C 1') |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 4a0b8780eea2c3fdb804d7ae | -- fails ALTER TABLE ONLY pitest2 ALTER COLUMN f3 SET GENERATED BY DEFAULT SET INCREMENT BY 2 SET START WITH 1000 RESTART |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 4b9c855bccee740d11dd9a0a | ALTER TABLE atnnpart1 ADD CONSTRAINT another_constr NOT NULL id |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 4bfa29fd196ccdc0a721217f | ALTER FOREIGN TABLE agg_bad OPTIONS (ADD log_verbosity 'silent') |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 4c47da03120b8f09128dd2fa | -- should log old key ALTER TABLE table_with_unique_not_null REPLICA IDENTITY USING INDEX table_with_unique_not_null_id_key |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 4cae1aa9d5af98658396f8b0 | -- -- partitioned FK referenced updates CASCADE -- ALTER TABLE temporal_partitioned_fk_rng2rng DROP CONSTRAINT temporal_partitioned_fk_rng2rng_fk, ADD CONSTRAINT temporal_partitioned_fk_rng2rng_fk ... |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 4ddf10837c75191ee6c10ff8 | ALTER INDEX tbspace_reindex_part_index_0 ATTACH PARTITION tbspace_reindex_part_index_0_2 |
@@ -606,37 +464,26 @@ libpg_query target: `18-latest` `9ab9951b7021adcc6d25d261d5016ca0b83726b8` (Post
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 4f69883f67d23884cbd5f07b | ALTER INDEX tbl_idx ALTER COLUMN 4 SET STATISTICS 1000 |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 4ff540b9bb2e8f00587f1957 | ALTER TABLE cwi_test ADD UNIQUE USING INDEX cwi_uniq4_idx |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 509bf9b50c7d75d9d1021ae4 | ALTER VIEW rw_view1 SET (check_option=here) |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 52935ee7a4575a5301f183a8 | ALTER FOREIGN TABLE ft1 ALTER COLUMN c4 SET DEFAULT 0 |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 52cbdd1f44f3f1245a4fdcf4 | ALTER FOREIGN TABLE agg_text OPTIONS (SET format 'text') |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 5331b3d73311918b8f31ef3c | -- =================================================================== -- conversion error -- =================================================================== ALTER FOREIGN TABLE ft1 ALTER COLUM... |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 54c60c3313e338b386bb18f1 | alter table idxpart add exclude USING GIST (a with -\|-) |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 56f197f10887e18a3f784881 | ALTER TABLE tbl_include_box add PRIMARY KEY USING INDEX tbl_include_box_idx_unique |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 57c9f7e9719fa481e391b8eb | ALTER TABLE FKTABLE ALTER CONSTRAINT fknd2 NOT DEFERRABLE |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 588f950f22fe3f69c0506480 | -- reassign an already-typed table ALTER TABLE tt7 NOT OF |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 595a6a18cd999730faf81ab5 | ALTER FOREIGN TABLE ft1 ADD PRIMARY KEY (c7) |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 59853e55001f6bb556970c2e | -- error ALTER TABLE gtest23b ALTER COLUMN b SET EXPRESSION AS (a * 1) |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 599246087178766f185858c2 | ALTER TABLE itest6 ALTER COLUMN a SET GENERATED BY DEFAULT SET INCREMENT BY 2 SET START WITH 100 RESTART |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 5adfdadf32183a27b03db135 | ALTER INDEX testschema.part_a_idx SET TABLESPACE pg_default |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 5b61e13592b0abf64c0e4405 | ALTER TABLE temporal3 ADD CONSTRAINT temporal3_uq UNIQUE USING INDEX idx_temporal3_uq |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 5c1d4cbe10e1a5c0d301fe2f | ALTER FOREIGN TABLE ft1 ADD COLUMN c11 serial |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 5c44d98009cf0811fac98f1f | -- change child constraint ALTER TABLE fk_partitioned_fk_2 ALTER CONSTRAINT fk_part_con ENFORCED |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 5d48d42f5ecce8a027a19cdb | ALTER TABLE test_replica_identity3 REPLICA IDENTITY USING INDEX test_replica_identity3_id_key |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 5de2dd77b9156f239859e7ce | ALTER TABLE toasted_several REPLICA IDENTITY FULL |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 5e021a1f5ec7c6f533dfccee | ALTER TABLE notnull_tbl1 ALTER CONSTRAINT nntbl1_a NO INHERIT |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 5ec5a8ade3e334012738af1f | ALTER VIEW rw_view1 SET (security_invoker = true) |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 5fba5852e4407d8a1f7088c8 | ALTER INDEX dummy_test_idx SET (option_string_val = 4) |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 6033ec9ee0d5ec1cb578da09 | ALTER FOREIGN TABLE ft1 ADD c11 integer |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 60714c72f9455648a37dc0d1 | ALTER FOREIGN TABLE IF EXISTS doesnt_exist_ft1 ALTER COLUMN c7 OPTIONS (ADD p1 'v1', ADD p2 'v2'), ALTER COLUMN c8 OPTIONS (ADD p1 'v1', ADD p2 'v2') |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 61b3d703548c0d83e58b3002 | -- but it's OK when the identity is FULL ALTER TABLE test_replica_identity3 REPLICA IDENTITY FULL |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 628755a57fb2b482506b47cd | ALTER INDEX tbspace_reindex_part_index ATTACH PARTITION tbspace_reindex_part_index_10 |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 6297e9d67402a501bb6faa7c | ALTER FOREIGN TABLE ft2 DROP COLUMN cx |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 62cfcae22a774909b029c48b | ALTER INDEX dummy_test_idx SET (option_enum = true) |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 633d32e11c011b4f4fd46a6c | alter table p1_c1 add constraint inh_check_constraint8 check (f1 < 10) not enforced |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 642f7fb129f0ff189d6e8bef | ALTER FOREIGN TABLE ft1 ADD COLUMN c5 integer DEFAULT 0 |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 64850a82124c76f030ed5373 | ALTER FOREIGN TABLE ft1 ALTER COLUMN c7 DROP NOT NULL |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 64ebfca5dc6dcb2c0237fad7 | -- Changing the constraint to NOT ENFORCED drops the associated FK triggers ALTER TABLE FKTABLE ALTER CONSTRAINT fktable_fk_fkey NOT ENFORCED |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 6566d55b288701a0f650b81e | -- RESET fails if a value is specified ALTER TABLE reloptions_test RESET (fillfactor=12) |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 6591f013d18e9412563fa61e | -- =================================================================== -- local type can be different from remote type in some cases, -- in particular if similarly-named operators do equivalent thi... |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 65a517469acc311df3d1b0ce | ALTER MATERIALIZED VIEW testschema.amv SET TABLESPACE regress_tblspace |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 675b3e52d837ce78688fed33 | alter table p1 add constraint inh_check_constraint9 check (f1 < 10) not enforced |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 6797b15cf11e947077afb486 | ALTER TABLE tt7 OF tt_t0 |
@@ -644,19 +491,14 @@ libpg_query target: `18-latest` `9ab9951b7021adcc6d25d261d5016ca0b83726b8` (Post
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 68798cff8169d795b17914a4 | ALTER TABLE gtest31_1 ALTER COLUMN b SET EXPRESSION AS ('hello3') |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 69de8d99a19ba5b589efd60c | -- Set boolean option to true without specifying value ALTER TABLE reloptions_test SET (autovacuum_enabled, fillfactor=32) |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 6b23cebafeea626cbb55b618 | alter index gist_pointidx SET (fillfactor = 40) |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 6b326485eb5d8eba77995949 | ALTER FOREIGN TABLE ft1 ALTER COLUMN c8 SET DATA TYPE integer |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 6c03824af775e5f45e023075 | ALTER TABLE temporal3 ADD CONSTRAINT temporal3_pk PRIMARY KEY USING INDEX idx_temporal3_uq |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 6c39a181f10b873faea75592 | -- fail, deferrable ALTER TABLE test_replica_identity_t3 REPLICA IDENTITY USING INDEX pk |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 6cbe0baa18d631459637fe7c | -- parted_replica_idx becomes valid here. alter index parted_replica_idx_1 ATTACH PARTITION parted_replica_idx_11 |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 6cd86a703d9802eab5c53a86 | ALTER TABLE tt3 OF tt_t0 |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 6e542698ea0ca012d9f49774 | -- force_not_null and force_null can be used together on the same column ALTER FOREIGN TABLE text_csv ALTER COLUMN word1 OPTIONS (force_null 'true') |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 6f4608a60ee8797a79bae0e8 | ALTER FOREIGN TABLE async_p1 OPTIONS (use_remote_estimate 'true') |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 6f6215e9058d26314bc730e7 | -- parted_replica_idx is not valid yet here, because parted_replica_idx_1 -- is not valid. alter index parted_replica_idx ATTACH PARTITION parted_replica_idx_1 |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 6f801183163cf42ea740de96 | -- try removing an oid column, should succeed (as it's nonexistent) alter table atacc1 SET WITHOUT OIDS |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 6f89d5897f725689748a04de | ALTER TABLE temporal_fk_rng2rng ADD CONSTRAINT temporal_fk_rng2rng_fk FOREIGN KEY (parent_id, PERIOD valid_at) REFERENCES temporal_rng ON DELETE RESTRICT |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 7036bb12df4b14afe53184b0 | ALTER TABLE inh_nn_parent ADD CONSTRAINT nna NOT NULL a |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 704c4a1d8df86926b27fc69c | ALTER FOREIGN TABLE IF EXISTS doesnt_exist_ft1 DROP c11 |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 723429affe9de34cb55ce696 | ALTER FOREIGN TABLE ft1 ALTER COLUMN c6 SET NOT NULL |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 72fc8736d6467824f7cbb7e9 | alter table p1_c1 add constraint inh_check_constraint4 check (f1 < 10) not enforced |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 7494b4ba1edbd5fe02ba23b1 | ALTER INDEX concur_reindex_part_index_0 ATTACH PARTITION concur_reindex_part_index_0_2 |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 74a16a00b52cd468b396c7c2 | alter table inh_nn1 alter constraint inh_nn1_pkey inherit |
@@ -664,52 +506,36 @@ libpg_query target: `18-latest` `9ab9951b7021adcc6d25d261d5016ca0b83726b8` (Post
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 75b1dfef4cef4bb3189ddc75 | ALTER TABLE gtest22c ALTER COLUMN b SET EXPRESSION AS (a * 4) |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 75f1b88336ecb9a8a661587f | alter index idxpart2_a_idx attach partition idxpart21_a_idx |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 76a36171974bf87233464333 | ALTER TABLE ataddindex ALTER f1 SET DATA TYPE TEXT, ADD EXCLUDE ((f1 LIKE 'a') WITH =) |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 76baa946953b125ae070a146 | ALTER FOREIGN TABLE ft1 SET TABLESPACE ts |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 7720da8143796aa8f3260f23 | ALTER TABLE gtest_child ALTER COLUMN f3 SET EXPRESSION AS (f2 * 10) |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 7738e5af004ed1b33767c46d | -- failure: one of the partitions has REPLICA IDENTITY FULL ALTER TABLE testpub_tbl8_1 REPLICA IDENTITY FULL |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 7745be55d6449938d470cd24 | ALTER FOREIGN TABLE foreign_tbl INHERIT parent_tbl |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 777ca9aef2e7e982004016cc | ALTER FOREIGN TABLE IF EXISTS doesnt_exist_ft1 ALTER COLUMN c8 TYPE char(10) |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 7790ffe0d97c082407041f95 | alter table p1 add constraint inh_check_constraint4 check (f1 < 10) not enforced |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 7820bf4ddcc5f39ad94fe5fe | -- SET identity column ALTER TABLE pitest2_p1 ALTER COLUMN f3 SET GENERATED BY DEFAULT |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 7ab4f452cad8f71754195955 | ALTER INDEX ptif_test1_index ATTACH PARTITION ptif_test11_index |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 7b1247df07f05b13ad231a2f | ALTER TABLE notnull_inhchild ADD CONSTRAINT nn1 NOT NULL i |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 7ba446eac665dff05b68c02f | ALTER FOREIGN TABLE IF EXISTS doesnt_exist_ft1 DROP CONSTRAINT IF EXISTS no_const |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 7bfe29bf8187e9a98aee745c | ALTER TABLE FKTABLE ALTER CONSTRAINT fkdi2 DEFERRABLE INITIALLY IMMEDIATE |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 7c0bffb243b0d78f960b0b8e | -- ERROR ALTER FOREIGN TABLE ft1 DROP CONSTRAINT IF EXISTS no_const |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 7da1dcaeb8ae31d6ba46e3cd | ALTER INDEX concur_reindex_part_index_0 ATTACH PARTITION concur_reindex_part_index_0_1 |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 7e1c21f256174417da960638 | ALTER TABLE regtest_table_4 ADD CONSTRAINT regtest_tbl4_con EXCLUDE USING btree (z WITH =) |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 7e204974964ab35af6b8c5ba | -- should fail on existing data without the WHERE clause ALTER TABLE circles ADD EXCLUDE USING gist (c1 WITH &&, (c2::circle) WITH &&) |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 7e8ef9066d0620c524107103 | -- the not-valid state of the child constraint will be ignored here. alter table p1 add constraint inh_check_constraint10 check (f1 < 10) not enforced |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 809d8f0f51bd87e39c1e8559 | ALTER FOREIGN TABLE IF EXISTS doesnt_exist_ft1 DROP COLUMN no_column |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 819947b630f202c6e8fa07b5 | -- =================================================================== -- test check constraints -- =================================================================== -- Consistent check constrain... |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 81fec91e6288b91b4ef2ba41 | ALTER TABLE gtest21ax ADD CONSTRAINT cc NOT NULL b |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 83268d8a5f1a325ba72f9de5 | ALTER INDEX ptif_test_index ATTACH PARTITION ptif_test2_index |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 834842fbc1f0ab9bc59476a9 | alter table idxpart add exclude USING GIST (a with =, b with =, c with &&) |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 8355f457b3a0799bedf3b9a6 | -- ERROR ALTER FOREIGN TABLE text_csv OPTIONS (SET format 'csv') |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 83d905100c7541b2ca8410ac | ALTER TABLE atnnparted ADD CONSTRAINT dummy_constr NOT NULL id NOT VALID |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 84ee526e1835ce6efadb2c47 | ALTER TABLE testpub_tbl8_1 REPLICA IDENTITY USING INDEX testpub_tbl8_1_pkey |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 84ef4d2dd76ecddc390f0570 | ALTER FOREIGN TABLE foreign_schema.foreign_table_1 ENABLE TRIGGER trigtest_before_stmt |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 85686aebd2a65a8762100aee | alter index parted_conflict_a_idx attach partition parted_conflict_1_a_idx |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 8598e7e905c41ca19018720d | -- ERROR ALTER FOREIGN TABLE fd_pt2_1 ADD CONSTRAINT fd_pt2chk1 CHECK (c1 > 0) |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 85f57f1cc380614ac769562d | ALTER FOREIGN TABLE ft1 ALTER COLUMN xmin OPTIONS (ADD p1 'v1') |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 867f04984ec59e3e9ff4f959 | alter table idxpart add exclude USING GIST (a with =, b with =) |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 86c9a75bb873bf9cd933ab18 | ALTER TABLE pp_nn_1 ADD CONSTRAINT nn NOT NULL a NO INHERIT |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 87d49b1d8fee2fc8000b7f01 | ALTER TABLE fk_partitioned_fk ADD CONSTRAINT fk_partitioned_fk_a_b_fkey FOREIGN KEY (a, b) REFERENCES fk_notpartitioned_pk NOT ENFORCED |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 89c8c719aa7035d76973b0a3 | ALTER INDEX pt_stats_index ATTACH PARTITION pt_stats2_index |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 8a155d07c30955f9e7ac31d0 | ALTER INDEX tbspace_reindex_part_index ATTACH PARTITION tbspace_reindex_part_index_0 |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 8a2b5b6a35cb6d0c5e471337 | ALTER TABLE temporal_fk_mltrng2mltrng ADD CONSTRAINT temporal_fk_mltrng2mltrng_fk FOREIGN KEY (parent_id, PERIOD valid_at) REFERENCES temporal_mltrng (id, PERIOD valid_at) ON UPDATE NO ACTION |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 8a54ab1eff8af7717fccb67b | ALTER FOREIGN TABLE ft1 DROP CONSTRAINT no_const |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 8ade8c3f13ea097754bc35b9 | -- -- partitioned FK referenced deletes SET NULL -- -- -- partitioned FK referenced updates SET DEFAULT -- ALTER TABLE temporal_partitioned_fk_rng2rng ALTER COLUMN parent_id SET DEFAULT '[-1,-1]', ... |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 8b3062f171ea3aa0506bd286 | ALTER TABLE notnull_child_upg ADD CONSTRAINT nn NOT NULL a |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 8bdf701a63a18816852423a4 | ALTER FOREIGN TABLE foreign_schema.foreign_table_1 DISABLE TRIGGER trigtest_before_stmt |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 8c3974950654511172eb3f87 | ALTER TABLE gtest31_1 ALTER COLUMN b SET EXPRESSION AS ('hello2') |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 8d8eacf7211783b9da5feab4 | ALTER FOREIGN TABLE ft1 DROP CONSTRAINT ft1_c2negative |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 8d915d158baf2ba6280b7287 | ALTER TABLE temporal_fk_mltrng2mltrng ADD CONSTRAINT temporal_fk_mltrng2mltrng_fk FOREIGN KEY (parent_id, PERIOD valid_at) REFERENCES temporal_mltrng (id, PERIOD valid_at) ON UPDATE RESTRICT |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 8da0b0db2c47b9d626ffb544 | ALTER FOREIGN TABLE ft1 ALTER COLUMN c1 SET STATISTICS 10000 |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 8e44e58511ebadd8a4ff9a99 | ALTER TABLE test_replica_identity REPLICA IDENTITY FULL |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 8e985becced7945466d6d6ee | -- These ALTER TABLE variants will not recurse. ALTER TABLE itest7 ALTER COLUMN a SET GENERATED BY DEFAULT |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 903ef34fc2b1323e7a36448f | -- nope ALTER TABLE notnull_tbl1_child2 ADD NOT NULL a NOT VALID |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 9078431c64ab3cc61f0a9e73 | -- accepted ALTER FOREIGN TABLE tru_ftable OPTIONS (SET truncatable 'false') |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 90a2364b84c0cc341427c032 | alter index idxpart_a_b_idx attach partition idxpart_a_b_idx |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 914703b53eb8e2996ea25b92 | ALTER TABLE temporal_fk_rng2rng ADD CONSTRAINT temporal_fk_rng2rng_fk FOREIGN KEY (parent_id, PERIOD valid_at) REFERENCES temporal_rng (id, PERIOD valid_at) |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 92a3840564f8afe3bcf34c1a | -- Check option won't cascade down to base view with INSTEAD OF triggers ALTER VIEW rw_view2 SET (check_option=cascaded) |
@@ -720,7 +546,6 @@ libpg_query target: `18-latest` `9ab9951b7021adcc6d25d261d5016ca0b83726b8` (Post
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 956a6f1973ac2c1de6111650 | ALTER TABLE notnull_tbl1 ADD CONSTRAINT notnull_con NOT NULL a NOT VALID |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 956f2796dc320d9047112da3 | -- Move back to the default tablespace. ALTER INDEX regress_tblspace_test_tbl_idx SET TABLESPACE pg_default |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 9579aa03f89dfd8242b5303e | -- -- partitioned FK referenced deletes CASCADE -- -- -- partitioned FK referenced updates SET NULL -- ALTER TABLE temporal_partitioned_fk_mltrng2mltrng DROP CONSTRAINT temporal_partitioned_fk_mltr... |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 9599241bd11df4cc841d28cb | ALTER FOREIGN TABLE ft1 ADD COLUMN c8 integer DEFAULT 0 |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 9644b3bb6481aa12ad3bfc2b | -- fails ALTER TABLE pitest2 ALTER COLUMN f3 SET GENERATED BY DEFAULT SET INCREMENT BY 2 SET START WITH 1000 RESTART |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 9645928d0c7bf3447c1e87bd | alter index idxpart_a_b_idx attach partition idxpart1_b_idx |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 96a90eaade087d86f8f80d78 | ALTER INDEX dummy_test_idx SET (option_string_val = true) |
@@ -729,29 +554,20 @@ libpg_query target: `18-latest` `9ab9951b7021adcc6d25d261d5016ca0b83726b8` (Post
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 995aa90580818a6948278a59 | -- must reject alter index idxpart_a_idx attach partition idxpart2_a_idx |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 99c29c7f48328ec96cc4e03e | ALTER TABLE notnull_tbl1_upg ADD CONSTRAINT nn NOT NULL a NOT VALID |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 99db06da6e1da34c7e38a462 | ALTER VIEW my_property_normal SET (security_barrier=true) |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 9a728d0ac07322c742766487 | ALTER FOREIGN TABLE IF EXISTS doesnt_exist_ft1 ADD COLUMN c8 integer |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 9a91cfff45a93c1c81c7e4de | -- fail, not a candidate key, nullable column ALTER TABLE test_replica_identity REPLICA IDENTITY USING INDEX test_replica_identity_nonkey |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 9c6dc2187c477e01e9720ede | ALTER TABLE sts_sch1.tbl ALTER COLUMN c SET EXPRESSION AS (a * 3) |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 9cc6f3f77a7b002bfb35a886 | ALTER FOREIGN TABLE IF EXISTS doesnt_exist_ft1 DROP CONSTRAINT ft1_c1_check |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 9e04b79998c033cdd582994b | ALTER TABLE fk_partitioned_fk ALTER CONSTRAINT fk_partitioned_fk_a_b_fkey NOT ENFORCED |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 9e073e4dd9811fbdaf4fbd38 | alter table p1 add constraint inh_check_constraint3 check (f1 > 0) not enforced |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 9ef243a111a050cd6595e9c1 | ALTER INDEX attmp_idx ALTER COLUMN 2 SET STATISTICS -1 |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 9f26cd63b255a8086f24eb14 | -- ERROR ALTER FOREIGN TABLE ft1 ADD CONSTRAINT ft1_c9_check CHECK (c9 < 0) NOT VALID |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 9f3068c210245936aba14375 | alter table anothertab add exclude using btree (f4 with =) where (f4 is not null) |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 9f3118d053ae0d6160071e77 | alter table idxpart add exclude USING GIST (a with =) |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 9f8ee0a181ad1b9034d172a8 | ALTER FOREIGN TABLE ft1 ADD COLUMN IF NOT EXISTS c6 integer |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 9f92de53016747ebdf9a854a | ALTER FOREIGN TABLE ft2 OPTIONS (use_remote_estimate 'true') |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | a0062d2a7f36a7a023d3c40d | ALTER TABLE test_replica_identity5 REPLICA IDENTITY USING INDEX test_replica_identity5_a_b_key |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | a13e9afd64533a9d463b5ae3 | -- should log the full old row now ALTER TABLE table_without_key REPLICA IDENTITY FULL |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | a1463927f6d923f7e1339c8d | ALTER FOREIGN TABLE IF EXISTS doesnt_exist_ft1 ADD COLUMN c9 integer |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | a1db74e132ba9172b07d0d7e | -- error ALTER FOREIGN TABLE tru_ftable OPTIONS (ADD truncatable 'true') |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | a2db0b60d64b1173f39a41b1 | -- but using a different constraint name is not allowed ALTER TABLE notnull_tbl1 ADD CONSTRAINT nn NOT NULL a |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | a314f587ff74f46629ea34e7 | ALTER FOREIGN TABLE agg_csv ADD CHECK (a >= 0) |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | a33e215bef80733a3acd4501 | alter table inh_nn1 alter constraint inh_nn1_f1_not_null inherit |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | a364b125a34dc530de348acf | ALTER TABLE temporal_mltrng ADD CONSTRAINT temporal_mltrng_pk PRIMARY KEY (id, valid_at WITHOUT OVERLAPS) |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | a3d664d7c7b089095bb0bd4e | -- idxpart1_a_idx is not valid, so idxpart_a_idx should not become valid: alter index idxpart_a_idx attach partition idxpart1_a_idx |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | a3e7883d6e6350cd1f9c5d73 | ALTER TABLE table_dropped_index_no_pk REPLICA IDENTITY USING INDEX table_dropped_index_no_pk_idx |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | a4efd9ac3741b81c12459a26 | -- child must have parent's INHERIT constraints ALTER FOREIGN TABLE ft2 INHERIT fd_pt1 |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | a5abfa948ed4768b88a7d600 | ALTER TABLE table_dropped_index_with_pk REPLICA IDENTITY USING INDEX table_dropped_index_with_pk_idx |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | a5b060ba7d52833ada649383 | ALTER INDEX dummy_test_idx SET (option_int = 10) |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | a5de2099c00140cd96fd737e | ALTER TABLE cwi_test ADD UNIQUE USING INDEX cwi_uniq3_idx |
@@ -761,96 +577,63 @@ libpg_query target: `18-latest` `9ab9951b7021adcc6d25d261d5016ca0b83726b8` (Post
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | a69b666b3a412e963944c033 | -- fail, not our index ALTER TABLE test_replica_identity REPLICA IDENTITY USING INDEX test_replica_identity_othertable_pkey |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | a885724c326d6eb4952d11d8 | ALTER TABLE itest6 ALTER COLUMN b SET INCREMENT BY 2 |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | a895f9c65cf387d6b5145d17 | ALTER TABLE tt6 OF tt_t0 |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | a8d7516b5c02ab432b5e9e41 | -- error ALTER FOREIGN TABLE tru_ftable OPTIONS (SET truncatable 'true') |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | aa860bc45cfa5266d9232013 | ALTER FOREIGN TABLE foreign_tbl NO INHERIT parent_tbl |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | ac4852bd866e778462089355 | ALTER FOREIGN TABLE agg_csv NO INHERIT agg |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | ac4e3c442800b1f45ad9ae5e | ALTER INDEX dummy_test_idx RESET (option_string_val) |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | ac90b987fb42dbbac4748c69 | ALTER TABLE notnull_tbl1 ADD CONSTRAINT nntbl1_a NOT NULL a NOT VALID |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | aca63db5df0e6c47e0ffcb77 | ALTER FOREIGN TABLE table30 OPTIONS ( SET batch_size '40') |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | ad22cba290238275ce7cc4f6 | -- should fail because of duplicate referenced columns: ALTER TABLE temporal_fk_rng2rng ADD CONSTRAINT temporal_fk_rng2rng_fk2 FOREIGN KEY (parent_id, PERIOD parent_id) REFERENCES temporal_rng (id,... |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | af0487dd5044bcf8994da260 | ALTER TABLE parent ALTER COLUMN a SET GENERATED BY DEFAULT |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | af20e671373e7cb267fef038 | ALTER INDEX testschema.part_a_idx SET TABLESPACE pg_global |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | afcb4b2f9c2a83f3c57de0b3 | ALTER TABLE pp_nn_1 ADD CONSTRAINT nn NOT NULL a NOT VALID |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | afe5ec110611fb9b962bda15 | -- fail alter index idxpart_2_idx attach partition idxpart1_2c_idx |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | b00a731098108bcfc499d9e3 | -- ALTER CONSTRAINT NO INHERIT should work on top-level constraints alter table inh_nn1 alter constraint inh_nn1_f1_not_null no inherit |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | b00db4ca5108a4f768ec42f6 | ALTER FOREIGN TABLE IF EXISTS doesnt_exist_ft1 ADD COLUMN IF NOT EXISTS c6 integer |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | b023832199e29669a483d567 | ALTER TABLE temporal_fk_rng2rng ADD CONSTRAINT temporal_fk_rng2rng_fk FOREIGN KEY (parent_id, PERIOD valid_at) REFERENCES temporal_rng ON DELETE SET NULL ON UPDATE SET NULL |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | b0ee61eb81babc1523275056 | ALTER VIEW rw_view1 SET (security_barrier = true) |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | b140c3a88f537cc27c8a1eda | alter foreign table rem2 drop constraint rem2_f1positive |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | b1b94501b997bea3300eec22 | ALTER TABLE fk_partitioned_fk_2 ADD CONSTRAINT fk_partitioned_fk_a_b_fkey FOREIGN KEY (a, b) REFERENCES fk_notpartitioned_pk NOT ENFORCED |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | b1f696c028769cd88a097e22 | ALTER TABLE tt7 OF tt_t1 |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | b30819a79dc8d350c14f64fb | ALTER FOREIGN TABLE ft1 OPTIONS (SET table_name 'T 1') |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | b3355931d7524216733e7bdd | ALTER TABLE temporal_fk_rng2rng ADD CONSTRAINT temporal_fk_rng2rng_fk FOREIGN KEY (parent_id, PERIOD valid_at) REFERENCES temporal_rng |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | b379dcd9bcd856fc89df761a | alter view base_tab_def_view alter b set default 'View default' |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | b3c13fbaf6c796cd149403f5 | alter table inh_nn_parent add not null a no inherit |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | b3fa472c2c98b702a54c19ee | ALTER FOREIGN TABLE table30000 OPTIONS ( SET fetch_size '60000') |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | b474c154cb01b958a79379bd | --ok -- SET EXPRESSION supports not null constraint ALTER TABLE gtest21ax ALTER COLUMN b SET EXPRESSION AS (nullif(a, 1)) |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | b582178a1247aadc2e2c8601 | alter index idxpart attach partition idxpart1 |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | b5b79595276e2a69db417239 | ALTER FOREIGN TABLE agg_bad OPTIONS (SET reject_limit '2') |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | b6fc881973005565e6d39132 | alter index idxpart_c attach partition idxpart1_c |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | b704e4f7404ea84c227e2bb6 | ALTER TABLE temporal_fk_rng2rng ALTER COLUMN parent_id SET DEFAULT '[-1,-1]', ADD CONSTRAINT temporal_fk_rng2rng_fk FOREIGN KEY (parent_id, PERIOD valid_at) REFERENCES temporal_rng ON DELETE SET DE... |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | b7831adc966f966c3e12a309 | -- Enforceability also changes the validate state, as data validation will be -- performed during this transformation. ALTER TABLE FKTABLE ALTER CONSTRAINT fk_con ENFORCED |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | b8a8efdcc16c8706b5e55114 | alter table inh_parent add constraint inh_parent_excl exclude ((1) with =) |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | b92fc3e48db77755154e0eb8 | ALTER FOREIGN TABLE ft1 ALTER COLUMN c1 SET (n_distinct = 100) |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | b969d34cd21584b2131a3045 | ALTER FOREIGN TABLE ft1 ADD COLUMN c7 integer NOT NULL |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | b98ce077fb5adc662273f61d | ALTER FOREIGN TABLE ft1 ALTER COLUMN c8 SET STATISTICS -1 |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | b9a1be2a15ef9f02472f2d5f | ALTER TABLE regtest_ptable_4_ones ADD CONSTRAINT regtest_ptbl4_con EXCLUDE USING btree (z WITH =) |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | baf2226de0950739f2e31766 | ALTER FOREIGN TABLE foreign_stats ADD CONSTRAINT b_nonzero CHECK (b <> 0) |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | bbd13119a5bf966c6e793b15 | ALTER FOREIGN TABLE ft1 DROP COLUMN no_column |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | bc845f94c5cf4831ce511459 | -- change NO INHERIT status of inherited constraint: no dice, it's inherited alter table cc2 add not null a2 no inherit |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | bca6bf4385beeb641639812b | ALTER INDEX gin_check_idx SET (fastupdate = false) |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | be67c533aa51c2e91c5ff6c2 | ALTER FOREIGN TABLE ft1 DROP COLUMN c9 |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | be928748aae7b3d425c0c462 | ALTER MATERIALIZED VIEW heapmv SET ACCESS METHOD heap2 |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | beac01c79c98d677cf79c884 | ALTER TABLE fktable ALTER CONSTRAINT fktable_fk_fkey NO INHERIT |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | bfbc1d1626b21a256758195d | ALTER FOREIGN TABLE IF EXISTS doesnt_exist_ft1 ALTER COLUMN c8 OPTIONS (SET p2 'V2', DROP p1) |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | bfd419b079cb66153749b64b | ALTER TABLE cwi_test ADD PRIMARY KEY USING INDEX cwi_a_nnd |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | c03cf294023cfc76c88bbde6 | ALTER FOREIGN TABLE ft1 ADD COLUMN c10 integer OPTIONS (p1 'v1') |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | c05852640f2b4a922d59d13b | ALTER FOREIGN TABLE ft1 OPTIONS (DROP delimiter, SET quote '~', ADD escape '@') |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | c06ad3a56e27ae102f36e8a6 | ALTER TABLE cwi_test DROP CONSTRAINT cwi_uniq_idx, ADD CONSTRAINT cwi_replaced_pkey PRIMARY KEY USING INDEX cwi_uniq2_idx |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | c0c62652e477ae7e3aea53fe | ALTER INDEX bloomidx SET (length=80) |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | c3120532d2a3a679c82db4fa | ALTER INDEX tbl_idx ALTER COLUMN 3 SET STATISTICS 1000 |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | c3a876e00f10cbed6d02cd5e | ---- -- Make sure we detect ineligible indexes ---- -- fail, not unique ALTER TABLE test_replica_identity REPLICA IDENTITY USING INDEX test_replica_identity_keyab |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | c3fad855fc02f5516e03bf25 | ALTER FOREIGN TABLE async_p1 OPTIONS (DROP use_remote_estimate) |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | c4058bb7449ca41162ce33ec | -- can't override ALTER TABLE ATACC1 ADD CONSTRAINT ditto NOT NULL a |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | c48f41dd88f6642ad81a242c | ALTER INDEX attmp_idx ALTER COLUMN 4 SET STATISTICS 1000 |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | c4cefb91a77fa605e88b03cc | ALTER INDEX attmp_idx ALTER COLUMN 2 SET STATISTICS 1000 |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | c5345c7412a4b26f17db2c71 | ALTER FOREIGN TABLE IF EXISTS doesnt_exist_ft1 OWNER TO regress_test_role |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | c6bec0baea71c10efacf52a8 | -- now it works alter index idxpart_pkey attach partition idxpart0_a_key |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | c704cc1cd5437ea97f0f0ecb | alter view uv_iocu_view alter column bb set default 'view default' |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | c7226a60473e584a4ef94bf4 | ALTER FOREIGN TABLE agg_text OWNER TO regress_file_fdw_user |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | c8622a537ce1a8ccdfed3e4d | -- Reverting it back to ENFORCED will result in failure because constraint validation will be triggered, -- as it was previously in a valid state. ALTER TABLE FKTABLE ALTER CONSTRAINT fktable_ftest... |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | caec240e30f6e298188000ec | alter table p1 add constraint inh_check_constraint6 check (f1 < 10) not enforced |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | ccc685a68ba1ad0cf92a2f4d | ALTER INDEX ptif_test_index ATTACH PARTITION ptif_test1_index |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | ccf768dcfce1a239d1fd3597 | ALTER FOREIGN TABLE agg_bad OPTIONS (ADD reject_limit '1') |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | cd19c5b7e86eed53dc296e2d | ALTER FOREIGN TABLE ft1 DROP COLUMN c0 |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | cd5e3bdf111057ed424641a6 | ALTER TABLE ref ALTER CONSTRAINT ref_f1_f2_fkey_1 DEFERRABLE INITIALLY DEFERRED |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | ce85fa45dc82b3a3373657c6 | alter index idxpart_1_idx attach partition idxpart1_1b_idx |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | ce89dabfa39ee0ebf2f49cfd | ALTER FOREIGN TABLE ft1 ALTER COLUMN c5 DROP DEFAULT |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | cee9ae5e30f5dd198771f24a | ALTER VIEW rw_view15 ALTER COLUMN upper SET DEFAULT 'NOT SET' |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | cefc2840f69734dde6e81a2a | ALTER FOREIGN TABLE async_p2 OPTIONS (use_remote_estimate 'true') |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | d0dd19985745a1f4178242dd | alter view my_locks set (security_barrier=off) |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | d10ca0a4a049615be8ae6c47 | -- failure: changing replica identity to FULL for partition fails, because -- of the column list on the parent ALTER TABLE testpub_tbl8_0 REPLICA IDENTITY FULL |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | d197714b292424eb89900838 | ALTER FOREIGN TABLE ft1 OWNER TO regress_test_role |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | d2251e1184bb31cc108a6e1e | ALTER TABLE pp_nn_1 ADD CONSTRAINT nn1 NOT NULL a NOT VALID |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | d277c80127b0711fe83054fc | ALTER TABLE rf_tbl_abcd_pk REPLICA IDENTITY USING INDEX idx_abcd_pk_c |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | d2f7c5fc9ffadccbceb7e5e1 | ALTER TABLE deferred_excl ADD EXCLUDE (f1 WITH =) |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | d330fcf15c745ab1c41784af | alter foreign table rem2 add constraint rem2_f1positive check (f1 >= 0) |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | d397dc463298a3a7dc9082a6 | alter foreign table remt1 inherit parent |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | d4c97fa6d07665dd11df1ee0 | -- Case 3. REPLICA IDENTITY NOTHING ALTER TABLE rf_tbl_abcd_pk REPLICA IDENTITY NOTHING |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | d5296fbf49f916c984a67134 | -- but reverse is not allowed alter table p1_c1 add constraint inh_check_constraint7 check (f1 < 10) not enforced |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | d586593d61909fc3065ccd9c | ALTER FOREIGN TABLE ft2 OPTIONS (schema_name 'S 1', table_name 'T 1') |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | d586b00f9204fda83e76246c | ALTER TABLE temporal3 ADD COLUMN valid_at daterange, ADD CONSTRAINT temporal3_pk PRIMARY KEY (id, valid_at WITHOUT OVERLAPS) |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | d593733eb6c6037e217f8682 | ALTER INDEX attmp_idx ALTER COLUMN 1 SET STATISTICS 1000 |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | d5b03cbff2f78f01b85e338f | alter view my_locks reset (security_barrier) |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | d64bec5a84483a4ac576deaf | ALTER TABLE temporal_rng3 ADD CONSTRAINT temporal_rng3_uq UNIQUE (id, valid_at WITHOUT OVERLAPS) |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | d66625128edae2e59da71496 | -- violates constraint ALTER TABLE gtest20 ALTER COLUMN b SET EXPRESSION AS (a * 100) |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | d6ca0e2201607ceccdfd5a7b | ALTER INDEX dummy_test_idx SET (option_string_val = 3.5) |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | d6e8002e2d36473b1df13916 | ALTER FOREIGN TABLE agg_bad ADD CHECK (a >= 0) |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | d6ee8d6b4bdbc7ddb0756019 | ALTER FOREIGN TABLE IF EXISTS doesnt_exist_ft1 DROP COLUMN IF EXISTS no_column |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | d6f25e593fb67c2079f8a727 | ALTER TABLE FKTABLE ALTER CONSTRAINT fk_con DEFERRABLE INITIALLY DEFERRED |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | d77757fdca4d1eb265a8e7af | ALTER FOREIGN TABLE IF EXISTS doesnt_exist_ft1 ALTER COLUMN c8 SET DATA TYPE text |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | d9c7b16053dba1fc38424edb | alter table anothertab add exclude using btree (f4 with =) where (f5 > 0) |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | da3ca3dc97cd92e73b404f23 | alter foreign table foo2 options (use_remote_estimate 'true') |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | dabddb74f2623bf417ca75b8 | -- -- partitioned FK referenced deletes CASCADE -- -- -- partitioned FK referenced updates SET NULL -- ALTER TABLE temporal_partitioned_fk_rng2rng DROP CONSTRAINT temporal_partitioned_fk_rng2rng_fk... |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | dabe0703c57b59cc33690da1 | alter index idxpart_a_b_idx attach partition idxpart1_tst3 |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | db1230cc378331913785b456 | ALTER TABLE rf_tbl_abcd_nopk REPLICA IDENTITY FULL |
@@ -866,11 +649,9 @@ libpg_query target: `18-latest` `9ab9951b7021adcc6d25d261d5016ca0b83726b8` (Post
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | dfaf51924c8ab5a6617f6bd3 | ALTER TABLE temporal_rng ADD CONSTRAINT temporal_rng_pk PRIMARY KEY (id, valid_at WITHOUT OVERLAPS) |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | dfc5e36ec9a1ebd3690f86fd | alter index idxpart_pkey attach partition idxpart1_a_idx |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | e1c61e5c7258fd8c4945aa6e | ALTER TABLE notnull_tbl1 ADD CONSTRAINT foobar NOT NULL a |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | e1d819345898d2836a0c5939 | -- ERROR -- on_error, log_verbosity and reject_limit tests ALTER FOREIGN TABLE agg_bad OPTIONS (ADD on_error 'ignore') |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | e255b6aa0359586dc1629730 | alter view my_locks set (autovacuum_enabled = false) |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | e38858f92e613c81a4f982f1 | ALTER INDEX dummy_test_idx SET (option_enum = 'one') |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | e485801b24502aa963fd3dd1 | -- fail alter index idxpart_2_idx attach partition idxpart1_2_idx |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | e4ae89c9d6c08bb4bff0bb1c | -- ERROR ALTER FOREIGN TABLE ft1 ALTER COLUMN c8 TYPE user_enum |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | e5acb0edd3483f321c1e1a39 | -- error ALTER TABLE gtest23b ALTER COLUMN b SET EXPRESSION AS (a * 5) |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | e612e81e944038f6a85d2bd1 | ALTER INDEX dummy_test_idx SET (option_string_val = 'val2') |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | e6a2182ffdd766603232eabd | ALTER TABLE concur_replident REPLICA IDENTITY USING INDEX concur_replident_i_idx |
@@ -879,7 +660,6 @@ libpg_query target: `18-latest` `9ab9951b7021adcc6d25d261d5016ca0b83726b8` (Post
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | e83b8ecaa00c8915fd3a33c5 | ALTER INDEX dummy_test_idx SET (option_bool = true) |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | e887911d735bb9cc81946bc3 | alter table p1_c1 add constraint inh_check_constraint3 check (f1 > 0) not enforced |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | e88ed6946937b3c0f66d6d89 | -- fail, expression index ALTER TABLE test_replica_identity REPLICA IDENTITY USING INDEX test_replica_identity_expr |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | e8d2e8b01f2fcf896baf6fbd | -- But inconsistent check constraints provide inconsistent results ALTER FOREIGN TABLE ft1 ADD CONSTRAINT ft1_c2negative CHECK (c2 < 0) |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | e8f40404ebbd63a7d7a5f43c | ALTER TABLE testpub_tbl6 REPLICA IDENTITY FULL |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | ea04f7b86fd3cb9784e6e2d0 | alter table constr_parent add not null a not valid |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | ea6248c73b6620229dc60839 | alter index idxpart1_a_idx attach partition idxpart11_a_idx |
@@ -887,29 +667,23 @@ libpg_query target: `18-latest` `9ab9951b7021adcc6d25d261d5016ca0b83726b8` (Post
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | ebe6968349b5dbc1768287de | ALTER TABLE tbl_include_unique1 add UNIQUE USING INDEX tbl_include_unique1_idx_unique |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | ec819a211650e2b2a45ae15f | ALTER TABLE pub_test.testpub_addpk ADD PRIMARY KEY USING INDEX testpub_addpk_id_idx |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | ed1b1e14666e7cc4b720945e | ALTER TABLE attmp ALTER COLUMN i RESET (n_distinct_inherited) |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | ed78f1b5d2f5211d378fe309 | ALTER FOREIGN TABLE ft1 ALTER COLUMN c8 TYPE char(10) USING '0' |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | eded3053553be030fb44c969 | -- ok ALTER VIEW gtest1v ALTER COLUMN b SET DEFAULT 100 |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | ee3fafd88a21d0ed9a3bc2bb | ALTER FOREIGN TABLE ft1 ADD COLUMN c4 integer |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | ef181a9c0e0f7ea5d400e442 | alter index idxpart_expr_idx attach partition idxpart1_expr_idx |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | efec3493910630d8a78d1c30 | ALTER TABLE temporal_fk_rng2rng ADD CONSTRAINT temporal_fk_rng2rng_fk FOREIGN KEY (parent_id, PERIOD valid_at) REFERENCES temporal_rng ON DELETE CASCADE ON UPDATE CASCADE |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | f09cdeda341541d6056ea3ce | alter index idxpart_a_b_idx attach partition idxpart1 |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | f09ffbab58297e346fe281d0 | ALTER INDEX ptif_test0_index ATTACH PARTITION ptif_test01_index |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | f134981434233de84187162d | -- ERROR ALTER FOREIGN TABLE ft1 ALTER COLUMN c7 OPTIONS (ADD p1 'v1', ADD p2 'v2'), ALTER COLUMN c8 OPTIONS (ADD p1 'v1', ADD p2 'v2') |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | f14fa241bb60e6d2a8324868 | ALTER TABLE tt4 OF tt_t0 |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | f1c5bd0ed2bd9569fc2c671d | ALTER TABLE temporal_mltrng3 ADD CONSTRAINT temporal_mltrng3_uq UNIQUE (id, valid_at WITHOUT OVERLAPS) |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | f318db23984d00fd50b675df | -- Can change enforceability and deferrability together ALTER TABLE FKTABLE ALTER CONSTRAINT fk_con NOT ENFORCED NOT DEFERRABLE |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | f33ab2c90b229a8152a48165 | ALTER VIEW my_property_secure SET (security_barrier=false) |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | f3d147a774a673417530660e | ALTER INDEX dummy_test_idx SET (option_int = 3.3) |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | f476bb3135c960d69443c279 | ALTER INDEX tbl_idx ALTER COLUMN 1 SET STATISTICS 1000 |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | f4808f78eea286ff0d71af88 | ALTER FOREIGN TABLE async_p2 OPTIONS (DROP use_remote_estimate) |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | f528f1bae131d62b4a0738ac | ALTER TABLE gtest25 ADD COLUMN b int GENERATED ALWAYS AS (a * 2) VIRTUAL, ALTER COLUMN b SET EXPRESSION AS (a * 3) |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | f58f1efbdabef47d1eaa2d86 | -- ERROR ALTER FOREIGN TABLE ft1 DROP COLUMN IF EXISTS no_column |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | f627bff050abaa0ceb85ca40 | -- succeed unique index over nonnullable cols ALTER TABLE test_replica_identity REPLICA IDENTITY USING INDEX test_replica_identity_keyab_key |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | f635ebcc747c6c85b3333c9a | -- error ALTER TABLE gtestnn_parent ALTER COLUMN f3 SET EXPRESSION AS (nullif(f1, 2) + nullif(f2, 11)) |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | f64203351c54f46ab7f4bb27 | ALTER TABLE unique_tbl ALTER CONSTRAINT unique_tbl_i_key NOT ENFORCED |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | f66cc71e6dc8e1056b5369bf | ALTER INDEX tbl_idx ALTER COLUMN 2 SET STATISTICS 1000 |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | f6cc57072a1aa6bb4d5451d4 | alter index gin_test_idx set (fastupdate = off) |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | f6d4c2a780ff818f5468272e | ALTER FOREIGN TABLE ft1 ALTER COLUMN c8 TYPE char(10) |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | f950d97b5bd831ed0917f5f8 | alter table p1 add constraint inh_check_constraint5 check (f1 < 10) not enforced |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | f9b760051fb47632c37ebd59 | ALTER TABLE ref22 ALTER CONSTRAINT ref_f1_f2_fkey DEFERRABLE INITIALLY IMMEDIATE |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | f9b7a0df44cac8d5d47af8f2 | ALTER INDEX dummy_test_idx SET (option_bool = 4) |
@@ -922,7 +696,6 @@ libpg_query target: `18-latest` `9ab9951b7021adcc6d25d261d5016ca0b83726b8` (Post
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | fc4852ad077ca0b3b857fe8e | ALTER INDEX ptif_test_index ATTACH PARTITION ptif_test0_index |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | fc9e733f289135904bf23d98 | ALTER TABLE notnull_part1_upg ADD CONSTRAINT notnull_con NOT NULL a NOT VALID |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | fe2473ec586eaebcd216a17d | alter view base_tab_view alter column c set default 'View default' |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | ffc98c941ffd0934fec169cf | ALTER FOREIGN TABLE ft1 ADD COLUMN c8 integer |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TSCONFIGURATION_STMT | 00b8e077303276c06f56d685 | ALTER TEXT SEARCH CONFIGURATION dummy_tst DROP MAPPING IF EXISTS FOR not_a_token, not_a_token |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TSCONFIGURATION_STMT | 030a3b95da02bcb8eb2e1f35 | ALTER TEXT SEARCH CONFIGURATION dummy_tst ADD MAPPING FOR not_a_token WITH ispell |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TSCONFIGURATION_STMT | 085aadd36d04726127b18e4b | ALTER TEXT SEARCH CONFIGURATION hunspell_tst ALTER MAPPING REPLACE hunspell_long WITH hunspell_num |
@@ -954,41 +727,6 @@ libpg_query target: `18-latest` `9ab9951b7021adcc6d25d261d5016ca0b83726b8` (Post
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TSDICTIONARY_STMT | b9225b3c6943475bf4fdb186 | ALTER TEXT SEARCH DICTIONARY xsyn (RULES='xsyn_sample', KEEPORIG=false, MATCHORIG=true, KEEPSYNONYMS=true, MATCHSYNONYMS=true) |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TSDICTIONARY_STMT | d885aecf9d514d9e6d296ab0 | ALTER TEXT SEARCH DICTIONARY xsyn (RULES='xsyn_sample', KEEPORIG=true, MATCHORIG=true, KEEPSYNONYMS=true, MATCHSYNONYMS=false) |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TSDICTIONARY_STMT | de206d2d634ddec8b835615a | ALTER TEXT SEARCH DICTIONARY xsyn (RULES='xsyn_sample', KEEPORIG=false, MATCHORIG=true, KEEPSYNONYMS=false, MATCHSYNONYMS=true) |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_USER_MAPPING_STMT | 0cb901a43494c904502d552f | ALTER USER MAPPING FOR regress_test_role SERVER s6 OPTIONS (DROP username) |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_USER_MAPPING_STMT | 1171d6336f3aefdaf9ec6922 | ALTER USER MAPPING FOR public SERVER fdtest OPTIONS (ADD oauth_client_id 'myID') |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_USER_MAPPING_STMT | 118e25e57812ef7e2f8919ec | -- If we add a password for our user mapping instead, we should get a different -- error because the password wasn't actually *used* when we run with trust auth. -- -- This won't work with installc... |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_USER_MAPPING_STMT | 17ac37f42fe2cd437eacb740 | ALTER USER MAPPING FOR SESSION_USER SERVER sv6 OPTIONS (SET user 'SESSION_USER_alt') |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_USER_MAPPING_STMT | 1ee7f5ef55c0ab7dce4ce480 | ALTER USER MAPPING FOR public SERVER s4 OPTIONS (ADD modified '1') |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_USER_MAPPING_STMT | 2439b4088c15fa8e7df88211 | ALTER USER MAPPING FOR public SERVER testserver1 OPTIONS (ADD oauth_client_id 'myID') |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_USER_MAPPING_STMT | 24688363661de6e9c8c6da1f | -- ERROR ALTER USER MAPPING FOR current_user SERVER s8 OPTIONS (username 'test') |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_USER_MAPPING_STMT | 2e29f62999dc635b6533f3bd | -- should work again -- Test that alteration of user mapping options causes reconnection ALTER USER MAPPING FOR CURRENT_USER SERVER loopback OPTIONS (ADD user 'no such user') |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_USER_MAPPING_STMT | 2ff1cfae25ea7227e0fe31d6 | ALTER USER MAPPING FOR USER SERVER sv4 OPTIONS (SET user 'USER_alt') |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_USER_MAPPING_STMT | 54900e111e41017674d06ff6 | -- Attempt to add a valid option that's not allowed in a user mapping ALTER USER MAPPING FOR public SERVER testserver1 OPTIONS (ADD sslmode 'require') |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_USER_MAPPING_STMT | 5648c9c3bd64d10ee0f13b6e | -- should fail ALTER USER MAPPING FOR CURRENT_USER SERVER loopback OPTIONS (DROP user) |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_USER_MAPPING_STMT | 61b455f09061bf0695c1cdb2 | -- ERROR ALTER USER MAPPING FOR public SERVER t1 OPTIONS (ADD modified '1') |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_USER_MAPPING_STMT | 7340c6e241ad0adb35e4b5d9 | ALTER USER MAPPING FOR public SERVER testserver1 OPTIONS (DROP user, DROP password) |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_USER_MAPPING_STMT | 7bf3687205e62ee2ab3301d8 | -- Unpriv user cannot make the mapping passwordless ALTER USER MAPPING FOR CURRENT_USER SERVER loopback_nopw OPTIONS (ADD password_required 'false') |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_USER_MAPPING_STMT | 826bb3c7a99ab1a60bf3c5d3 | ALTER USER MAPPING FOR "Public" SERVER sv8 OPTIONS (SET user '"Public"_alt') |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_USER_MAPPING_STMT | 8517904f7c8be0321f2cb9ab | ALTER USER MAPPING FOR "user" SERVER sv5 OPTIONS (SET user '"user"_alt') |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_USER_MAPPING_STMT | 86795024e33b11143dc77bfb | ALTER USER MAPPING FOR nonexistent SERVER sv10 OPTIONS (SET user 'nonexistent_alt') |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_USER_MAPPING_STMT | 907126cfa22f6d470f03ed3e | ALTER USER MAPPING FOR CURRENT_USER SERVER loopback_nopw OPTIONS (ADD sslkey 'foo.key') |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_USER_MAPPING_STMT | 91e390c339c10996241cda35 | -- ALTER USER MAPPING ALTER USER MAPPING FOR CURRENT_USER SERVER sv1 OPTIONS (SET user 'CURRENT_USER_alt') |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_USER_MAPPING_STMT | 96e61cfe7b633cced4af3efa | ALTER USER MAPPING FOR CURRENT_ROLE SERVER sv3 OPTIONS (SET user 'CURRENT_ROLE_alt') |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_USER_MAPPING_STMT | 98904bb6cc4f2f148974e0de | ALTER USER MAPPING FOR CURRENT_USER SERVER loopback_nopw OPTIONS (ADD sslcert 'foo.crt') |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_USER_MAPPING_STMT | 9bb50f4e25b2f3cfec568b79 | ALTER USER MAPPING FOR public SERVER testserver1 OPTIONS (ADD oauth_issuer 'https://example.com') |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_USER_MAPPING_STMT | ac742cf13781de79c6c7efe0 | -- unpriv user also cannot set sslcert / sslkey on the user mapping -- first set password_required so we see the right error messages ALTER USER MAPPING FOR CURRENT_USER SERVER loopback_nopw OPTION... |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_USER_MAPPING_STMT | b052557cc7b109e7e6de951e | ALTER USER MAPPING FOR "current_user" SERVER sv2 OPTIONS (SET user '"current_user"_alt') |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_USER_MAPPING_STMT | b469d0598b082bb00d1d51ff | -- ERROR ALTER USER MAPPING FOR public SERVER s5 OPTIONS (gotcha 'true') |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_USER_MAPPING_STMT | b4f6ba68b4f446deaaed6efc | -- But the superuser can ALTER USER MAPPING FOR regress_nosuper SERVER loopback_nopw OPTIONS (ADD password_required 'false') |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_USER_MAPPING_STMT | bd0939b71c9f3a79c0fe4595 | -- ERROR ALTER USER MAPPING FOR regress_test_role SERVER s6 OPTIONS (gotcha 'true') |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_USER_MAPPING_STMT | c6384ebbf8cda138a0b94360 | ALTER USER MAPPING FOR current_user SERVER s5 OPTIONS (ADD modified '1') |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_USER_MAPPING_STMT | c91ad11beeaf5cbc439c7919 | -- ERROR ALTER USER MAPPING FOR user SERVER ss4 OPTIONS (gotcha 'true') |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_USER_MAPPING_STMT | d23c3416fa0f4441fd9084bb | -- ERROR ALTER USER MAPPING FOR current_user SERVER s8 OPTIONS (DROP user, SET password 'public') |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_USER_MAPPING_STMT | d791c0c2d026371ccd483a46 | ALTER USER MAPPING FOR regress_testrolx SERVER sv9 OPTIONS (SET user 'regress_testrolx_alt') |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_USER_MAPPING_STMT | d7fc381d61c0e75b06be2321 | -- Ensure valid options we haven't used in a user mapping yet are -- permitted to check validation. ALTER USER MAPPING FOR public SERVER testserver1 OPTIONS (ADD sslkey 'value', ADD sslcert 'value') |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_USER_MAPPING_STMT | dbaf51da04610270278ec4b2 | ALTER USER MAPPING FOR PUBLIC SERVER sv7 OPTIONS (SET user 'public_alt') |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_USER_MAPPING_STMT | ec6c8862ba10d5e13eec90c7 | -- But we can add valid ones fine ALTER USER MAPPING FOR public SERVER testserver1 OPTIONS (ADD sslpassword 'dummy') |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_USER_MAPPING_STMT | f9a46643cb73c83a3031250c | ALTER USER MAPPING FOR public SERVER fdtest OPTIONS (ADD oauth_issuer 'https://example.com') |
 | ERROR | PG_QUERY__NODE__NODE_COPY_STMT | 0b5f280b932616ef267ea817 | copy (update copydml_test set t = 'g' where t = 'f' returning id) to stdout |
 | ERROR | PG_QUERY__NODE__NODE_COPY_STMT | 0e3fc3e245654303cc044937 | copy (update copydml_test set t = 'g') to stdout |
 | ERROR | PG_QUERY__NODE__NODE_COPY_STMT | 0f4b250be4a93147c90bb66f | copy donothingbrtrig_test from stdout |
@@ -1214,202 +952,6 @@ libpg_query target: `18-latest` `9ab9951b7021adcc6d25d261d5016ca0b83726b8` (Post
 | ERROR | PG_QUERY__NODE__NODE_CREATE_EXTENSION_STMT | ed59ed022621c5e6270070e4 | -- -- Test @extschema:extname@ syntax and no_relocate option -- CREATE EXTENSION test_ext_req_schema1 SCHEMA has$dollar |
 | ERROR | PG_QUERY__NODE__NODE_CREATE_EXTENSION_STMT | f1ed96d0d6ea79901ce201fc | create extension test_regex |
 | ERROR | PG_QUERY__NODE__NODE_CREATE_EXTENSION_STMT | f4be13f03ca55a5519cdb354 | CREATE EXTENSION pg_freespacemap |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_FDW_STMT | 05b876cdcc312c14100450ce | -- Foreign tables CREATE FOREIGN DATA WRAPPER wrapper_stats |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_FDW_STMT | 178780abe55c77a4f0b0235b | CREATE FOREIGN DATA WRAPPER test_fdw HANDLER invalid_fdw_handler |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_FDW_STMT | 1aa835cf0064f00204c47b8a | -- ERROR CREATE FOREIGN DATA WRAPPER test_fdw HANDLER test_fdw_handler HANDLER invalid_fdw_handler |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_FDW_STMT | 1d8ac11e1d51a0e04afcbf17 | CREATE FOREIGN DATA WRAPPER postgres_fdw HANDLER postgres_fdw_handler VALIDATOR postgres_fdw_validator |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_FDW_STMT | 2be0722de1cf048c1be51ccb | -- Check that foreign tables are rejected CREATE FOREIGN DATA WRAPPER dummy |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_FDW_STMT | 2f8f789d038490b5b7e12d91 | create foreign data wrapper copytest_wrapper |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_FDW_STMT | 3867a1fff505c315d28b2451 | CREATE FOREIGN DATA WRAPPER file_fdw HANDLER file_fdw_handler VALIDATOR file_fdw_validator |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_FDW_STMT | 3ea4a255158a78cd479f1b67 | -- CREATE USER MAPPING CREATE FOREIGN DATA WRAPPER test_wrapper |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_FDW_STMT | 5cb9c44220f9b47e89fb0e19 | CREATE FOREIGN DATA WRAPPER foobar |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_FDW_STMT | 631b1c1994e8c0d8840799fd | -- CREATE FOREIGN DATA WRAPPER CREATE FOREIGN DATA WRAPPER foo VALIDATOR bar |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_FDW_STMT | 7140a37dd972081ef7d11d1c | CREATE FOREIGN DATA WRAPPER postgresql VALIDATOR postgresql_fdw_validator |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_FDW_STMT | 786430aacd93464d029c90c7 | create foreign data wrapper useless |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_FDW_STMT | 7c341030cc20ed141816c19e | CREATE FOREIGN DATA WRAPPER addr_fdw |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_FDW_STMT | 7d37eb11c4d3892a68da2e30 | -- -- Foreign Data Wrapper and Foreign Server -- CREATE FOREIGN DATA WRAPPER alt_fdw1 |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_FDW_STMT | 82f103758f0de46a99ddc0da | CREATE FOREIGN DATA WRAPPER foo OPTIONS (testing '1') |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_FDW_STMT | 8e6f8cdcbb721d34727ba00f | CREATE FOREIGN DATA WRAPPER file_fdw2 HANDLER file_fdw_handler VALIDATOR file_fdw_validator |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_FDW_STMT | 9392d109af40e0eac0580ee3 | CREATE FOREIGN DATA WRAPPER ext_cine_fdw |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_FDW_STMT | 99871cfdaa4cbe2cad6a2017 | -- ERROR CREATE FOREIGN DATA WRAPPER foo OPTIONS ("test wrapper" 'true') |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_FDW_STMT | 9e138856d204ca3733c8ded7 | -- ERROR CREATE FOREIGN DATA WRAPPER test_fdw HANDLER test_fdw_handler |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_FDW_STMT | 9eb2ab796e48ef074343ab41 | -- ERROR CREATE FOREIGN DATA WRAPPER foo |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_FDW_STMT | a48e98d6ba21b506f7669c83 | CREATE FOREIGN DATA WRAPPER dblink_fdw VALIDATOR dblink_fdw_validator |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_FDW_STMT | a6dc7fc71fadb4484aa7ee95 | CREATE FOREIGN DATA WRAPPER foo VALIDATOR postgresql_fdw_validator |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_FDW_STMT | a7f9b076b885cf2f0cc6847a | -- ERROR CREATE FOREIGN DATA WRAPPER foo OPTIONS (testing '1', another '2') |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_FDW_STMT | cca21d0cba291d57393faf4a | CREATE FOREIGN DATA WRAPPER extstats_dummy_fdw |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_FDW_STMT | e95974c753e1873670430ff5 | CREATE FOREIGN DATA WRAPPER foo OPTIONS (testing '1', testing '2') |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_FDW_STMT | f516560de4cb734dde87eeba | -- -- CREATE FOREIGN TABLE LIKE -- CREATE FOREIGN DATA WRAPPER ctl_dummy |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_FDW_STMT | f7e1e427545223852472de39 | CREATE FOREIGN DATA WRAPPER alt_fdw2 |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_FOREIGN_SERVER_STMT | 04a1d2b8e834630b76d2dbd1 | CREATE SERVER t2 FOREIGN DATA WRAPPER foo |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_FOREIGN_SERVER_STMT | 052964d23e97fd72bcaf290a | CREATE SERVER sv9 FOREIGN DATA WRAPPER test_wrapper |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_FOREIGN_SERVER_STMT | 09052e9b9d5b6e6497e91b46 | CREATE SERVER s5 VERSION '15.0' FOREIGN DATA WRAPPER foo |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_FOREIGN_SERVER_STMT | 103809e5bd7213b5f64b20b1 | CREATE SERVER testserver1 FOREIGN DATA WRAPPER postgres_fdw |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_FOREIGN_SERVER_STMT | 14091feaa95b4728d2621391 | -- ERROR CREATE SERVER s10 FOREIGN DATA WRAPPER foo |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_FOREIGN_SERVER_STMT | 1502f6ee5900b8dc4a5717f5 | -- Invalid fdw_tuple_cost option CREATE SERVER inv_scst FOREIGN DATA WRAPPER postgres_fdw OPTIONS(fdw_tuple_cost '100$%$#$#') |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_FOREIGN_SERVER_STMT | 20aae49dbbc7212a859028f9 | CREATE SERVER sv1 FOREIGN DATA WRAPPER test_wrapper |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_FOREIGN_SERVER_STMT | 260f7ca486c7941f86c68519 | CREATE SERVER sv2 FOREIGN DATA WRAPPER test_wrapper |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_FOREIGN_SERVER_STMT | 300d905bfa18031055bbc329 | CREATE SERVER s1 FOREIGN DATA WRAPPER foo |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_FOREIGN_SERVER_STMT | 3a95979154149aa121273717 | create server copytest_server foreign data wrapper copytest_wrapper |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_FOREIGN_SERVER_STMT | 42f2eb2e0544d881dddf4c1c | CREATE SERVER sv3 FOREIGN DATA WRAPPER test_wrapper |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_FOREIGN_SERVER_STMT | 4687fb727c3c8dc042f8055f | -- ERROR CREATE SERVER IF NOT EXISTS s1 FOREIGN DATA WRAPPER foo |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_FOREIGN_SERVER_STMT | 4b95a61c8067b2cf2335a454 | CREATE SERVER server_stats FOREIGN DATA WRAPPER wrapper_stats |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_FOREIGN_SERVER_STMT | 4e9f840b14842bd3fee851dd | CREATE SERVER IF NOT EXISTS ext_cine_srv FOREIGN DATA WRAPPER ext_cine_fdw |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_FOREIGN_SERVER_STMT | 512389e991daa7ca9ff8a538 | create server useless_server foreign data wrapper useless |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_FOREIGN_SERVER_STMT | 5413262a1d3cd0c2f435c9b1 | CREATE SERVER sv4 FOREIGN DATA WRAPPER test_wrapper |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_FOREIGN_SERVER_STMT | 5d048f8499e9890d759f958e | CREATE SERVER t1 FOREIGN DATA WRAPPER foo |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_FOREIGN_SERVER_STMT | 5e90ceaa00657c1d6c2966a3 | CREATE SERVER s3 TYPE 'oracle' FOREIGN DATA WRAPPER foo |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_FOREIGN_SERVER_STMT | 6cd141b2ce1a1d7d6d85bce2 | CREATE SERVER fetch101 FOREIGN DATA WRAPPER postgres_fdw OPTIONS( fetch_size '101' ) |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_FOREIGN_SERVER_STMT | 7033d888589ecc351fe36d96 | CREATE SERVER sv8 FOREIGN DATA WRAPPER test_wrapper |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_FOREIGN_SERVER_STMT | 7e0a12cd6d56458d90fbdb06 | CREATE SERVER addr_fserv FOREIGN DATA WRAPPER addr_fdw |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_FOREIGN_SERVER_STMT | 7f87da2c7add2d24b6adee34 | CREATE SERVER s4 TYPE 'oracle' FOREIGN DATA WRAPPER foo OPTIONS (host 'a', dbname 'b') |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_FOREIGN_SERVER_STMT | 803eb25d5d5b67b153d41fa0 | CREATE SERVER sv7 FOREIGN DATA WRAPPER test_wrapper |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_FOREIGN_SERVER_STMT | 8203f267f06825b9506dd1e9 | CREATE SERVER alt_fserv1 FOREIGN DATA WRAPPER alt_fdw1 |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_FOREIGN_SERVER_STMT | 87ffdfb9c980fef6f1b68b32 | CREATE SERVER s9 FOREIGN DATA WRAPPER postgresql |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_FOREIGN_SERVER_STMT | 885a204958a8d0e1e122baf0 | -- =================================================================== -- test invalid server, foreign table and foreign data wrapper options -- ====================================================... |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_FOREIGN_SERVER_STMT | 952ce25f5b81af27445a3048 | CREATE SERVER s0 FOREIGN DATA WRAPPER dummy |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_FOREIGN_SERVER_STMT | 971877c4063abd0bb2a8ec9d | CREATE SERVER sv6 FOREIGN DATA WRAPPER test_wrapper |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_FOREIGN_SERVER_STMT | 9bc4ce39c6371d2503fe79df | CREATE SERVER sv5 FOREIGN DATA WRAPPER test_wrapper |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_FOREIGN_SERVER_STMT | 9e914a4e799cf10bf91a97e9 | CREATE SERVER sv10 FOREIGN DATA WRAPPER test_wrapper |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_FOREIGN_SERVER_STMT | aac73a7ef55f10fb1fca4cec | CREATE SERVER "integer" FOREIGN DATA WRAPPER addr_fdw |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_FOREIGN_SERVER_STMT | b12129a637f48187eeb3f2ff | CREATE SERVER s7 TYPE 'oracle' VERSION '17.0' FOREIGN DATA WRAPPER foo OPTIONS (host 'a', dbname 'b') |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_FOREIGN_SERVER_STMT | b41cddbb7dc74bd13111c78c | CREATE SERVER ctl_s0 FOREIGN DATA WRAPPER ctl_dummy |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_FOREIGN_SERVER_STMT | bca6c90572f3b722a6a18fbf | -- ERROR CREATE SERVER file_server2 FOREIGN DATA WRAPPER file_fdw |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_FOREIGN_SERVER_STMT | cb214c153aaa4748618afaf0 | CREATE SERVER s8 FOREIGN DATA WRAPPER postgresql OPTIONS (foo '1') |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_FOREIGN_SERVER_STMT | cc507b04c5f07128dd3db127 | CREATE SERVER s6 VERSION '16.0' FOREIGN DATA WRAPPER foo OPTIONS (host 'a', dbname 'b') |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_FOREIGN_SERVER_STMT | d1d3c89e00aa24d504a69174 | -- No ERROR, just NOTICE CREATE SERVER s2 FOREIGN DATA WRAPPER foo OPTIONS (host 'a', dbname 'b') |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_FOREIGN_SERVER_STMT | d6d9b5dacc7a3f8561da9e9c | CREATE SERVER batch10 FOREIGN DATA WRAPPER postgres_fdw OPTIONS( batch_size '10' ) |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_FOREIGN_SERVER_STMT | de419f5ac6f57041a4987ede | CREATE SERVER file_server FOREIGN DATA WRAPPER file_fdw |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_FOREIGN_SERVER_STMT | e09f763d8bb5df953e176feb | CREATE SERVER dummy_server FOREIGN DATA WRAPPER dummy |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_FOREIGN_SERVER_STMT | e4a37099f348a36c15715853 | CREATE SERVER ext_cine_srv FOREIGN DATA WRAPPER dummy |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_FOREIGN_SERVER_STMT | f7eaa5c6ce6a273a7d879f13 | CREATE SERVER alt_fserv2 FOREIGN DATA WRAPPER alt_fdw2 |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_FOREIGN_SERVER_STMT | f8374945c82f3b5e13e5dcec | -- ERROR CREATE SERVER s8 FOREIGN DATA WRAPPER postgresql OPTIONS (host 'localhost', dbname 's8db') |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_FOREIGN_SERVER_STMT | f95ea631f3c33c86167be627 | -- ERROR CREATE SERVER s9 FOREIGN DATA WRAPPER foo |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_FOREIGN_SERVER_STMT | fbac917cd1f321f3aefa50d4 | CREATE SERVER extstats_dummy_srv FOREIGN DATA WRAPPER extstats_dummy_fdw |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | 056fe1d6a736f39d2d4735ce | CREATE FOREIGN TABLE ft2 () INHERITS (fd_pt1) SERVER s0 OPTIONS (delimiter ',', quote '"', "be quoted" 'value') |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | 0622d4f679e21f01e7df89c7 | CREATE FOREIGN TABLE tru_ftable (id int) SERVER loopback OPTIONS (table_name 'tru_rtable0') |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | 06eccfa36dd2e8ae42b607ba | -- ERROR CREATE FOREIGN TABLE tbl () SERVER file_server OPTIONS ("a=b" 'true') |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | 09ff267d2977fa6603eb463d | CREATE FOREIGN TABLE table30000 ( x int ) SERVER fetch101 OPTIONS ( fetch_size '30000' ) |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | 0c83c8318029bcf85b92a6d9 | -- ERROR CREATE FOREIGN TABLE tbl () SERVER file_server OPTIONS (format 'binary', quote ':') |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | 0f460acd885f4c3a074bec9f | -- ERROR CREATE FOREIGN TABLE tbl () SERVER file_server OPTIONS (format 'csv', quote '-', null '=-=') |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | 0fbbee95b5046e40f6f85e6b | CREATE FOREIGN TABLE batch_cp_upd_test3_f PARTITION OF batch_cp_upd_test FOR VALUES IN (3) SERVER loopback OPTIONS (table_name 'batch_cp_upd_test3', batch_size '1') |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | 109a2219d86b4a73e844f028 | -- ERROR CREATE FOREIGN TABLE tbl () SERVER file_server OPTIONS (format 'csv', delimiter '---') |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | 124d9df0f94d88d8e599e45e | -- ERROR CREATE FOREIGN TABLE tbl () SERVER file_server OPTIONS (log_verbosity 'unsupported') |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | 1812f0481551136467a50a92 | -- ERROR CREATE FOREIGN TABLE tbl () SERVER file_server OPTIONS (format 'csv', quote '---') |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | 188864b6300249f5865b791f | CREATE FOREIGN TABLE ft1 ( c1 integer OPTIONS ("param 1" 'val1') NOT NULL, c2 text OPTIONS (param2 'val2', param3 'val3') CHECK (c2 <> ''), c3 date, CHECK (c3 BETWEEN '1994-01-01'::date AND '1994-0... |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | 1a14d6dd1894aa28f789f6f4 | -- ERROR CREATE FOREIGN TABLE tbl () SERVER file_server OPTIONS (reject_limit '1') |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | 1c0dc685d52607e9b2d9571b | CREATE FOREIGN TABLE prem1 (f1 int, f2 text) SERVER loopback OPTIONS (table_name 'ploc1') |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | 1cd01f323368c391e8760b97 | -- ERROR CREATE FOREIGN TABLE tbl () SERVER file_server OPTIONS (format 'csv', null ' ') |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | 1cf9107e09f0c3cbe6e59aa7 | -- ERROR CREATE FOREIGN TABLE tbl () SERVER file_server OPTIONS (format 'binary', header 'true') |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | 1d367d4465f8be57af71dfa6 | CREATE FOREIGN TABLE tru_ftable_parent (id int) SERVER loopback OPTIONS (table_name 'tru_rtable_parent') |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | 1e00645ea21bc963f2cfa41c | CREATE FOREIGN TABLE tru_pk_ftable (id int) SERVER loopback OPTIONS (table_name 'tru_pk_table') |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | 208518c7601ccd0a17ca6def | -- ERROR CREATE FOREIGN TABLE tbl () SERVER file_server OPTIONS (force_not_null '*') |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | 280334941bb77ccf35ca8255 | -- Invalid batch_size option CREATE FOREIGN TABLE inv_bsz (c1 int ) SERVER loopback OPTIONS (batch_size '100$%$#$#') |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | 2cbc48144776aad625bced4d | create foreign table rem3 (f1 int, f2 text) server loopback options(table_name 'loc3') |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | 2ccb5ab18e16e68103bcb4f6 | CREATE FOREIGN TABLE reind_fdw_10_20 PARTITION OF reind_fdw_parent FOR VALUES FROM (10) TO (20) SERVER loopback OPTIONS (table_name 'reind_local_10_20') |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | 2d829f55436731cae9fb0b6c | CREATE FOREIGN TABLE remote_tbl (a int, b int, c text) SERVER loopback OPTIONS (table_name 'base_tbl3') |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | 2ed4831743c53699d38b1bda | create foreign table remp2 (b text, a int check (a in (2))) server loopback options (table_name 'loct2') |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | 31ae5a4b166f6f0bf487d0c4 | CREATE FOREIGN TABLE foreign_tbl2 () INHERITS (foreign_tbl) SERVER loopback OPTIONS (table_name 'base_tbl') |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | 32b3049aa9dde5f90ccec572 | -- ERROR CREATE FOREIGN TABLE tbl () SERVER file_server OPTIONS (format 'text', delimiter '.') |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | 39bad7469450d77e2f122853 | CREATE FOREIGN TABLE foreign_tbl (a int, b int) SERVER loopback OPTIONS (table_name 'base_tbl') |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | 3b2adaf37787ee8e0fc95bac | CREATE FOREIGN TABLE ftprt1_p2 PARTITION OF fprt1 FOR VALUES FROM (250) TO (500) SERVER loopback OPTIONS (TABLE_NAME 'fprt1_p2') |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | 3b3c7b50ca3c2ef107994b31 | CREATE FOREIGN TABLE ft_part2 (a INT) SERVER s0 |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | 3f307fc8019bac4f52786e31 | -- ERROR CREATE FOREIGN TABLE tbl () SERVER file_server OPTIONS (force_null '*') |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | 406ca34ec29aad626c784436 | -- ERROR CREATE FOREIGN TABLE tbl () SERVER file_server OPTIONS (format 'text', quote ':') |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | 4b8f86231e85efde9aef70a2 | CREATE FOREIGN TABLE ft7 ( c1 int NOT NULL, c2 int NOT NULL, c3 text ) SERVER loopback3 OPTIONS (schema_name 'S 1', table_name 'T 4') |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | 4d51a8132e8b4bb19ac8644f | -- ERROR CREATE FOREIGN TABLE tbl () SERVER file_server OPTIONS (format 'csv', delimiter '-', quote '-') |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | 4d82ac0c70aafab3bce01a93 | -- ERROR CREATE FOREIGN TABLE tbl () SERVER file_server OPTIONS (format 'text', escape ':') |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | 5064509419d66e3499cddea6 | CREATE FOREIGN TABLE ftable (a text, b int) SERVER loopback OPTIONS (table_name 'batch_table', batch_size '2') |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | 51281918cdf5ec7fe0b3deff | -- =================================================================== -- create foreign tables -- =================================================================== CREATE FOREIGN TABLE ft1 ( c0 ... |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | 561c6453bdff13917a053fd2 | create foreign table rem2 (f1 int, f2 text) server loopback options(table_name 'loc2') |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | 5978d132406ec8adca27fba2 | -- ERROR CREATE FOREIGN TABLE tbl () SERVER file_server OPTIONS (format 'text', delimiter 'a') |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | 5b07cbbe987539ceb48a32a1 | CREATE FOREIGN TABLE fpagg_tab_p3 PARTITION OF pagg_tab FOR VALUES FROM (20) TO (30) SERVER loopback OPTIONS (table_name 'pagg_tab_p3') |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | 5eecb7b545865ef5514fb1ef | CREATE FOREIGN TABLE foreign_tbl (b int) SERVER loopback OPTIONS (table_name 'base_tbl') |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | 5fa2c3da9a2d0aa905175ab7 | -- ERROR CREATE FOREIGN TABLE ft1 ( c1 integer OPTIONS ("param 1" 'val1') PRIMARY KEY, c2 text OPTIONS (param2 'val2', param3 'val3'), c3 date ) SERVER s0 OPTIONS (delimiter ',', quote '"', "be quo... |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | 61c98ccc8452422a20e04a5e | CREATE FOREIGN TABLE ft5 ( c1 int NOT NULL, c2 int NOT NULL, c3 text ) SERVER loopback OPTIONS (schema_name 'S 1', table_name 'T 4') |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | 66c7531fcb9b759e5bda0f53 | CREATE FOREIGN TABLE fpagg_tab_p2 PARTITION OF pagg_tab FOR VALUES FROM (10) TO (20) SERVER loopback OPTIONS (table_name 'pagg_tab_p2') |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | 68c2ecf202652e7ea45eadfd | CREATE FOREIGN TABLE foreign_part PARTITION OF temp_parted DEFAULT SERVER s0 |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | 6af60af75522916a68cce710 | -- Test INCLUDING ALL -- INDEXES, IDENTITY, COMPRESSION, STORAGE are not copied. CREATE FOREIGN TABLE ctl_foreign_table2(LIKE ctl_table INCLUDING ALL) SERVER ctl_s0 |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | 6bccb1767544313bb9e53425 | CREATE FOREIGN TABLE batch_table_p0f PARTITION OF batch_table FOR VALUES WITH (MODULUS 2, REMAINDER 0) SERVER loopback OPTIONS (table_name 'batch_table_p0') |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | 6c97ecc643fe902b4e6e3ed3 | -- validator tests CREATE FOREIGN TABLE tbl () SERVER file_server OPTIONS (foo 'bar') |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | 70a5613401ff3cc6ef2ed972 | CREATE FOREIGN TABLE ft1 ( c1 integer OPTIONS ("param 1" 'val1') NOT NULL, c2 text OPTIONS (param2 'val2', param3 'val3'), c3 date, UNIQUE (c3) ) SERVER s0 OPTIONS (delimiter ',', quote '"', "be qu... |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | 72e99bb66189dd2fefdd96de | create foreign table remt1 (a int, b text) server loopback options (table_name 'loct1') |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | 7625ed8c986d1a8b73cf6130 | create foreign table bar2 (f3 int) inherits (bar) server loopback options (table_name 'loct2') |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | 76680239b4e2036a10bdb2d2 | CREATE FOREIGN TABLE remote_application_name (application_name text) SERVER loopback2 OPTIONS (schema_name 'public', table_name 'my_application_name') |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | 7671d12e587259583a948eda | CREATE FOREIGN TABLE ft_part_1_2 (a INT NOT NULL) SERVER s0 |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | 7e9c80d7285f0eaca4b7a544 | create foreign table grem1 ( a int, b int generated always as (a * 2) stored, c int generated always as (a * 3) virtual ) server loopback options(table_name 'gloc1') |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | 81128ef3ea86492881a6200a | CREATE FOREIGN TABLE fd_pt2_1 PARTITION OF fd_pt2 FOR VALUES IN (1) SERVER s0 OPTIONS (delimiter ',', quote '"', "be quoted" 'value') |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | 8348e63982e44bc60f644b36 | CREATE FOREIGN TABLE batch_table_p0f PARTITION OF batch_table FOR VALUES WITH (MODULUS 3, REMAINDER 0) SERVER loopback OPTIONS (table_name 'batch_table_p0', batch_size '10') |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | 868f15bd4e719cb2eeb42d90 | CREATE FOREIGN TABLE tststats.f (a int, b int, c text) SERVER extstats_dummy_srv |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | 86dadbfb759a9f7b745242f8 | -- ERROR CREATE FOREIGN TABLE tbl () SERVER file_server OPTIONS (on_error 'unsupported') |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | 870ddcc542c3ee6e2d0f6167 | CREATE FOREIGN TABLE async_p1 PARTITION OF async_pt FOR VALUES FROM (1000) TO (2000) SERVER loopback OPTIONS (table_name 'base_tbl1') |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | 8887b6196333c5b3529fc08f | CREATE FOREIGN TABLE batch_cp_upd_test1_f PARTITION OF batch_cp_upd_test FOR VALUES IN (1) SERVER loopback OPTIONS (table_name 'batch_cp_upd_test1', batch_size '10') |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | 88a081f0ea332d1a3a0f351c | -- Disable batch insert CREATE FOREIGN TABLE ftable ( x int ) SERVER loopback OPTIONS ( table_name 'batch_table', batch_size '1' ) |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | 8d6d662db8e8f6aa1f459dd0 | CREATE FOREIGN TABLE ftprt2_p2 PARTITION OF fprt2 FOR VALUES FROM (250) TO (500) SERVER loopback OPTIONS (table_name 'fprt2_p2', use_remote_estimate 'true') |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | 8e0f82506edc544ad93624db | create foreign table remt2 (a int, b text) server loopback options (table_name 'loct2') |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | 8e48603565dacfd5686dcf6c | -- ERROR CREATE FOREIGN TABLE ft_part2 (a INT NOT NULL) SERVER s0 |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | 8ebb6f6505ed23cfea0d2959 | CREATE FOREIGN TABLE ftprt2_p1 (b int, c varchar, a int) SERVER loopback OPTIONS (table_name 'fprt2_p1', use_remote_estimate 'true') |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | 92f8a9989a0ab4e52d7baa00 | CREATE FOREIGN TABLE ft2 ( c1 integer NOT NULL, c2 text, c3 date ) SERVER s0 OPTIONS (delimiter ',', quote '"', "be quoted" 'value') |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | 9783d33f122215ce49a26768 | CREATE FOREIGN TABLE ft1 (c1 integer NOT NULL) SERVER s0 |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | 991dfc7aef3a2a13f3934291 | create foreign table tab_batch_sharded_p1 partition of tab_batch_sharded for values with (modulus 2, remainder 1) server loopback options (table_name 'tab_batch_sharded_p1_remote') |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | 9984f36efc850f5b165e6c55 | CREATE FOREIGN TABLE fd_pt2_1 ( c1 integer NOT NULL, c2 text, c3 date, c4 char ) SERVER s0 OPTIONS (delimiter ',', quote '"', "be quoted" 'value') |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | 9fdf3d3507abf9994fde86f5 | create foreign table remp1 (a int check (a in (1)), b text) server loopback options (table_name 'loct1') |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | a120089d2b6dda8f7f421568 | CREATE FOREIGN TABLE insert_tbl (a int, b int, c text) SERVER loopback OPTIONS (table_name 'base_tbl4') |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | a18785bf46ece092174cd026 | CREATE FOREIGN TABLE ft2 ( c1 int NOT NULL, c2 int NOT NULL, cx int, c3 text, c4 timestamptz, c5 timestamp, c6 varchar(10), c7 char(10) default 'ft2', c8 user_enum ) SERVER loopback |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | a49d4e8c8f70060f5842d96b | create foreign table ft3 (f1 text collate "C", f2 text, f3 varchar(10)) server loopback options (table_name 'loct3', use_remote_estimate 'true') |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | a51ea86c4378a3c15d49b6cd | CREATE FOREIGN TABLE analyze_ftable (id int, a text, b bigint) SERVER loopback OPTIONS (table_name 'analyze_table') |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | a8639bfe0e5cf66d0cd01e98 | -- ERROR CREATE FOREIGN TABLE tbl () SERVER file_server OPTIONS (format 'csv', delimiter '-', null '=-=') |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | abe33740abbda6a49ebf85d3 | -- ERROR CREATE FOREIGN TABLE tbl () SERVER file_server OPTIONS (format 'csv', delimiter ' ') |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | af7b687a7f4614997a10e38e | CREATE FOREIGN TABLE batch_table_p1f PARTITION OF batch_table FOR VALUES WITH (MODULUS 3, REMAINDER 1) SERVER loopback OPTIONS (table_name 'batch_table_p1', batch_size '1') |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | b052c624c5a78dfcd5268338 | CREATE FOREIGN TABLE foreign_tbl (a int, b int) SERVER loopback OPTIONS (table_name 'child_tbl') |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | b0de162b620d91b1106c4377 | CREATE FOREIGN TABLE prem2 (f1 int, f2 text) SERVER loopback2 OPTIONS (table_name 'ploc2') |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | b37ac864fad4140a5566e6fd | CREATE FOREIGN TABLE ft_empty (c1 int NOT NULL, c2 text) SERVER loopback OPTIONS (table_name 'loct_empty') |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | b7b1833ac9004a8c7a09c3bd | -- ERROR CREATE FOREIGN TABLE tbl () SERVER file_server OPTIONS (format 'text', delimiter '1') |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | b7ec58e2aa99697e9263ac2c | CREATE FOREIGN TABLE remote_backend_pid (pid int) SERVER loopback OPTIONS (table_name 'my_backend_pid') |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | b814084e8a12a49a4284ea73 | create foreign table remp (a int check (a in (3)), b text) server loopback options (table_name 'loct') |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | ba84e30536370fe75d2af925 | CREATE FOREIGN TABLE ft1 ( c1 integer OPTIONS ("param 1" 'val1') REFERENCES ref_table (id), c2 text OPTIONS (param2 'val2', param3 'val3'), c3 date ) SERVER s0 OPTIONS (delimiter ',', quote '"', "b... |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | bbf62ba71cc9ea34fbe547a0 | CREATE FOREIGN TABLE child_foreign (b text, c numeric, a int) SERVER loopback OPTIONS (table_name 'child_local') |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | bca67aa86625d5a0a8e3a594 | CREATE FOREIGN TABLE ftprt1_p1 PARTITION OF fprt1 FOR VALUES FROM (0) TO (250) SERVER loopback OPTIONS (table_name 'fprt1_p1', use_remote_estimate 'true') |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | bddbd4467892d35f25fcb69f | create foreign table remp (a int check (a in (1)), b text) server loopback options (table_name 'loct') |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | bf542459d1b94311f5bd2c8f | CREATE FOREIGN TABLE test_foreign_table () SERVER dummy_server |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | c52fd35329cdba847a9338f7 | CREATE FOREIGN TABLE pg_temp.ft1_nopw ( c1 int NOT NULL, c2 int NOT NULL, c3 text, c4 timestamptz, c5 timestamp, c6 varchar(10), c7 char(10) default 'ft1', c8 user_enum ) SERVER loopback_nopw OPTIO... |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | c5393c778b69474c5c6c8606 | create foreign table foo2 (f3 int) inherits (foo) server loopback options (table_name 'loct1') |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | c69ba0712e2bf6eb981e2a0e | CREATE FOREIGN TABLE foreign_stats (a int) SERVER server_stats |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | c8163bb7fb9843f48004845c | CREATE FOREIGN TABLE tru_ftable_child () INHERITS (tru_ftable_parent) SERVER loopback OPTIONS (table_name 'tru_rtable_child') |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | c922feb8aff4e9043c038343 | -- Create foreign partitions CREATE FOREIGN TABLE fpagg_tab_p1 PARTITION OF pagg_tab FOR VALUES FROM (0) TO (10) SERVER loopback OPTIONS (table_name 'pagg_tab_p1') |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | ca5c103dcf847338213e459e | CREATE FOREIGN TABLE addr_nsp.genftable (a int) SERVER addr_fserv |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | cc8acf09ca7b8ffae772513d | CREATE FOREIGN TABLE table30 ( x int ) SERVER batch10 OPTIONS ( batch_size '30' ) |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | cd0f42e9701bbca7d69b0004 | create foreign table foo2child (f3 int) inherits (foo2) server loopback options (table_name 'loct4') |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | d14810fbbed6cb1a5296ed20 | create foreign table rem1 (f1 serial, f2 text) server loopback options(table_name 'loc1') |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | d4601e71c00f80e7aa69b73b | -- Test error handling, if accessing one of the foreign partitions errors out CREATE FOREIGN TABLE async_p_broken PARTITION OF async_pt FOR VALUES FROM (10000) TO (10001) SERVER loopback OPTIONS (t... |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | d58cb4e935869bd95db72aec | -- ERROR CREATE FOREIGN TABLE tbl () SERVER file_server |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | d8317f5bc2e0f06ffe649e00 | CREATE FOREIGN TABLE ftable ( x int ) SERVER loopback OPTIONS ( table_name 'batch_table', batch_size '10' ) |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | dc81ac18c67725bae1f3bb76 | CREATE FOREIGN TABLE ft4 ( c1 int NOT NULL, c2 int NOT NULL, c3 text ) SERVER loopback OPTIONS (schema_name 'S 1', table_name 'T 3') |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | df829464d57afc7552b385ba | CREATE FOREIGN TABLE batch_table_p1f PARTITION OF batch_table FOR VALUES WITH (MODULUS 2, REMAINDER 1) SERVER loopback OPTIONS (table_name 'batch_table_p1') |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | e0f6f4ac515236e94e89277b | CREATE FOREIGN TABLE ft6 ( c1 int NOT NULL, c2 int NOT NULL, c3 text ) SERVER loopback2 OPTIONS (schema_name 'S 1', table_name 'T 4') |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | e28644abb4b290a3c2ffaa44 | -- ERROR CREATE FOREIGN TABLE tbl () SERVER file_server OPTIONS (format 'binary', escape ':') |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | e45f509e069df41ae88a0bc4 | CREATE FOREIGN TABLE ftable PARTITION OF parent FOR VALUES IN ('AAA') SERVER loopback OPTIONS (table_name 'batch_table', batch_size '2') |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | e50b1b42df7a6c85c644e1a7 | -- ERROR CREATE FOREIGN TABLE tbl () SERVER file_server OPTIONS (format 'xml') |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | e543105c37d12e83c5be554a | CREATE FOREIGN TABLE async_p3 PARTITION OF async_pt FOR VALUES FROM (3000) TO (4000) SERVER loopback2 OPTIONS (table_name 'base_tbl3') |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | e7b01eb6d3f2c8bc6118336b | CREATE FOREIGN TABLE ft3 ( c1 integer NOT NULL, c2 text, c3 date ) INHERITS(ft2) SERVER s0 |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | e7c11c955e6bc78d14a270b9 | create foreign table copytest_foreign_table (a int) server copytest_server |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | eb9761ffb1ce7d32215fec21 | CREATE FOREIGN TABLE remt2 (c1 int, c2 text) SERVER loopback OPTIONS (table_name 'loct2') |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | ed825a2e0e8166380caf3460 | -- Invalid fetch_size option CREATE FOREIGN TABLE inv_fsz (c1 int ) SERVER loopback OPTIONS (fetch_size '100$%$#$#') |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | ee0a5da5e13955dc942c3bac | -- ERROR CREATE FOREIGN TABLE tbl () SERVER file_server OPTIONS (on_error 'ignore', reject_limit '0') |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | f03119bf55717787be22333b | CREATE FOREIGN TABLE ft_part_1_2 (a INT) SERVER s0 |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | f549961b30bbbeea1d57783a | CREATE FOREIGN TABLE async_p2 PARTITION OF async_pt FOR VALUES FROM (2000) TO (3000) SERVER loopback2 OPTIONS (table_name 'base_tbl2') |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | f551a7a1d37be9042e64dbd3 | CREATE FOREIGN TABLE ft_part1 PARTITION OF lt1 FOR VALUES FROM (0) TO (1000) SERVER s0 |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | f593cbb36e4563c55556b628 | -- =================================================================== -- REINDEX -- =================================================================== -- remote table is not created here CREATE F... |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | f6f0bb07b18dee0f95c663ed | CREATE FOREIGN TABLE b (bb TEXT) INHERITS (a) SERVER loopback OPTIONS (table_name 'loct') |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | f826908ed93a7299da1db989 | -- ERROR CREATE FOREIGN TABLE tbl () SERVER file_server OPTIONS (format 'binary', on_error 'ignore') |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | f87383fbb15e2a7dedad1292 | -- ERROR CREATE FOREIGN TABLE tbl () SERVER file_server OPTIONS (format 'text', delimiter '\\') |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | f8f377fbe73d7a214f3d9b4f | CREATE FOREIGN TABLE ft_part_1_1 PARTITION OF lt1_part1 FOR VALUES FROM (0) TO (100) SERVER s0 |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | f9046de9ac1ffc18337b640a | CREATE FOREIGN TABLE foreign_tbl (a text, b int) SERVER loopback OPTIONS (table_name 'local_tbl') |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | fa21cc79bb111c1b51686cd1 | -- ERROR CREATE FOREIGN TABLE foreign_part (a int) SERVER s0 |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | fbd3dfcc733fd4c3ca32b7bb | -- ERROR CREATE FOREIGN TABLE tbl () SERVER file_server OPTIONS (format 'text', escape '-') |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | fbf7bc2b91087759bcf7f666 | -- ERROR CREATE FOREIGN TABLE ft1 () SERVER no_server |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | fea6fbcbddae2b4ac7765d45 | -- ERROR CREATE FOREIGN TABLE tbl () SERVER file_server OPTIONS (format 'csv', escape '---') |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | fedca79e9ca6157ab47b2635 | CREATE FOREIGN TABLE tru_ftable__p1 PARTITION OF tru_ptable FOR VALUES WITH (MODULUS 2, REMAINDER 1) SERVER loopback OPTIONS (table_name 'tru_rtable1') |
 | ERROR | PG_QUERY__NODE__NODE_CREATE_FUNCTION_STMT | 10b807de222492ae98e8b09d | CREATE FUNCTION functest_S_2(a text[]) RETURNS int RETURN a[1]::int |
 | ERROR | PG_QUERY__NODE__NODE_CREATE_FUNCTION_STMT | 1faf46ce11177ac2f1ed8935 | CREATE FUNCTION functest_S_14() RETURNS bigint RETURN (SELECT count(*) FROM functestv3) |
 | ERROR | PG_QUERY__NODE__NODE_CREATE_FUNCTION_STMT | 387b54c840c303f10f68bbd6 | CREATE FUNCTION functest_S_3() RETURNS boolean RETURN false |
@@ -1427,118 +969,6 @@ libpg_query target: `18-latest` `9ab9951b7021adcc6d25d261d5016ca0b83726b8` (Post
 | ERROR | PG_QUERY__NODE__NODE_CREATE_PLANG_STMT | a59703ad5d06c68426e329ff | CREATE LANGUAGE alt_lang2 HANDLER plpgsql_call_handler |
 | ERROR | PG_QUERY__NODE__NODE_CREATE_PLANG_STMT | b143f564c3e37706079058e0 | -- -- Procedural Language -- CREATE LANGUAGE alt_lang1 HANDLER plpgsql_call_handler |
 | ERROR | PG_QUERY__NODE__NODE_CREATE_PLANG_STMT | f4ee38b6cf870facbb4c5456 | CREATE TRUSTED LANGUAGE plsample HANDLER plsample_call_handler |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_POLICY_STMT | 00306a3d0ab89065f143fc58 | CREATE POLICY p1 ON document FOR SELECT USING (cid = (SELECT cid from category WHERE cname = 'novel')) |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_POLICY_STMT | 034361621d936063238fcf03 | CREATE POLICY pa_target_pol ON pa_target USING (tid != 0) |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_POLICY_STMT | 08898b7e9c2b6416c887b7cc | CREATE POLICY blog_1 ON blog USING (id % 2 = 0) |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_POLICY_STMT | 0a8c0d582dc54d1d862a8a8d | CREATE POLICY r2 ON rec2 USING (a = (SELECT x FROM rec1v WHERE y = b)) |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_POLICY_STMT | 0ba073c6c7a91500f9552433 | CREATE POLICY p1 ON t1 USING (a % 2 = 0) |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_POLICY_STMT | 0c4c2aa6f3cd3a63d183ef84 | CREATE POLICY p2 ON t1 TO regress_rls_carol USING ((a % 4) = 0) |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_POLICY_STMT | 0ed8138117039a736db766bb | CREATE POLICY p1 ON event_trigger_test USING (FALSE) |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_POLICY_STMT | 0eedd238e2546edc852d445d | CREATE POLICY foo ON pg_description FOR SELECT USING (description NOT LIKE 'secret%') |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_POLICY_STMT | 10064636a5b28e0d0dd89cf6 | CREATE POLICY p1 ON r1 FOR SELECT USING (false) |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_POLICY_STMT | 153e2ab11d1f9923d24f4131 | CREATE POLICY p3 ON y2 USING (a % 4 = 0) |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_POLICY_STMT | 19f1782ebb8268841b17dc27 | CREATE POLICY p3 ON r1 FOR INSERT WITH CHECK (true) |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_POLICY_STMT | 1b0f52a2a71c4e8012aae910 | CREATE POLICY p0 ON x1 FOR ALL USING (c = current_user) |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_POLICY_STMT | 1ee2b4904a325121b8f0c0f2 | CREATE POLICY p0 ON r1 USING (b * 10 = c) |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_POLICY_STMT | 20c374f42b69137973040c5a | CREATE POLICY p3 ON rls_tbl FOR UPDATE USING (c1 <= 3) WITH CHECK (c1 > 5) |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_POLICY_STMT | 22f5b81ceba5c8e8fde29c7a | CREATE POLICY p2 ON r1 FOR UPDATE USING (a < 20) WITH CHECK (true) |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_POLICY_STMT | 268ba362428acfd9e4e632a1 | CREATE POLICY r1 ON rec1 USING (x = (SELECT a FROM rec2v WHERE b = y)) |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_POLICY_STMT | 2748660103ec2324c9598240 | CREATE POLICY p3 ON document FOR UPDATE USING (cid = (SELECT cid from category WHERE cname = 'novel')) WITH CHECK (dauthor = current_user) |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_POLICY_STMT | 278d63c6e23c7e8217872936 | CREATE POLICY priv_test_parent_tbl_pol ON tststats.priv_test_parent_tbl USING (2 * a < 0) |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_POLICY_STMT | 2a106e68ca293bed85599071 | CREATE POLICY p2 ON r2 FOR INSERT WITH CHECK (false) |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_POLICY_STMT | 2efea6cdaf121a8bda00fea7 | CREATE POLICY p1 ON y1 FOR SELECT USING (a % 2 = 1) |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_POLICY_STMT | 30657c1dcf492f096d1b10a1 | CREATE POLICY p1 ON s1 USING (a in (select x from s2 where y like '%2f%')) |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_POLICY_STMT | 3167a4889180054996abc099 | CREATE POLICY p1 ON rls_tbl USING (a < 0) |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_POLICY_STMT | 316d6c2f5925b78ce09ca10a | -- -- Test ALL policies with ON CONFLICT DO UPDATE (much the same as existing UPDATE -- tests) -- CREATE POLICY p3_with_all ON document FOR ALL USING (cid = (SELECT cid from category WHERE cname = ... |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_POLICY_STMT | 3676f414f8c86ab27d4af172 | CREATE POLICY p1 ON x1 FOR SELECT USING (a % 2 = 0) |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_POLICY_STMT | 379aa9d83421688e971f43da | CREATE POLICY p4 ON x1 FOR DELETE USING (a < 8) |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_POLICY_STMT | 3cfc2d037421c86544b8185c | -- Create policy on parent -- user's security level must be higher than or equal to document's CREATE POLICY pp1 ON part_document AS PERMISSIVE USING (dlevel <= (SELECT seclv FROM uaccount WHERE pg... |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_POLICY_STMT | 3ff79482b4efef2e4b884db3 | CREATE POLICY p1 ON r1 AS RESTRICTIVE USING (b > 10) |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_POLICY_STMT | 43d197f53271cbb8c6339b1d | CREATE POLICY policy_stats ON tab_policy_stats USING (a = 5) WITH CHECK (b < 5) |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_POLICY_STMT | 445bb0c69e62d68fe071e5ca | CREATE POLICY p4 ON rls_tbl_force FOR DELETE USING (c1 = 8) |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_POLICY_STMT | 470dda346747ba9254ea9ab8 | create policy p1 on rls_t for select to regress_rls_alice using (true) |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_POLICY_STMT | 4a2bbc63daff321da0c6d549 | CREATE POLICY p3 ON rls_part USING (a < 0) |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_POLICY_STMT | 4d9b7430ef6715cd8368cbe0 | CREATE POLICY coll_p ON coll_t USING (c < ('foo'::text COLLATE "C")) |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_POLICY_STMT | 4e13ec1d4bb05742be173678 | create policy p1 on rls_t for select to regress_rls_alice using (c = current_setting('rls_test.blah')) |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_POLICY_STMT | 4e77fafd0277415ce3a7eb5e | CREATE POLICY r2 ON rec2 USING (a = (SELECT x FROM rec1 WHERE y = b)) |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_POLICY_STMT | 4f7ce759d114ed20e4373bd5 | CREATE POLICY genpol ON addr_nsp.gentable |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_POLICY_STMT | 59933f11f2b691b25ab6161e | -- should succeed -- partitioned target CREATE POLICY p1 ON dob_t2 TO regress_rls_dob_role1,regress_rls_dob_role2 USING (true) |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_POLICY_STMT | 5a63737af5bb7ab5ddb41347 | CREATE POLICY p1 ON r2 FOR SELECT USING (true) |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_POLICY_STMT | 5c6751af345649f0dba4b1ac | CREATE POLICY seeall ON range_parted AS PERMISSIVE FOR SELECT USING (true) |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_POLICY_STMT | 6348234f891c9f1344c8cd73 | CREATE POLICY p2 ON r1 FOR INSERT WITH CHECK (true) |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_POLICY_STMT | 64bef39b1f569ad8faa592bc | CREATE POLICY p4 ON r2 FOR DELETE USING (false) |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_POLICY_STMT | 6534ae0771a441ffbc4209b7 | CREATE POLICY p1 ON dob_t1 TO regress_rls_dob_role1 USING (true) |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_POLICY_STMT | 67aee0b7ae133f65c038fdef | CREATE POLICY p1 ON y1 FOR ALL USING (a % 2 = 0) |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_POLICY_STMT | 6cd817d9294eead657664515 | CREATE POLICY p1 ON t1 TO regress_rls_bob USING ((a % 2) = 0) |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_POLICY_STMT | 7378ac52666653edb26d67a5 | CREATE POLICY pguc ON event_trigger_test USING (FALSE) |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_POLICY_STMT | 759a0faddef833d71737a7b1 | CREATE POLICY policy_range_parted_wholerow on range_parted AS RESTRICTIVE for UPDATE USING (true) WITH CHECK (range_parted = row('b', 10, 112, 1, NULL)::range_parted) |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_POLICY_STMT | 7bb83d7107f8685a3d5ef0a2 | CREATE POLICY p2 ON rls_tbl FOR SELECT USING (c1 <= 3) |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_POLICY_STMT | 7f84cd9ce9a82fde72f90c0a | -- should fail, already gone CREATE POLICY p1 ON dob_t1 TO regress_rls_dob_role1,regress_rls_dob_role2 USING (true) |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_POLICY_STMT | 7fee556000acf9a887235650 | CREATE POLICY comment_1 ON comment USING (blog_id < 4) |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_POLICY_STMT | 80b0d61ee26bbba703bfd410 | CREATE POLICY p1 ON b1 USING (a % 2 = 0) |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_POLICY_STMT | 83c0c96aadc1d1b017f8f7d0 | CREATE POLICY P ON tbl1 TO regress_rls_eve, regress_rls_frank USING (true) |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_POLICY_STMT | 8401937326fdfe7f6203395d | CREATE POLICY p3 ON r2 FOR UPDATE USING (false) |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_POLICY_STMT | 8499225bb8dbba2d6f00ea81 | CREATE POLICY p4 ON rls_tbl FOR DELETE USING (c1 <= 3) |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_POLICY_STMT | 87cf4a664c535fd6fd51e369 | -- and Dave isn't allowed to see manga documents CREATE POLICY p1r ON document AS RESTRICTIVE TO regress_rls_dave USING (cid <> 44) |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_POLICY_STMT | 8e8495fde3085df0f7f72f3c | CREATE POLICY p1 ON current_check FOR SELECT USING (currentid % 2 = 0) |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_POLICY_STMT | 8e8b689b38270262a74ae581 | -- be even number CREATE POLICY p2 ON t2 FOR ALL TO PUBLIC USING (a % 2 = 1) |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_POLICY_STMT | 8faa40338e56c7efad02492f | CREATE POLICY d1 ON dependent FOR ALL TO PUBLIC USING (x = (SELECT d.x FROM dependee d WHERE d.y = y)) |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_POLICY_STMT | 937f68e975cd15d7d65f444f | CREATE POLICY p3_with_default ON document FOR UPDATE USING (cid = (SELECT cid from category WHERE cname = 'novel')) |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_POLICY_STMT | 9442b52ffb74d0f104a4f4b8 | CREATE POLICY evtrg_nontemp_pol ON evtrg_nontemp_table USING (f2 > 0) |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_POLICY_STMT | 9461d16a6b3656b4131105dc | CREATE POLICY p1 ON rls_test_restrictive USING (true) |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_POLICY_STMT | 95e0ffefeec5820b8d455bcb | CREATE POLICY p3 ON s1 FOR INSERT WITH CHECK (a = (SELECT a FROM s1)) |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_POLICY_STMT | 991bfa809699d4e2cd006a40 | CREATE POLICY p2 ON current_check FOR DELETE USING (currentid = 4 AND rlsuser = current_user) |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_POLICY_STMT | 9a221c14fc299c0479a60352 | -- one may only update documents in 'novel' category and new dlevel must be > 0 CREATE POLICY p3 ON document FOR UPDATE USING (cid = (SELECT cid from category WHERE cname = 'novel')) WITH CHECK (dl... |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_POLICY_STMT | 9c4773779c86706e0350a410 | CREATE POLICY p1 ON rls_tbl_force USING (c1 = 5) WITH CHECK (c1 < 5) |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_POLICY_STMT | 9d693dbca4213a6141f7f79a | CREATE POLICY p3 ON current_check FOR UPDATE USING (currentid = 4) WITH CHECK (rlsuser = current_user) |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_POLICY_STMT | 9d80d036436e847e69b5bfbf | CREATE POLICY p2 ON z1 TO regress_rls_group2 USING (a % 2 = 1) |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_POLICY_STMT | 9fa1300f950204d0b06c00f0 | CREATE POLICY p1 ON r1 FOR SELECT USING (a < 20) |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_POLICY_STMT | a6de3d1b738c181785804b54 | CREATE POLICY r1 ON rec1 USING (x = (SELECT r.x FROM rec1 r WHERE y = r.y)) |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_POLICY_STMT | a767b7f6c9214cfe61041f25 | CREATE POLICY policy_range_parted_subplan on range_parted AS RESTRICTIVE for UPDATE USING (true) WITH CHECK ((SELECT range_parted.c <= c1 FROM mintab)) |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_POLICY_STMT | aa7bc86c49f3720b5741bd5b | CREATE POLICY p1 ON document FOR SELECT USING (true) |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_POLICY_STMT | ac21c5da4719cc8be52eaaef | CREATE POLICY priv_test_tbl_pol ON tststats.priv_test_tbl USING (2 * a < 0) |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_POLICY_STMT | ac4d39808b76f0013c10bf16 | CREATE POLICY p1 ON r1 USING (false) |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_POLICY_STMT | adaa43bc4b018278dc62b1f0 | CREATE POLICY p1 ON copy_rel_to USING (a % 2 = 0) |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_POLICY_STMT | ae0318126291a7d8ed0a401b | CREATE POLICY p1 ON rls_test_permissive USING (data % 2 = 0) |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_POLICY_STMT | ae9f1a47970a688fa143a0b1 | CREATE POLICY a_temp_pol ON a_temp_tbl USING (f2 > 0) |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_POLICY_STMT | aeb19ba56d79296102948e18 | CREATE POLICY pp3 ON part_document_satire AS RESTRICTIVE USING (cid < 55) |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_POLICY_STMT | b1a0ca1fe9795cb94389d565 | CREATE POLICY p3 ON x1 FOR UPDATE USING (a % 2 = 0) |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_POLICY_STMT | b4310ff25544679e003dcd89 | CREATE POLICY p1 ON copy_t USING (a % 2 = 0) |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_POLICY_STMT | b51494a7a63a066b65d61827 | CREATE POLICY p1 ON rls_tbl USING (rls_tbl >= ROW(1,1,1)) |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_POLICY_STMT | b60883b8353201f2bf52a6e8 | CREATE POLICY p1 ON rls_test_both USING (data % 2 = 0) |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_POLICY_STMT | ba4ad93e457893572fc6c239 | -- Create policies on r2 which prevent the -- owner from seeing any rows, but RI should -- still see them. CREATE POLICY p1 ON r2 USING (false) |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_POLICY_STMT | ba82d75aaeb46069513e3484 | -- one may only delete documents in 'manga' category CREATE POLICY p4 ON document FOR DELETE USING (cid = (SELECT cid from category WHERE cname = 'manga')) |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_POLICY_STMT | bab4349bc4bde9a4ae78e81f | CREATE POLICY p1 ON rls_tbl USING (c1 > 5) |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_POLICY_STMT | c5e3c68709ec19535c008b23 | CREATE POLICY p4 ON rls_child_tbl USING (a < 0) |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_POLICY_STMT | c64b10dc1290421661d623fd | CREATE POLICY p1 ON z1 TO regress_rls_group1 USING (a % 2 = 0) |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_POLICY_STMT | c6c92fafde9d9c288502e7de | CREATE POLICY p2 ON rls_tbl_force FOR SELECT USING (c1 = 8) |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_POLICY_STMT | c7b2e559682b0ee9eedcfb96 | -- but Dave isn't allowed to anything at cid 50 or above -- this is to make sure that we sort the policies by name first -- when applying WITH CHECK, a later INSERT by Dave should fail due -- to p1... |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_POLICY_STMT | c995e9920777b9e4de821e46 | CREATE POLICY pp3 ON part_document AS RESTRICTIVE USING ((SELECT dlevel <= seclv FROM uaccount WHERE pguser = current_user)) |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_POLICY_STMT | d09998138a1c8af1bc53f328 | CREATE POLICY p2 ON document FOR INSERT WITH CHECK (dauthor = current_user) |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_POLICY_STMT | d5e8206043907c4a8ee2e133 | CREATE POLICY p2 ON y1 FOR SELECT USING (a > 2) |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_POLICY_STMT | da317849b48a858e09f8ab83 | CREATE POLICY p1 ON rls_test_restrictive USING (data % 2 = 0) |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_POLICY_STMT | daf7fe3cc75c28c95691e8b4 | create policy p1 on ec1 using (f1 < '5'::int8alias1) |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_POLICY_STMT | df572189a9b03b1cfbd1c3a6 | CREATE POLICY p2 ON x1 FOR INSERT WITH CHECK (a % 2 = 1) |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_POLICY_STMT | e0340957b23d168c1a8d3e46 | --fail CREATE POLICY p1 ON y2 FOR ALL USING (a % 2 = 0) |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_POLICY_STMT | e628f1bb14ac9f2e978a1709 | -- should succeed -- same cases with duplicate polroles entries CREATE POLICY p1 ON dob_t1 TO regress_rls_dob_role1,regress_rls_dob_role1 USING (true) |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_POLICY_STMT | e67bc021c935f2b01334f424 | -- policy must accept ctid = (InvalidBlockNumber,0) since updates check it -- before assigning a ctid to the new row CREATE POLICY p1 ON current_check_2 AS PERMISSIVE USING (ctid IN ('(0,1)', '(0,2... |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_POLICY_STMT | e69ddfe144263ac962565dae | -- user's security level must be higher than or equal to document's CREATE POLICY p1 ON document AS PERMISSIVE USING (dlevel <= (SELECT seclv FROM uaccount WHERE pguser = current_user)) |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_POLICY_STMT | e7725bab38d550172b5b063f | CREATE POLICY p2 ON y2 USING (a % 3 = 0) |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_POLICY_STMT | e90b89fb64a425248b6e2726 | -- should fail, already gone CREATE POLICY p1 ON dob_t1 TO regress_rls_dob_role1,regress_rls_dob_role1,regress_rls_dob_role2 USING (true) |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_POLICY_STMT | e9351c233689e14f8a66503d | CREATE POLICY p2 ON r1 AS RESTRICTIVE USING ((SELECT c) < 400) |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_POLICY_STMT | e9f0ff0edd25116d04f15c9b | CREATE POLICY p ON t USING (max(c)) |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_POLICY_STMT | ea8999bd093a36f991f82b94 | CREATE POLICY measurement_p ON measurement USING (peaktemp IS NOT NULL) |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_POLICY_STMT | eaaec03cc776907eda451582 | CREATE POLICY p1 ON rls_tbl USING (EXISTS (SELECT 1 FROM ref_tbl)) |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_POLICY_STMT | ee3b3b2a518b3cc9dc30ff03 | CREATE POLICY policy_range_parted ON range_parted for UPDATE USING (true) WITH CHECK (c % 2 = 0) |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_POLICY_STMT | f224dfd2d8590f99e5e1add1 | CREATE POLICY p3 ON z1 AS RESTRICTIVE USING (a NOT IN (SELECT a FROM z1_blacklist)) |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_POLICY_STMT | f3d756684e355e5950f12672 | CREATE POLICY p1 ON r1 USING (true) |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_POLICY_STMT | f54d5a92d65e1ac219c86175 | -- Dave is only allowed to see cid < 55 CREATE POLICY pp1r ON part_document AS RESTRICTIVE TO regress_rls_dave USING (cid < 55) |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_POLICY_STMT | f5cae7f1ea415bf317178acb | CREATE POLICY dep_p1 ON dep1 TO regress_rls_bob USING (c1 > (select max(dep2.c1) from dep2)) |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_POLICY_STMT | f5dac76b1fa27357da7d7c9c | CREATE POLICY p3 ON rls_tbl_force FOR UPDATE USING (c1 = 8) WITH CHECK (c1 >= 5) |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_POLICY_STMT | f6535999802c43f87aff90d2 | CREATE POLICY p2 ON rls_ptbl USING (a < 0) |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_POLICY_STMT | fa5cca3e06c8ba8067b54ee5 | CREATE POLICY p2 ON category USING (CASE WHEN current_user = 'regress_rls_bob' THEN cid IN (11, 33) WHEN current_user = 'regress_rls_carol' THEN cid IN (22, 44) ELSE false END) |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_POLICY_STMT | ff8239be28b9c91dd1f5e0fe | create policy p2 on rls_t for select to regress_rls_bob using (false) |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_POLICY_STMT | ff97d73a69ba6c1a286f3115 | CREATE POLICY p2 ON s2 USING (x in (select a from s1 where b like '%22%')) |
 | ERROR | PG_QUERY__NODE__NODE_CREATE_PUBLICATION_STMT | 03a66b4f338787a1f3cbf6d6 | -- Generated columns in column list, when 'publish_generated_columns'='none' CREATE PUBLICATION pub1 FOR table gencols(a, gen1) WITH (publish_generated_columns = none) |
 | ERROR | PG_QUERY__NODE__NODE_CREATE_PUBLICATION_STMT | 06eb811f9ec5e440d6bdad0f | -- check create publication on an object which is not schema CREATE PUBLICATION testpub1_forschema1 FOR TABLES IN SCHEMA testpub_view |
 | ERROR | PG_QUERY__NODE__NODE_CREATE_PUBLICATION_STMT | 09261ae46a3ce91cf6d2dee9 | CREATE PUBLICATION dummy_pub |
@@ -1625,125 +1055,6 @@ libpg_query target: `18-latest` `9ab9951b7021adcc6d25d261d5016ca0b83726b8` (Post
 | ERROR | PG_QUERY__NODE__NODE_CREATE_PUBLICATION_STMT | f22ecfe8ddb8e0e775128929 | -- check create publication on a system schema CREATE PUBLICATION testpub_forschema FOR TABLES IN SCHEMA pg_catalog |
 | ERROR | PG_QUERY__NODE__NODE_CREATE_PUBLICATION_STMT | f3552df4f4679386ebece8fe | CREATE PUBLICATION testpub4 FOR TABLE ONLY testpub_tbl3 |
 | ERROR | PG_QUERY__NODE__NODE_CREATE_PUBLICATION_STMT | fdbd82862a3f0a4b6962d85a | -- Firstly, test using the option publish='insert' because the row filter -- validation of referenced columns is less strict than for delete/update. CREATE PUBLICATION testpub5 FOR TABLE testpub_rf... |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | 0466786e3d699453fe76bbb6 | create statistics atref_stat on ((b).a is not null) from atref |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | 060c9d81dd013a88f156725a | CREATE STATISTICS tst on (z) from ext_stats_test1 |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | 07f491ecb5b9a902d0848e4e | CREATE STATISTICS tst ON (x \|\| 'x'), (x \|\| 'x'), (y + 1), (x \|\| 'x'), (x \|\| 'x'), (y + 1), (x \|\| 'x'), (x \|\| 'x'), (y + 1) FROM ext_stats_test |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | 0c1097990afafc922e4abfff | CREATE STATISTICS tststats.s8 ON a, b FROM tststats.pt |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | 15c11f7eb4849b6e3eaeacb7 | CREATE STATISTICS alt_stat2 ON a, b FROM alt_regress_1 |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | 168564e82be6ff1abfee167f | CREATE STATISTICS expr_stats_1 (mcv) ON (a+b), (a-b), (2*a), (3*b) FROM expr_stats |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | 16af0265fc7643deb4ecb70c | CREATE STATISTICS parent_stat (dependencies) ON a, c FROM parent |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | 194f0c214e4cde6039b1b160 | CREATE STATISTICS mcv_lists_partial_stats (mcv) ON a, b, c FROM mcv_lists_partial |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | 1bc0e1240db785cc58f0bd30 | -- check use of a boolean-returning expression CREATE STATISTICS ab1_exprstat_6 ON (case a when 1 then true else false end), b FROM ab1 |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | 1d02ab7736ebbff9054bbce0 | CREATE STATISTICS ctlt1_expr_stat ON (a \|\| b) FROM ctlt1 |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | 1e047afdc04ff6d44c35b033 | CREATE STATISTICS ab1_a_b_stats ON a, b FROM ab1 |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | 1fba997f582be2c1aca1fa17 | CREATE STATISTICS tststats.s7 ON a, b FROM tststats.f |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | 1fe584dd8f7d6d9e08cd19fc | -- create statistics with both MCV and expressions CREATE STATISTICS mcv_lists_stats (mcv) ON (mod(a,20)), (mod(b::int,10)), (mod(c,5)) FROM mcv_lists |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | 258f76c2b9c71778f15b3242 | -- create statistics CREATE STATISTICS func_deps_stat (dependencies) ON (mod(a,11)), (mod(b::int, 13)), (mod(c, 7)) FROM functional_dependencies |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | 25f9eee52679d652ff8d00e2 | CREATE STATISTICS sts_sch2.fail ON a, b, c FROM sts_sch1.tbl |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | 279b93b2015eb95e02d3832c | CREATE STATISTICS s_expr ON mod(id, 2), lower(col) FROM stats_ext_tbl |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | 2b10caf40a1f28d7c298672f | -- create separate functional dependencies CREATE STATISTICS functional_dependencies_multi_1 (dependencies) ON a, b FROM functional_dependencies_multi |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | 2be925db852fb0d5386f17e9 | CREATE STATISTICS alt_stat1 ON a, b FROM alt_regress_2 |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | 2c015beafafbce43ce1d1624 | CREATE STATISTICS ctl_stats4_stat ON a, c FROM ctl_stats4_parent |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | 2def07c89bb977c9740dc729 | CREATE STATISTICS tab_expr_stats_1 (mcv) ON a, (2*a), (3*b) FROM tab_expr_stats |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | 3075452c3460c2495b5f9853 | -- statistics without a less-than operator not supported CREATE STATISTICS tst (ndistinct) ON w from ext_stats_test1 |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | 30ace61360d2f9543a5afc49 | CREATE STATISTICS mcv_lists_multi_2 (mcv) ON c, d FROM mcv_lists_multi |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | 3179f575019600ae4d767463 | CREATE STATISTICS alt_stat2 ON a, b FROM alt_regress_2 |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | 31bbabe5a6ec237a5fa7bde7 | CREATE STATISTICS IF NOT EXISTS ab1_a_b_stats ON a, b FROM ab1 |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | 330662f9dc0d090f09bc5f06 | CREATE STATISTICS ON a, b, c FROM sts_sch1.tbl |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | 349086ca4492e8e32afac9b1 | CREATE STATISTICS tststats.s2 ON a, b FROM tststats.ti |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | 35cb34f6c308b8f1570d85ce | CREATE STATISTICS tststats.s3 ON a, b FROM tststats.s |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | 36f8121e59ebc606537c3302 | CREATE STATISTICS pg_temp.stats_ext_temp ON a, b FROM ab1 |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | 3a1731d0f13bc74546141d57 | -- create statistics CREATE STATISTICS func_deps_stat (dependencies) ON a, b, c FROM functional_dependencies |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | 3cb4f131c3f6ed584bf70e04 | -- expression stats may be built on a single expression column CREATE STATISTICS ab1_exprstat_1 ON (a+b) FROM ab1 |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | 3fd2dbf0e4a31828d0ddc736 | -- create statistics on expressions CREATE STATISTICS func_deps_stat (dependencies) ON (a * 2), upper(b), (c + 1) FROM functional_dependencies |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | 4232de1239e8c5097aea1883 | CREATE STATISTICS alt_stat1 ON a, b FROM alt_regress_1 |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | 45d17eca84a3ea459b2c1949 | -- create statistics CREATE STATISTICS mcv_lists_stats (mcv) ON a, b, d FROM mcv_lists |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | 4a6234dfc00fcfff233b566e | CREATE STATISTICS expr_stats_1 (mcv) ON a, b, (b \|\| c), (c \|\| b) FROM expr_stats |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | 4b09e0e35b33523cfe4a86ce | CREATE STATISTICS tst ON a FROM ext_stats_test s TABLESAMPLE system (x) |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | 4d8294a43b700b2668be2c8f | create statistics (mcv) ON a, b, (a+b), (a-b) FROM stts_t1 |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | 4e43ec181a1ca9eed67145ba | -- Extended statistics with an attribute that cannot be analyzed. -- This includes all statistics kinds. CREATE STATISTICS test_stats ON data, id FROM test_table |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | 4ee3e922b63edf05515ea8f5 | create statistics stts_s2.stts_yama (dependencies, mcv) on col1, col3 from stts_t3 |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | 4fa4ff1a38b5de6b3873c3e1 | CREATE STATISTICS tststats.s9 ON a, b FROM tststats.pt1 |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | 514233a0536e37ea2a836b70 | CREATE STATISTICS stxdinh ON a, b FROM stxdinh |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | 525c78212651b50ac2722c04 | -- create separate MCV statistics CREATE STATISTICS mcv_lists_multi_1 (mcv) ON a, b FROM mcv_lists_multi |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | 558c861012a0f6651358b9fe | -- create statistics CREATE STATISTICS mcv_lists_stats (mcv) ON a, b, c FROM mcv_lists |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | 55ab4107ab947a08afea85ec | CREATE STATISTICS mcv_lists_arrays_stats (mcv) ON a, b, c FROM mcv_lists_arrays |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | 5b830c5f6f6817018c802016 | CREATE STATISTICS stxdinp ON (a + 1), a, b FROM stxdinp |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | 5cc460c7773178c30ac8781b | CREATE STATISTICS tst ON a FROM JSON_TABLE(jsonb '123', '$' COLUMNS (item int)) |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | 5e358dcaa8e9339523a46004 | CREATE STATISTICS expr_stat_comp_1 ON c0, c1 FROM expr_stats_incompatible_test |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | 601506393cc4a963d9f6205f | CREATE STATISTICS ctl_table_stat ON a,b FROM ctl_table |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | 6286742cb59f0750d11b52d3 | CREATE STATISTICS tst (ndistinct) ON z from ext_stats_test1 |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | 68a12b68816fdd30a261fabf | CREATE STATISTICS mcv_lists_uuid_stats (mcv) ON a, b, c FROM mcv_lists_uuid |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | 6bb63e8a6b0809e130da15ad | CREATE STATISTICS tststats.s1 ON a, b FROM tststats.t |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | 6cedd2ae49c31fec1b41258e | -- Ensure statistics are dropped when columns are CREATE STATISTICS ab1_b_c_stats ON b, c FROM ab1 |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | 7088f369b286895fbb57186c | CREATE STATISTICS tst ON a FROM foo NATURAL JOIN bar |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | 709ac68b821be0a53baff795 | CREATE STATISTICS s_col ON id, col FROM stats_ext_tbl |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | 72690aa2737db7a32160a15c | CREATE STATISTICS tst (ndistinct) ON xmin from ext_stats_test1 |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | 72e4e6573afb6a49a0c2f7d0 | CREATE STATISTICS s12 (ndistinct) ON (c * 10), (d - 1) FROM ndistinct |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | 790d8376414b9056419108ba | CREATE STATISTICS s12 (ndistinct) ON c, d FROM ndistinct |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | 7aeaf9b3d14bc4cb7815678e | -- incorrect expressions CREATE STATISTICS tst ON (y) FROM ext_stats_test |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | 7b6695c65d5f94bfc2b01f4a | -- adding anything to the expression builds all statistics kinds CREATE STATISTICS ab1_exprstat_3 ON (a+b), a FROM ab1 |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | 7c70a0ed92e35d9aa898213e | CREATE STATISTICS tst ON a, b FROM nonexistent |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | 7ee8393c00849feb3a22644e | CREATE STATISTICS tst ON x, x, y, x, x, (x \|\| 'x'), (y + 1), (x \|\| 'x'), (x \|\| 'x'), (y + 1) FROM ext_stats_test |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | 7f3ea467753c54c48fe02644 | -- statistics on system column not allowed CREATE STATISTICS tst on tableoid from ext_stats_test1 |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | 8411e88dcaaaf7c390f1c481 | -- create statistics CREATE STATISTICS mcv_lists_stats (mcv) ON (mod(a,7)), (mod(b::int,11)), (mod(c,13)) FROM mcv_lists |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | 845bfa3cb1ce41a542c7381d | -- The ndistinct extended statistics on (x, y, z) provides more reliable value -- of bucket size. CREATE STATISTICS extstat_sb_2 (ndistinct) ON x, y, z FROM sb_2 |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | 863c06904bef6b3e5a910b4e | CREATE STATISTICS s12 (ndistinct) ON a, (b+1), (c * 10) FROM ndistinct |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | 87208f9c670ed829f84a55bf | CREATE STATISTICS tst ON a FROM (SELECT * FROM ext_stats_test) AS foo |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | 87df3bcb2f0c71c9f9453416 | CREATE STATISTICS tst ON (x \|\| 'x'), (x \|\| 'x'), y FROM ext_stats_test |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | 87e26fec37f20086dd05a981 | CREATE STATISTICS sts_sch2.pass2 ON a, b, c FROM sts_sch1.tbl |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | 8865741671ae7d2c6c7726a0 | CREATE STATISTICS t_b_c_stat (mcv) ON b, c FROM bitmap_split_or |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | 8e9ecc48953d67d2ef206768 | CREATE STATISTICS s12 (ndistinct) ON c, d, (c * 10), (d - 1) FROM ndistinct |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | 8f493088b8e82e2d87e192f3 | CREATE STATISTICS tst ON x, x, y, x, x, y, x, x, y FROM ext_stats_test |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | 9469d7512489ffe079097492 | CREATE STATISTICS tststats.s5 ON a, b FROM tststats.mv |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | 963f1a5456a119c135ead668 | create statistics (ndistinct, dependencies, mcv) on a, b from stts_t1 |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | 982e52fd9afc379663633421 | CREATE STATISTICS tst (unrecognized) ON x, y FROM ext_stats_test |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | 9a34fd6be98059028b2cb015 | -- correct command CREATE STATISTICS s10 ON a, b, c FROM ndistinct |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | 9eaac9fd8e81402dc84ed4b3 | create statistics (mcv) ON (a+b), (a-b) FROM stts_t1 |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | 9ebba0036b636eb1dd18cf77 | CREATE STATISTICS s11 (ndistinct) ON a, b, (a*5), (b+1) FROM ndistinct |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | a0a47f58a99119afa5f5f62f | CREATE STATISTICS regress_schema_2.ab1_a_b_stats ON a, b FROM ab1 |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | a1227c6e142d33389130cea4 | create statistics (ndistinct) on a, b from stts_t1 |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | a23ff165cad15e55fbc7a163 | -- create statistics with expressions only (we create three separate stats, in order not to build more complex extended stats) CREATE STATISTICS mcv_lists_stats_1 ON (mod(a,20)) FROM mcv_lists |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | a30982b22b3720a0ebb8843b | CREATE STATISTICS ctl_stats3_stat ON a, c FROM ctl_stats3_parent |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | a4755bf80651138f2d82e03b | create statistics (ndistinct, dependencies) on a, b from stts_t1 |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | a6aa900da9dc8318deb1159f | -- create statistics CREATE STATISTICS mcv_lists_stats (mcv) ON a, b, c, ia FROM mcv_lists |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | ac5a3c106e31bf1b6496a9cb | CREATE STATISTICS alt_stat2 ON a FROM tftest(1) |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | b5012349441c8dc0381b2e4c | CREATE STATISTICS tst ON x, x, y FROM ext_stats_test |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | b566f75e122a3b02d4e03231 | CREATE STATISTICS ctlt1_a_b_stat ON a,b FROM ctlt1 |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | bb245b2fe1a0144bca82eb9c | -- Extended statistics with an expression that cannot be analyzed. CREATE STATISTICS test_stats ON func_int_custom(data), (id) FROM test_table |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | bb3a18a28169c15eb463699e | CREATE STATISTICS s10 (ndistinct) ON (a+1), (b+100), (2*c) FROM ndistinct |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | bb6b2ac64a578b96619ffa72 | CREATE STATISTICS ab1_b_a_stats ON b, a FROM ab1 |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | bc695d63c1dad4208b195c9d | -- date_trunc on timestamptz is not immutable, but that should not matter CREATE STATISTICS ab1_exprstat_4 ON date_trunc('day', d) FROM ab1 |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | bd4fa14b8c98c15556f531c2 | CREATE STATISTICS tst ON a FROM XMLTABLE('foo' PASSING 'bar' COLUMNS a text) |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | bd58c9db229a79584abb5e85 | CREATE STATISTICS group_tbl_stat (ndistinct) ON a, b FROM group_tbl |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | c313c0883bc881cd4ed84820 | -- unsupported targets CREATE STATISTICS tst ON a FROM (VALUES (x)) AS foo |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | c3308bfe386fb737618f67b0 | CREATE STATISTICS t_a_b_stat (mcv) ON a, b FROM bitmap_split_or |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | c3f4effd7c9eaebc63c94821 | CREATE STATISTICS tststats.priv_test_stats (mcv) ON a, b FROM tststats.priv_test_tbl |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | c7a290cd373c039ab9374b70 | CREATE STATISTICS s10 (ndistinct) ON a, b, (2*c) FROM ndistinct |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | cbe009732fa77af5a579448c | CREATE STATISTICS sts_sch2.pass1 ON a, b, c FROM sts_sch1.tbl |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | cc7097265b3b87ee8878eb0e | CREATE STATISTICS tst on (tableoid) from ext_stats_test1 |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | cc9e974131762290cfaba162 | create statistics stts_s1.stts_foo on col1, col2 from stts_t3 |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | d36eb3d07453e7018f5d31ce | CREATE STATISTICS tst on (z+1) from ext_stats_test1 |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | d45a217fbb645604df160247 | CREATE STATISTICS mcv_lists_bool_stats (mcv) ON a, b, c FROM mcv_lists_bool |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | d515d4fceef55ebd2a9a07fd | CREATE STATISTICS tst on z from ext_stats_test1 |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | d540df445daa158d160d87eb | create statistics on b, c from stts_t2 |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | d5c6ce8a272e2bb6afe43d9b | CREATE STATISTICS ab1_a_b_c_stats ON a, b, c FROM ab1 |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | d74ce7367c64fec8fcba09fb | CREATE STATISTICS gtest31_2_stat ON ((y).b is not null) FROM gtest31_2 |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | d7e30d025669ab0df92f55d9 | CREATE STATISTICS tststats.s4 ON a, b FROM tststats.v |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | d8449989e2c57f1ae8ef87ca | CREATE STATISTICS expr_stats_1 (mcv) ON a, b, (2*a), (3*b), (a+b), (a-b) FROM expr_stats |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | e0b4ea77afff141701b7766f | -- with a single expression, we only enable expression statistics CREATE STATISTICS ab1_exprstat_2 ON (a+b) FROM ab1 |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | e12ecee1b8276ae0d6116dea | CREATE STATISTICS addr_nsp.gentable_stat ON a, b FROM addr_nsp.gentable |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | e2381f114638b8e25aae1cd9 | CREATE STATISTICS tststats.s6 ON a, b FROM tststats.ty |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | e737fdbbb701d934ddbb360c | -- date_trunc on timestamp is immutable CREATE STATISTICS ab1_exprstat_5 ON date_trunc('day', c) FROM ab1 |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | e7a609ea10f3e01d3c260e3c | CREATE STATISTICS tst on (tableoid::int+1) from ext_stats_test1 |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | e886d9ebb52b782e4f2a5eca | CREATE STATISTICS mcv_lists_stats_3 ON (mod(c,5)) FROM mcv_lists |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | e950bb12c385d81666b43f11 | CREATE STATISTICS ext_stat ON (a \|\| b) FROM test_like_6 |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | f1831a5617e10569fc01e8d1 | CREATE STATISTICS tst ON a, b FROM ext_stats_test |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | f41f4b2abf50504c35d4eae0 | CREATE STATISTICS mcv_lists_stats_2 ON (mod(b::int,10)) FROM mcv_lists |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | f96d72c2a0f3c5ff205893fa | create statistics stts_hoge on col1, col2, col3 from stts_t3 |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | f9e117ad4d66fbebd6ee5e3c | -- basic statistics on both attributes (no expressions) CREATE STATISTICS s11 (ndistinct) ON a, b FROM ndistinct |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | fdfb0519f3c084db54ff52b9 | CREATE STATISTICS functional_dependencies_multi_2 (dependencies) ON c, d FROM functional_dependencies_multi |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STMT | 0293644918cc5b1e9d246a22 | CREATE TABLE badcompresstbl (a text COMPRESSION I_Do_Not_Exist_Compression) |
 | ERROR | PG_QUERY__NODE__NODE_CREATE_STMT | 02f7e9a73462b5a1bcb5e9c2 | -- partitioned table have not-null, then the partitions can not be NOT NULL NOT VALID. CREATE TABLE pp_nn (a int, b int, NOT NULL a) PARTITION BY LIST (a) |
 | ERROR | PG_QUERY__NODE__NODE_CREATE_STMT | 0373dac26c5f4f3a3bee1365 | -- (parent_id, valid_at) REFERENCES [implicit] -- FOREIGN KEY part should specify PERIOD CREATE TABLE temporal_fk_mltrng2mltrng ( id int4range, valid_at datemultirange, parent_id int4range, CONSTRA... |
 | ERROR | PG_QUERY__NODE__NODE_CREATE_STMT | 052446778ffd0dc01156e4b4 | -- PK with a non-range column: CREATE TABLE temporal_rng ( id int4range, valid_at TEXT, CONSTRAINT temporal_rng_pk PRIMARY KEY (id, valid_at WITHOUT OVERLAPS) ) |
@@ -1753,7 +1064,6 @@ libpg_query target: `18-latest` `9ab9951b7021adcc6d25d261d5016ca0b83726b8` (Post
 | ERROR | PG_QUERY__NODE__NODE_CREATE_STMT | 0eddf1d21f4d3e10ecdb9e6a | CREATE TABLE gtest_child PARTITION OF gtest_parent ( f3 WITH OPTIONS GENERATED ALWAYS AS (f2 * 2) STORED ) FOR VALUES FROM ('2016-07-01') TO ('2016-08-01') |
 | ERROR | PG_QUERY__NODE__NODE_CREATE_STMT | 0f308b99b0fdf0518de433e5 | -- -- test a range with both a PK and a UNIQUE constraint -- CREATE TABLE temporal3 ( id int4range, valid_at daterange, id2 int8range, name TEXT, CONSTRAINT temporal3_pk PRIMARY KEY (id, valid_at W... |
 | ERROR | PG_QUERY__NODE__NODE_CREATE_STMT | 0f8a31b0d34897a09f0360dc | -- inherits gen expr CREATE TABLE gtest_child2 PARTITION OF gtest_parent ( f3 WITH OPTIONS GENERATED ALWAYS AS (f2 * 22) STORED -- overrides gen expr ) FOR VALUES FROM ('2016-08-01') TO ('2016-09-01') |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STMT | 10815da084a8c3058c1ecc3d | -- fails -- SET STORAGE may need to add a TOAST table create table test_storage (a text, c text storage plain) |
 | ERROR | PG_QUERY__NODE__NODE_CREATE_STMT | 1332a561e4517f4b8b01bf3b | -- works: PERIOD for both referenced and referencing CREATE TABLE temporal_fk_rng2rng ( id int4range, valid_at daterange, parent_id int4range, CONSTRAINT temporal_fk_rng2rng_pk PRIMARY KEY (id, val... |
 | ERROR | PG_QUERY__NODE__NODE_CREATE_STMT | 137e8cc51661164506e89e57 | -- with a UNIQUE constraint: CREATE TABLE temporal3 ( id int4range, valid_at daterange, CONSTRAINT temporal3_uq UNIQUE (id, valid_at WITHOUT OVERLAPS) ) |
 | ERROR | PG_QUERY__NODE__NODE_CREATE_STMT | 14cd86df22620c26c23bb2a5 | -- OK with equals and &&, and equals is the partition key create table idxpart (a int4range, b int4range, exclude USING GIST (a with =, b with &&)) partition by range (a) |
@@ -1763,7 +1073,6 @@ libpg_query target: `18-latest` `9ab9951b7021adcc6d25d261d5016ca0b83726b8` (Post
 | ERROR | PG_QUERY__NODE__NODE_CREATE_STMT | 19bf5f89125e5a6213ff7a63 | create table parttmp (id int, valid_at daterange, exclude using gist (id with <>, valid_at with &&)) partition by range (id) |
 | ERROR | PG_QUERY__NODE__NODE_CREATE_STMT | 1ac101cc2bb38517a5cb63f9 | CREATE TABLE inh_nn3 (a int not null, b int, not null a no inherit) |
 | ERROR | PG_QUERY__NODE__NODE_CREATE_STMT | 1bdf5923ce4e0bacd614f73e | create table rewritemetoo1 of rewritetype |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STMT | 1ca411995349bb99d9f3af33 | -- error CREATE TABLE cminh(f1 TEXT COMPRESSION lz4) INHERITS(cmdata) |
 | ERROR | PG_QUERY__NODE__NODE_CREATE_STMT | 1d399ebbc1f1f331e66bf21f | CREATE TABLE INSERT_TBL (x INT DEFAULT nextval('insert_seq'), y TEXT DEFAULT '-NULL-', z INT DEFAULT -1 * currval('insert_seq'), CONSTRAINT INSERT_TBL_CON CHECK (x >= 3 AND y <> 'check failed' AND ... |
 | ERROR | PG_QUERY__NODE__NODE_CREATE_STMT | 1e45375992223036a8b79d9c | -- error CREATE TABLE persons2 OF person_type ( id WITH OPTIONS PRIMARY KEY, UNIQUE (name) ) |
 | ERROR | PG_QUERY__NODE__NODE_CREATE_STMT | 1f03ffd6eab51f49b0cc234d | create table notnull_tbl_fail (a serial, constraint foo not null a, constraint bar not null a) |
@@ -1775,9 +1084,7 @@ libpg_query target: `18-latest` `9ab9951b7021adcc6d25d261d5016ca0b83726b8` (Post
 | ERROR | PG_QUERY__NODE__NODE_CREATE_STMT | 22fd61558cce9a0f71a63bdc | -- (parent_id, valid_at) REFERENCES (id, PERIOD valid_at) -- FOREIGN KEY part should specify PERIOD CREATE TABLE temporal_fk_mltrng2mltrng ( id int4range, valid_at datemultirange, parent_id int4ran... |
 | ERROR | PG_QUERY__NODE__NODE_CREATE_STMT | 25c164d58ea1e8fd593eff6f | create table test_range_excl( room int4range, speaker int4range, during tsrange, exclude using gist (room with =, during with &&), exclude using gist (speaker with =, during with &&) ) |
 | ERROR | PG_QUERY__NODE__NODE_CREATE_STMT | 26a07b17ab324b96d2100c04 | CREATE TABLE gtest_child3 PARTITION OF gtest_parent ( f3 WITH OPTIONS GENERATED ALWAYS AS IDENTITY -- error ) FOR VALUES FROM ('2016-09-01') TO ('2016-10-01') |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STMT | 26c7027d64142a990bb6905f | -- update using datum from different table CREATE TABLE cmmove2(f1 text COMPRESSION pglz) |
 | ERROR | PG_QUERY__NODE__NODE_CREATE_STMT | 27a098077b6c1502e6627071 | -- OK more than one equal column and a && column create table idxpart (a int4range, b int4range, c int4range, exclude USING GIST (a with =, b with =, c with &&)) partition by range (a, b) |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STMT | 27ad4e76b09e49c9e9972b15 | -- try setting compression for incompressible data type CREATE TABLE cmdata2 (f1 int COMPRESSION pglz) |
 | ERROR | PG_QUERY__NODE__NODE_CREATE_STMT | 287485e0e18c0407aa63c0ab | CREATE TABLE evttrig.part_10_20 PARTITION OF evttrig.parted (id) FOR VALUES FROM (10) TO (20) PARTITION BY RANGE (id) |
 | ERROR | PG_QUERY__NODE__NODE_CREATE_STMT | 2920a3de69e53dc900458fa4 | create table idxpart1pk partition of idxpart (a primary key) for values from (0) to (100) |
 | ERROR | PG_QUERY__NODE__NODE_CREATE_STMT | 2e642fae9f3ad006f51a0e8f | -- Can't create a FK with a mismatched range type CREATE TABLE temporal_fk_rng2rng ( id int4range, valid_at int4range, parent_id int4range, CONSTRAINT temporal_fk_rng2rng_pk2 PRIMARY KEY (id, valid... |
@@ -1790,9 +1097,7 @@ libpg_query target: `18-latest` `9ab9951b7021adcc6d25d261d5016ca0b83726b8` (Post
 | ERROR | PG_QUERY__NODE__NODE_CREATE_STMT | 3bfc1c638ece59a5343e830d | -- -- test PARTITION BY for ranges -- -- temporal PRIMARY KEY: CREATE TABLE temporal_partitioned ( id int4range, valid_at daterange, name text, CONSTRAINT temporal_paritioned_pk PRIMARY KEY (id, va... |
 | ERROR | PG_QUERY__NODE__NODE_CREATE_STMT | 3d848c5e0cccf824ad30c6a8 | CREATE TABLE gtest_child3 PARTITION OF gtest_parent ( f3 DEFAULT 42 -- error ) FOR VALUES FROM ('2016-09-01') TO ('2016-10-01') |
 | ERROR | PG_QUERY__NODE__NODE_CREATE_STMT | 3e8dd9b821a04fe553198705 | -- UNIQUE with two columns plus a range: CREATE TABLE temporal_rng3 ( id1 int4range, id2 int4range, valid_at daterange, CONSTRAINT temporal_rng3_uq UNIQUE (id1, id2, valid_at WITHOUT OVERLAPS) ) |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STMT | 3efbf10f21eb781ad78fedaa | CREATE TABLE cmdata2 (f1 TEXT COMPRESSION pglz, f2 TEXT COMPRESSION lz4) |
 | ERROR | PG_QUERY__NODE__NODE_CREATE_STMT | 40590822637c196ca7821c37 | create table twoconstraints (f1 int unique, f2 box, exclude using gist(f2 with &&)) |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STMT | 41da001f8cadb8d5c288c961 | CREATE TABLE cmdata2 (f1 text COMPRESSION pglz) |
 | ERROR | PG_QUERY__NODE__NODE_CREATE_STMT | 4234aee93fa75719f45878e4 | CREATE TABLE quuux_default1 PARTITION OF quuux_default ( CONSTRAINT check_1 CHECK (a IS NOT NULL AND a = 1) ) FOR VALUES IN ('b') |
 | ERROR | PG_QUERY__NODE__NODE_CREATE_STMT | 42742e2389f76d5ee8743480 | -- PK with one column plus a range: CREATE TABLE temporal_rng ( -- Since we can't depend on having btree_gist here, -- use an int4range instead of an int. -- (The rangetypes regression test uses th... |
 | ERROR | PG_QUERY__NODE__NODE_CREATE_STMT | 43aa6cfc077691a3afa8cfe4 | -- Two scalar columns: CREATE TABLE temporal_fk2_rng2rng ( id int4range, valid_at daterange, parent_id1 int4range, parent_id2 int4range, CONSTRAINT temporal_fk2_rng2rng_pk PRIMARY KEY (id, valid_at... |
@@ -1801,7 +1106,6 @@ libpg_query target: `18-latest` `9ab9951b7021adcc6d25d261d5016ca0b83726b8` (Post
 | ERROR | PG_QUERY__NODE__NODE_CREATE_STMT | 471defae079fa9bd21722fd9 | -- (parent_id, valid_at) REFERENCES (id, valid_at) -- both should specify PERIOD: CREATE TABLE temporal_fk_rng2rng ( id int4range, valid_at daterange, parent_id int4range, CONSTRAINT temporal_fk_rn... |
 | ERROR | PG_QUERY__NODE__NODE_CREATE_STMT | 47939518464a7a0705c5f13c | -- (parent_id) REFERENCES (id, PERIOD valid_at) CREATE TABLE temporal_fk_mltrng2mltrng ( id int4range, valid_at datemultirange, parent_id int4range, CONSTRAINT temporal_fk_mltrng2mltrng_pk PRIMARY ... |
 | ERROR | PG_QUERY__NODE__NODE_CREATE_STMT | 48ae818ed664c518903c7a11 | -- (parent_id) REFERENCES (id, PERIOD valid_at) CREATE TABLE temporal_fk_rng2rng ( id int4range, valid_at daterange, parent_id int4range, CONSTRAINT temporal_fk_rng2rng_pk PRIMARY KEY (id, valid_at... |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STMT | 48cb4932cdcb571b8ece43b8 | -- copy to existing table CREATE TABLE cmmove3(f1 text COMPRESSION pglz) |
 | ERROR | PG_QUERY__NODE__NODE_CREATE_STMT | 49d7257d75ee6c18e240397d | CREATE TABLE temporal_fk2_mltrng2mltrng ( id int4range, valid_at datemultirange, parent_id1 int4range, parent_id2 int4range, CONSTRAINT temporal_fk2_mltrng2mltrng_pk PRIMARY KEY (id, valid_at WITHO... |
 | ERROR | PG_QUERY__NODE__NODE_CREATE_STMT | 4a44d3d51e502142496ad392 | CREATE TABLE notnull_tbl4_cld3 (PRIMARY KEY (a) DEFERRABLE, CONSTRAINT a_nn NOT NULL a) INHERITS (notnull_tbl4) |
 | ERROR | PG_QUERY__NODE__NODE_CREATE_STMT | 4ce4e71e7f9fd35d528d65c3 | create table idxpart1 partition of idxpart (i) for values with (modulus 2, remainder 1) |
@@ -1809,7 +1113,6 @@ libpg_query target: `18-latest` `9ab9951b7021adcc6d25d261d5016ca0b83726b8` (Post
 | ERROR | PG_QUERY__NODE__NODE_CREATE_STMT | 5098bc9eefcb5e76be5b71bc | CREATE TABLE temporal_fk2_rng2rng ( id int4range, valid_at daterange, parent_id1 int4range, parent_id2 int4range, CONSTRAINT temporal_fk2_rng2rng_pk PRIMARY KEY (id, valid_at WITHOUT OVERLAPS), CON... |
 | ERROR | PG_QUERY__NODE__NODE_CREATE_STMT | 55cddc8ce8054ae32327709d | -- PK with two columns plus a multirange: CREATE TABLE temporal_mltrng2 ( id1 int4range, id2 int4range, valid_at datemultirange, CONSTRAINT temporal_mltrng2_pk PRIMARY KEY (id1, id2, valid_at WITHO... |
 | ERROR | PG_QUERY__NODE__NODE_CREATE_STMT | 55e5b2a4bc9d170cc7ae396d | -- Not OK with equals and &&, and equals is not the partition key create table idxpart (a int4range, b int4range, c int4range, exclude USING GIST (b with =, c with &&)) partition by range (a) |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STMT | 58d0707de896885951e0a3e5 | -- test creating table with compression method CREATE TABLE cmdata(f1 text COMPRESSION pglz) |
 | ERROR | PG_QUERY__NODE__NODE_CREATE_STMT | 5d872dc225d65e0a9943d3f7 | CREATE TABLE evttrig.part_1_10 PARTITION OF evttrig.parted (id) FOR VALUES FROM (1) TO (10) |
 | ERROR | PG_QUERY__NODE__NODE_CREATE_STMT | 5f4d1d0616ac091ef967f76f | CREATE TABLE withoid() WITH (oids) |
 | ERROR | PG_QUERY__NODE__NODE_CREATE_STMT | 64345c1fbe01b1deea447c1f | -- Check deferred exclusion constraint CREATE TABLE deferred_excl ( f1 int, f2 int, CONSTRAINT deferred_excl_con EXCLUDE (f1 WITH =) INITIALLY DEFERRED ) |
@@ -1846,15 +1149,12 @@ libpg_query target: `18-latest` `9ab9951b7021adcc6d25d261d5016ca0b83726b8` (Post
 | ERROR | PG_QUERY__NODE__NODE_CREATE_STMT | 9c4f79c6961dab888d7518a1 | -- it's not possible to override a no-inherit constraint with an inheritable one CREATE TABLE ATACC2 (a int, CONSTRAINT a_is_not_null NOT NULL a NO INHERIT) |
 | ERROR | PG_QUERY__NODE__NODE_CREATE_STMT | a05a4b354f24fdae31edc338 | CREATE TABLE ATACC1 (a int, NOT NULL a NO INHERIT) PARTITION BY LIST (a) |
 | ERROR | PG_QUERY__NODE__NODE_CREATE_STMT | a1d87f477ba2589ed1113849 | -- -- EXCLUDE constraints -- CREATE TABLE circles ( c1 CIRCLE, c2 TEXT, EXCLUDE USING gist (c1 WITH &&, (c2::circle) WITH &&) WHERE (circle_center(c1) <> '(0,0)') ) |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STMT | a2971e782e8bc986a55a338a | -- test compression with partition CREATE TABLE cmpart(f1 text COMPRESSION lz4) PARTITION BY HASH(f1) |
 | ERROR | PG_QUERY__NODE__NODE_CREATE_STMT | a29d6d2d7333881cef5c6445 | -- OK to add an exclusion constraint if partitioning by its equal column create table idxpart (a int4range, exclude USING GIST (a with = )) partition by range (a) |
 | ERROR | PG_QUERY__NODE__NODE_CREATE_STMT | a2f66fb5fa2ae207e5f2826f | -- UNIQUE with a non-range column: CREATE TABLE temporal_rng3 ( id int4range, valid_at TEXT, CONSTRAINT temporal_rng3_uq UNIQUE (id, valid_at WITHOUT OVERLAPS) ) |
 | ERROR | PG_QUERY__NODE__NODE_CREATE_STMT | a36a7e443939b334f313e4ae | CREATE TABLE test_ex_constraints ( c circle, EXCLUDE USING gist (c WITH &&) ) |
 | ERROR | PG_QUERY__NODE__NODE_CREATE_STMT | a8f6fdf68309bdb9892b2a1a | create table notnull_tbl_fail (a serial, constraint foo not null a no inherit) |
 | ERROR | PG_QUERY__NODE__NODE_CREATE_STMT | ab17b28dd8793eac34b7f772 | CREATE TABLE inh_nn_parent (a int, NOT NULL a NO INHERIT) |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STMT | acc5db5a96d85882421f5a28 | CREATE TABLE ctl_table(a int PRIMARY KEY, b varchar COMPRESSION pglz, c int GENERATED ALWAYS AS (a * 2) STORED, d bigint GENERATED ALWAYS AS IDENTITY, e int DEFAULT 1) |
 | ERROR | PG_QUERY__NODE__NODE_CREATE_STMT | b1d14b184e2108fe1fe61ff5 | CREATE TABLE of_tt_enum_type OF tt_enum_type |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STMT | b21c42e7b8fa77c408bf68fd | CREATE TABLE cmpart2(f1 text COMPRESSION pglz) |
 | ERROR | PG_QUERY__NODE__NODE_CREATE_STMT | b360580603369b7efe5db60a | -- OK more than one equal column create table idxpart (a int4range, b int4range, exclude USING GIST (a with =, b with =)) partition by range (a, b) |
 | ERROR | PG_QUERY__NODE__NODE_CREATE_STMT | b3685ad731412214ab9ef263 | -- PK with a range column/PERIOD that isn't there: CREATE TABLE temporal_rng ( id INTEGER, CONSTRAINT temporal_rng_pk PRIMARY KEY (id, valid_at WITHOUT OVERLAPS) ) |
 | ERROR | PG_QUERY__NODE__NODE_CREATE_STMT | b43015e3f33f0f884d04874d | CREATE TABLE personsx OF person_type (myname WITH OPTIONS NOT NULL) |
@@ -1869,11 +1169,9 @@ libpg_query target: `18-latest` `9ab9951b7021adcc6d25d261d5016ca0b83726b8` (Post
 | ERROR | PG_QUERY__NODE__NODE_CREATE_STMT | c2d1fc08b20ae31d7973f93d | -- with a UNIQUE constraint: CREATE TABLE temporal_mltrng3 ( id int4range, valid_at datemultirange, CONSTRAINT temporal_mltrng3_uq UNIQUE (id, valid_at WITHOUT OVERLAPS) ) |
 | ERROR | PG_QUERY__NODE__NODE_CREATE_STMT | c49d95cd3bd9dc547ed9919b | CREATE TABLE part_b PARTITION OF parted ( b NOT NULL DEFAULT 1, CONSTRAINT check_a CHECK (length(a) > 0), CONSTRAINT check_b CHECK (b >= 0) ) FOR VALUES IN ('b') |
 | ERROR | PG_QUERY__NODE__NODE_CREATE_STMT | c4ea21032686d6dbbf7d44c0 | -- should fail because of duplicate referenced columns: CREATE TABLE temporal_fk_mltrng2mltrng ( id int4range, valid_at datemultirange, parent_id int4range, CONSTRAINT temporal_fk_mltrng2mltrng_pk ... |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STMT | c6810c7248b7f45f13ef0aa2 | -- check STORAGE correctness create table test_storage_failed (a text, b int storage extended) |
 | ERROR | PG_QUERY__NODE__NODE_CREATE_STMT | c6a0d6b7b02a590422933b0d | CREATE TABLE IF NOT EXISTS persons OF person_type |
 | ERROR | PG_QUERY__NODE__NODE_CREATE_STMT | cbd1e51b3e3f8005e41c761c | create table notnull_tbl_fail (a int constraint foo not null, constraint foo not null a no inherit) |
 | ERROR | PG_QUERY__NODE__NODE_CREATE_STMT | cc50f50895a77cdbd4fded3b | -- UNIQUE with a range column/PERIOD that isn't there: CREATE TABLE temporal_rng3 ( id INTEGER, CONSTRAINT temporal_rng3_uq UNIQUE (id, valid_at WITHOUT OVERLAPS) ) |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STMT | cc70f024bbcef340288ec6e3 | -- pg_column_toast_chunk_id CREATE TABLE test_chunk_id (a TEXT, b TEXT STORAGE EXTERNAL) |
 | ERROR | PG_QUERY__NODE__NODE_CREATE_STMT | cec1585fdd4198bb6e1cf24c | CREATE TABLE inh_nn_lvl3 (CONSTRAINT foo NOT NULL a NO INHERIT) INHERITS (inh_nn_lvl2) |
 | ERROR | PG_QUERY__NODE__NODE_CREATE_STMT | cf50d100af26e4abf89c9370 | CREATE TABLE gtest28 OF gtest_type (f1 WITH OPTIONS GENERATED ALWAYS AS (f2 *2) STORED) |
 | ERROR | PG_QUERY__NODE__NODE_CREATE_STMT | d03b40c04944ed9f9dddae4a | CREATE TABLE notnull_tbl4_lk3 (LIKE notnull_tbl4 INCLUDING INDEXES, NOT NULL a) |
@@ -1974,53 +1272,6 @@ libpg_query target: `18-latest` `9ab9951b7021adcc6d25d261d5016ca0b83726b8` (Post
 | ERROR | PG_QUERY__NODE__NODE_CREATE_TRANSFORM_STMT | 8ef58f73b71a47fa78542d3d | CREATE TRANSFORM FOR int LANGUAGE SQL ( FROM SQL WITH FUNCTION prsd_lextype(internal), TO SQL WITH FUNCTION int4recv(internal)) |
 | ERROR | PG_QUERY__NODE__NODE_CREATE_TRANSFORM_STMT | a7f9e2fb46b3b26cc94f2ee4 | -- fail CREATE TRANSFORM FOR hstore LANGUAGE plperl (FROM SQL WITH FUNCTION internal_in(cstring), TO SQL WITH FUNCTION plperl_to_hstore(internal)) |
 | ERROR | PG_QUERY__NODE__NODE_CREATE_TRANSFORM_STMT | e59f670b472d591324148262 | -- fail CREATE OR REPLACE TRANSFORM FOR hstore LANGUAGE plperl (FROM SQL WITH FUNCTION hstore_to_plperl(internal), TO SQL WITH FUNCTION plperl_to_hstore(internal)) |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_USER_MAPPING_STMT | 0492b182499f59bd651aa1d8 | CREATE USER MAPPING FOR regress_testrolx SERVER sv9 OPTIONS (user 'regress_testrolx') |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_USER_MAPPING_STMT | 09dda4c7504a3687798647b0 | -- ERROR CREATE USER MAPPING FOR public SERVER s9 |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_USER_MAPPING_STMT | 0b3d5d7985b442493d36ae18 | CREATE USER MAPPING FOR user SERVER s8 OPTIONS (username 'test', password 'secret') |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_USER_MAPPING_STMT | 1a1ac7e73ca91c0eb0ef4959 | CREATE USER MAPPING FOR current_user SERVER s1 |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_USER_MAPPING_STMT | 23f6c21618074d55f7275e94 | CREATE USER MAPPING FOR SESSION_USER SERVER sv6 OPTIONS (user 'SESSION_USER') |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_USER_MAPPING_STMT | 277b6bb46a17f4a9019bcd3a | CREATE USER MAPPING FOR "user" SERVER sv5 OPTIONS (user '"USER"') |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_USER_MAPPING_STMT | 2ae129122852e343059b1ac6 | CREATE USER MAPPING FOR CURRENT_USER SERVER loopback2 |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_USER_MAPPING_STMT | 2cce0391b4c8f12e4638791a | CREATE USER MAPPING FOR user SERVER s4 |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_USER_MAPPING_STMT | 313f8b5af12196dabe0228e1 | CREATE USER MAPPING FOR regress_unprivileged_role SERVER s10 OPTIONS (user 'secret') |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_USER_MAPPING_STMT | 3eda1f31414708ee0e9f2825 | CREATE USER MAPPING FOR current_user SERVER t1 OPTIONS (username 'bob', password 'boo') |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_USER_MAPPING_STMT | 4003c447ddc70908f16afc95 | -- Should not get that error once a user mapping is created CREATE USER MAPPING FOR regress_view_owner_another SERVER loopback OPTIONS (password_required 'false') |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_USER_MAPPING_STMT | 406f98a42fbe7e94196ccaa5 | CREATE USER MAPPING FOR "current_user" SERVER sv2 OPTIONS (user '"current_user"') |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_USER_MAPPING_STMT | 442f4491b528907d717c95e2 | CREATE USER MAPPING FOR public SERVER s6 |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_USER_MAPPING_STMT | 459ef9d8fc65e9c0880f7630 | create user mapping for regress_evt_user server useless_server |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_USER_MAPPING_STMT | 46794796462e9971e6d005aa | CREATE USER MAPPING FOR current_user SERVER s7 |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_USER_MAPPING_STMT | 510a6fb71cca09df9996b9e3 | CREATE USER MAPPING FOR public SERVER testserver1 OPTIONS (user 'value', password 'value') |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_USER_MAPPING_STMT | 528f9576a2b449c7e96656cd | CREATE USER MAPPING FOR PUBLIC SERVER sv7 OPTIONS (user 'PUBLIC') |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_USER_MAPPING_STMT | 55666b653c3689f85df47ff0 | CREATE USER MAPPING FOR current_user SERVER s9 |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_USER_MAPPING_STMT | 590252a4517e291e5f76acf2 | CREATE USER MAPPING FOR regress_multi_conn_user1 SERVER loopback |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_USER_MAPPING_STMT | 61f46de166c12d223a36bb03 | CREATE USER MAPPING FOR CURRENT_USER SERVER loopback_nopw |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_USER_MAPPING_STMT | 62acc8aaf446339b60f68750 | -- ERROR CREATE USER MAPPING FOR regress_file_fdw_user SERVER file_server |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_USER_MAPPING_STMT | 67a3d59e6fe19a196f7eb47d | -- ERROR CREATE USER MAPPING FOR public SERVER file_server OPTIONS (force_not_null '*') |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_USER_MAPPING_STMT | 6a536ad23db4efac00448aab | -- ERROR duplicate CREATE USER MAPPING FOR public SERVER s4 OPTIONS ("this mapping" 'is public') |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_USER_MAPPING_STMT | 6d41b005831e988dd215253d | CREATE USER MAPPING FOR regress_multi_conn_user2 SERVER loopback |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_USER_MAPPING_STMT | 6e1513fffa0ddd39f603e63d | CREATE USER MAPPING FOR public SERVER fdtest OPTIONS (server 'localhost') |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_USER_MAPPING_STMT | 72294a26fc08f9cbebb10eae | -- ERROR CREATE USER MAPPING FOR public SERVER s4 |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_USER_MAPPING_STMT | 76d067f89be7373cc77cdb36 | -- ERROR CREATE USER MAPPING FOR current_user SERVER s4 |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_USER_MAPPING_STMT | 7a6ba6d2de86b2ea1f8012f6 | CREATE USER MAPPING FOR "Public" SERVER sv8 OPTIONS (user '"Public"') |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_USER_MAPPING_STMT | 7be0534be7f8066893784560 | CREATE USER MAPPING FOR public SERVER loopback3 |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_USER_MAPPING_STMT | 7d3de8ae4c6184760c939d4f | -- ERROR CREATE USER MAPPING FOR public SERVER file_server OPTIONS (force_null '*') |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_USER_MAPPING_STMT | 7eaa133e134b45db49a18ace | CREATE USER MAPPING FOR regress_no_priv_user SERVER file_server |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_USER_MAPPING_STMT | 7ee07a4215193f6da1b646b0 | CREATE USER MAPPING FOR regress_view_owner SERVER loopback |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_USER_MAPPING_STMT | 8f84bd311b0eb8719158627e | CREATE USER MAPPING FOR CURRENT_USER SERVER loopback |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_USER_MAPPING_STMT | 91412ed6044c9c5e35824b9f | -- ERROR CREATE USER MAPPING IF NOT EXISTS FOR current_user SERVER s1 |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_USER_MAPPING_STMT | 9510cd8f3d88bf24b65ae6e6 | CREATE USER MAPPING FOR regress_file_fdw_superuser SERVER file_server |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_USER_MAPPING_STMT | a123daa935477587a1646cb7 | CREATE USER MAPPING FOR CURRENT_USER SERVER sv1 OPTIONS (user 'CURRENT_USER') |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_USER_MAPPING_STMT | a9298e5aa92ed1e99eb0f410 | CREATE USER MAPPING FOR current_user SERVER s5 |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_USER_MAPPING_STMT | ab1ee8c7be20df9ffddf921c | CREATE USER MAPPING FOR CURRENT_ROLE SERVER sv3 OPTIONS (user 'CURRENT_ROLE') |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_USER_MAPPING_STMT | b542b88eaa485fe5559aaa1b | CREATE USER MAPPING FOR USER SERVER sv4 OPTIONS (user 'USER') |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_USER_MAPPING_STMT | b80af2b93fd4e4a8301098ab | CREATE USER MAPPING FOR nonexistent SERVER sv10 OPTIONS (user 'nonexistent') |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_USER_MAPPING_STMT | bf3a67c79fbd62a79b02f81b | -- But creation of user mappings for non-superusers should fail CREATE USER MAPPING FOR public SERVER loopback_nopw |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_USER_MAPPING_STMT | cb0f4a2cff8de0332a5434d4 | -- ERROR CREATE USER MAPPING FOR user SERVER s8 OPTIONS (user 'test', password 'secret') |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_USER_MAPPING_STMT | cb9ffcf7ebb3f6504e2b122b | CREATE USER MAPPING FOR current_user SERVER s6 OPTIONS (username 'test') |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_USER_MAPPING_STMT | d3a914600d7641ee5c697735 | CREATE USER MAPPING FOR public SERVER s10 OPTIONS (user 'secret') |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_USER_MAPPING_STMT | d89191c631e6ae9ebfe90328 | CREATE USER MAPPING FOR public SERVER t1 |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_USER_MAPPING_STMT | fea790c4d90b398699a3763e | CREATE USER MAPPING FOR regress_addr_user SERVER "integer" |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_USER_MAPPING_STMT | fefd13fcbda75105870cfa8a | -- ERROR CREATE USER MAPPING FOR public SERVER s8 |
 | ERROR | PG_QUERY__NODE__NODE_DROP_OWNED_STMT | 0307eccae9adec018e1d24b2 | DROP OWNED BY regress_rls_dob_role1 |
 | ERROR | PG_QUERY__NODE__NODE_DROP_OWNED_STMT | 04447288cda271406e7deefb | DROP OWNED BY regress_alter_function_role |
 | ERROR | PG_QUERY__NODE__NODE_DROP_OWNED_STMT | 0f2bdcd8f09cf73bd1b9321c | DROP OWNED BY regress_heaptest_role |
@@ -2090,38 +1341,30 @@ libpg_query target: `18-latest` `9ab9951b7021adcc6d25d261d5016ca0b83726b8` (Post
 | ERROR | PG_QUERY__NODE__NODE_RENAME_STMT | 00c7d8ee48aacf49c76595ca | ALTER TABLESPACE regress_tblspace RENAME TO regress_tblspace_renamed |
 | ERROR | PG_QUERY__NODE__NODE_RENAME_STMT | 043de1fdd68ded7201e68ad0 | alter trigger parenttrig on parent rename to anothertrig |
 | ERROR | PG_QUERY__NODE__NODE_RENAME_STMT | 0651db681ffb0bce9d58f7aa | -- failed (name conflict) ALTER TEXT SEARCH PARSER alt_ts_prs1 RENAME TO alt_ts_prs3 |
-| ERROR | PG_QUERY__NODE__NODE_RENAME_STMT | 0be9d91833b14beb3c1bb72a | ALTER POLICY p1 ON event_trigger_test RENAME TO p2 |
 | ERROR | PG_QUERY__NODE__NODE_RENAME_STMT | 19eb46d5ac860c54c67ce51b | ALTER PUBLICATION testpub_default RENAME TO testpub_foo |
 | ERROR | PG_QUERY__NODE__NODE_RENAME_STMT | 1afb05cbebd7490dfadc7eec | -- failed (not owner) ALTER TEXT SEARCH CONFIGURATION alt_ts_conf1 RENAME TO alt_ts_conf4 |
 | ERROR | PG_QUERY__NODE__NODE_RENAME_STMT | 1d9bc0c6a92cfdfb680165f8 | ALTER TRIGGER t1 ON pg_description RENAME TO t2 |
 | ERROR | PG_QUERY__NODE__NODE_RENAME_STMT | 1fe1eac51d7c6a0a52628412 | ALTER TEXT SEARCH CONFIGURATION alt_ts_conf3 RENAME TO alt_ts_conf4 |
-| ERROR | PG_QUERY__NODE__NODE_RENAME_STMT | 221b917999140d83d12ecaa4 | ALTER POLICY p1 ON t1 RENAME TO p2 |
 | ERROR | PG_QUERY__NODE__NODE_RENAME_STMT | 22d44278d244a7138c397638 | ALTER TEXT SEARCH DICTIONARY alt_ts_dict1 RENAME TO alt_ts_dict2 |
 | ERROR | PG_QUERY__NODE__NODE_RENAME_STMT | 25215f2b8fed42101796b7d1 | ALTER RULE r1 ON pg_description RENAME TO r2 |
 | ERROR | PG_QUERY__NODE__NODE_RENAME_STMT | 27a9c1b3741e6c8a34b3f628 | ALTER TEXT SEARCH CONFIGURATION alt_ts_conf1 RENAME TO alt_ts_conf2 |
 | ERROR | PG_QUERY__NODE__NODE_RENAME_STMT | 2b0c0091193c27385bdb0f36 | -- but we can rename the subscription we just created ALTER SUBSCRIPTION regress_testsub RENAME TO regress_testsub2 |
-| ERROR | PG_QUERY__NODE__NODE_RENAME_STMT | 2de44cbe53bf697b0d5d6a67 | -- failed (name conflict) ALTER FOREIGN DATA WRAPPER alt_fdw1 RENAME TO alt_fdw3 |
-| ERROR | PG_QUERY__NODE__NODE_RENAME_STMT | 2fb9df10e725a4cb81ff1713 | ALTER FOREIGN TABLE IF EXISTS doesnt_exist_ft1 RENAME c1 TO foreign_column_1 |
 | ERROR | PG_QUERY__NODE__NODE_RENAME_STMT | 3514ac1b2d4a9fad63cfc32d | ALTER RULE InsertRule ON rule_v1 RENAME to NewInsertRule |
 | ERROR | PG_QUERY__NODE__NODE_RENAME_STMT | 3760b2b52ad1d170aa8e4395 | ALTER TEXT SEARCH PARSER alt_ts_prs1 RENAME TO alt_ts_prs2 |
 | ERROR | PG_QUERY__NODE__NODE_RENAME_STMT | 3ae2bb20b47fc37b66d64dae | -- failed (name conflict) ALTER TEXT SEARCH DICTIONARY alt_ts_dict1 RENAME TO alt_ts_dict3 |
-| ERROR | PG_QUERY__NODE__NODE_RENAME_STMT | 41947156a8959717cb611946 | ALTER FOREIGN TABLE IF EXISTS doesnt_exist_ft1 RENAME TO foreign_table_1 |
 | ERROR | PG_QUERY__NODE__NODE_RENAME_STMT | 50830440c8c28885300bf215 | ALTER LANGUAGE alt_lang1 RENAME TO alt_lang2 |
 | ERROR | PG_QUERY__NODE__NODE_RENAME_STMT | 5af6ae5ab9a2e1a38a7fb48d | -- failed (name conflict) ALTER LANGUAGE alt_lang2 RENAME TO alt_lang3 |
 | ERROR | PG_QUERY__NODE__NODE_RENAME_STMT | 61d1623aca8818dc62d370e8 | ALTER RULE rules_parted_table_insert ON rules_parted_table RENAME TO rules_parted_table_insert_redirect |
 | ERROR | PG_QUERY__NODE__NODE_RENAME_STMT | 67acb1c1fad55fd44bb957f3 | alter trigger a on grandparent rename to b |
-| ERROR | PG_QUERY__NODE__NODE_RENAME_STMT | 6efa25b446861ff3481cfe1b | -- failed (name conflict) ALTER SERVER alt_fserv1 RENAME TO alt_fserv3 |
 | ERROR | PG_QUERY__NODE__NODE_RENAME_STMT | 6fa0fa03b682aabd81c75532 | -- already exists ALTER RULE "_RETURN" ON rule_v1 RENAME TO abc |
 | ERROR | PG_QUERY__NODE__NODE_RENAME_STMT | 7a01cf59f089206aa142fb5f | ALTER SUBSCRIPTION regress_testsub RENAME TO regress_testsub_dummy |
 | ERROR | PG_QUERY__NODE__NODE_RENAME_STMT | 7d690c1ac2fbc1683a0e2455 | -- doesn't exist ALTER RULE NewInsertRule ON rule_v1 RENAME TO "_RETURN" |
 | ERROR | PG_QUERY__NODE__NODE_RENAME_STMT | 816f2f86f18fb8226fd6a6e3 | -- failed (name conflict) ALTER TEXT SEARCH CONFIGURATION alt_ts_conf1 RENAME TO alt_ts_conf3 |
-| ERROR | PG_QUERY__NODE__NODE_RENAME_STMT | 82b80976ce3dd17a78d758a3 | -- ERROR ALTER FOREIGN TABLE foreign_schema.ft1 RENAME c1 TO foreign_column_1 |
 | ERROR | PG_QUERY__NODE__NODE_RENAME_STMT | 8c93f6b53470ecd6dea2c771 | ALTER SUBSCRIPTION regress_testsub2 RENAME TO regress_testsub |
 | ERROR | PG_QUERY__NODE__NODE_RENAME_STMT | 8eafbc49d3804d4381d42bde | -- ONLY not supported alter trigger b on middle rename to c |
 | ERROR | PG_QUERY__NODE__NODE_RENAME_STMT | 95f4d639a15d03fbdf017358 | ALTER SUBSCRIPTION regress_testsub RENAME TO regress_testsub_foo |
 | ERROR | PG_QUERY__NODE__NODE_RENAME_STMT | 9664a2dc6ffe09b2a841123c | ALTER PUBLICATION testpub_default RENAME TO testpub_dummy |
 | ERROR | PG_QUERY__NODE__NODE_RENAME_STMT | a43b033cfdfeeff2737a09e4 | -- Test RENAME TRIGGER ALTER TRIGGER modified_a ON main_table RENAME TO modified_modified_a |
-| ERROR | PG_QUERY__NODE__NODE_RENAME_STMT | a7654d51725f0ea86ce3fea5 | ALTER POLICY p1 ON t1 RENAME TO p1 |
 | ERROR | PG_QUERY__NODE__NODE_RENAME_STMT | ac81ff9cae06f143c819d6dd | -- failed (not owner) ALTER LANGUAGE alt_lang1 RENAME TO alt_lang3 |
 | ERROR | PG_QUERY__NODE__NODE_RENAME_STMT | ae00de0a2a62929987fe4f8d | -- should fail, name collision alter event trigger regress_event_trigger rename to regress_event_trigger2 |
 | ERROR | PG_QUERY__NODE__NODE_RENAME_STMT | b234c3e9f22edd86485982bf | -- OK alter event trigger regress_event_trigger rename to regress_event_trigger3 |
@@ -2129,9 +1372,6 @@ libpg_query target: `18-latest` `9ab9951b7021adcc6d25d261d5016ca0b83726b8` (Post
 | ERROR | PG_QUERY__NODE__NODE_RENAME_STMT | d4be7caec570c3524caa9da5 | -- failed (not owner) ALTER TEXT SEARCH DICTIONARY alt_ts_dict1 RENAME TO alt_ts_dict4 |
 | ERROR | PG_QUERY__NODE__NODE_RENAME_STMT | d542079b61793bca1fcf7e7f | ALTER TEXT SEARCH TEMPLATE alt_ts_temp1 RENAME TO alt_ts_temp2 |
 | ERROR | PG_QUERY__NODE__NODE_RENAME_STMT | e54342cf0e70bc4ba36c5c20 | -- failed (name conflict) ALTER TEXT SEARCH TEMPLATE alt_ts_temp1 RENAME TO alt_ts_temp3 |
-| ERROR | PG_QUERY__NODE__NODE_RENAME_STMT | eadff4ace3c5ceefe25ceecc | ALTER FOREIGN TABLE foreign_schema.ft1 RENAME TO foreign_table_1 |
-| ERROR | PG_QUERY__NODE__NODE_RENAME_STMT | ec50b7ac60d399dfa5b3e0c4 | -- OK ALTER SERVER alt_fserv1 RENAME TO alt_fserv2 |
-| ERROR | PG_QUERY__NODE__NODE_RENAME_STMT | f2b3b07215b79357b496766c | ALTER FOREIGN DATA WRAPPER alt_fdw1 RENAME TO alt_fdw2 |
 | ERROR | PG_QUERY__NODE__NODE_RENAME_STMT | f49041582279ec2adf1eca04 | alter trigger p on grandparent rename to q |
 | ERROR | PG_QUERY__NODE__NODE_RENAME_STMT | f7ae72dcceed63ea365cf99c | alter trigger b on grandparent rename to c |
 | ERROR | PG_QUERY__NODE__NODE_RULE_STMT | 0478311755f975b6235b519f | CREATE RULE rule1 AS ON INSERT TO ruletest1 DO INSTEAD INSERT INTO ruletest2 VALUES (NEW.*) |
@@ -2603,41 +1843,6 @@ libpg_query target: `18-latest` `9ab9951b7021adcc6d25d261d5016ca0b83726b8` (Post
 | TRAILING_INPUT | PG_QUERY__NODE__NODE_DROPDB_STMT | aebcbb6ed04f056a781c8d18 | drop database if exists test_database_exists (force) |
 | TRAILING_INPUT | PG_QUERY__NODE__NODE_DROPDB_STMT | dfce96615d6417e5a8a2941f | drop database test_database_exists with (force) |
 | TRAILING_INPUT | PG_QUERY__NODE__NODE_DROPDB_STMT | efae4f9fe20ffb0919c20b80 | drop database test_database_exists (force) |
-| TRAILING_INPUT | PG_QUERY__NODE__NODE_DROP_USER_MAPPING_STMT | 03563ac8a5541dddd7e57f37 | DROP USER MAPPING IF EXISTS FOR user SERVER ss4 |
-| TRAILING_INPUT | PG_QUERY__NODE__NODE_DROP_USER_MAPPING_STMT | 1927682088893709f789da12 | -- DROP USER MAPPING IF EXISTS DROP USER MAPPING IF EXISTS FOR CURRENT_USER SERVER sv1 |
-| TRAILING_INPUT | PG_QUERY__NODE__NODE_DROP_USER_MAPPING_STMT | 19626d28e0762ee85209a772 | -- We're done with the role named after a specific user and need to check the -- changes to the public mapping. DROP USER MAPPING FOR CURRENT_USER SERVER loopback_nopw |
-| TRAILING_INPUT | PG_QUERY__NODE__NODE_DROP_USER_MAPPING_STMT | 1e76b9d320a1bb378ea3cb46 | DROP USER MAPPING FOR "Public" SERVER sv8 |
-| TRAILING_INPUT | PG_QUERY__NODE__NODE_DROP_USER_MAPPING_STMT | 246bbeb3ed08c93027003841 | DROP USER MAPPING FOR SESSION_USER SERVER sv6 |
-| TRAILING_INPUT | PG_QUERY__NODE__NODE_DROP_USER_MAPPING_STMT | 2ed5ac20b835a7bbbb586ac4 | DROP USER MAPPING FOR public SERVER s7 |
-| TRAILING_INPUT | PG_QUERY__NODE__NODE_DROP_USER_MAPPING_STMT | 30ed2a6d7c5da4368186538f | DROP USER MAPPING IF EXISTS FOR USER SERVER sv4 |
-| TRAILING_INPUT | PG_QUERY__NODE__NODE_DROP_USER_MAPPING_STMT | 34d363856ab61402c89a2e0f | -- DROP USER MAPPING DROP USER MAPPING FOR CURRENT_USER SERVER sv1 |
-| TRAILING_INPUT | PG_QUERY__NODE__NODE_DROP_USER_MAPPING_STMT | 49873b489d22210a5ae45267 | -- ERROR DROP USER MAPPING FOR user SERVER ss4 |
-| TRAILING_INPUT | PG_QUERY__NODE__NODE_DROP_USER_MAPPING_STMT | 503e28f8a331d99fedf04635 | DROP USER MAPPING FOR public SERVER fdtest |
-| TRAILING_INPUT | PG_QUERY__NODE__NODE_DROP_USER_MAPPING_STMT | 5aa90f51979d073b463049fa | DROP USER MAPPING FOR regress_testrolx SERVER sv9 |
-| TRAILING_INPUT | PG_QUERY__NODE__NODE_DROP_USER_MAPPING_STMT | 5c4db08dc5486fed0f372d4d | DROP USER MAPPING FOR regress_view_owner_another SERVER loopback |
-| TRAILING_INPUT | PG_QUERY__NODE__NODE_DROP_USER_MAPPING_STMT | 68aa5d9aa45e5e94002de951 | DROP USER MAPPING IF EXISTS FOR public SERVER s7 |
-| TRAILING_INPUT | PG_QUERY__NODE__NODE_DROP_USER_MAPPING_STMT | 69a81fed33d5b822c1ade677 | DROP USER MAPPING FOR regress_multi_conn_user2 SERVER loopback |
-| TRAILING_INPUT | PG_QUERY__NODE__NODE_DROP_USER_MAPPING_STMT | 6ccfe51e184835e3057cbb1a | DROP USER MAPPING FOR USER SERVER sv4 |
-| TRAILING_INPUT | PG_QUERY__NODE__NODE_DROP_USER_MAPPING_STMT | 7727234b95cad3759249687b | DROP USER MAPPING IF EXISTS FOR PUBLIC SERVER sv7 |
-| TRAILING_INPUT | PG_QUERY__NODE__NODE_DROP_USER_MAPPING_STMT | 7a058e9702c9c1bed4c87f23 | -- ERROR DROP USER MAPPING FOR regress_test_role SERVER s6 |
-| TRAILING_INPUT | PG_QUERY__NODE__NODE_DROP_USER_MAPPING_STMT | 803bc7a4791484a10c5040c1 | -- ERROR DROP USER MAPPING IF EXISTS FOR regress_test_missing_role SERVER s4 |
-| TRAILING_INPUT | PG_QUERY__NODE__NODE_DROP_USER_MAPPING_STMT | 843c0931c223c0a24a2a9706 | DROP USER MAPPING IF EXISTS FOR SESSION_USER SERVER sv6 |
-| TRAILING_INPUT | PG_QUERY__NODE__NODE_DROP_USER_MAPPING_STMT | 8b97d383aa8c60c4e3169d30 | DROP USER MAPPING FOR "current_user" SERVER sv2 |
-| TRAILING_INPUT | PG_QUERY__NODE__NODE_DROP_USER_MAPPING_STMT | 90392f9589d9b38216abccbc | DROP USER MAPPING FOR "user" SERVER sv5 |
-| TRAILING_INPUT | PG_QUERY__NODE__NODE_DROP_USER_MAPPING_STMT | 9236f6b9c7df5ec89bb6d716 | DROP USER MAPPING FOR public SERVER s4 |
-| TRAILING_INPUT | PG_QUERY__NODE__NODE_DROP_USER_MAPPING_STMT | 97b27353564026b69fdd5452 | -- Clean up DROP USER MAPPING FOR regress_multi_conn_user1 SERVER loopback |
-| TRAILING_INPUT | PG_QUERY__NODE__NODE_DROP_USER_MAPPING_STMT | 98f0187f65447a9cb4081301 | DROP USER MAPPING FOR current_user SERVER t1 |
-| TRAILING_INPUT | PG_QUERY__NODE__NODE_DROP_USER_MAPPING_STMT | 9fd8f8c132f4d58a7709735f | DROP USER MAPPING IF EXISTS FOR CURRENT_USER SERVER sv3 |
-| TRAILING_INPUT | PG_QUERY__NODE__NODE_DROP_USER_MAPPING_STMT | b37e0f2be32a8fd7631d5667 | DROP USER MAPPING FOR CURRENT_ROLE SERVER sv3 |
-| TRAILING_INPUT | PG_QUERY__NODE__NODE_DROP_USER_MAPPING_STMT | ca83e08df715f5b12e8adcf7 | DROP USER MAPPING FOR public SERVER s8 |
-| TRAILING_INPUT | PG_QUERY__NODE__NODE_DROP_USER_MAPPING_STMT | d12c679dc0951a4c2a111ad9 | DROP USER MAPPING IF EXISTS FOR regress_testrolx SERVER sv9 |
-| TRAILING_INPUT | PG_QUERY__NODE__NODE_DROP_USER_MAPPING_STMT | d2c8d39d5a6f2bcb0cdd34cd | DROP USER MAPPING FOR PUBLIC SERVER sv7 |
-| TRAILING_INPUT | PG_QUERY__NODE__NODE_DROP_USER_MAPPING_STMT | daf821a7400448c0b9143c2a | DROP USER MAPPING IF EXISTS FOR "current_user" SERVER sv2 |
-| TRAILING_INPUT | PG_QUERY__NODE__NODE_DROP_USER_MAPPING_STMT | dcb160a04f8382d06894c6af | DROP USER MAPPING IF EXISTS FOR "Public" SERVER sv8 |
-| TRAILING_INPUT | PG_QUERY__NODE__NODE_DROP_USER_MAPPING_STMT | e719fdd3735b6924f54d772a | DROP USER MAPPING IF EXISTS FOR nonexistent SERVER sv10 |
-| TRAILING_INPUT | PG_QUERY__NODE__NODE_DROP_USER_MAPPING_STMT | e757f28aa8fb2ab3fcc452cf | -- cleanup DROP USER MAPPING FOR public SERVER loopback_nopw |
-| TRAILING_INPUT | PG_QUERY__NODE__NODE_DROP_USER_MAPPING_STMT | fceee740e978075eb5da1f79 | DROP USER MAPPING IF EXISTS FOR "user" SERVER sv5 |
-| TRAILING_INPUT | PG_QUERY__NODE__NODE_DROP_USER_MAPPING_STMT | fef22a552d6fa6ce1c337353 | DROP USER MAPPING FOR nonexistent SERVER sv10 |
 | TRAILING_INPUT | PG_QUERY__NODE__NODE_EXPLAIN_STMT | 1ab56686d06e40a14ad4a59a | explain (costs off) select * from boolpart where a is false and a is unknown |
 | TRAILING_INPUT | PG_QUERY__NODE__NODE_EXPLAIN_STMT | 44283f06afae43f5513c8c1e | -- -- Similar to the previous test case, but this time it's a backwards scan -- using a < RowCompare. Must use the <= strategy (and not the < strategy). -- explain (costs off) SELECT proname, proar... |
 | TRAILING_INPUT | PG_QUERY__NODE__NODE_EXPLAIN_STMT | 58fa179e9a230d8ac6d8cd2d | explain (costs off) select * from boolpart where a is not unknown |
@@ -2860,18 +2065,6 @@ libpg_query target: `18-latest` `9ab9951b7021adcc6d25d261d5016ca0b83726b8` (Post
 | TYPE_MISMATCH | PG_QUERY__NODE__NODE_CLUSTER_STMT | e12a490c485acbe4349b6280 | -- and after clustering on clstr_expression_minus_a CLUSTER clstr_expression USING clstr_expression_minus_a |
 | TYPE_MISMATCH | PG_QUERY__NODE__NODE_CLUSTER_STMT | e9b329b14dfa6b310588578a | -- order of "skipping" warnings may vary CLUSTER |
 | TYPE_MISMATCH | PG_QUERY__NODE__NODE_CLUSTER_STMT | eaa7f0421c57651e60409022 | CLUSTER abbrev_abort_uuids USING abbrev_abort_uuids__noabort_increasing_idx |
-| TYPE_MISMATCH | PG_QUERY__NODE__NODE_IMPORT_FOREIGN_SCHEMA_STMT | 09b28bbc67426a08bbc17964 | IMPORT FOREIGN SCHEMA import_source FROM SERVER loopback INTO import_dest3 OPTIONS (import_collate 'false', import_generated 'false', import_not_null 'false') |
-| TYPE_MISMATCH | PG_QUERY__NODE__NODE_IMPORT_FOREIGN_SCHEMA_STMT | 20299bcabb564f8b93ffca3d | IMPORT FOREIGN SCHEMA import_source FROM SERVER loopback INTO import_dest2 OPTIONS (import_default 'true') |
-| TYPE_MISMATCH | PG_QUERY__NODE__NODE_IMPORT_FOREIGN_SCHEMA_STMT | 2713aeb2e56f2fff6e50da9c | IMPORT FOREIGN SCHEMA nonesuch FROM SERVER loopback INTO notthere |
-| TYPE_MISMATCH | PG_QUERY__NODE__NODE_IMPORT_FOREIGN_SCHEMA_STMT | 48e730825a770bb213241f3e | IMPORT FOREIGN SCHEMA import_source FROM SERVER loopback INTO import_dest1 |
-| TYPE_MISMATCH | PG_QUERY__NODE__NODE_IMPORT_FOREIGN_SCHEMA_STMT | 54017858932aa39351343e76 | IMPORT FOREIGN SCHEMA import_source LIMIT TO (t5) FROM SERVER loopback INTO import_dest5 |
-| TYPE_MISMATCH | PG_QUERY__NODE__NODE_IMPORT_FOREIGN_SCHEMA_STMT | 5a9b5993e3c10139f2fc3d8d | IMPORT FOREIGN SCHEMA import_source LIMIT TO (t1, nonesuch, t4_part) FROM SERVER loopback INTO import_dest4 |
-| TYPE_MISMATCH | PG_QUERY__NODE__NODE_IMPORT_FOREIGN_SCHEMA_STMT | 7610230da9bb61a3fa39f6ba | -- ERROR IMPORT FOREIGN SCHEMA s1 LIMIT TO (t1) FROM SERVER s9 INTO public |
-| TYPE_MISMATCH | PG_QUERY__NODE__NODE_IMPORT_FOREIGN_SCHEMA_STMT | 8c998d9eecc20b3c99f223df | -- ERROR IMPORT FOREIGN SCHEMA s1 EXCEPT (t1, t2) FROM SERVER s9 INTO public OPTIONS (option1 'value1', option2 'value2') |
-| TYPE_MISMATCH | PG_QUERY__NODE__NODE_IMPORT_FOREIGN_SCHEMA_STMT | 8e12afd49163a6ec7169125f | -- IMPORT FOREIGN SCHEMA IMPORT FOREIGN SCHEMA s1 FROM SERVER s9 INTO public |
-| TYPE_MISMATCH | PG_QUERY__NODE__NODE_IMPORT_FOREIGN_SCHEMA_STMT | 9fa9e38184d68db7b8ce4101 | --ERROR IMPORT FOREIGN SCHEMA s1 EXCEPT (t1) FROM SERVER s9 INTO public |
-| TYPE_MISMATCH | PG_QUERY__NODE__NODE_IMPORT_FOREIGN_SCHEMA_STMT | b3cfe4805b8d1012ad9e51af | IMPORT FOREIGN SCHEMA nonesuch FROM SERVER nowhere INTO notthere |
-| TYPE_MISMATCH | PG_QUERY__NODE__NODE_IMPORT_FOREIGN_SCHEMA_STMT | dec9c9529ed5d856f1bcfa02 | IMPORT FOREIGN SCHEMA nonesuch FROM SERVER loopback INTO import_dest4 |
 | TYPE_MISMATCH | PG_QUERY__NODE__NODE_REASSIGN_OWNED_STMT | 2e1439bc6ee75ff24beee170 | REASSIGN OWNED BY regress_dep_user1 TO regress_dep_user2 |
 | TYPE_MISMATCH | PG_QUERY__NODE__NODE_REASSIGN_OWNED_STMT | 314472a8d2397328b1a2a17a | REASSIGN OWNED BY regress_dump_test_super TO CURRENT_ROLE |
 | TYPE_MISMATCH | PG_QUERY__NODE__NODE_REASSIGN_OWNED_STMT | 6878a6bb5db6e8b9788c34c5 | REASSIGN OWNED BY regress_host_resource_admin TO regress_host_resource_newadmin |
@@ -3134,6 +2327,12 @@ libpg_query target: `18-latest` `9ab9951b7021adcc6d25d261d5016ca0b83726b8` (Post
 | Result | Oracle Node | ID | SQL |
 | --- | --- | --- | --- |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_ENUM_STMT | b7ed99265edea652185d1c72 | -- enum values added later take some different codepaths internally, -- so make sure we have coverage for those too alter type rainbow add value 'y' before 'g' |
+| DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_FDW_STMT | 19614de4a47f91f2a6bcfb71 | -- should preserve dependency on test_fdw_handler ALTER FOREIGN DATA WRAPPER test_fdw VALIDATOR postgresql_fdw_validator |
+| DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_FOREIGN_SERVER_STMT | 684ca81ae2786564cba837bc | ALTER SERVER fdtest OPTIONS (ADD oauth_client_id 'myID') |
+| DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_FOREIGN_SERVER_STMT | 73b6948233355748d81adf92 | ALTER SERVER testserver1 OPTIONS (ADD oauth_client_id 'myID') |
+| DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_FOREIGN_SERVER_STMT | 917ae882230ab58f56bfe22d | ALTER SERVER loopback OPTIONS (SET application_name 'fdw_conn_check') |
+| DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_FOREIGN_SERVER_STMT | c51ca4987598db73ed930b75 | -- OAuth options are not allowed in either context ALTER SERVER testserver1 OPTIONS (ADD oauth_issuer 'https://example.com') |
+| DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_FOREIGN_SERVER_STMT | f41fa8374ae236379a8943a7 | -- OAuth options are not allowed in either context ALTER SERVER fdtest OPTIONS (ADD oauth_issuer 'https://example.com') |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_FUNCTION_STMT | 1cdd8ef896873984e6d4543c | alter function whoami() security invoker |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_FUNCTION_STMT | 317f08ecfce8fee22be8c1ad | -- security definer functions override the user who queued the trigger alter function whoami() security definer |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_FUNCTION_STMT | 475bbad02029e33da516466e | -- -- check that an upper-level qual is not pushed down if it references a grouped -- Var whose underlying expression contains volatile functions -- alter function tattle(x int, y int) volatile |
@@ -3207,6 +2406,7 @@ libpg_query target: `18-latest` `9ab9951b7021adcc6d25d261d5016ca0b83726b8` (Post
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 012112ea98f38b1dc0e6c15b | ALTER TABLE atnnparted ATTACH PARTITION atnnpart1 FOR VALUES IN ('1') |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 01fc15c066805cd13de0ee08 | ALTER TABLE sl ADD COLUMN bool_col boolean |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 04aabb8698b9ec9373781fe7 | alter table inh_cc2 no inherit inh_pp1 |
+| DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 06cb619bb32ed7c029c9a792 | ALTER FOREIGN TABLE ft1 DROP c11 |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 08f2a4c4b84a4b17d71f146a | ALTER TABLE temporal_fk_rng2rng DROP CONSTRAINT temporal_fk_rng2rng_fk |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 0b32908227962a456b8afc4a | -- add NOT NULL constraint recursively alter table inh_parent alter column f1 set not null |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 0ea20d1fa311f7c124484b11 | alter table cc3 no inherit cc1 |
@@ -3235,6 +2435,7 @@ libpg_query target: `18-latest` `9ab9951b7021adcc6d25d261d5016ca0b83726b8` (Post
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 2b7dac41b1e039ffc7ee83d0 | -- omit COLUMN ALTER TABLE test_add_column DROP IF EXISTS c6 |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 2d31ecbd6f8bb8b0f57a14e4 | ALTER TABLE temporal3 DROP COLUMN valid_at |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 2d6a551690fe66999082ec47 | alter table inh_pp1 alter column f1 drop not null |
+| DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 2e9cab523d73531ae65571b5 | ALTER FOREIGN TABLE IF EXISTS doesnt_exist_ft1 ADD c11 integer |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 30eae89d36c4b02d6d6a8b46 | ALTER TABLE vac_truncate_test RESET (vacuum_truncate) |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 340eeb212108e3950ce43916 | ALTER TABLE ctl_stats3_parent DROP COLUMN b |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 34641e008d4c18d2ab84d98a | ALTER TABLE fk_partitioned_fk_3 ATTACH PARTITION fk_partitioned_fk_3_1 FOR VALUES FROM (2000,2000) TO (3000,3000) |
@@ -3249,6 +2450,7 @@ libpg_query target: `18-latest` `9ab9951b7021adcc6d25d261d5016ca0b83726b8` (Post
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 451d0194dbc823e5ef602865 | -- -- multirange PK: test with existing rows -- ALTER TABLE temporal_mltrng DROP CONSTRAINT temporal_mltrng_pk |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 48f95258ac52a76138a58e62 | ALTER TABLE ONLY notnull_tbl6 ALTER b DROP NOT NULL |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 49f11d482196f20ddb785daa | -- DROP NOT NULL gets rid of both the attnotnull flag and the constraint itself ALTER TABLE notnull_tbl1 ALTER a DROP NOT NULL |
+| DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 4bfa29fd196ccdc0a721217f | ALTER FOREIGN TABLE agg_bad OPTIONS (ADD log_verbosity 'silent') |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 4d7f053da45acdc6ae93fd4f | -- fails on existing row ALTER TABLE gtest20a ADD COLUMN c float8 DEFAULT random() CHECK (b < 61) |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 4dac7d086116478a17cd72c5 | -- omit COLUMN ALTER TABLE test_add_column ADD IF NOT EXISTS c6 integer |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 4dbef5b2e9f2e3df42dbe157 | -- cannot add primary key on a column with an invalid not-null ALTER TABLE notnull_tbl1 ADD PRIMARY KEY (a) |
@@ -3267,6 +2469,7 @@ libpg_query target: `18-latest` `9ab9951b7021adcc6d25d261d5016ca0b83726b8` (Post
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 5c0c4cd11f45706503d398e7 | ALTER TABLE comment_test ALTER COLUMN id SET DATA TYPE x |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 5d1ddaaa547310ff0f60d507 | -- remove constraint from cc2: no dice, it's inherited alter table cc2 alter column a2 drop not null |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 5de1ec9196b8e15757722adf | ALTER TABLE notnull_tbl3 ALTER A DROP NOT NULL |
+| DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 6033ec9ee0d5ec1cb578da09 | ALTER FOREIGN TABLE ft1 ADD c11 integer |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 61c80e86413f9f387952f6fc | -- error ALTER TABLE gtest25 ADD COLUMN c int DEFAULT 42, ADD COLUMN x int GENERATED ALWAYS AS (c * 4) VIRTUAL |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 63ea10d1160017d03e0b5fed | -- this must be rejected to avoid self-inclusion issues: alter type two_ints add attribute c two_ints_multirange |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 653564a7c1420347e430acb4 | alter table inh_child no inherit inh_parent |
@@ -3277,6 +2480,7 @@ libpg_query target: `18-latest` `9ab9951b7021adcc6d25d261d5016ca0b83726b8` (Post
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 6dcd4929513a1b071f812d81 | -- It's possible to alter the column types this way: ALTER TABLE gtest27 DROP COLUMN x, ALTER COLUMN a TYPE bigint, ALTER COLUMN b TYPE bigint, ADD COLUMN x bigint GENERATED ALWAYS AS ((a + b) * 2)... |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 702a068bc4d403a5e941d1c3 | ALTER TABLE temporal3 DROP COLUMN valid_thru |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 7049801cfc1e21e3a268b641 | ALTER TABLE notnull_tbl1_child2 INHERIT notnull_tbl1 |
+| DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 704c4a1d8df86926b27fc69c | ALTER FOREIGN TABLE IF EXISTS doesnt_exist_ft1 DROP c11 |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 704d905358d9d5501f0c7197 | ALTER TABLE notnull_tbl1 DROP CONSTRAINT notnull_tbl1_b_not_null |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 70a126bddb1db507a2591b92 | ALTER TABLE notnull_tbl1 DROP CONSTRAINT nntbl1_a |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 71249aa70fcd6673c87dd74b | alter table inh_child inherit inh_parent |
@@ -3288,6 +2492,7 @@ libpg_query target: `18-latest` `9ab9951b7021adcc6d25d261d5016ca0b83726b8` (Post
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 7b6bb21a5b040723be849834 | ALTER TABLE pg_toast.pg_toast_2615 SET (fillfactor = '90') |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 7d5bcd83c78da7f68afcba5e | ALTER TABLE gtest20c ADD CONSTRAINT whole_row_check CHECK (gtest20c IS NOT NULL) |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 7f15f9edb5af164ba7030c9e | -- doesn't exist in referenced table ALTER TABLE fk_partitioned_fk_2 ADD FOREIGN KEY (a, b) REFERENCES fk_notpartitioned_pk NOT VALID |
+| DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 809d8f0f51bd87e39c1e8559 | ALTER FOREIGN TABLE IF EXISTS doesnt_exist_ft1 DROP COLUMN no_column |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 86623fa2a5a0390ffcb27702 | ALTER TABLE fk_partitioned_fk_3_1 ADD FOREIGN KEY (a, b) REFERENCES fk_notpartitioned_pk |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 8b66ab8343d94baa9f931148 | ALTER TABLE regular_table DETACH PARTITION any_name FINALIZE |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 8c854a0f491e6016674decb0 | alter table inh_child1 no inherit inh_parent |
@@ -3302,6 +2507,7 @@ libpg_query target: `18-latest` `9ab9951b7021adcc6d25d261d5016ca0b83726b8` (Post
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 9c572e54f5c3716bd8343112 | ALTER TABLE temporal_fk_mltrng2mltrng DROP CONSTRAINT temporal_fk_mltrng2mltrng_fk |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 9c9c892c12311282842c63cd | ALTER TABLE foo_parted ATTACH PARTITION foo_part_d2 FOR VALUES IN (4) |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 9d9872ce93721df0aa913cfc | -- remove from pp1, should succeed alter table pp1 alter column f1 drop not null |
+| DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 9f8ee0a181ad1b9034d172a8 | ALTER FOREIGN TABLE ft1 ADD COLUMN IF NOT EXISTS c6 integer |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 9faf5dcf18430aa79143d181 | alter table cnn_uq add unique (a) |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | a186a0d5f0cdc2d3714513c4 | ALTER TABLE has_volatile ADD col5 int GENERATED ALWAYS AS (tableoid::int + col2) VIRTUAL |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | a1adad7c436f7d92fe8f9540 | ALTER TABLE gtest_tableoid ADD COLUMN c regclass GENERATED ALWAYS AS (tableoid) VIRTUAL |
@@ -3317,9 +2523,11 @@ libpg_query target: `18-latest` `9ab9951b7021adcc6d25d261d5016ca0b83726b8` (Post
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | ad7b4692c8492a69b0fe9ac3 | ALTER TABLE ONLY notnull_tbl5 ALTER b DROP NOT NULL |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | ae1c9e7d2cded1c879d31c7f | ALTER TABLE fk_notpartitioned_fk ADD CONSTRAINT fk_notpartitioned_fk_a_b_fkey FOREIGN KEY (a, b) REFERENCES fk_partitioned_pk NOT VALID |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | aeab454b756f85bc6fc0d6cc | -- inh_child1 should have not null constraint alter table inh_child1 inherit inh_parent |
+| DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | b00db4ca5108a4f768ec42f6 | ALTER FOREIGN TABLE IF EXISTS doesnt_exist_ft1 ADD COLUMN IF NOT EXISTS c6 integer |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | b3360e83ab31f44f2ef3c8b8 | ALTER TABLE t ADD COLUMN j int |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | b3d28a3311d6af9857ea7cf3 | -- succeeds ALTER TABLE attmp3 VALIDATE CONSTRAINT b_greater_than_ten_not_enforced |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | b4c878a4e194b7a722d6b116 | ALTER TABLE gtest25 ADD COLUMN x int GENERATED ALWAYS AS (b * 4) VIRTUAL |
+| DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | b5b79595276e2a69db417239 | ALTER FOREIGN TABLE agg_bad OPTIONS (SET reject_limit '2') |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | b94d59bf591c9cb9196fdc87 | -- named NOT NULL constraint alter table cc1 add column a2 int constraint nn not null |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | bb4a09fe660ea08e0c564454 | ALTER TABLE fk_partitioned_fk_1 ADD FOREIGN KEY (a, b) REFERENCES fk_notpartitioned_pk |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | bbfca31b24fe274efe154db3 | alter table inh_child2 no inherit inh_parent2 |
@@ -3331,6 +2539,7 @@ libpg_query target: `18-latest` `9ab9951b7021adcc6d25d261d5016ca0b83726b8` (Post
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | c75ac7a8df9cc65b9075bc84 | -- this should work alter table renameColumn add column x int check (x > 0) not enforced |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | c7ab33bac89d1e8a96d655c1 | ALTER TABLE notnull_inhparent ALTER i SET NOT NULL |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | c7ce37a6cb2cd3149be29758 | ALTER TABLE fk_partitioned_fk_3 ADD FOREIGN KEY (a, b) REFERENCES fk_notpartitioned_pk NOT VALID |
+| DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | ccf768dcfce1a239d1fd3597 | ALTER FOREIGN TABLE agg_bad OPTIONS (ADD reject_limit '1') |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | cd5931a7f105a0a7212a827e | ALTER TABLE test_tsvector SET (parallel_workers = 2) |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | cd712fe63372085985c061f6 | ALTER TABLE gtest24ata ALTER COLUMN b TYPE gtestdomain1 |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | d01009f6b97192cc905aab45 | --error ALTER TABLE notnull_chld0 DROP CONSTRAINT nn_chld0 |
@@ -3348,6 +2557,7 @@ libpg_query target: `18-latest` `9ab9951b7021adcc6d25d261d5016ca0b83726b8` (Post
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | dba4d2a9263b4e82b25feac9 | ALTER TABLE atnnpart1 ADD PRIMARY KEY (id) |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | de99144a7e1a8ab536dd5be5 | --table rewrite won't validate invalid constraint ALTER TABLE notnull_tbl1 ADD column d float8 default random() |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | e0113d5010bcb340b272ed55 | -- error ALTER TABLE gtestnn_parent ADD COLUMN c int NOT NULL GENERATED ALWAYS AS (nullif(f1, 4) + nullif(f2, 6)) VIRTUAL |
+| DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | e1d819345898d2836a0c5939 | -- ERROR -- on_error, log_verbosity and reject_limit tests ALTER FOREIGN TABLE agg_bad OPTIONS (ADD on_error 'ignore') |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | e207880d7f626258a3c8965b | ALTER TABLE test_add_column ADD c6 integer |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | e58cc6960966c696a77d7cf1 | ALTER TABLE ONLY notnull_tbl6 DROP CONSTRAINT ann |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | e84098148cc3d0491d94556e | --now ok -- parents and child not-null will all be validated. ALTER TABLE notnull_tbl1 VALIDATE CONSTRAINT nn_parent |
@@ -3358,6 +2568,10 @@ libpg_query target: `18-latest` `9ab9951b7021adcc6d25d261d5016ca0b83726b8` (Post
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | fd8268882b0e1ab08b1a280e | ALTER TABLE fk_notpartitioned_fk VALIDATE CONSTRAINT fk_notpartitioned_fk_a_b_fkey |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | fe98762f7a5d241996f44dbd | ALTER TABLE ATACC2 INHERIT ATACC1 |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TYPE_STMT | ad47ecc2003e91f9faafa17e | -- Switch type to use typanalyze function that always returns false. ALTER TYPE int_custom SET (ANALYZE = int_custom_typanalyze_false) |
+| DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_USER_MAPPING_STMT | 1171d6336f3aefdaf9ec6922 | ALTER USER MAPPING FOR public SERVER fdtest OPTIONS (ADD oauth_client_id 'myID') |
+| DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_USER_MAPPING_STMT | 2439b4088c15fa8e7df88211 | ALTER USER MAPPING FOR public SERVER testserver1 OPTIONS (ADD oauth_client_id 'myID') |
+| DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_USER_MAPPING_STMT | 9bb50f4e25b2f3cfec568b79 | ALTER USER MAPPING FOR public SERVER testserver1 OPTIONS (ADD oauth_issuer 'https://example.com') |
+| DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_USER_MAPPING_STMT | f9a46643cb73c83a3031250c | ALTER USER MAPPING FOR public SERVER fdtest OPTIONS (ADD oauth_issuer 'https://example.com') |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CLOSE_PORTAL_STMT | e48d8167537f191de4d18183 | CLOSE foocur |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_COMMENT_STMT | 11ea15496c79bb15392f01fe | COMMENT ON CONSTRAINT noinh_con_copy_b_not_null ON noinh_con_copy IS 'not null b' |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_COMMENT_STMT | 20f13bc0922141049778d093 | COMMENT ON ROLE regress_hasprivs IS NULL |
@@ -3402,6 +2616,19 @@ libpg_query target: `18-latest` `9ab9951b7021adcc6d25d261d5016ca0b83726b8` (Post
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_DOMAIN_STMT | d91ac261693670fb3f297432 | create domain d_fail as int4 unique |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_ENUM_STMT | 2016c8a8388b111c9d6f9ece | -- only CREATE TYPE AS types may be used CREATE TYPE tt_enum_type AS ENUM ('a') |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_ENUM_STMT | 2a31affb1a4845c7d47047e2 | -- enum check create type rainbow as enum ('r','o','g','b','i','v') |
+| DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FDW_STMT | 2f8f789d038490b5b7e12d91 | create foreign data wrapper copytest_wrapper |
+| DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FDW_STMT | f516560de4cb734dde87eeba | -- -- CREATE FOREIGN TABLE LIKE -- CREATE FOREIGN DATA WRAPPER ctl_dummy |
+| DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FOREIGN_SERVER_STMT | 3a95979154149aa121273717 | create server copytest_server foreign data wrapper copytest_wrapper |
+| DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FOREIGN_SERVER_STMT | b41cddbb7dc74bd13111c78c | CREATE SERVER ctl_s0 FOREIGN DATA WRAPPER ctl_dummy |
+| DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | 124d9df0f94d88d8e599e45e | -- ERROR CREATE FOREIGN TABLE tbl () SERVER file_server OPTIONS (log_verbosity 'unsupported') |
+| DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | 1a14d6dd1894aa28f789f6f4 | -- ERROR CREATE FOREIGN TABLE tbl () SERVER file_server OPTIONS (reject_limit '1') |
+| DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | 6af60af75522916a68cce710 | -- Test INCLUDING ALL -- INDEXES, IDENTITY, COMPRESSION, STORAGE are not copied. CREATE FOREIGN TABLE ctl_foreign_table2(LIKE ctl_table INCLUDING ALL) SERVER ctl_s0 |
+| DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | 7e9c80d7285f0eaca4b7a544 | create foreign table grem1 ( a int, b int generated always as (a * 2) stored, c int generated always as (a * 3) virtual ) server loopback options(table_name 'gloc1') |
+| DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | 86dadbfb759a9f7b745242f8 | -- ERROR CREATE FOREIGN TABLE tbl () SERVER file_server OPTIONS (on_error 'unsupported') |
+| DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | b7ec58e2aa99697e9263ac2c | CREATE FOREIGN TABLE remote_backend_pid (pid int) SERVER loopback OPTIONS (table_name 'my_backend_pid') |
+| DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | e7c11c955e6bc78d14a270b9 | create foreign table copytest_foreign_table (a int) server copytest_server |
+| DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | ee0a5da5e13955dc942c3bac | -- ERROR CREATE FOREIGN TABLE tbl () SERVER file_server OPTIONS (on_error 'ignore', reject_limit '0') |
+| DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | f826908ed93a7299da1db989 | -- ERROR CREATE FOREIGN TABLE tbl () SERVER file_server OPTIONS (format 'binary', on_error 'ignore') |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FUNCTION_STMT | 024733832f291f4722e5c08f | -- Runtime pruning on MERGE using a stable function create function stable_one() returns int as $$ begin return 1; end; $$ language plpgsql stable |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FUNCTION_STMT | 02dbefd7cc76b85574885b88 | -- fail - user-defined functions are not allowed CREATE FUNCTION testpub_rf_func2() RETURNS integer IMMUTABLE AS $$ BEGIN RETURN 123; END; $$ LANGUAGE plpgsql |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FUNCTION_STMT | 0552434987a5074fada371db | CREATE FUNCTION pg_buffercache_evict_relation( IN regclass, OUT buffers_evicted int4, OUT buffers_flushed int4, OUT buffers_skipped int4) AS 'MODULE_PATHNAME', 'pg_buffercache_evict_relation' LANGU... |
@@ -3534,6 +2761,10 @@ libpg_query target: `18-latest` `9ab9951b7021adcc6d25d261d5016ca0b83726b8` (Post
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FUNCTION_STMT | ffda77ff789cc22807cadd80 | -- Now make the equal function return false when given two NULLs create or replace function myinteq(myint, myint) returns bool as $$ begin if $1 is null and $2 is null then return false; else retur... |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_OP_CLASS_STMT | c6132012ffbe596f82e4bd00 | CREATE OPERATOR CLASS part_test_int4_ops_bad FOR TYPE int4 USING hash AS FUNCTION 2 part_hashint4_error(int4, int8) |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_OP_CLASS_STMT | ec11c51de8e33d2ec1a03f91 | -- -- Btree operator class for int_custom -- -- This is required for the type to be usable in extended statistics objects, -- for attributes and expressions. -- CREATE OPERATOR CLASS int_custom_ops... |
+| DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_POLICY_STMT | 1ee2b4904a325121b8f0c0f2 | CREATE POLICY p0 ON r1 USING (b * 10 = c) |
+| DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_POLICY_STMT | 3ff79482b4efef2e4b884db3 | CREATE POLICY p1 ON r1 AS RESTRICTIVE USING (b > 10) |
+| DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_POLICY_STMT | 4e13ec1d4bb05742be173678 | create policy p1 on rls_t for select to regress_rls_alice using (c = current_setting('rls_test.blah')) |
+| DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_POLICY_STMT | e9351c233689e14f8a66503d | CREATE POLICY p2 ON r1 AS RESTRICTIVE USING ((SELECT c) < 400) |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_RANGE_STMT | 360814f99cc93e4eed406af0 | -- error CREATE TYPE gtestdomain1range AS range (subtype = gtestdomain1) |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_RANGE_STMT | 9d8478b55cf49b7edef59861 | create type mytype as range (subtype=int4, multirange_type_name=mr_sch.mr_type) |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_RANGE_STMT | a2f1deea4490b33d934efdb1 | CREATE TYPE int4_d_range as range (subtype = int4_d) |
@@ -3559,6 +2790,23 @@ libpg_query target: `18-latest` `9ab9951b7021adcc6d25d261d5016ca0b83726b8` (Post
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_SCHEMA_STMT | ee8bce82af490880ebb5623b | CREATE SCHEMA pgss_schema_2 |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_SEQ_STMT | 4d2b9b10849220e114bc3a4f | CREATE SEQUENCE stats_import.testseq |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_SEQ_STMT | c0d6558cba2251214cc0556d | create sequence aitest_seq increment 10 start 0 minvalue 0 |
+| DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | 060c9d81dd013a88f156725a | CREATE STATISTICS tst on (z) from ext_stats_test1 |
+| DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | 2c015beafafbce43ce1d1624 | CREATE STATISTICS ctl_stats4_stat ON a, c FROM ctl_stats4_parent |
+| DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | 3075452c3460c2495b5f9853 | -- statistics without a less-than operator not supported CREATE STATISTICS tst (ndistinct) ON w from ext_stats_test1 |
+| DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | 4e43ec181a1ca9eed67145ba | -- Extended statistics with an attribute that cannot be analyzed. -- This includes all statistics kinds. CREATE STATISTICS test_stats ON data, id FROM test_table |
+| DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | 601506393cc4a963d9f6205f | CREATE STATISTICS ctl_table_stat ON a,b FROM ctl_table |
+| DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | 6286742cb59f0750d11b52d3 | CREATE STATISTICS tst (ndistinct) ON z from ext_stats_test1 |
+| DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | 72690aa2737db7a32160a15c | CREATE STATISTICS tst (ndistinct) ON xmin from ext_stats_test1 |
+| DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | 7f3ea467753c54c48fe02644 | -- statistics on system column not allowed CREATE STATISTICS tst on tableoid from ext_stats_test1 |
+| DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | 845bfa3cb1ce41a542c7381d | -- The ndistinct extended statistics on (x, y, z) provides more reliable value -- of bucket size. CREATE STATISTICS extstat_sb_2 (ndistinct) ON x, y, z FROM sb_2 |
+| DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | 8865741671ae7d2c6c7726a0 | CREATE STATISTICS t_b_c_stat (mcv) ON b, c FROM bitmap_split_or |
+| DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | a30982b22b3720a0ebb8843b | CREATE STATISTICS ctl_stats3_stat ON a, c FROM ctl_stats3_parent |
+| DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | bb245b2fe1a0144bca82eb9c | -- Extended statistics with an expression that cannot be analyzed. CREATE STATISTICS test_stats ON func_int_custom(data), (id) FROM test_table |
+| DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | c3308bfe386fb737618f67b0 | CREATE STATISTICS t_a_b_stat (mcv) ON a, b FROM bitmap_split_or |
+| DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | cc7097265b3b87ee8878eb0e | CREATE STATISTICS tst on (tableoid) from ext_stats_test1 |
+| DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | d36eb3d07453e7018f5d31ce | CREATE STATISTICS tst on (z+1) from ext_stats_test1 |
+| DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | d515d4fceef55ebd2a9a07fd | CREATE STATISTICS tst on z from ext_stats_test1 |
+| DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | e7a609ea10f3e01d3c260e3c | CREATE STATISTICS tst on (tableoid::int+1) from ext_stats_test1 |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | 00ee8f968f6c9946229d8e8e | -- -- Tests for VACUUM ONLY / ANALYZE ONLY on inheritance tables -- CREATE TABLE only_inh_parent (a int primary key, b TEXT) |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | 0230f86bcbd345ed2246020b | create table idxpart1 partition of idxpart for values from (0) to (500) |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | 02631199fd4a6bfe08fddcba | CREATE TABLE testpub_rf_tbl7 (id int PRIMARY KEY, x int, y int GENERATED ALWAYS AS (x * 111) VIRTUAL) |
@@ -3837,6 +3085,7 @@ libpg_query target: `18-latest` `9ab9951b7021adcc6d25d261d5016ca0b83726b8` (Post
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | a6e39f7bad1794847051512f | -- Test the same constraint name for different columns in different parents create table inh_parent1(a int constraint nn not null) |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | a703a0b4443bb81982ffdc61 | create table notnull_tbl_fail (a int generated by default as identity not null no inherit) |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | ab82ac0033708c82928bf2bd | -- Attaching a child table with the same valid foreign key constraint. CREATE TABLE fk_partitioned_fk_1 (a int, b int) |
+| DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | acc5db5a96d85882421f5a28 | CREATE TABLE ctl_table(a int PRIMARY KEY, b varchar COMPRESSION pglz, c int GENERATED ALWAYS AS (a * 2) STORED, d bigint GENERATED ALWAYS AS IDENTITY, e int DEFAULT 1) |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | adc3d32c7acdebe11f549246 | -- can't drop NOT NULL from under an invalid PK CREATE TABLE list_parted3 (a int NOT NULL) PARTITION BY LIST (a) |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | adefabf69b4121f25e7eca88 | -- we leave these tables around for purposes of testing dump/reload/upgrade -- generated columns in partition key (not allowed) CREATE TABLE gtest_part_key (f1 date NOT NULL, f2 bigint, f3 bigint G... |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | af8b11b24b23da842d0d9b94 | CREATE UNLOGGED TABLE unlogged1 (a int) PARTITION BY RANGE (a) |
@@ -6316,12 +5565,6 @@ libpg_query target: `18-latest` `9ab9951b7021adcc6d25d261d5016ca0b83726b8` (Post
 | ERROR | PG_QUERY__NODE__NODE_ALTER_DEFAULT_PRIVILEGES_STMT | 6ae1a6a6468c957427a88589 | -- no ALTER DEFAULT PRIVILEGES GRANT ALL ON LARGE OBJECTS TO regress_priv_user2 |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_EXTENSION_STMT | 6a6f8e7e23dca156c632048e | alter extension test_ext7 update to '2.2bad' |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_EXTENSION_STMT | b714bdf4645f52f39124c30b | -- New functions and views for pg_stat_statements in 1.12 AlTER EXTENSION pg_stat_statements UPDATE TO '1.12' |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_FDW_STMT | 19614de4a47f91f2a6bcfb71 | -- should preserve dependency on test_fdw_handler ALTER FOREIGN DATA WRAPPER test_fdw VALIDATOR postgresql_fdw_validator |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_FOREIGN_SERVER_STMT | 684ca81ae2786564cba837bc | ALTER SERVER fdtest OPTIONS (ADD oauth_client_id 'myID') |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_FOREIGN_SERVER_STMT | 73b6948233355748d81adf92 | ALTER SERVER testserver1 OPTIONS (ADD oauth_client_id 'myID') |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_FOREIGN_SERVER_STMT | 917ae882230ab58f56bfe22d | ALTER SERVER loopback OPTIONS (SET application_name 'fdw_conn_check') |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_FOREIGN_SERVER_STMT | c51ca4987598db73ed930b75 | -- OAuth options are not allowed in either context ALTER SERVER testserver1 OPTIONS (ADD oauth_issuer 'https://example.com') |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_FOREIGN_SERVER_STMT | f41fa8374ae236379a8943a7 | -- OAuth options are not allowed in either context ALTER SERVER fdtest OPTIONS (ADD oauth_issuer 'https://example.com') |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_PUBLICATION_STMT | 02943481957998163dc52eda | -- error: duplicates not allowed in column list ALTER PUBLICATION testpub_fortable ADD TABLE testpub_tbl5 (a, a) |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_PUBLICATION_STMT | 2714a132fa387a16c2935b6e | -- error: virtual generated column "e" can't be in list ALTER PUBLICATION testpub_fortable ADD TABLE testpub_tbl5 (a, e) |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_PUBLICATION_STMT | 52d7259230f9645916abd830 | ALTER PUBLICATION testpub_fortable SET TABLE testpub_tbl1 (id, ctid) |
@@ -6331,7 +5574,6 @@ libpg_query target: `18-latest` `9ab9951b7021adcc6d25d261d5016ca0b83726b8` (Post
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 030bd70cb513b576e70a0b59 | ALTER TABLE temporal_rng2 ADD CONSTRAINT temporal_rng_pk PRIMARY KEY (id, valid_at WITHOUT OVERLAPS) |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 0349daccc7588273fad7efc9 | ALTER TABLE fktable ALTER CONSTRAINT fktable_fk_fkey NOT ENFORCED |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 069b31f81beae46ed1099297 | ALTER TABLE testpub_rf_tbl7 ALTER COLUMN y SET EXPRESSION AS (x * testpub_rf_func2()) |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 06cb619bb32ed7c029c9a792 | ALTER FOREIGN TABLE ft1 DROP c11 |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 0d9e74318aa68e56115fd5c5 | ALTER TABLE notnull_parent_upg ADD CONSTRAINT nn NOT NULL a NOT VALID |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 168fb72c9698b507a682c424 | ALTER TABLE ATACC1 ADD NOT NULL a NO INHERIT |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 17e665fbdd654a91cc03a9b4 | -- succeeds ALTER TABLE attmp3 ADD CONSTRAINT b_greater_than_ten_not_enforced CHECK (b > 10) NOT ENFORCED |
@@ -6350,7 +5592,6 @@ libpg_query target: `18-latest` `9ab9951b7021adcc6d25d261d5016ca0b83726b8` (Post
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 2bf309323b734a0722eae7cb | ALTER TABLE notnull_chld0 ADD CONSTRAINT nn_chld0 NOT NULL a not valid |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 2dea23fa2eb1840be13c743e | ALTER TABLE cnn_pk ADD CONSTRAINT cnn_primarykey PRIMARY KEY USING INDEX cnn_uq |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 2e7eb0fd5f2866514ab2ed81 | ALTER TABLE temporal_fk_mltrng2mltrng ALTER CONSTRAINT temporal_fk_mltrng2mltrng_fk DEFERRABLE INITIALLY DEFERRED |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 2e9cab523d73531ae65571b5 | ALTER FOREIGN TABLE IF EXISTS doesnt_exist_ft1 ADD c11 integer |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 305bfd07992f3bb65b0233d0 | alter index idxpart_expr_idx attach partition idxpart2_expr_idx |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 31387fef237b77474e2b5e52 | alter table constr_parent2 add not null a not valid |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 31e15803d78d7790a8652903 | ALTER TABLE unique_tbl ALTER CONSTRAINT unique_tbl_i_key ENFORCED |
@@ -6363,13 +5604,11 @@ libpg_query target: `18-latest` `9ab9951b7021adcc6d25d261d5016ca0b83726b8` (Post
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 3da0e1c87fb3b79f6f52ebb0 | ALTER TABLE temporal_fk_rng2rng ALTER CONSTRAINT temporal_fk_rng2rng_fk DEFERRABLE INITIALLY DEFERRED |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 41ea983a45ad6b4088060d07 | alter table cnn_uq add unique using index cnn_uq_idx |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 4b9c855bccee740d11dd9a0a | ALTER TABLE atnnpart1 ADD CONSTRAINT another_constr NOT NULL id |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 4bfa29fd196ccdc0a721217f | ALTER FOREIGN TABLE agg_bad OPTIONS (ADD log_verbosity 'silent') |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 4cae1aa9d5af98658396f8b0 | -- -- partitioned FK referenced updates CASCADE -- ALTER TABLE temporal_partitioned_fk_rng2rng DROP CONSTRAINT temporal_partitioned_fk_rng2rng_fk, ADD CONSTRAINT temporal_partitioned_fk_rng2rng_fk ... |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 4e435ac6f2c8d6791aafb932 | -- error - generated column "b" must be published explicitly as it is -- part of the REPLICA IDENTITY. ALTER TABLE testpub_gencol REPLICA IDENTITY FULL |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 5b61e13592b0abf64c0e4405 | ALTER TABLE temporal3 ADD CONSTRAINT temporal3_uq UNIQUE USING INDEX idx_temporal3_uq |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 5c44d98009cf0811fac98f1f | -- change child constraint ALTER TABLE fk_partitioned_fk_2 ALTER CONSTRAINT fk_part_con ENFORCED |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 5e021a1f5ec7c6f533dfccee | ALTER TABLE notnull_tbl1 ALTER CONSTRAINT nntbl1_a NO INHERIT |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 6033ec9ee0d5ec1cb578da09 | ALTER FOREIGN TABLE ft1 ADD c11 integer |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 61b3d703548c0d83e58b3002 | -- but it's OK when the identity is FULL ALTER TABLE test_replica_identity3 REPLICA IDENTITY FULL |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 633d32e11c011b4f4fd46a6c | alter table p1_c1 add constraint inh_check_constraint8 check (f1 < 10) not enforced |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 64ebfca5dc6dcb2c0237fad7 | -- Changing the constraint to NOT ENFORCED drops the associated FK triggers ALTER TABLE FKTABLE ALTER CONSTRAINT fktable_fk_fkey NOT ENFORCED |
@@ -6377,13 +5616,11 @@ libpg_query target: `18-latest` `9ab9951b7021adcc6d25d261d5016ca0b83726b8` (Post
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 6c03824af775e5f45e023075 | ALTER TABLE temporal3 ADD CONSTRAINT temporal3_pk PRIMARY KEY USING INDEX idx_temporal3_uq |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 6f89d5897f725689748a04de | ALTER TABLE temporal_fk_rng2rng ADD CONSTRAINT temporal_fk_rng2rng_fk FOREIGN KEY (parent_id, PERIOD valid_at) REFERENCES temporal_rng ON DELETE RESTRICT |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 7036bb12df4b14afe53184b0 | ALTER TABLE inh_nn_parent ADD CONSTRAINT nna NOT NULL a |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 704c4a1d8df86926b27fc69c | ALTER FOREIGN TABLE IF EXISTS doesnt_exist_ft1 DROP c11 |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 72fc8736d6467824f7cbb7e9 | alter table p1_c1 add constraint inh_check_constraint4 check (f1 < 10) not enforced |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 74a16a00b52cd468b396c7c2 | alter table inh_nn1 alter constraint inh_nn1_pkey inherit |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 7790ffe0d97c082407041f95 | alter table p1 add constraint inh_check_constraint4 check (f1 < 10) not enforced |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 7b1247df07f05b13ad231a2f | ALTER TABLE notnull_inhchild ADD CONSTRAINT nn1 NOT NULL i |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 7e8ef9066d0620c524107103 | -- the not-valid state of the child constraint will be ignored here. alter table p1 add constraint inh_check_constraint10 check (f1 < 10) not enforced |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 809d8f0f51bd87e39c1e8559 | ALTER FOREIGN TABLE IF EXISTS doesnt_exist_ft1 DROP COLUMN no_column |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 81fec91e6288b91b4ef2ba41 | ALTER TABLE gtest21ax ADD CONSTRAINT cc NOT NULL b |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 83d905100c7541b2ca8410ac | ALTER TABLE atnnparted ADD CONSTRAINT dummy_constr NOT NULL id NOT VALID |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 86c9a75bb873bf9cd933ab18 | ALTER TABLE pp_nn_1 ADD CONSTRAINT nn NOT NULL a NO INHERIT |
@@ -6403,7 +5640,6 @@ libpg_query target: `18-latest` `9ab9951b7021adcc6d25d261d5016ca0b83726b8` (Post
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 99c29c7f48328ec96cc4e03e | ALTER TABLE notnull_tbl1_upg ADD CONSTRAINT nn NOT NULL a NOT VALID |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 9e04b79998c033cdd582994b | ALTER TABLE fk_partitioned_fk ALTER CONSTRAINT fk_partitioned_fk_a_b_fkey NOT ENFORCED |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 9e073e4dd9811fbdaf4fbd38 | alter table p1 add constraint inh_check_constraint3 check (f1 > 0) not enforced |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 9f8ee0a181ad1b9034d172a8 | ALTER FOREIGN TABLE ft1 ADD COLUMN IF NOT EXISTS c6 integer |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | a0062d2a7f36a7a023d3c40d | ALTER TABLE test_replica_identity5 REPLICA IDENTITY USING INDEX test_replica_identity5_a_b_key |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | a2db0b60d64b1173f39a41b1 | -- but using a different constraint name is not allowed ALTER TABLE notnull_tbl1 ADD CONSTRAINT nn NOT NULL a |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | a33e215bef80733a3acd4501 | alter table inh_nn1 alter constraint inh_nn1_f1_not_null inherit |
@@ -6412,13 +5648,11 @@ libpg_query target: `18-latest` `9ab9951b7021adcc6d25d261d5016ca0b83726b8` (Post
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | ad22cba290238275ce7cc4f6 | -- should fail because of duplicate referenced columns: ALTER TABLE temporal_fk_rng2rng ADD CONSTRAINT temporal_fk_rng2rng_fk2 FOREIGN KEY (parent_id, PERIOD parent_id) REFERENCES temporal_rng (id,... |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | afcb4b2f9c2a83f3c57de0b3 | ALTER TABLE pp_nn_1 ADD CONSTRAINT nn NOT NULL a NOT VALID |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | b00a731098108bcfc499d9e3 | -- ALTER CONSTRAINT NO INHERIT should work on top-level constraints alter table inh_nn1 alter constraint inh_nn1_f1_not_null no inherit |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | b00db4ca5108a4f768ec42f6 | ALTER FOREIGN TABLE IF EXISTS doesnt_exist_ft1 ADD COLUMN IF NOT EXISTS c6 integer |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | b023832199e29669a483d567 | ALTER TABLE temporal_fk_rng2rng ADD CONSTRAINT temporal_fk_rng2rng_fk FOREIGN KEY (parent_id, PERIOD valid_at) REFERENCES temporal_rng ON DELETE SET NULL ON UPDATE SET NULL |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | b1b94501b997bea3300eec22 | ALTER TABLE fk_partitioned_fk_2 ADD CONSTRAINT fk_partitioned_fk_a_b_fkey FOREIGN KEY (a, b) REFERENCES fk_notpartitioned_pk NOT ENFORCED |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | b3355931d7524216733e7bdd | ALTER TABLE temporal_fk_rng2rng ADD CONSTRAINT temporal_fk_rng2rng_fk FOREIGN KEY (parent_id, PERIOD valid_at) REFERENCES temporal_rng |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | b3c13fbaf6c796cd149403f5 | alter table inh_nn_parent add not null a no inherit |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | b474c154cb01b958a79379bd | --ok -- SET EXPRESSION supports not null constraint ALTER TABLE gtest21ax ALTER COLUMN b SET EXPRESSION AS (nullif(a, 1)) |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | b5b79595276e2a69db417239 | ALTER FOREIGN TABLE agg_bad OPTIONS (SET reject_limit '2') |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | b704e4f7404ea84c227e2bb6 | ALTER TABLE temporal_fk_rng2rng ALTER COLUMN parent_id SET DEFAULT '[-1,-1]', ADD CONSTRAINT temporal_fk_rng2rng_fk FOREIGN KEY (parent_id, PERIOD valid_at) REFERENCES temporal_rng ON DELETE SET DE... |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | b7831adc966f966c3e12a309 | -- Enforceability also changes the validate state, as data validation will be -- performed during this transformation. ALTER TABLE FKTABLE ALTER CONSTRAINT fk_con ENFORCED |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | b8a8efdcc16c8706b5e55114 | alter table inh_parent add constraint inh_parent_excl exclude ((1) with =) |
@@ -6428,7 +5662,6 @@ libpg_query target: `18-latest` `9ab9951b7021adcc6d25d261d5016ca0b83726b8` (Post
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | c4058bb7449ca41162ce33ec | -- can't override ALTER TABLE ATACC1 ADD CONSTRAINT ditto NOT NULL a |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | c8622a537ce1a8ccdfed3e4d | -- Reverting it back to ENFORCED will result in failure because constraint validation will be triggered, -- as it was previously in a valid state. ALTER TABLE FKTABLE ALTER CONSTRAINT fktable_ftest... |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | caec240e30f6e298188000ec | alter table p1 add constraint inh_check_constraint6 check (f1 < 10) not enforced |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | ccf768dcfce1a239d1fd3597 | ALTER FOREIGN TABLE agg_bad OPTIONS (ADD reject_limit '1') |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | cd5e3bdf111057ed424641a6 | ALTER TABLE ref ALTER CONSTRAINT ref_f1_f2_fkey_1 DEFERRABLE INITIALLY DEFERRED |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | d2251e1184bb31cc108a6e1e | ALTER TABLE pp_nn_1 ADD CONSTRAINT nn1 NOT NULL a NOT VALID |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | d5296fbf49f916c984a67134 | -- but reverse is not allowed alter table p1_c1 add constraint inh_check_constraint7 check (f1 < 10) not enforced |
@@ -6442,7 +5675,6 @@ libpg_query target: `18-latest` `9ab9951b7021adcc6d25d261d5016ca0b83726b8` (Post
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | dccac0246aaa8fcf541744b7 | ALTER TABLE notnull_tbl1_3 add CONSTRAINT nn3 NOT NULL a NOT VALID |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | dfaf51924c8ab5a6617f6bd3 | ALTER TABLE temporal_rng ADD CONSTRAINT temporal_rng_pk PRIMARY KEY (id, valid_at WITHOUT OVERLAPS) |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | e1c61e5c7258fd8c4945aa6e | ALTER TABLE notnull_tbl1 ADD CONSTRAINT foobar NOT NULL a |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | e1d819345898d2836a0c5939 | -- ERROR -- on_error, log_verbosity and reject_limit tests ALTER FOREIGN TABLE agg_bad OPTIONS (ADD on_error 'ignore') |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | e7fda49144b0bd2b12f930a8 | ALTER TABLE notnull_inhparent ADD CONSTRAINT nn NOT NULL i NOT VALID |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | e887911d735bb9cc81946bc3 | alter table p1_c1 add constraint inh_check_constraint3 check (f1 > 0) not enforced |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | ea04f7b86fd3cb9784e6e2d0 | alter table constr_parent add not null a not valid |
@@ -6457,10 +5689,6 @@ libpg_query target: `18-latest` `9ab9951b7021adcc6d25d261d5016ca0b83726b8` (Post
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | fb6093628d03b0d9e0d31126 | alter table inh_nn1 -- test multicommand alter table while at it alter constraint inh_nn1_f1_not_null inherit, alter constraint inh_nn1_f1_not_null no inherit |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | fc9e733f289135904bf23d98 | ALTER TABLE notnull_part1_upg ADD CONSTRAINT notnull_con NOT NULL a NOT VALID |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TSCONFIGURATION_STMT | 5ffca48f8e01844fc4f59d1f | ALTER TEXT SEARCH CONFIGURATION evttrig_tscfg DROP MAPPING FOR word |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_USER_MAPPING_STMT | 1171d6336f3aefdaf9ec6922 | ALTER USER MAPPING FOR public SERVER fdtest OPTIONS (ADD oauth_client_id 'myID') |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_USER_MAPPING_STMT | 2439b4088c15fa8e7df88211 | ALTER USER MAPPING FOR public SERVER testserver1 OPTIONS (ADD oauth_client_id 'myID') |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_USER_MAPPING_STMT | 9bb50f4e25b2f3cfec568b79 | ALTER USER MAPPING FOR public SERVER testserver1 OPTIONS (ADD oauth_issuer 'https://example.com') |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_USER_MAPPING_STMT | f9a46643cb73c83a3031250c | ALTER USER MAPPING FOR public SERVER fdtest OPTIONS (ADD oauth_issuer 'https://example.com') |
 | ERROR | PG_QUERY__NODE__NODE_COPY_STMT | 1021fb3d0a7c5db4f2f75029 | COPY (UPDATE stats_track_tab SET x = 2 WHERE x = 1 RETURNING x) TO stdout |
 | ERROR | PG_QUERY__NODE__NODE_COPY_STMT | 21a551ddacfd544860681ac8 | COPY ( MERGE INTO sq_target t USING sq_source s ON tid = sid WHEN MATCHED AND tid >= 2 THEN UPDATE SET balance = t.balance + delta WHEN NOT MATCHED THEN INSERT (balance, tid) VALUES (balance + delt... |
 | ERROR | PG_QUERY__NODE__NODE_COPY_STMT | 97a87590b73ff273af267947 | COPY (MERGE INTO stats_track_tab USING (SELECT 1 id) ON x = id WHEN MATCHED THEN UPDATE SET x = id WHEN NOT MATCHED THEN INSERT (x) VALUES (id) RETURNING x) TO stdout |
@@ -6470,23 +5698,6 @@ libpg_query target: `18-latest` `9ab9951b7021adcc6d25d261d5016ca0b83726b8` (Post
 | ERROR | PG_QUERY__NODE__NODE_CREATE_EXTENSION_STMT | a3c1f91ad698bbcf1c2fb205 | -- Tests with various custom types CREATE EXTENSION test_custom_types |
 | ERROR | PG_QUERY__NODE__NODE_CREATE_EXTENSION_STMT | a93222982285c427b218c7c2 | CREATE EXTENSION refint |
 | ERROR | PG_QUERY__NODE__NODE_CREATE_EXTENSION_STMT | cedc59780c463971860b2d29 | CREATE EXTENSION pg_logicalinspect |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_FDW_STMT | 2f8f789d038490b5b7e12d91 | create foreign data wrapper copytest_wrapper |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_FDW_STMT | f516560de4cb734dde87eeba | -- -- CREATE FOREIGN TABLE LIKE -- CREATE FOREIGN DATA WRAPPER ctl_dummy |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_FOREIGN_SERVER_STMT | 3a95979154149aa121273717 | create server copytest_server foreign data wrapper copytest_wrapper |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_FOREIGN_SERVER_STMT | b41cddbb7dc74bd13111c78c | CREATE SERVER ctl_s0 FOREIGN DATA WRAPPER ctl_dummy |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | 124d9df0f94d88d8e599e45e | -- ERROR CREATE FOREIGN TABLE tbl () SERVER file_server OPTIONS (log_verbosity 'unsupported') |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | 1a14d6dd1894aa28f789f6f4 | -- ERROR CREATE FOREIGN TABLE tbl () SERVER file_server OPTIONS (reject_limit '1') |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | 6af60af75522916a68cce710 | -- Test INCLUDING ALL -- INDEXES, IDENTITY, COMPRESSION, STORAGE are not copied. CREATE FOREIGN TABLE ctl_foreign_table2(LIKE ctl_table INCLUDING ALL) SERVER ctl_s0 |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | 7e9c80d7285f0eaca4b7a544 | create foreign table grem1 ( a int, b int generated always as (a * 2) stored, c int generated always as (a * 3) virtual ) server loopback options(table_name 'gloc1') |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | 86dadbfb759a9f7b745242f8 | -- ERROR CREATE FOREIGN TABLE tbl () SERVER file_server OPTIONS (on_error 'unsupported') |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | b7ec58e2aa99697e9263ac2c | CREATE FOREIGN TABLE remote_backend_pid (pid int) SERVER loopback OPTIONS (table_name 'my_backend_pid') |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | e7c11c955e6bc78d14a270b9 | create foreign table copytest_foreign_table (a int) server copytest_server |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | ee0a5da5e13955dc942c3bac | -- ERROR CREATE FOREIGN TABLE tbl () SERVER file_server OPTIONS (on_error 'ignore', reject_limit '0') |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | f826908ed93a7299da1db989 | -- ERROR CREATE FOREIGN TABLE tbl () SERVER file_server OPTIONS (format 'binary', on_error 'ignore') |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_POLICY_STMT | 1ee2b4904a325121b8f0c0f2 | CREATE POLICY p0 ON r1 USING (b * 10 = c) |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_POLICY_STMT | 3ff79482b4efef2e4b884db3 | CREATE POLICY p1 ON r1 AS RESTRICTIVE USING (b > 10) |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_POLICY_STMT | 4e13ec1d4bb05742be173678 | create policy p1 on rls_t for select to regress_rls_alice using (c = current_setting('rls_test.blah')) |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_POLICY_STMT | e9351c233689e14f8a66503d | CREATE POLICY p2 ON r1 AS RESTRICTIVE USING ((SELECT c) < 400) |
 | ERROR | PG_QUERY__NODE__NODE_CREATE_PUBLICATION_STMT | 03a66b4f338787a1f3cbf6d6 | -- Generated columns in column list, when 'publish_generated_columns'='none' CREATE PUBLICATION pub1 FOR table gencols(a, gen1) WITH (publish_generated_columns = none) |
 | ERROR | PG_QUERY__NODE__NODE_CREATE_PUBLICATION_STMT | 2897635b6f4de4db02753b47 | CREATE PUBLICATION testpub_xxx WITH (publish_generated_columns) |
 | ERROR | PG_QUERY__NODE__NODE_CREATE_PUBLICATION_STMT | 4a88011ed4300ea926b7eba9 | CREATE PUBLICATION testpub_xxx WITH (publish_generated_columns = stored, publish_generated_columns = none) |
@@ -6497,23 +5708,6 @@ libpg_query target: `18-latest` `9ab9951b7021adcc6d25d261d5016ca0b83726b8` (Post
 | ERROR | PG_QUERY__NODE__NODE_CREATE_PUBLICATION_STMT | a5e09d1078d0b1f769deaf71 | -- error - generated column "b" must be published explicitly as it is -- part of the REPLICA IDENTITY index. CREATE PUBLICATION pub_gencol FOR TABLE testpub_gencol |
 | ERROR | PG_QUERY__NODE__NODE_CREATE_PUBLICATION_STMT | b1f39566e0f5f35c1dc739d0 | -- ok - generated column "b" is published explicitly CREATE PUBLICATION pub_gencol FOR TABLE testpub_gencol with (publish_generated_columns = stored) |
 | ERROR | PG_QUERY__NODE__NODE_CREATE_PUBLICATION_STMT | d7ebfe49ac3aae32cc22d215 | CREATE PUBLICATION testpub_xxx WITH (publish_generated_columns = foo) |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | 060c9d81dd013a88f156725a | CREATE STATISTICS tst on (z) from ext_stats_test1 |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | 2c015beafafbce43ce1d1624 | CREATE STATISTICS ctl_stats4_stat ON a, c FROM ctl_stats4_parent |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | 3075452c3460c2495b5f9853 | -- statistics without a less-than operator not supported CREATE STATISTICS tst (ndistinct) ON w from ext_stats_test1 |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | 4e43ec181a1ca9eed67145ba | -- Extended statistics with an attribute that cannot be analyzed. -- This includes all statistics kinds. CREATE STATISTICS test_stats ON data, id FROM test_table |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | 601506393cc4a963d9f6205f | CREATE STATISTICS ctl_table_stat ON a,b FROM ctl_table |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | 6286742cb59f0750d11b52d3 | CREATE STATISTICS tst (ndistinct) ON z from ext_stats_test1 |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | 72690aa2737db7a32160a15c | CREATE STATISTICS tst (ndistinct) ON xmin from ext_stats_test1 |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | 7f3ea467753c54c48fe02644 | -- statistics on system column not allowed CREATE STATISTICS tst on tableoid from ext_stats_test1 |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | 845bfa3cb1ce41a542c7381d | -- The ndistinct extended statistics on (x, y, z) provides more reliable value -- of bucket size. CREATE STATISTICS extstat_sb_2 (ndistinct) ON x, y, z FROM sb_2 |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | 8865741671ae7d2c6c7726a0 | CREATE STATISTICS t_b_c_stat (mcv) ON b, c FROM bitmap_split_or |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | a30982b22b3720a0ebb8843b | CREATE STATISTICS ctl_stats3_stat ON a, c FROM ctl_stats3_parent |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | bb245b2fe1a0144bca82eb9c | -- Extended statistics with an expression that cannot be analyzed. CREATE STATISTICS test_stats ON func_int_custom(data), (id) FROM test_table |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | c3308bfe386fb737618f67b0 | CREATE STATISTICS t_a_b_stat (mcv) ON a, b FROM bitmap_split_or |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | cc7097265b3b87ee8878eb0e | CREATE STATISTICS tst on (tableoid) from ext_stats_test1 |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | d36eb3d07453e7018f5d31ce | CREATE STATISTICS tst on (z+1) from ext_stats_test1 |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | d515d4fceef55ebd2a9a07fd | CREATE STATISTICS tst on z from ext_stats_test1 |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | e7a609ea10f3e01d3c260e3c | CREATE STATISTICS tst on (tableoid::int+1) from ext_stats_test1 |
 | ERROR | PG_QUERY__NODE__NODE_CREATE_STMT | 02f7e9a73462b5a1bcb5e9c2 | -- partitioned table have not-null, then the partitions can not be NOT NULL NOT VALID. CREATE TABLE pp_nn (a int, b int, NOT NULL a) PARTITION BY LIST (a) |
 | ERROR | PG_QUERY__NODE__NODE_CREATE_STMT | 0373dac26c5f4f3a3bee1365 | -- (parent_id, valid_at) REFERENCES [implicit] -- FOREIGN KEY part should specify PERIOD CREATE TABLE temporal_fk_mltrng2mltrng ( id int4range, valid_at datemultirange, parent_id int4range, CONSTRA... |
 | ERROR | PG_QUERY__NODE__NODE_CREATE_STMT | 052446778ffd0dc01156e4b4 | -- PK with a non-range column: CREATE TABLE temporal_rng ( id int4range, valid_at TEXT, CONSTRAINT temporal_rng_pk PRIMARY KEY (id, valid_at WITHOUT OVERLAPS) ) |
@@ -6573,7 +5767,6 @@ libpg_query target: `18-latest` `9ab9951b7021adcc6d25d261d5016ca0b83726b8` (Post
 | ERROR | PG_QUERY__NODE__NODE_CREATE_STMT | a2f66fb5fa2ae207e5f2826f | -- UNIQUE with a non-range column: CREATE TABLE temporal_rng3 ( id int4range, valid_at TEXT, CONSTRAINT temporal_rng3_uq UNIQUE (id, valid_at WITHOUT OVERLAPS) ) |
 | ERROR | PG_QUERY__NODE__NODE_CREATE_STMT | a8f6fdf68309bdb9892b2a1a | create table notnull_tbl_fail (a serial, constraint foo not null a no inherit) |
 | ERROR | PG_QUERY__NODE__NODE_CREATE_STMT | ab17b28dd8793eac34b7f772 | CREATE TABLE inh_nn_parent (a int, NOT NULL a NO INHERIT) |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STMT | acc5db5a96d85882421f5a28 | CREATE TABLE ctl_table(a int PRIMARY KEY, b varchar COMPRESSION pglz, c int GENERATED ALWAYS AS (a * 2) STORED, d bigint GENERATED ALWAYS AS IDENTITY, e int DEFAULT 1) |
 | ERROR | PG_QUERY__NODE__NODE_CREATE_STMT | b1d14b184e2108fe1fe61ff5 | CREATE TABLE of_tt_enum_type OF tt_enum_type |
 | ERROR | PG_QUERY__NODE__NODE_CREATE_STMT | b3685ad731412214ab9ef263 | -- PK with a range column/PERIOD that isn't there: CREATE TABLE temporal_rng ( id INTEGER, CONSTRAINT temporal_rng_pk PRIMARY KEY (id, valid_at WITHOUT OVERLAPS) ) |
 | ERROR | PG_QUERY__NODE__NODE_CREATE_STMT | b59ac750c94e7d6011e698ea | CREATE TABLE gtest_child3 PARTITION OF gtest_parent ( f3 GENERATED ALWAYS AS (f2 * 2) VIRTUAL -- error ) FOR VALUES FROM ('2016-09-01') TO ('2016-10-01') |
@@ -6693,2509 +5886,813 @@ libpg_query target: `18-latest` `9ab9951b7021adcc6d25d261d5016ca0b83726b8` (Post
 
 | Previous | Current | Oracle Node | ID | SQL |
 | --- | --- | --- | --- | --- |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 0021c2a7a68ca36e706d94ca | create aggregate first_el_agg_any(anyelement) ( SFUNC = first_el_transfn, STYPE = anyarray, FINALFUNC = first_el ) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 002fe7b564ccbc8d25bd63f0 | CREATE OPERATOR #*# ( leftarg = SETOF int8, procedure = factorial ) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_ROLE_STMT | 00322410166bf02d9d8cf79e | CREATE ROLE regress_stats_user2 |
-| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_PREPARE_STMT | 003e00c9eb42deaa083c715d | PREPARE pstmt(text, int[]) AS SELECT * FROM fooarr WHERE f1 = $1 AND f2 = $2 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 00817b3ba7b80f7bff85ad5d | CREATE OPERATOR = (procedure = inline_eq, leftarg = foodomain, rightarg = foodomain) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OP_FAMILY_STMT | 00b199f99d246e5596c684b7 | ALTER OPERATOR FAMILY gist_bool_ops USING gist ADD FUNCTION 11 (bool, bool) gbt_bool_sortsupport (internal) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_OP_FAMILY_STMT | 00bb2be074a72ac2fc9c5457 | -- Should work. During ALTER OPERATOR FAMILY ... DROP OPERATOR -- when left type is the same as right type, a DROP with only one argument type should work CREATE OPERATOR FAMILY alt_opf8 USING btree |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OP_FAMILY_STMT | 00e51b5084183a9f5160f2a9 | -- These are "loose" in the opfamily for consistency with the rest of btree_gist ALTER OPERATOR FAMILY gist_uuid_ops USING gist ADD OPERATOR 6 <> (uuid, uuid) , FUNCTION 9 (uuid, uuid) gbt_uuid_fet... |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OWNER_STMT | 00f89e699b16a73399c02ec7 | ALTER AGGREGATE testagg4(int2) OWNER TO SESSION_USER |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_COMMENT_STMT | 0108c261dacbb2626d6edb96 | COMMENT ON FUNCTION seg_lt(seg, seg) IS 'less than' |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_OP_CLASS_STMT | 010db86892c31db4b515764c | -- -- The btree indexing operator class. -- CREATE OPERATOR CLASS citext_ops DEFAULT FOR TYPE CITEXT USING btree AS OPERATOR 1 < (citext, citext), OPERATOR 2 <= (citext, citext), OPERATOR 3 = (cite... |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_ROLE_STMT | 0117078d0d4f3e606368c516 | CREATE ROLE regress_noiseword SYSID 12345 |
-| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEALLOCATE_STMT | 01173db4677c435ba9a8f759 | DEALLOCATE stat_select |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OPERATOR_STMT | 0125730c5c31326c7b1b277f | ALTER OPERATOR @ (ltree, ltxtquery) SET (RESTRICT = matchingsel, JOIN = matchingjoinsel) |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_FETCH_STMT | 0167c378960515360c065112 | FETCH all in foo20 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_OP_CLASS_STMT | 01b22f54d6eaab6ac4caa381 | -- Create the operator class CREATE OPERATOR CLASS gist_interval_ops DEFAULT FOR TYPE interval USING gist AS OPERATOR 1 < , OPERATOR 2 <= , OPERATOR 3 = , OPERATOR 4 >= , OPERATOR 5 > , FUNCTION 1 ... |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 01b916a762e89db54a79d0e1 | CREATE OPERATOR > ( PROCEDURE = isngt, LEFTARG = isbn13, RIGHTARG = isbn, COMMUTATOR = <, NEGATOR = <=, RESTRICT = scalargtsel, JOIN = scalargtjoinsel ) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 01fcac43d31ecc1b6650f669 | CREATE TEXT SEARCH DICTIONARY unaccent ( TEMPLATE = unaccent, RULES = 'unaccent' ) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OPERATOR_STMT | 0200c0002808481f6ef75e01 | ALTER OPERATOR >= (ismn13, ean13) SET ( RESTRICT = scalargesel, JOIN = scalargejoinsel) |
-| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_PREPARE_STMT | 020e6ad3e948b77f9f613286 | -- prepared statement with parameter PREPARE pgss_test (int) AS SELECT $1, 'test' LIMIT 1 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OP_FAMILY_STMT | 021177c0e13031871cbd1fc5 | ALTER OPERATOR FAMILY isn_ops USING btree ADD OPERATOR 1 < (upc, ean13), OPERATOR 2 <= (upc, ean13), OPERATOR 3 = (upc, ean13), OPERATOR 4 >= (upc, ean13), OPERATOR 5 > (upc, ean13), FUNCTION 1 btu... |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_COMMENT_STMT | 021228a4f4f8776a0c554043 | COMMENT ON COLUMN ctlt3.c IS 'C' |
-| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_EXPLAIN_STMT | 023c039b9af3018dcb926f40 | EXPLAIN (COSTS OFF) EXECUTE test(NULL, 3.14, '-1.5') |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_COMMENT_STMT | 0256b6c2e413e68fbe0bd21b | COMMENT ON TYPE default_test_row IS 'good comment' |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_COMMENT_STMT | 025a91fce1f11960a4cf2205 | COMMENT ON ACCESS METHOD bloom IS 'bloom index access method' |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_ROLE_STMT | 027100f71c370356c223c9fd | CREATE ROLE regress_schemauser2 superuser login |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_ROLE_STMT | 027ecf31dc8d6cfb5ab6f4f0 | CREATE ROLE regress_unprivileged_role |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 027fc0c0a496572febe12b17 | CREATE OPERATOR >= ( PROCEDURE = isnge, LEFTARG = ismn13, RIGHTARG = ismn13, COMMUTATOR = <=, NEGATOR = <, RESTRICT = scalargtsel, JOIN = scalargtjoinsel ) |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DECLARE_CURSOR_STMT | 029b495fd1fe2355bbfd2c4b | DECLARE foo25 SCROLL CURSOR WITH HOLD FOR SELECT * FROM tenk2 |
-| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_EXECUTE_STMT | 029fa500b2f635824e0dca3f | EXECUTE st5('foo', 1) |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_COMMENT_STMT | 02b86f1eb882502026670fdb | COMMENT ON CONSTRAINT ctlt3_a_check ON ctlt3 IS 't3_a_check' |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 02ba01efa4f65fb3d768765e | CREATE OPERATOR ~ ( LEFTARG = ltree, RIGHTARG = lquery, PROCEDURE = ltq_regex, COMMUTATOR = '~', RESTRICT = contsel, JOIN = contjoinsel ) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_ROLE_SET_STMT | 02e5341b3d23bf15dc703fa4 | -- error ALTER ROLE nonexistent SET application_name to 'BOMB' |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DECLARE_CURSOR_STMT | 034f398f3ba2b2565d4a7ace | DECLARE foo7 SCROLL CURSOR FOR SELECT * FROM tenk1 ORDER BY unique2 |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_FETCH_STMT | 0363032c8e6b1c657598bf36 | FETCH 2 FROM c1 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 037b89361966d59140e1ffa0 | CREATE OPERATOR !~* ( PROCEDURE = texticregexne, LEFTARG = citext, RIGHTARG = text, NEGATOR = ~*, RESTRICT = icregexnesel, JOIN = icregexnejoinsel ) |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DECLARE_CURSOR_STMT | 037d69ab02317e0fe95a448b | DECLARE foo15 SCROLL CURSOR FOR SELECT * FROM tenk1 ORDER BY unique2 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_ROLE_STMT | 038c111092d98f56ca678758 | -- test proper begins here CREATE USER regress_priv_user1 |
-| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_PREPARE_STMT | 03ef8df3ab4f451b564a647d | prepare int8_query as select * from int8_tbl i8 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 03f3f47402f39b4403997cd4 | -- N P -- should CREATE CREATE AGGREGATE myaggp03a(*) (SFUNC = stfp, STYPE = int4[], FINALFUNC = ffp, INITCOND = '{}') |
-| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_PREPARE_STMT | 03f51ecb689d60554c27ed3c | prepare test_mode_pp (int) as select count(*) from test_mode where a = $1 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_ROLE_STMT | 04058e452ecc33876e5f6aaf | ALTER ROLE regress_test_inherit WITH INHERIT |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_COMMENT_STMT | 040a2f6dae797748507f4b29 | COMMENT ON TYPE issn13 IS 'International Standard Serial Number 13 (ISSN13)' |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_ROLE_STMT | 041ac39ac5000656ed0c68ab | CREATE USER regress_view_user2 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_ROLE_STMT | 04289f58f0f504e92c4312f2 | CREATE ROLE regress_passwd2 |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_FETCH_STMT | 043fcc4201158ca9271493d3 | FETCH backward 1 in foo23 |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_COMMENT_STMT | 046fb27c6f7ef9612e3d6b4d | COMMENT ON TYPE issn IS 'International Standard Serial Number (ISSN)' |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OPERATOR_STMT | 0475d00df3e30c0d77722f58 | ALTER OPERATOR <= (upc, ean13) SET ( RESTRICT = scalarlesel, JOIN = scalarlejoinsel) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 048a3eb9e9958b4dcbc361b5 | CREATE OPERATOR << ( LEFTARG = seg, RIGHTARG = seg, PROCEDURE = seg_left, COMMUTATOR = '>>', RESTRICT = positionsel, JOIN = positionjoinsel ) |
-| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEALLOCATE_STMT | 048e838d0d9b02cd22d021ae | deallocate ab_q1 |
-| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_EXPLAIN_STMT | 04c1f11854be3af92e7f1b34 | EXPLAIN (VERBOSE, COSTS OFF) EXECUTE st7 |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_SEC_LABEL_STMT | 04ccea2735510abc71fe350d | SECURITY LABEL FOR 'dummy' ON ROLE regress_dummy_seclabel_user2 IS 'unclassified' |
-| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_PREPARE_STMT | 04e2dd345f752df94b9fb5bc | prepare q (int, int) as select * from ( select * from p union all select * from q1 union all select 1, 1, 1 ) s(a, b, c) where s.a = $1 and s.b = $2 and s.c = (select 1) |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DECLARE_CURSOR_STMT | 050dd776b98d39138841d39a | DECLARE foo22 SCROLL CURSOR FOR SELECT * FROM tenk2 |
-| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_EXPLAIN_STMT | 0532965819a2f2b9c080ccae | explain (analyze, costs off, summary off, timing off, buffers off) execute ab_q1 (1, 2, 3) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 0543774218b0fd55c5754a78 | CREATE OPERATOR <= ( PROCEDURE = isnle, LEFTARG = ean13, RIGHTARG = isbn, COMMUTATOR = >=, NEGATOR = >, RESTRICT = scalarltsel, JOIN = scalarltjoinsel) |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DECLARE_CURSOR_STMT | 05452a721d2475088690db12 | DECLARE c SCROLL CURSOR FOR SELECT noabort_decreasing FROM abbrev_abort_uuids ORDER BY noabort_decreasing |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OPERATOR_STMT | 0548a9872bd834c71f708f56 | ALTER OPERATOR %>> (text, text) SET (RESTRICT = matchingsel, JOIN = matchingjoinsel) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OP_FAMILY_STMT | 054db8d1155759d7a483d2c5 | ALTER OPERATOR FAMILY gist__ltree_ops USING gist ADD FUNCTION 10 (_ltree) _ltree_gist_options (internal) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_ROLE_SET_STMT | 0556b25ff16d0a1cd9f2136f | ALTER ROLE CURRENT_USER RESET application_name |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_FETCH_STMT | 0559324cf7e5128e47a63c0a | fetch from c |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_COMMENT_STMT | 0581c2e83a10d2ef4ed03b5c | COMMENT ON SEQUENCE fkey_table_seq IS 'SEQUENCE test' |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DROP_STMT | 0590a3d2c62b6b959237019d | -- no such aggregate drop aggregate nonesuch (int4) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OP_FAMILY_STMT | 05a15e1e0329631840a21a20 | ALTER OPERATOR FAMILY alt_opf16 USING gist ADD FUNCTION 1 btint42cmp(int4, int2) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OP_FAMILY_STMT | 05a8fd110c47d2f0fe98df91 | ALTER OPERATOR FAMILY gist_trgm_ops USING gist ADD FUNCTION 10 (text) gtrgm_options (internal) |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CLOSE_PORTAL_STMT | 05a9458317e9f2dba3efbeaa | CLOSE foo19 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 05c0a073a71e1997a4ce98ac | -- CREATE/DROP COLLATION CREATE COLLATION builtin_c ( PROVIDER = builtin, LOCALE = "C" ) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OPERATOR_STMT | 05c60c9b9a8fdee89fc06432 | ALTER OPERATOR >= (ean13, isbn13) SET ( RESTRICT = scalargesel, JOIN = scalargejoinsel) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 05e116c1a8e7ebd37a065342 | CREATE COLLATION lt_upperfirst (provider = icu, locale = 'und-u-kf-upper') |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 05f05ec2a37984553fd337bc | CREATE OPERATOR >= ( PROCEDURE = isnge, LEFTARG = ean13, RIGHTARG = ean13, COMMUTATOR = <=, NEGATOR = <, RESTRICT = scalargtsel, JOIN = scalargtjoinsel ) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 061d356621eb21580adb6330 | CREATE OPERATOR ~>~ ( LEFTARG = CITEXT, RIGHTARG = CITEXT, NEGATOR = ~<=~, COMMUTATOR = ~<~, PROCEDURE = citext_pattern_gt, RESTRICT = scalargtsel, JOIN = scalargtjoinsel ) |
-| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEALLOCATE_STMT | 06274ea1364b01c503e99d2f | DEALLOCATE st6 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 062c251ebcee255cad46d7a3 | CREATE OPERATOR \|@\| (PROCEDURE = unnest, RIGHTARG = ANYARRAY) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 065dd7bc66ca46dd2251f63c | CREATE OPERATOR > ( LEFTARG = CITEXT, RIGHTARG = CITEXT, NEGATOR = <=, COMMUTATOR = <, PROCEDURE = citext_gt, RESTRICT = scalargtsel, JOIN = scalargtjoinsel ) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 065e872ffb4ec1b76345a591 | CREATE OPERATOR <> ( PROCEDURE = isnne, LEFTARG = ean13, RIGHTARG = issn, COMMUTATOR = <>, NEGATOR = =, RESTRICT = neqsel, JOIN = neqjoinsel) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_ROLE_STMT | 068a9f7a18293440148bbee1 | CREATE USER regress_alter_generic_user2 |
-| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_EXPLAIN_STMT | 068d594b0fcf6d3122f43600 | explain (analyze, costs off, summary off, timing off, buffers off) execute ab_q2 (2, 2) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_ROLE_STMT | 06908b04a76012b0cea0abc5 | ALTER ROLE regress_test_createdb WITH CREATEDB |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 06a2950bcd76852c24704730 | CREATE TEXT SEARCH DICTIONARY synonym ( Template=synonym, Synonyms=synonym_sample ) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 06a4e5adb977d74583ba8ec6 | CREATE COLLATION testcoll_shifted (provider = icu, locale = '@colAlternate=shifted') |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 06a66ed903be33dc1bea4f2c | CREATE OPERATOR ~ ( LEFTARG = cube, RIGHTARG = cube, PROCEDURE = cube_contained, COMMUTATOR = '@', RESTRICT = contsel, JOIN = contjoinsel ) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 06a8d82c3ac1daa302f94af1 | CREATE OPERATOR <> ( PROCEDURE = isnne, LEFTARG = ean13, RIGHTARG = issn13, COMMUTATOR = <>, NEGATOR = =, RESTRICT = neqsel, JOIN = neqjoinsel) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_ROLE_STMT | 06bd8d0fc094b17516b8ba55 | CREATE ROLE regress_nosuch_replication REPLICATION |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_COMMENT_STMT | 06e859f853cc8905e705b7db | COMMENT ON FUNCTION seg_contained(seg, seg) IS 'contained in' |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 070ef2d6eeb3a5438f7a447b | CREATE OPERATOR <<@@ ( PROCEDURE = pt_contained_poly, LEFTARG = point, RIGHTARG = polygon ) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_ROLE_STMT | 0723f5a2075d4eb46ca0cf22 | ALTER ROLE SESSION_USER WITH REPLICATION |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OPERATOR_STMT | 07494d620d36955cce21e3e8 | ALTER OPERATOR >= (isbn, isbn) SET ( RESTRICT = scalargesel, JOIN = scalargejoinsel) |
-| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_PREPARE_STMT | 07720bb27b58c1ef48d8036d | PREPARE q6 AS SELECT * FROM tenk1 WHERE unique1 = $1 AND stringu1 = $2 |
-| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_PREPARE_STMT | 077fbccccb3ac1190feb2b1d | -- Ensure that an Append node properly can handle selection of all first level -- partitions before finally detecting the correct set of 2nd level partitions -- which match the given parameter. pre... |
-| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_EXPLAIN_STMT | 0785f0b334f99ce3fe7b9e2b | EXPLAIN (COSTS OFF) EXECUTE p1(2) |
-| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_PREPARE_STMT | 078db0c01f7b94b49af1cddd | prepare s1 as select $1::pos_int = 10 as "is_ten" |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 07964d4b73dc971447136131 | CREATE OPERATOR && ( LEFTARG = seg, RIGHTARG = seg, PROCEDURE = seg_overlap, COMMUTATOR = '&&', RESTRICT = areasel, JOIN = areajoinsel ) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OPERATOR_STMT | 07bde77ea9bc3325838ea003 | ALTER OPERATOR <= (issn13, issn13) SET ( RESTRICT = scalarlesel, JOIN = scalarlejoinsel) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OBJECT_SCHEMA_STMT | 07e1e7aaf9642b29c0cd7c2b | alter operator class alter1.ctype_hash_ops using hash set schema alter2 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 08219a54818be8f92fec273c | CREATE TEXT SEARCH DICTIONARY alt_ts_dict1 (template=simple) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 0837b2a20a210e936c479e09 | -- Case2 (R = P) && ((B = P) \|\| (B = N)) -- ------------------------------------- -- S tf1 B tf2 -- ----------------------- -- N N N N -- should CREATE CREATE AGGREGATE myaggp05a(BASETYPE = int, SF... |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_ROLE_STMT | 084c3957b5859b588424b5bf | -- privileges CREATE USER regress_cp_user1 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 086aa4d3c8f3a9f27cf69675 | -- -- ISBN13 operators: -- --------------------------------------------------- CREATE OPERATOR < ( PROCEDURE = isnlt, LEFTARG = isbn13, RIGHTARG = isbn13, COMMUTATOR = >, NEGATOR = >=, RESTRICT = s... |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_ROLE_STMT | 08724a31f3513cc07a09b12f | CREATE ROLE regress_guc_user |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DROP_STMT | 08a1eb67b96070695b674d5f | -- procedure 1 requested again in separate statement DROP OPERATOR FAMILY alt_opf17 USING btree |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_OP_CLASS_STMT | 08b6ecfb8b88833661e8890b | create operator class my_op_class for type int using btree family my_op_family as operator 1 public.<^, operator 3 public.=^, operator 5 public.>^, function 1 my_op_cmp(int, int) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 08bfa5d690ecaeae3828c077 | CREATE OPERATOR <> ( LEFTARG = CITEXT, RIGHTARG = CITEXT, NEGATOR = =, COMMUTATOR = <>, PROCEDURE = citext_ne, RESTRICT = neqsel, JOIN = neqjoinsel ) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DROP_ROLE_STMT | 08e595dcb15a49d5af5b211f | DROP GROUP IF EXISTS regress_test_g1, regress_test_g2 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_OP_CLASS_STMT | 08f4262ca132bca8cc9cfe98 | CREATE OPERATOR CLASS inet_ops DEFAULT FOR TYPE inet USING gin AS OPERATOR 1 <, OPERATOR 2 <=, OPERATOR 3 =, OPERATOR 4 >=, OPERATOR 5 >, FUNCTION 1 network_cmp(inet,inet), FUNCTION 2 gin_extract_v... |
-| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_EXPLAIN_STMT | 08fa957fd35e97d8a822518a | explain (costs off) execute tenk1_count(1) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_ROLE_STMT | 09078f8f77c6c33e17f1e639 | CREATE USER regress_plperl_user2 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_ROLE_STMT | 093a3b64605e621561ed58af | CREATE ROLE regress_test_superuser WITH SUPERUSER |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 094107b1f1f28b588b4badce | CREATE OPERATOR <> ( PROCEDURE = isnne, LEFTARG = isbn, RIGHTARG = isbn13, COMMUTATOR = <>, NEGATOR = =, RESTRICT = neqsel, JOIN = neqjoinsel) |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_FETCH_STMT | 096045c007f0cd9f3620271b | fetch all in c3 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OP_FAMILY_STMT | 097e33507bb3ee94016fc99d | alter operator family integer_ops using btree add operator 3 = (int8alias2, int8alias2) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_ROLE_STMT | 09a05a7a5949b0acaeeb6ebe | CREATE ROLE regress_test_inherit WITH NOINHERIT |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_OP_CLASS_STMT | 09b9ea124afe973c46e275f8 | CREATE OPERATOR CLASS alt_opc2 FOR TYPE uuid USING hash AS STORAGE uuid |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OP_FAMILY_STMT | 09bce2ec322b4e08263c720b | ALTER OPERATOR FAMILY gist_cube_ops USING gist drop function 3 (cube) |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_FETCH_STMT | 09d7625960edeabad61eb2bb | FETCH ABSOLUTE 8 FROM c1 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 09e2355e6b7c11fa3facd6d6 | CREATE OPERATOR = ( LEFTARG = seg, RIGHTARG = seg, PROCEDURE = seg_same, COMMUTATOR = '=', NEGATOR = '<>', RESTRICT = eqsel, JOIN = eqjoinsel, MERGES ) |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_COMMENT_STMT | 09e2e3ecd87c273aea122666 | comment on constraint c1 on domain dcomptype is 'random commentary' |
-| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_EXPLAIN_STMT | 0a0ec5286db06b3a6c39d96b | -- Check plan EXPLAIN (COSTS OFF) EXECUTE role_inval |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 0a33a2b9c3ecd340f82efffe | CREATE OPERATOR <= ( PROCEDURE = isnle, LEFTARG = isbn, RIGHTARG = ean13, COMMUTATOR = >=, NEGATOR = >, RESTRICT = scalarltsel, JOIN = scalarltjoinsel) |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DECLARE_CURSOR_STMT | 0a3aeebd89c8461a970e8ed1 | DECLARE c1 CURSOR FOR SELECT * FROM uctest a, uctest b WHERE a.f1 = b.f1 + 5 FOR SHARE OF a |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DROP_STMT | 0ac92dd085ab5f07781c0043 | DROP OPERATOR ===(bigint, bigint) |
-| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_EXECUTE_STMT | 0aef9e636f266c87e398f9c9 | execute tenk1_count(1) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_ROLE_STMT | 0afd8f5faf26aa62558772e1 | -- test foreign data wrapper functionality CREATE ROLE regress_dblink_user |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_ROLE_STMT | 0b25c2838be7b1350acbbee0 | ALTER USER "None" WITH REPLICATION |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_ROLE_SET_STMT | 0b34a8d4a00855cc027504b2 | ALTER ROLE CURRENT_ROLE RESET application_name |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 0b6ae3c3290262c545b24c7d | CREATE OPERATOR - ( LEFTARG = _int4, RIGHTARG = int4, PROCEDURE = intarray_del_elem ) |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DECLARE_CURSOR_STMT | 0b9a412578c0ddbc2a21dc43 | DECLARE c1 CURSOR FOR SELECT stringu1 FROM onek WHERE stringu1 = 'DZAAAA' |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 0ba1b81c2cc20cc7004bab4d | CREATE COLLATION testcoll_ignore_accents (provider = icu, locale = '@colStrength=primary;colCaseLevel=yes') |
-| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_EXECUTE_STMT | 0bc34972df3113d634d3c569 | EXECUTE p1(2) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OPERATOR_STMT | 0bde0b70439965147a66661d | ALTER OPERATOR < (ltree, ltree) SET (RESTRICT = scalarltsel, JOIN = scalarltjoinsel) |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DECLARE_CURSOR_STMT | 0bfd25c9e6ab9a0de83fa609 | declare c2 scroll cursor for select generate_series(1,3) as g |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DECLARE_CURSOR_STMT | 0c2268a600e9ff1fe209a55b | declare held_portal cursor with hold for select * from toasted_data |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DECLARE_CURSOR_STMT | 0c6958f1999eda3bb4505efe | declare c1 scroll cursor for select * from generate_series(1,4) i where i <> all (values (2),(3)) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 0c9634425bf25be6f9b90051 | CREATE OPERATOR <= ( PROCEDURE = isnle, LEFTARG = isbn13, RIGHTARG = isbn13, COMMUTATOR = >=, NEGATOR = >, RESTRICT = scalarltsel, JOIN = scalarltjoinsel) |
-| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_PREPARE_STMT | 0d11606a16fc37fc2b33acc6 | PREPARE q2(text) AS SELECT datname, datistemplate, datallowconn FROM pg_database WHERE datname = $1 |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DECLARE_CURSOR_STMT | 0d17b1262fc8628df2ada3c7 | DECLARE ok CURSOR FOR SELECT * FROM int8_tbl |
-| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_PREPARE_STMT | 0d2238ab0229cae830455880 | PREPARE q7(unknown) AS SELECT * FROM road WHERE thepath = $1 |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DECLARE_CURSOR_STMT | 0d248cbffb0b9968a39ac1a4 | declare curs cursor for select * from gtest_cursor order by id for update |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 0d37ca6d859ac795cb9ea856 | CREATE AGGREGATE myaggn02b(*) (SFUNC = stfnp, STYPE = anyarray, INITCOND = '{}') |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_FETCH_STMT | 0d3aa2c4b0a9160f1488a513 | fetch backward 1 in c1 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_ROLE_STMT | 0d3ed39d1fd576c957e74813 | create role regress_bob |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OP_FAMILY_STMT | 0d77c1fee7924ddc7460b224 | ALTER OPERATOR FAMILY gist_text_ops USING gist ADD FUNCTION 9 (text, text) gbt_var_fetch (internal) |
-| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_PREPARE_STMT | 0d93e5cb99e22be17bbee09d | -- test single-line header and data prepare q as select repeat('x',2*n) as "0123456789abcdef", repeat('y',20-2*n) as "0123456789" from generate_series(1,10) as n |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_ROLE_STMT | 0d9de709ecdfb54f824b2462 | ALTER USER CURRENT_ROLE WITH REPLICATION |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_FETCH_STMT | 0daadb8126279b9ac4ed1793 | FETCH FORWARD ALL pgss_cursor |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 0e0f3ba72549de917eb55d9f | CREATE COLLATION testx (provider = icu, locale = 'nonsense-nowhere') |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_ROLE_STMT | 0e21502db4769532fa7d22ca | CREATE ROLE regress_role_admin CREATEDB CREATEROLE REPLICATION BYPASSRLS |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_SEC_LABEL_STMT | 0e470ba0348f095c0af73fd4 | SECURITY LABEL ON COLUMN t5.e IS 'system_u:object_r:sepgsql_table_t:s0' |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_FETCH_STMT | 0e6f42c603111aaf8b1d014a | FETCH 18 in foo18 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 0eccc7991d6e1e94b4f16785 | CREATE TEXT SEARCH CONFIGURATION thesaurus_tst ( COPY=synonym_tst ) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 0edd4923ead9298abbd15959 | CREATE AGGREGATE testns.priv_testagg(int) (sfunc = int4pl, stype = int4) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OP_FAMILY_STMT | 0f1b86cdecab2b7129d7835b | ALTER OPERATOR FAMILY gist_time_ops USING gist ADD FUNCTION 12 ("any", "any") gist_translate_cmptype_btree (int) |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_FETCH_STMT | 0f4ebc8685df0c23f3aeb857 | fetch backward all in c2 |
-| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_PREPARE_STMT | 0f70667bd4df1b24489620b0 | prepare mt_q2 (int) as select * from ma_test where a >= $1 order by b limit 1 |
-| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_EXECUTE_STMT | 0f8f6b382bc0a49d7dfa72a4 | EXECUTE st3(10, 20) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_ROLE_STMT | 0f8f93a6370a61e5aaf392e9 | CREATE ROLE regress_test_def_inherit |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_ROLE_STMT | 0fb3597f2e19c0438fecfc25 | ALTER GROUP regress_priv_group1 ADD USER regress_priv_user4 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 0fc23f9ecc6fbca2d266002c | CREATE OR REPLACE AGGREGATE myavg (numeric) ( stype = internal, sfunc = numeric_avg_accum, finalfunc = numeric_avg, serialfunc = numeric_avg_serialize, deserialfunc = numeric_avg_deserialize, combi... |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_ROLE_STMT | 0fec0acc5aeed894b28bd08d | CREATE USER regress_dep_user1 |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CLOSE_PORTAL_STMT | 100251da912667ba7d981a7a | CLOSE foo1 |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_COMMENT_STMT | 10077ae6bd1d460132cf079c | COMMENT ON FOREIGN TABLE ft1 IS 'ft1' |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 1026f2b5b3579b5bc2ceda8a | CREATE OPERATOR = ( PROCEDURE = isneq, LEFTARG = isbn13, RIGHTARG = isbn, COMMUTATOR = =, NEGATOR = <>, RESTRICT = eqsel, JOIN = eqjoinsel, MERGES, HASHES) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FUNCTION_STMT | 10354200ffb4f7ae181c0f9a | CREATE PROCEDURE test_proc11(a OUT int, VARIADIC b int[]) LANGUAGE plpgsql AS $$ BEGIN RAISE NOTICE 'a: %, b: %', a, b; a := b[1] + b[2]; END; $$ |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 103f8c4425b6eb6b7701a935 | -- LOCALE conflicts with LC_CTYPE CREATE COLLATION coll_dup_chk (LC_CTYPE = "POSIX", LOCALE = '') |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DROP_STMT | 104a86b56cdf625fcc4e47b6 | DROP OPERATOR ###### (int4, NONE) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FUNCTION_STMT | 105de1d540263f1049f2804d | CREATE FUNCTION dup (f1 anycompatible, f2 anycompatiblearray, f3 out anycompatible, f4 out anycompatiblearray) AS 'select $1, $2' LANGUAGE sql |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OP_FAMILY_STMT | 109d0459467440b27bbe0e48 | alter operator family integer_ops using btree add function 1 int8alias1cmp (int8, int8alias1) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_ROLE_STMT | 10c50dccb0627e2dc34073ed | CREATE ROLE regress_grantor2 ROLE regress_grantor1 |
-| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_EXECUTE_STMT | 114874ea11422bf9d900b324 | execute pstmt_def_insert(1) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 1162e5715acee8ce883a4da2 | CREATE OPERATOR ~> ( LEFTARG = cube, RIGHTARG = int, PROCEDURE = cube_coord_llur ) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 117ef8decfadf5ade2582d48 | create operator <> ( leftarg = myint, rightarg = myint, commutator = <>, negator = =, procedure = myintne, restrict = eqsel, join = eqjoinsel, merges ) |
-| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_PREPARE_STMT | 1185c680cc329174fe02b53c | prepare ab_q1 (int, int, int) as select * from ab where a between $1 and $2 and b <= $3 |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_COMMENT_STMT | 1192145bfe74a6c9d5218d4d | COMMENT ON INDEX testcomment_idx1 IS 'test comment' |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_COMMENT_STMT | 119b5aba5978fc91fab58b62 | COMMENT ON CONVERSION myconv IS 'bar' |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_COMMENT_STMT | 11ea15496c79bb15392f01fe | COMMENT ON CONSTRAINT noinh_con_copy_b_not_null ON noinh_con_copy IS 'not null b' |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_SEC_LABEL_STMT | 11ec4cf14da5b00e42c9dc9e | SECURITY LABEL ON ROLE regress_dummy_seclabel_user3 IS 'classified' |
-| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_EXPLAIN_STMT | 11f313ddd3192fef0c7a80ad | EXPLAIN (COSTS OFF) EXECUTE p2(2) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 121d9e3e7ea5847d07011f45 | CREATE OPERATOR <> ( PROCEDURE = isnne, LEFTARG = isbn, RIGHTARG = isbn, COMMUTATOR = <>, NEGATOR = =, RESTRICT = neqsel, JOIN = neqjoinsel) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_OP_CLASS_STMT | 122b9d8d4cbfa32b044d4e8b | -- Create the operator class CREATE OPERATOR CLASS gist_inet_ops DEFAULT FOR TYPE inet USING gist AS OPERATOR 1 < , OPERATOR 2 <= , OPERATOR 3 = , OPERATOR 4 >= , OPERATOR 5 > , FUNCTION 1 gbt_inet... |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 1265e619aaa607db23a855c4 | -- -- ISBN operators: -- --------------------------------------------------- CREATE OPERATOR < ( PROCEDURE = isnlt, LEFTARG = isbn, RIGHTARG = isbn, COMMUTATOR = >, NEGATOR = >=, RESTRICT = scalarl... |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_OP_CLASS_STMT | 126db4c88dba6cf0b758984e | -- -- The hash indexing operator class. -- CREATE OPERATOR CLASS citext_ops DEFAULT FOR TYPE citext USING hash AS OPERATOR 1 = (citext, citext), FUNCTION 1 citext_hash(citext) |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CLOSE_PORTAL_STMT | 1277bc4cfd1a89401d79edda | CLOSE foo18 |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DECLARE_CURSOR_STMT | 128738924da59b26662abc92 | DECLARE FOOCUR CURSOR FOR SELECT * from stats_track_tab |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DROP_STMT | 128e585958b30ca27ea6f1a3 | DROP OPERATOR FAMILY alt_opf16 USING gist |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DECLARE_CURSOR_STMT | 128ed6f3929c278beb19ae31 | DECLARE cursor_stats_2 CURSOR WITH HOLD FOR SELECT 3 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_ROLE_STMT | 12c2d402247c97568d5e0a11 | CREATE ROLE regress_createdb CREATEDB |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_SEC_LABEL_STMT | 12f1f74813ff4b0227c9d50d | SECURITY LABEL ON COLUMN t5.g IS 'system_u:object_r:sepgsql_secret_table_t:s0' |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_FETCH_STMT | 12fd6e639d6f69d8744ac93e | FETCH 10 in foo10 |
-| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_SELECT_STMT | 12fe93a9c35f936560d56125 | select delete('aa=>1 , b=>2, c=>3'::hstore, 'b=>2'::hstore) |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_FETCH_STMT | 130db1ecb857c06b7bfd666a | MOVE FORWARD ALL FROM c |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_COMMENT_STMT | 132367cd9eeb7f2235c8cc46 | COMMENT ON CONSTRAINT ctlt1_a_check ON ctlt1 IS 't1_a_check' |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 1324124ea0e9fbe9dff772ac | CREATE AGGREGATE testagg9(int2) (SFUNC = int2_sum, STYPE = int8) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OP_FAMILY_STMT | 134e165744e2faab948f3aeb | ALTER OPERATOR FAMILY isn_ops USING hash ADD OPERATOR 1 = (ean13, isbn13), OPERATOR 1 = (ean13, ismn13), OPERATOR 1 = (ean13, issn13), OPERATOR 1 = (ean13, isbn), OPERATOR 1 = (ean13, ismn), OPERAT... |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_ROLE_STMT | 13774690c59489816203bf17 | CREATE ROLE regress_hasprivs CREATEROLE LOGIN INHERIT CONNECTION LIMIT 5 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OP_FAMILY_STMT | 138aaa268f85ad9bf70706df | -- operator number should be between 1 and 5 ALTER OPERATOR FAMILY alt_opf4 USING btree ADD OPERATOR 0 < (int4, int2) |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DECLARE_CURSOR_STMT | 13ac9f55a8e75b1c7cdfe6d4 | DECLARE c1 SCROLL CURSOR FOR SELECT * FROM current_check |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 13d521af9c012faaa264550c | CREATE OPERATOR -> ( LEFTARG = hstore, RIGHTARG = text[], PROCEDURE = slice_array ) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OP_FAMILY_STMT | 13e24497e4024f2e2b917ab1 | ALTER OPERATOR FAMILY alt_opf19 USING btree ADD FUNCTION 5 (int4) btint42cmp(int4, int2) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 13f03fd87fcb3caeb81f2aa9 | CREATE OPERATOR <> ( LEFTARG = ltree, RIGHTARG = ltree, PROCEDURE = ltree_ne, COMMUTATOR = '<>', NEGATOR = '=', RESTRICT = neqsel, JOIN = neqjoinsel ) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 13f612d7938722bd9690de77 | -- lexing of <=, >=, <>, != has a number of edge cases -- (=> is tested elsewhere) -- this is legal because ! is not allowed in sql ops CREATE OPERATOR !=- ( rightarg = int8, procedure = factorial ) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_RENAME_STMT | 140f898c1d8f686d7787740f | ALTER ROLE regress_schemauser2 RENAME TO regress_schemauser_renamed |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_ROLE_SET_STMT | 1411462384bcc02eca5f6787 | -- error ALTER ROLE PUBLIC SET application_name to 'BOMB' |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_ROLE_STMT | 141190140bced3532fd726dc | -- error ALTER ROLE nonexistent WITH NOREPLICATION |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_ROLE_STMT | 143ecfc0b8e6116ff9b23e8b | CREATE ROLE regress_inherit INHERIT |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 14570f778b124fc6df2743d8 | CREATE OPERATOR > ( PROCEDURE = isngt, LEFTARG = ismn, RIGHTARG = ismn13, COMMUTATOR = <, NEGATOR = <=, RESTRICT = scalargtsel, JOIN = scalargtjoinsel ) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OPERATOR_STMT | 1460aff93a24d45e3e4aea4a | ALTER OPERATOR === (boolean, real) SET (HASHES = false) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OPERATOR_STMT | 1490a77347bb4595d6f57a92 | ALTER OPERATOR <= (ean13, issn13) SET ( RESTRICT = scalarlesel, JOIN = scalarlejoinsel) |
-| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEALLOCATE_STMT | 1493af4ffb244419f29d124e | DEALLOCATE data_sel |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 14a893d95f8805e91de7a9c9 | CREATE OPERATOR schema_op1.#*# ( rightarg = int8, procedure = factorial ) |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_SEC_LABEL_STMT | 14aacbc5256b0980c06495ef | SECURITY LABEL ON TABLE dummy_seclabel_tbl2 IS 'unclassified' |
-| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_SELECT_STMT | 14b18dd17c0c611955e76d6d | -- delete select delete('a=>1 , b=>2, c=>3'::hstore, 'a') |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 14b7ab052031dea2172fceac | create aggregate my_avg_init(int4) ( stype = avg_state, sfunc = avg_transfn, finalfunc = avg_finalfn, initcond = '(10,0)' ) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 14cad8b73bc9720e76b8c484 | -- without finalfunc; test obsolete spellings 'sfunc1' etc CREATE AGGREGATE newsum ( sfunc1 = int4pl, basetype = int4, stype1 = int4, initcond1 = '0' ) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OP_FAMILY_STMT | 14e863bdac22316a923868c5 | ALTER OPERATOR FAMILY isn_ops USING btree ADD OPERATOR 1 < (issn13, ean13), OPERATOR 1 < (issn13, issn), OPERATOR 2 <= (issn13, ean13), OPERATOR 2 <= (issn13, issn), OPERATOR 3 = (issn13, ean13), O... |
-| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_EXECUTE_STMT | 14e95241085f724610ec8863 | EXECUTE st(100) |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_COMMENT_STMT | 1528da8d1371c1ccc0674533 | -- Test comments COMMENT ON CONSTRAINT constrname_wrong ON FKTABLE IS 'fk constraint comment' |
-| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_EXECUTE_STMT | 1555ab804e8fcf551f5a75b4 | EXECUTE st2(10, 20) |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CLOSE_PORTAL_STMT | 15b3fa02bf835b8d2b679563 | CLOSE foo13 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OP_FAMILY_STMT | 15d3adff48146142fa762e55 | ALTER OPERATOR FAMILY gist_enum_ops USING gist ADD FUNCTION 11 (anyenum, anyenum) gbt_enum_sortsupport (internal) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OPERATOR_STMT | 15e586935f4dcbb76de9a7b1 | ALTER OPERATOR === (boolean, real) SET (HASHES) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DROP_STMT | 1618920bfa52bfc962819884 | DROP OPERATOR FAMILY alt_opf15 USING hash |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_OP_CLASS_STMT | 1643f99416af6ba7b7e1a7e4 | CREATE OPERATOR CLASS gist__ltree_ops DEFAULT FOR TYPE _ltree USING gist AS OPERATOR 10 <@ (_ltree, ltree), OPERATOR 11 @> (ltree, _ltree), OPERATOR 12 ~ (_ltree, lquery), OPERATOR 13 ~ (lquery, _l... |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DROP_STMT | 167bc8732efee588b0e6933f | DROP AGGREGATE testns.agg1(int) |
-| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_EXPLAIN_STMT | 169f263c11d9d293316f05ea | EXPLAIN (VERBOSE, COSTS OFF) EXECUTE async_pt_query (2000, 505) |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CLOSE_PORTAL_STMT | 16a2b423f0de5396aada2233 | CLOSE foo2 |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_FETCH_STMT | 16b16048a996a93e2a02cf48 | MOVE BACKWARD ALL FROM c |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_SEC_LABEL_STMT | 16b7684b62e6138a0208c217 | SECURITY LABEL ON FUNCTION f4() IS 'system_u:object_r:sepgsql_nosuch_trusted_proc_exec_t:s0' |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_ROLE_STMT | 16f346fc53c6f22b2701eaa1 | -- error ALTER ROLE PUBLIC WITH NOREPLICATION |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 170bddea6add7c14b44598c6 | CREATE OPERATOR = ( PROCEDURE = isneq, LEFTARG = ismn, RIGHTARG = ismn13, COMMUTATOR = =, NEGATOR = <>, RESTRICT = eqsel, JOIN = eqjoinsel, MERGES, HASHES) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_ROLE_STMT | 170df89fbb1ee8dbadc11811 | CREATE ROLE regress_pg_logicalinspect |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OPERATOR_STMT | 1712d0ecf72eb5747c3d3c93 | ALTER OPERATOR <@ (ltree, _ltree) SET (RESTRICT = matchingsel, JOIN = matchingjoinsel) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_ROLE_STMT | 1732f8f18222e511d4f4020a | -- permissions checks CREATE USER regress_view_user1 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OPERATOR_STMT | 17399992353f11ba967af613 | ALTER OPERATOR <= (ean13, ismn13) SET ( RESTRICT = scalarlesel, JOIN = scalarlejoinsel) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OP_FAMILY_STMT | 1747c549662f203b4f92fc32 | ALTER OPERATOR FAMILY alt_opf18 USING btree ADD OPERATOR 1 < (int4, int2) , OPERATOR 2 <= (int4, int2) , OPERATOR 3 = (int4, int2) , OPERATOR 4 >= (int4, int2) , OPERATOR 5 > (int4, int2) , FUNCTIO... |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_FETCH_STMT | 177dd054b7ab647f2d083b9c | FETCH 1 IN cursor_stats_2 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 17912f54a8b3bfdae802df71 | CREATE OPERATOR !+! (PROCEDURE = int4pl, LEFTARG = priv_testdomain1, RIGHTARG = priv_testdomain1) |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_FETCH_STMT | 17b025ad4e32510c4bf792c7 | FETCH NEXT FROM c_3 |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_FETCH_STMT | 17d0daab721da15256cf25c2 | fetch prior from rf_cur |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_ROLE_SET_STMT | 17ea0a8d2d5230dfad78a48e | ALTER ROLE "Public" RESET application_name |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 17f3f7e29627fe3593888238 | CREATE OPERATOR < ( PROCEDURE = isnlt, LEFTARG = issn, RIGHTARG = issn13, COMMUTATOR = >, NEGATOR = >=, RESTRICT = scalarltsel, JOIN = scalarltjoinsel) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_OP_FAMILY_STMT | 180914ab4ec595791acd1173 | -- Should fail. Only two arguments required for ALTER OPERATOR FAMILY ... DROP OPERATOR CREATE OPERATOR FAMILY alt_opf7 USING btree |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_FETCH_STMT | 1812b4780f4838e8232fa9e6 | move forward all in c1 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_ROLE_STMT | 18140f4322f5a00cc109d590 | CREATE ROLE regress_password_null PASSWORD NULL |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_ROLE_STMT | 182ecb1e55c60e544b9a4ae9 | CREATE ROLE regress_group_indirect_manager |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 183c1824f2c457e18e7bfea8 | CREATE OPERATOR <= ( PROCEDURE = isnle, LEFTARG = ismn13, RIGHTARG = ismn, COMMUTATOR = >=, NEGATOR = >, RESTRICT = scalarltsel, JOIN = scalarltjoinsel) |
-| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_EXECUTE_STMT | 184181ccf9f87f7d3ede3544 | EXECUTE cprep |
-| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_PREPARE_STMT | 18532b3bdd5e92e8af3001c3 | PREPARE plancache_test2 AS WITH q AS MATERIALIZED (SELECT * FROM z1 WHERE f_leak(b)) SELECT * FROM q,z2 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 18a5a45ca9ff0c83e48d7fb8 | CREATE OPERATOR = ( PROCEDURE = isneq, LEFTARG = ismn13, RIGHTARG = ismn13, COMMUTATOR = =, NEGATOR = <>, RESTRICT = eqsel, JOIN = eqjoinsel, MERGES, HASHES) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OP_FAMILY_STMT | 18b030e1a35d8fa52e3e172c | ALTER OPERATOR FAMILY gist_macaddr8_ops USING gist ADD FUNCTION 11 (macaddr8, macaddr8) gbt_macad8_sortsupport (internal) |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DECLARE_CURSOR_STMT | 18bc657d4b69b0ec72f690f1 | DECLARE c SCROLL CURSOR FOR SELECT ctid FROM tidrangescan WHERE ctid < '(1,0)' |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_ROLE_STMT | 193abe520ea01a1927a1d015 | -- end NOT NULL NOT VALID -- Comments -- Setup a low-level role to enforce non-superuser checks. CREATE ROLE regress_constraint_comments |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OP_FAMILY_STMT | 1961a6e235b7b39757ef48e5 | ALTER OPERATOR FAMILY gist_hstore_ops USING gist ADD FUNCTION 10 (hstore) ghstore_options (internal) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_ROLE_STMT | 1972f7f477709286e2b97ebb | CREATE ROLE regress_rol_op6 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 1989c1a05cd5b5d16f312526 | CREATE OPERATOR @> ( LEFTARG = _ltree, RIGHTARG = ltree, PROCEDURE = _ltree_isparent, COMMUTATOR = '<@', RESTRICT = contsel, JOIN = contjoinsel ) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OP_FAMILY_STMT | 19a2485bdb43a17c14d9e97f | ALTER OPERATOR FAMILY gist_bytea_ops USING gist ADD OPERATOR 6 <> (bytea, bytea) , FUNCTION 9 (bytea, bytea) gbt_var_fetch (internal) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 19a37c7527c069384361cd1e | CREATE TEXT SEARCH DICTIONARY hunspell_err ( Template=ispell, DictFile=ispell_sample, AffFile=hunspell_sample_long ) |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_FETCH_STMT | 19c383cd53f6639120308fab | FETCH 2 in foo2 |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_FETCH_STMT | 19e7c589289714cc5745a6cb | fetch backward all in c1 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_OP_CLASS_STMT | 19f40658d643d1669b4a82f8 | CREATE OPERATOR CLASS char_ops DEFAULT FOR TYPE "char" USING gin AS OPERATOR 1 <, OPERATOR 2 <=, OPERATOR 3 =, OPERATOR 4 >=, OPERATOR 5 >, FUNCTION 1 btcharcmp("char","char"), FUNCTION 2 gin_extra... |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_FETCH_STMT | 1a10d58d716f8497ed11983b | FETCH 8 in foo8 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_ROLE_STMT | 1a2164ca8e33da274eebb180 | CREATE ROLE regress_publication_user2 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DROP_STMT | 1a285933d168c07eb75c5cbc | DROP OPERATOR @#@ (int, int) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 1a4a8313900f6c7fb2cface4 | CREATE AGGREGATE schema_two.newton (BASETYPE = int, SFUNC = schema_two.add, STYPE = int) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_ROLE_STMT | 1aa39c044a2b0552d6615c00 | create user regress_insert_other_user |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_ROLE_STMT | 1aa7f7250bd8c105ed34258d | CREATE ROLE regress_stat_scan_tables IN ROLE pg_stat_scan_tables |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DROP_STMT | 1aa9d960a3485835f98785b4 | DROP AGGREGATE myavg (numeric) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_OP_CLASS_STMT | 1abb1bc0b7219fb73b54f978 | CREATE OPERATOR CLASS upc_ops DEFAULT FOR TYPE upc USING hash FAMILY isn_ops AS OPERATOR 1 =, FUNCTION 1 hashupc(upc) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 1acff932dbf549d9f92178b6 | create text search dictionary alter1.dict(template = alter1.tmpl) |
-| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEALLOCATE_STMT | 1b1edb0c9232c5c9076a71a4 | DEALLOCATE pgss_test |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_SEC_LABEL_STMT | 1b23fb03a8e790514a9b5f6a | SECURITY LABEL ON COLUMN t1p.p IS 'system_u:object_r:sepgsql_ro_table_t:s0' |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_FETCH_STMT | 1b242ae99933f6378c49e9ad | FETCH 20 in foo20 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_OP_CLASS_STMT | 1b40695dcfa2a81d71ad9411 | CREATE OPERATOR CLASS uuid_ops DEFAULT FOR TYPE uuid USING gin AS OPERATOR 1 <, OPERATOR 2 <=, OPERATOR 3 =, OPERATOR 4 >=, OPERATOR 5 >, FUNCTION 1 uuid_cmp(uuid,uuid), FUNCTION 2 gin_extract_valu... |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OWNER_STMT | 1b4ead4d1e3e47a1558cbe17 | -- failed (no role membership) ALTER AGGREGATE alt_agg2(int) OWNER TO regress_alter_generic_user3 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 1b5c1205490f8e77ea9d5391 | CREATE OPERATOR >= ( PROCEDURE = isnge, LEFTARG = issn, RIGHTARG = issn, COMMUTATOR = <=, NEGATOR = <, RESTRICT = scalargtsel, JOIN = scalargtjoinsel ) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OP_FAMILY_STMT | 1b69a1d8e075f10510123ad7 | ALTER OPERATOR FAMILY gist_bpchar_ops USING gist ADD OPERATOR 6 <> (bpchar, bpchar) , FUNCTION 9 (bpchar, bpchar) gbt_var_fetch (internal) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_OP_CLASS_STMT | 1b80191cea2a654d5d3e3370 | CREATE OPERATOR CLASS text_ops DEFAULT FOR TYPE text USING bloom AS OPERATOR 1 =(text, text), FUNCTION 1 hashtext(text) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_ROLE_STMT | 1ba8988bed231c758f10ba8f | CREATE USER regress_merge_none |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_FETCH_STMT | 1bdd77fa71d58d3728cab6f8 | FETCH backward 9 in foo15 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DROP_STMT | 1bf7833a7c84ced9bfb7b055 | DROP OPERATOR @!= (boolean, real) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OPERATOR_STMT | 1c2bba94ee212de9c654ec1d | ALTER OPERATOR ^<@ (_ltree, ltree) SET (RESTRICT = matchingsel, JOIN = matchingjoinsel) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 1c2c3638d331dd61d9f3966b | CREATE AGGREGATE myaggn07b(BASETYPE = anyelement, SFUNC = tfnp, STYPE = int[], INITCOND = '{}') |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_ROLE_STMT | 1c4012ac6667b05e03ecd404 | -- duplicate CREATE USER regress_priv_user6 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 1c51a0165c43f417773975cb | CREATE TEXT SEARCH CONFIGURATION en (copy=english) |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_FETCH_STMT | 1c7ea0ec0d8958409b4ec88d | FETCH BACKWARD 1 FROM c |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OPERATOR_STMT | 1c8eea5d59f3caec9df42354 | ALTER OPERATOR ^@> (ltree, ltree) SET (RESTRICT = matchingsel, JOIN = matchingjoinsel) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 1cb50b41c232a2615775071a | CREATE OPERATOR <-> ( LEFTARG = int8, RIGHTARG = int8, PROCEDURE = int8_dist, COMMUTATOR = '<->' ) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 1cd2aa227fb22097e845bab6 | CREATE COLLATION ctest_nondet (provider = icu, locale = '', deterministic = false) |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_FETCH_STMT | 1ce8aa7c713e777a58a6087e | FETCH ABSOLUTE 2 FROM foo24 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 1d28bf717e42a08a817793cf | CREATE OPERATOR <-> ( LEFTARG = float8, RIGHTARG = float8, PROCEDURE = float8_dist, COMMUTATOR = '<->' ) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 1d4db715f9b0a84679aa488e | CREATE AGGREGATE myaggn05b(BASETYPE = int, SFUNC = tfnp, STYPE = int[], INITCOND = '{}') |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 1d5ec1e4b1608f860ac20e88 | CREATE OPERATOR <= ( LEFTARG = int_custom, RIGHTARG = int_custom, FUNCTION = int_custom_le, COMMUTATOR = >=, NEGATOR = >, RESTRICT = scalarlesel, JOIN = scalarlejoinsel ) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DROP_STMT | 1d6080a711e5f298dd88a3f6 | DROP AGGREGATE IF EXISTS foo(no_such_schema.no_such_type) |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_FETCH_STMT | 1d765748d43db85d16c94d36 | FETCH all in foo15 |
-| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_EXPLAIN_STMT | 1dbc0612f48197bd912f4b7a | EXPLAIN (VERBOSE, COSTS OFF) EXECUTE st4(1) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_ROLE_STMT | 1dcf4fdb1b2a10d845096405 | CREATE ROLE regress_nosuch_superuser SUPERUSER |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OPERATOR_STMT | 1dd709d022c84f759d633ce8 | ALTER OPERATOR ~ (_int4, _int4) SET (RESTRICT = _int_contained_sel, JOIN = _int_contained_joinsel) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 1de0867e46e875b67683a96c | CREATE OPERATOR ^? ( LEFTARG = _lquery, RIGHTARG = ltree, PROCEDURE = lt_q_rregex, COMMUTATOR = '^?', RESTRICT = contsel, JOIN = contjoinsel ) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 1e6bce76457d52f6606d9e8d | CREATE OPERATOR <= ( PROCEDURE = isnle, LEFTARG = isbn13, RIGHTARG = isbn, COMMUTATOR = >=, NEGATOR = >, RESTRICT = scalarltsel, JOIN = scalarltjoinsel) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 1e78b21e90f6e957913a2015 | CREATE OPERATOR @= ( LEFTARG = real, RIGHTARG = boolean, PROCEDURE = alter_op_test_fn_real_bool ) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 1e8d459ad2edc4d606700c18 | CREATE COLLATION test3 (provider = icu, lc_collate = 'en_US.utf8') |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FUNCTION_STMT | 1e9462c765c0d0f283e77b20 | CREATE FUNCTION pgp_armor_headers(text, key OUT text, value OUT text) RETURNS SETOF record AS 'MODULE_PATHNAME', 'pgp_armor_headers' LANGUAGE C IMMUTABLE STRICT |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OP_FAMILY_STMT | 1e9f3501c5fb5930e3a66313 | ALTER OPERATOR FAMILY isn_ops USING hash ADD OPERATOR 1 = (isbn13, ean13), OPERATOR 1 = (isbn13, isbn) |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DECLARE_CURSOR_STMT | 1ea50e03bd685769a7e2f1e1 | DECLARE foo19 CURSOR FOR SELECT * FROM onek WHERE unique1 = 56 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_ROLE_STMT | 1ea86ab9a35ae50d0df4b9d1 | ALTER ROLE regress_replication NOREPLICATION |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_EXPLAIN_STMT | 1ebf11ff01f7afe2fe8be593 | -- unfortunately can't show analyze output confirming sort method, -- the memory used output wouldn't be stable EXPLAIN (COSTS OFF) DECLARE c SCROLL CURSOR FOR SELECT noabort_decreasing FROM abbrev... |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 1eef3f387806bfa9301add84 | CREATE OPERATOR >= ( PROCEDURE = isnge, LEFTARG = issn13, RIGHTARG = issn13, COMMUTATOR = <=, NEGATOR = <, RESTRICT = scalargtsel, JOIN = scalargtjoinsel ) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OPERATOR_STMT | 1effe20555566669f309e953 | ALTER OPERATOR === (boolean, real) SET (MERGES) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 1f3cca1c3f823a3de65af8a3 | -- fails CREATE COLLATION builtin2 ( PROVIDER = builtin, LC_CTYPE = "C", LC_COLLATE = "C" ) |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_COMMENT_STMT | 1f923963b2801df6400eddc4 | COMMENT ON INDEX six IS NULL |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_ROLE_STMT | 1faf24958499c228f36f3f89 | CREATE ROLE regress_stats_ext |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 1faf5ea92cb5460afecfb0e6 | -- -- Text Search Template -- CREATE TEXT SEARCH TEMPLATE alt_ts_temp1 (lexize=dsimple_lexize) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OP_FAMILY_STMT | 1fcde82c98913e6863690752 | ALTER OPERATOR FAMILY gist_float8_ops USING gist ADD FUNCTION 11 (float8, float8) gbt_float8_sortsupport (internal) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 1fdcb2c4fcebb8ef9c820ec6 | CREATE OPERATOR = ( PROCEDURE = isneq, LEFTARG = issn13, RIGHTARG = ean13, COMMUTATOR = =, NEGATOR = <>, RESTRICT = eqsel, JOIN = eqjoinsel, MERGES, HASHES) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 1fe9d13b54030bb667f92648 | CREATE OPERATOR ~ ( LEFTARG = hstore, RIGHTARG = hstore, PROCEDURE = hs_contained, COMMUTATOR = '@', RESTRICT = contsel, JOIN = contjoinsel ) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DROP_STMT | 1ff451eaf66eba002bb22792 | DROP OPERATOR FAMILY test_operator_family USING btree |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 2022e57787fe7c042ca655ec | -- -- Test builtin "C" -- CREATE COLLATION regress_builtin_c ( provider = builtin, locale = 'C') |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_ROLE_STMT | 203338bf68800ce5e57e1782 | -- test SET and INHERIT options with object ownership changes CREATE ROLE regress_roleoption_protagonist |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_COMMENT_STMT | 203f3d978b105376cad5a5e2 | COMMENT ON VIEW datatype_view IS 'This is a view' |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 204a8f7fd01ce45aef726e28 | -- Case4 (R = N) && ((B = P) \|\| (B = N)) -- ------------------------------------- -- S tf1 B tf2 -- ----------------------- -- N N N N -- should CREATE CREATE AGGREGATE myaggn05a(BASETYPE = int, SF... |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CLOSE_PORTAL_STMT | 204ae18ed2016c02fa584a05 | CLOSE foo21 |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DECLARE_CURSOR_STMT | 205b6949e0fa81cc09dc713c | DECLARE foo20 SCROLL CURSOR FOR SELECT * FROM tenk2 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_ROLE_STMT | 205f87b9b59560af0efb8201 | ALTER USER regress_priv_user2 PASSWORD 'verysecret' |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_FETCH_STMT | 207639c90df26131e0359b66 | FETCH backward 23 in foo1 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 2077473c0f190c82fa19e286 | -- P P N P -- should ERROR: tfp(anyarray, int) not matched by tfp(anyarray, anyelement) CREATE AGGREGATE myaggn18a(BASETYPE = int, SFUNC = tfp, STYPE = anyarray, FINALFUNC = ffnp, INITCOND = '{}') |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OPERATOR_STMT | 209279599734f1f8e2b39814 | ALTER OPERATOR >= (ismn, ismn) SET ( RESTRICT = scalargesel, JOIN = scalargejoinsel) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 20949b58b359b6d161f0164a | -- -- OPERATORS -- CREATE OPERATOR < ( LEFTARG = seg, RIGHTARG = seg, PROCEDURE = seg_lt, COMMUTATOR = '>', NEGATOR = '>=', RESTRICT = scalarltsel, JOIN = scalarltjoinsel ) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 20c3c04973e8cf7ef7873b2d | CREATE OPERATOR = ( leftarg = casttesttype, rightarg = casttesttype, procedure = casttesttype_eq, commutator = =) |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_FETCH_STMT | 20e17473f81364f8b6bc9bdb | fetch backward 1 in c2 |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_COMMENT_STMT | 20e22e1eda17e2c5447d281b | COMMENT ON TYPE int2range IS 'RANGE test' |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_ROLE_STMT | 20e3152a4b8ffd80e66b1ca8 | ALTER ROLE regress_test_role_canlogin WITH LOGIN |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_ROLE_SET_STMT | 20effa5406fa9cf0b8adb488 | ALTER ROLE CURRENT_ROLE SET application_name to 'BAZ' |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_COMMENT_STMT | 20f13bc0922141049778d093 | COMMENT ON ROLE regress_hasprivs IS NULL |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_COMMENT_STMT | 210fd3666d4c783515a4035b | COMMENT ON INDEX ctlt1_pkey IS 'index pkey' |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OP_FAMILY_STMT | 2110ee6d3cf0f239372b4509 | ALTER OPERATOR FAMILY isn_ops USING btree ADD OPERATOR 1 < (issn, ean13), OPERATOR 1 < (issn, issn13), OPERATOR 2 <= (issn, ean13), OPERATOR 2 <= (issn, issn13), OPERATOR 3 = (issn, ean13), OPERATO... |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OPERATOR_STMT | 2128a31f4ec6302bd6ef52cb | ALTER OPERATOR >= (ismn13, ismn) SET ( RESTRICT = scalargesel, JOIN = scalargejoinsel) |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_FETCH_STMT | 212ed8302d7f0204becc2017 | FETCH backward 17 in foo7 |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_SEC_LABEL_STMT | 2133637ae018d34661ad5e54 | SECURITY LABEL ON FUNCTION dummy_seclabel_four() IS 'classified' |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_ROLE_STMT | 21487beeb52c37f094cd032b | CREATE USER regress_test_user_canlogin WITH NOLOGIN |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FUNCTION_STMT | 215f526eb10094ecc3e4dfff | -- check defaults for variadics create function dfunc(a variadic int[]) returns int as $$ select array_upper($1, 1) $$ language sql |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 216c677abb12d64efd92cc66 | CREATE COLLATION test4 FROM nonsense |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_ROLE_STMT | 2186f725afb150c5e86667b8 | CREATE USER regress_alter_generic_user3 |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_FETCH_STMT | 218d3d2592982c47192cf67c | FETCH ABSOLUTE -1 FROM foo25 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DROP_STMT | 21af0a7e5978a1c79e41596b | DROP OPERATOR ~ (hstore, hstore) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OWNER_STMT | 21c41073c08a999d3352c63e | -- OK ALTER AGGREGATE alt_agg2(int) OWNER TO regress_alter_generic_user2 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_ROLE_STMT | 21ccc5e301ff17f1573290f1 | CREATE USER regress_merge_no_privs |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OPERATOR_STMT | 21d4638c3f17f692304b12d7 | ALTER OPERATOR ^<@ (ltree, _ltree) SET (RESTRICT = matchingsel, JOIN = matchingjoinsel) |
-| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_PREPARE_STMT | 21d4ec03ac5afc52e06b4f2a | PREPARE select1 AS SELECT 1 as a |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DROP_STMT | 226610afec38a37c40747bea | -- fail DROP AGGREGATE priv_testagg1(int) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 227593c82a5b636e90c71074 | CREATE OPERATOR < ( PROCEDURE = isnlt, LEFTARG = ean13, RIGHTARG = ismn13, COMMUTATOR = >, NEGATOR = >=, RESTRICT = scalarltsel, JOIN = scalarltjoinsel) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OP_FAMILY_STMT | 227a5ff8dc8065846411fce5 | ALTER OPERATOR FAMILY gist_bpchar_ops USING gist ADD FUNCTION 12 ("any", "any") gist_translate_cmptype_btree (int) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OP_FAMILY_STMT | 22c0e844af6c935db1bd8c6e | ALTER OPERATOR FAMILY alt_opf8 USING btree ADD OPERATOR 1 < (int4, int4) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_OP_CLASS_STMT | 22c3e34aff18a94c4db07ccd | CREATE OPERATOR CLASS oid_ops DEFAULT FOR TYPE oid USING gin AS OPERATOR 1 <, OPERATOR 2 <=, OPERATOR 3 =, OPERATOR 4 >=, OPERATOR 5 >, FUNCTION 1 btoidcmp(oid,oid), FUNCTION 2 gin_extract_value_oi... |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 22f1226fe557d0f72b2a1c0e | CREATE OPERATOR <% ( LEFTARG = text, RIGHTARG = text, PROCEDURE = word_similarity_op, COMMUTATOR = '%>', RESTRICT = contsel, JOIN = contjoinsel ) |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_COMMENT_STMT | 22f42d70609b43dde224b30f | COMMENT ON COLUMN default_test_row.nope IS 'bad comment' |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OP_FAMILY_STMT | 22f78cc33b4a69059d9b0599 | ALTER OPERATOR FAMILY alt_nsp6.alt_opf6 USING btree ADD OPERATOR 1 < (int4, int2) |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_FETCH_STMT | 2331ae5d282adca39609a50e | FETCH all in foo18 |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DECLARE_CURSOR_STMT | 236a937cafd1a177ad7ae41c | DECLARE c1 CURSOR FOR SELECT * FROM uctest a, uctest b WHERE a.f1 = b.f1 + 5 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_ROLE_STMT | 237f79f59ec4934d2c8049b7 | ALTER ROLE regress_test_inherit WITH NOINHERIT |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_ROLE_STMT | 23ae2e0dc11df073f5b1512b | -- SET statements. -- These use two different strings, still they count as one entry. CREATE ROLE regress_stat_set_1 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_EXPLAIN_STMT | 23b294c96ac4417c5278f0f4 | explain (costs off) declare c2 cursor for select generate_series(1,3) as g |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 240b46d4bc7029dfd9bd50cd | -- P P P N -- should ERROR: tf1p(anyarray, anyelement) not matched by tf1p(anyarray, int) CREATE AGGREGATE myaggn19a(BASETYPE = anyelement, SFUNC = tf1p, STYPE = anyarray, FINALFUNC = ffnp, INITCON... |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_ROLE_STMT | 242838c658fa46e29d7aba01 | CREATE ROLE regress_encrypted_password ENCRYPTED PASSWORD 'foo' |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_FETCH_STMT | 24d0d9e0be98105bb896b7b8 | FETCH 15 in foo15 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_ROLE_STMT | 24e45da5140aae17003b649d | CREATE ROLE regress_test_role2 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 24f8150858c146ce029186e1 | CREATE OPERATOR >= ( PROCEDURE = isnge, LEFTARG = ean13, RIGHTARG = upc, COMMUTATOR = <=, NEGATOR = <, RESTRICT = scalargtsel, JOIN = scalargtjoinsel) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OP_FAMILY_STMT | 250cc4c43d802ba300154a0b | ALTER OPERATOR FAMILY alt_opf12 USING btree ADD FUNCTION 1 fn_opf12(int4, int2) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 2515fbeedaf0296b3840839e | CREATE AGGREGATE myaggn14b(BASETYPE = int, SFUNC = tf2p, STYPE = anyarray, INITCOND = '{}') |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OPERATOR_STMT | 2521b47e43ee7edc55b7fbed | ALTER OPERATOR >= (isbn13, isbn) SET ( RESTRICT = scalargesel, JOIN = scalargejoinsel) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_ROLE_STMT | 254d96270e336c876ff634c1 | ALTER ROLE regress_createdb SUPERUSER |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_OP_CLASS_STMT | 255e6ab58fd92ed68ccaff67 | CREATE OPERATOR CLASS bytea_ops DEFAULT FOR TYPE bytea USING gin AS OPERATOR 1 <, OPERATOR 2 <=, OPERATOR 3 =, OPERATOR 4 >=, OPERATOR 5 >, FUNCTION 1 byteacmp(bytea,bytea), FUNCTION 2 gin_extract_... |
-| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEALLOCATE_STMT | 25a7658f969ba34fa8547e72 | deallocate mt_q1 |
-| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_EXECUTE_STMT | 25a7b45aaa20c17b3cf1d3c6 | -- should fail execute s1(NULL) |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DECLARE_CURSOR_STMT | 25d0d1309d5c601707e62bcf | DECLARE foo26 CURSOR WITH HOLD FOR SELECT * FROM tenk1 ORDER BY unique2 |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CLOSE_PORTAL_STMT | 25dba4eb807fd8cc26cde487 | CLOSE cursor_stats_1 |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DECLARE_CURSOR_STMT | 25efb4c4cc9cdcc57be4d3c9 | DECLARE foo25 CURSOR FOR SELECT * FROM onek2 WHERE unique1 = 60 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_ROLE_STMT | 26c72bde33eeda145fe4b9c3 | CREATE ROLE regress_group_member |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_OP_CLASS_STMT | 26c9fc46d8265349a73c7074 | CREATE OPERATOR CLASS time_ops DEFAULT FOR TYPE time USING gin AS OPERATOR 1 <, OPERATOR 2 <=, OPERATOR 3 =, OPERATOR 4 >=, OPERATOR 5 >, FUNCTION 1 time_cmp(time,time), FUNCTION 2 gin_extract_valu... |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_COMMENT_STMT | 26ddda87f6093c4fa1a878bb | COMMENT ON CONSTRAINT the_constraint ON DOMAIN constraint_comments_dom IS 'yes, another comment' |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 27126d85d7e4d5af7ddd5e4e | CREATE OPERATOR > ( PROCEDURE = isngt, LEFTARG = ean13, RIGHTARG = issn13, COMMUTATOR = <, NEGATOR = <=, RESTRICT = scalargtsel, JOIN = scalargtjoinsel) |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_FETCH_STMT | 272312ec1f18d324f792d58e | FETCH NEXT pgss_cursor |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OP_FAMILY_STMT | 278cb3beca990ed45f78f0ac | -- Should fail. Not allowed to have cross-type skip support function. ALTER OPERATOR FAMILY alt_opf18 USING btree ADD FUNCTION 6 (int4, int2) btint4skipsupport(internal) |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_COMMENT_STMT | 2792036dead209b566ecfaac | comment on index at_partitioned_1_id_name_key is 'child 1 index' |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 279c74c35f5c42d4e44dd109 | CREATE OPERATOR ?@ ( LEFTARG = _ltree, RIGHTARG = ltxtquery, PROCEDURE = _ltxtq_extract_exec ) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_ROLE_STMT | 27d41b34d459500e6186c34b | ALTER USER CURRENT_ROLE WITH NOREPLICATION |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 27d9c488331a1883093c55e5 | CREATE TEXT SEARCH CONFIGURATION addr_ts_conf (copy=english) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 27dff5b27ef09250b2d96ff9 | CREATE OPERATOR %# ( RIGHTARG = hstore, PROCEDURE = hstore_to_matrix ) |
-| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_EXPLAIN_STMT | 280c0ce6cbd7acff1e220865 | -- Ensure MergeAppend behaves correctly when no subplans match explain (analyze, costs off, summary off, timing off, buffers off) execute mt_q1(35) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_ROLE_STMT | 282a683a1e7fcc9bc4e54487 | CREATE ROLE regress_datdba_before |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 282f554fc27c83399d63aee2 | create aggregate sum2(int8,int8) ( sfunc = sum3, stype = int8, initcond = '0' ) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_OP_CLASS_STMT | 28409fe06887df113b3a00b2 | CREATE OPERATOR CLASS int4_ops DEFAULT FOR TYPE int4 USING gin AS OPERATOR 1 <, OPERATOR 2 <=, OPERATOR 3 =, OPERATOR 4 >=, OPERATOR 5 >, FUNCTION 1 btint4cmp(int4,int4), FUNCTION 2 gin_extract_val... |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CLOSE_PORTAL_STMT | 28415c3315eff6815a0242da | CLOSE foo25 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OP_FAMILY_STMT | 287e3116fff73a029e6d2f73 | -- operator 1 requested again in separate statement ALTER OPERATOR FAMILY alt_opf17 USING btree ADD OPERATOR 1 < (int4, int2) , OPERATOR 2 <= (int4, int2) , OPERATOR 3 = (int4, int2) , OPERATOR 4 >... |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_ROLE_STMT | 288a8d93c660629d01a21ead | CREATE ROLE regress_createrole CREATEROLE NOINHERIT |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FUNCTION_STMT | 2912c3537ac75b729af2d9e2 | CREATE PROCEDURE ptestx(a int DEFAULT 42, b OUT int) LANGUAGE SQL AS $$ SELECT a $$ |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 292175e7bd01741493e7c2af | CREATE COLLATION testcoll_backwards (provider = icu, locale = '@colBackwards=yes') |
-| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_SELECT_STMT | 29356910aef45f07defcb697 | SELECT set('t') |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 293bb988efd4b3892b1ea4de | CREATE OPERATOR # ( RIGHTARG = _int4, PROCEDURE = icount ) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 2959827457d0fe4d130b6b2d | CREATE OPERATOR <= ( LEFTARG = seg, RIGHTARG = seg, PROCEDURE = seg_le, COMMUTATOR = '>=', NEGATOR = '>', RESTRICT = scalarltsel, JOIN = scalarltjoinsel ) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OWNER_STMT | 29769df684666a2cdfccc35b | ALTER OPERATOR FAMILY alt_opf1 USING hash OWNER TO regress_alter_generic_user1 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 29782ae9a15ce279a2bcf55c | CREATE OPERATOR <= ( PROCEDURE = isnle, LEFTARG = ean13, RIGHTARG = ismn13, COMMUTATOR = >=, NEGATOR = >, RESTRICT = scalarltsel, JOIN = scalarltjoinsel) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OP_FAMILY_STMT | 298431a759bfa3a0b85b7c3c | ALTER OPERATOR FAMILY gist__int_ops USING gist ADD FUNCTION 10 (_int4) g_int_options (internal) |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_FETCH_STMT | 29942f9cce09e7e643138dae | MOVE BACKWARD 10000 FROM c |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DROP_STMT | 29bf995a574a2292f8fb8265 | DROP OPERATOR IF EXISTS + (no_such_type, no_such_type) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 29e79bc26fdb225cab22c99c | create operator = ( leftarg = myint, rightarg = myint, commutator = =, negator = <>, procedure = myinteq, restrict = eqsel, join = eqjoinsel, merges ) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_ROLE_STMT | 2a1cf4a39b4c7a8c29832604 | ALTER ROLE CURRENT_USER WITH REPLICATION |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DECLARE_CURSOR_STMT | 2a3ad9c6e0879a3fe843e605 | DECLARE foo21 CURSOR FOR SELECT * FROM onek WHERE unique1 = 58 |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_COMMENT_STMT | 2a4098a208239a57c1a44e0c | COMMENT ON COLUMN comment_test_child.id IS 'Column ''id'' on comment_test_child' |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 2a4d1d5bc5e294def2b803f5 | -- nondeterministic collations -- (not supported with libc provider) CREATE COLLATION ctest_det (locale = 'en_US.utf8', deterministic = true) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_ROLE_STMT | 2a4e76fcdf6b3c8dd3408be4 | ALTER ROLE regress_passwd_empty PASSWORD 'md585939a5ce845f1a1b620742e3c659e0a' |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 2a5db8de095702ee60e68f91 | -- LOCALE conflicts with LC_COLLATE and LC_CTYPE CREATE COLLATION coll_dup_chk (LC_COLLATE = "POSIX", LC_CTYPE = "POSIX", LOCALE = '') |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DISCARD_STMT | 2a5eaf3fde06497b22705d9e | DISCARD SEQUENCES |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_OP_FAMILY_STMT | 2a695075500920760f481ee2 | -- Should fail. Invalid opclass options function (#5) specifications. CREATE OPERATOR FAMILY alt_opf19 USING btree |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 2a9bbbb73e966de739836c58 | CREATE OPERATOR -> ( LEFTARG = cube, RIGHTARG = int, PROCEDURE = cube_coord ) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OP_FAMILY_STMT | 2ab97b70c7c6d7d50dac85a8 | ALTER OPERATOR FAMILY gist_timestamptz_ops USING gist ADD FUNCTION 12 ("any", "any") gist_translate_cmptype_btree (int) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OPERATOR_STMT | 2ac1372a6ffd2fd092d619eb | ALTER OPERATOR <= (issn, ean13) SET ( RESTRICT = scalarlesel, JOIN = scalarlejoinsel) |
-| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_PREPARE_STMT | 2ac5d768ca2bcb1d9548b3a6 | PREPARE q4(nonexistenttype) AS SELECT $1 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 2aca06aedf50098c5113dbf9 | CREATE OPERATOR >= ( PROCEDURE = isnge, LEFTARG = isbn13, RIGHTARG = isbn13, COMMUTATOR = <=, NEGATOR = <, RESTRICT = scalargtsel, JOIN = scalargtjoinsel ) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 2adf2a3fd456796ef4fd01a3 | CREATE OPERATOR #*# ( rightarg = SETOF int8, procedure = factorial ) |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_COMMENT_STMT | 2b03db65b5bc373c8e2d2f13 | -- Test comments COMMENT ON RULE rtest_v1_bad ON rtest_v1 IS 'bad rule' |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 2b0ec774181d94253c501dc6 | CREATE COLLATION regress_pg_c_utf8 ( provider = builtin, locale = 'C.UTF-8') |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 2b2ce012afb841248321761f | CREATE OPERATOR @!= ( LEFTARG = boolean, RIGHTARG = real, PROCEDURE = alter_op_test_fn_bool_real ) |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_FETCH_STMT | 2b7d945e62cc169c76f90cee | FETCH 6 in foo6 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OWNER_STMT | 2b903db31ac32fa5d5ff7038 | -- failed (no role membership) ALTER OPERATOR @+@(int4, int4) OWNER TO regress_alter_generic_user3 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 2b9c544a15e593813606d723 | CREATE OPERATOR <= ( PROCEDURE = isnle, LEFTARG = ean13, RIGHTARG = ismn, COMMUTATOR = >=, NEGATOR = >, RESTRICT = scalarltsel, JOIN = scalarltjoinsel) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 2ba61272a22b06dc38d23aa0 | CREATE OPERATOR <= ( PROCEDURE = isnle, LEFTARG = ean13, RIGHTARG = ean13, COMMUTATOR = >=, NEGATOR = >, RESTRICT = scalarltsel, JOIN = scalarltjoinsel) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DROP_STMT | 2bb2d0a8fc5d695986ddd089 | DROP OPERATOR FAMILY alt_opf9 USING gist |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 2bcbb725ef65d69ef622100a | CREATE OPERATOR <#> ( LEFTARG = cube, RIGHTARG = cube, PROCEDURE = distance_taxicab, COMMUTATOR = '<#>' ) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_OP_CLASS_STMT | 2bd44b0de125ceaa09f3a889 | CREATE OPERATOR CLASS ismn_ops DEFAULT FOR TYPE ismn USING btree FAMILY isn_ops AS OPERATOR 1 <, OPERATOR 2 <=, OPERATOR 3 =, OPERATOR 4 >=, OPERATOR 5 >, FUNCTION 1 btismncmp(ismn, ismn) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OP_FAMILY_STMT | 2bf1bb890c91a90e2d099f9b | ALTER OPERATOR FAMILY gist_macaddr_ops USING gist ADD FUNCTION 11 (macaddr, macaddr) gbt_macaddr_sortsupport (internal) |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_SEC_LABEL_STMT | 2bfc096d692cebdaf0f65e29 | SECURITY LABEL ON COLUMN dummy_seclabel_tbl1 IS 'unclassified' |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 2c0f714ecf4c45adcb8513af | CREATE OPERATOR <-> ( LEFTARG = timestamp, RIGHTARG = timestamp, PROCEDURE = ts_dist, COMMUTATOR = '<->' ) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OP_FAMILY_STMT | 2c1230d52c4994af082432ff | ALTER OPERATOR FAMILY gist_timestamp_ops USING gist ADD FUNCTION 11 (timestamp, timestamp) gbt_ts_sortsupport (internal) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OWNER_STMT | 2c3a9550566062c1b7394d80 | -- error ALTER AGGREGATE testagg6(int2) OWNER TO nonexistent |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OP_FAMILY_STMT | 2c4b03f4a3a46e5fff9887c9 | ALTER OPERATOR FAMILY gist_timestamp_ops USING gist ADD FUNCTION 9 (timestamp, timestamp) gbt_ts_fetch (internal) |
-| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_PREPARE_STMT | 2c9664cc422d3b7e410adf4c | PREPARE foo (xml) AS SELECT xmlconcat('<foo/>', $1) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OWNER_STMT | 2cb996c6109adbd633b65c85 | ALTER AGGREGATE testagg5(int2) OWNER TO regress_testrolx |
-| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_EXECUTE_STMT | 2cc3839e75a4c0d99fea18f7 | EXECUTE pp |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DECLARE_CURSOR_STMT | 2cc424d90f267b1ae9011a87 | declare c2 cursor for select * from int8_tbl limit 3 |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_COMMENT_STMT | 2cd73c5684ecbd91346a85c9 | COMMENT ON INDEX comment_test_pk IS 'Index backing the PRIMARY KEY of comment_test' |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DROP_STMT | 2cde49328d30d177d67857b6 | DROP OPERATOR ~ (_int4, _int4) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DROP_STMT | 2cf8079e35a7b95ffb02aadd | DROP OPERATOR CLASS IF EXISTS no_such_schema.widget_ops USING btree |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_SEC_LABEL_STMT | 2d3ee2e87c42e6a4a716c54b | SECURITY LABEL ON ROLE regress_dummy_seclabel_user3 IS '...invalid label...' |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_COMMENT_STMT | 2d5ef83192aff853f68cfe93 | COMMENT ON STATISTICS ab1_a_b_stats IS 'changed comment' |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 2d6e0a52234b533faaf47b56 | CREATE OPERATOR ==== ( LEFTARG = real, RIGHTARG = boolean, PROCEDURE = alter_op_test_fn_real_bool ) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_ROLE_STMT | 2d8d5e016db7c503a37e3302 | CREATE ROLE regress_passwd3 PASSWORD 'role_pwd3' |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_COMMENT_STMT | 2dc70900eb38110c5d1eaa03 | COMMENT ON FUNCTION cube_contains(cube, cube) IS 'contains' |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 2df7377799257a228ebd0704 | CREATE OPERATOR - ( LEFTARG = hstore, RIGHTARG = text, PROCEDURE = delete ) |
-| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_EXPLAIN_STMT | 2df95d9570b2f9d45b90ca26 | EXPLAIN (COSTS OFF) EXECUTE test(NULL, 3.14, NULL) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 2dfbfd561d428c7bdaeba34c | CREATE OPERATOR = ( PROCEDURE = isneq, LEFTARG = ean13, RIGHTARG = ismn13, COMMUTATOR = =, NEGATOR = <>, RESTRICT = eqsel, JOIN = eqjoinsel, MERGES, HASHES) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OPERATOR_STMT | 2e17d37b1a0dd6f7cb4a9844 | ALTER OPERATOR >= (issn13, issn13) SET ( RESTRICT = scalargesel, JOIN = scalargejoinsel) |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_COMMENT_STMT | 2e8cb53bc6bd434e2bcdfeea | COMMENT ON TYPE isbn IS 'International Standard Book Number (ISBN)' |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OPERATOR_STMT | 2ee05a36bec9080c7884e8ba | ALTER OPERATOR @ (ltxtquery, _ltree) SET (RESTRICT = matchingsel, JOIN = matchingjoinsel) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DROP_STMT | 2eed0561b58ec53045183a15 | -- no such type1 drop operator = (nonesuch, int4) |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_FETCH_STMT | 2ef848997822bcd758c37fe8 | -- scroll beyond end FETCH LAST FROM c |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_OP_CLASS_STMT | 2f33e7fa01861268a44f3aac | CREATE OPERATOR CLASS name_ops DEFAULT FOR TYPE name USING spgist AS OPERATOR 1 < , OPERATOR 2 <= , OPERATOR 3 = , OPERATOR 4 >= , OPERATOR 5 > , FUNCTION 1 spgist_name_config(internal, internal), ... |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OP_FAMILY_STMT | 2f49e3b36f0ee08c2c539c5f | ALTER OPERATOR FAMILY gist_cash_ops USING gist ADD FUNCTION 9 (money, money) gbt_cash_fetch (internal) |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DECLARE_CURSOR_STMT | 2f89d637df95cb59ac8c247a | DECLARE foo14 CURSOR FOR SELECT * FROM onek WHERE unique1 = 51 |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_FETCH_STMT | 2fbef2211373a2ee6eab3dd5 | FETCH ok |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 2fc54717df99f5d7fa4215d6 | -- fail -- invalid: non-lowercase quoted identifiers CREATE COLLATION case_coll ("Lc_Collate" = "POSIX", "Lc_Ctype" = "POSIX") |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 302a8cba386439c3c49ebce4 | -- ensure create aggregate works. CREATE AGGREGATE myavg (numeric) ( stype = internal, sfunc = numeric_avg_accum, finalfunc = numeric_avg, serialfunc = numeric_avg_serialize, deserialfunc = numeric... |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OPERATOR_STMT | 302fd3797b5b53adb63d9ec1 | ALTER OPERATOR === (boolean, real) SET (NEGATOR = !====) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_OP_FAMILY_STMT | 305629172e5d90b8e15007da | CREATE OPERATOR FAMILY alt_opf12 USING btree |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 3083154a11fdb7d41e4a683d | CREATE OPERATOR < ( PROCEDURE = isnlt, LEFTARG = ean13, RIGHTARG = issn, COMMUTATOR = >, NEGATOR = >=, RESTRICT = scalarltsel, JOIN = scalarltjoinsel) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_ROLE_STMT | 30986442a7ca9550612693b4 | -- Verify that clustering all tables does in fact cluster the right ones CREATE USER regress_clstr_user |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 30afb40981d2cd1b4b4185d5 | CREATE OPERATOR <> ( PROCEDURE = isnne, LEFTARG = issn13, RIGHTARG = ean13, COMMUTATOR = <>, NEGATOR = =, RESTRICT = neqsel, JOIN = neqjoinsel) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DROP_STMT | 30b023bdbd0151a9154615ee | -- no such type2 drop operator = (int4, nonesuch) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OP_FAMILY_STMT | 30cc66d811484efd15cd776f | ALTER OPERATOR FAMILY gist_timestamptz_ops USING gist ADD FUNCTION 9 (timestamptz, timestamptz) gbt_ts_fetch (internal) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 310296f68cb19d6b4c2ce316 | CREATE OPERATOR <= ( LEFTARG = CITEXT, RIGHTARG = CITEXT, NEGATOR = >, COMMUTATOR = >=, PROCEDURE = citext_le, RESTRICT = scalarltsel, JOIN = scalarltjoinsel ) |
-| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_PREPARE_STMT | 312d0162170832ecc1f39c6d | prepare q as select current_user, * from rls_f() |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OWNER_STMT | 314f374e53ca259286fa365c | ALTER AGGREGATE testagg1(int2) OWNER TO CURRENT_USER |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_OP_FAMILY_STMT | 3179dd9384aaa7eb88d38bb6 | -- -- OpFamily and OpClass -- CREATE OPERATOR FAMILY alt_opf1 USING hash |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_FETCH_STMT | 31830644f0af906ccd3f8ff8 | fetch all in local_portal |
-| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_SELECT_STMT | 31860fb302574299dcfc5ee7 | select delete('a=>1 , b=>2, c=>3'::hstore, ARRAY['d','b']) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OP_FAMILY_STMT | 319e59a067228113d6a62799 | ALTER OPERATOR FAMILY gist_float4_ops USING gist ADD FUNCTION 12 ("any", "any") gist_translate_cmptype_btree (int) |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_FETCH_STMT | 31b13fff6e249d24bed09547 | fetch all in c4 |
-| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEALLOCATE_STMT | 31cfa62d80055dd558629e07 | deallocate ab_q5 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 31f0f5ad3ba1bb7ad90f4883 | CREATE OPERATOR #*# ( leftarg = int8, rightarg = int8, procedure = fn_op5 ) |
-| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_EXPLAIN_STMT | 31f84c39cd40bfdf76550e98 | explain (analyze, costs off, summary off, timing off, buffers off) execute mt_q1(25) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_OP_CLASS_STMT | 31fbd4f2c4c06352b4915643 | create operator class custom_opclass for type int4 using hash as operator 1 = , function 2 dummy_hashint4(int4, int8) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_ROLE_STMT | 31fc9de3781d23a25900b57f | -- -- CREATE TYPE checks for CREATE on multirange schema -- create role regress_mr |
-| PARTIAL | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_INSERT_STMT | 32390b33e43c48e78fe22adf | insert into permtest_parent select 1, 'a', left(fipshash(i::text), 5) from generate_series(0, 100) i |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_FETCH_STMT | 3250312e9d51242d4e63599c | FETCH 12 in foo12 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OPERATOR_STMT | 325fe2013414001a3194df07 | alter operator = (int8, int8alias1) set (hashes) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OPERATOR_STMT | 32630e59d2fcdcc756bfd21d | ALTER OPERATOR ~~ (query_int, _int4) SET (RESTRICT = _int_matchsel) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FUNCTION_STMT | 327c42d25a66cdd6a0b08e14 | CREATE FUNCTION pgp_armor_headers(text, key OUT text, value OUT text) RETURNS SETOF record AS 'MODULE_PATHNAME', 'pgp_armor_headers' LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE |
-| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_PREPARE_STMT | 32a6ad764295d67b0e2b2dba | prepare u as select current_user, * from rls_f() |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_FETCH_STMT | 32d865dca4a4cb429f6b0cd7 | FETCH backward 5 in foo19 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_ROLE_STMT | 33040667265c4fe1d3e853d0 | CREATE USER regress_priv_user7 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_RENAME_STMT | 33133db6c966b0099bffca44 | -- OK ALTER OPERATOR CLASS alt_opc1 USING hash RENAME TO alt_opc2 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_ROLE_STMT | 3351bc1ca48be696733e9496 | -- drop as non-superuser should fail create role regress_evt_user |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DROP_STMT | 3388805511da3dfde433c155 | DROP OPERATOR <\|(bigint, bigint) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_ROLE_STMT | 33a07d6d6d5d15fcffc41e02 | CREATE ROLE regress_nosuch_bypassrls BYPASSRLS |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_COMMENT_STMT | 33f4c8084f8b0941ee38ce3a | COMMENT ON TABLE datatype_table IS 'This table should contain all native datatypes' |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_OP_FAMILY_STMT | 341c26d905d327678afded9f | CREATE OPERATOR FAMILY alt_opf5 USING btree |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 3438557209a314676adb369d | CREATE OPERATOR <> ( PROCEDURE = isnne, LEFTARG = issn13, RIGHTARG = issn, COMMUTATOR = <>, NEGATOR = =, RESTRICT = neqsel, JOIN = neqjoinsel) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_OP_CLASS_STMT | 343936d7da2601f5d9b9ef91 | CREATE OPERATOR CLASS money_ops DEFAULT FOR TYPE money USING gin AS OPERATOR 1 <, OPERATOR 2 <=, OPERATOR 3 =, OPERATOR 4 >=, OPERATOR 5 >, FUNCTION 1 cash_cmp(money,money), FUNCTION 2 gin_extract_... |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_ROLE_SET_STMT | 3473a16afad862cf3758f6b3 | ALTER ROLE regress_ae_role SET auto_explain.bogus = 1 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 34a5f11c7b3aba7270e5d1eb | CREATE OPERATOR === ( LEFTARG = boolean, RIGHTARG = boolean, PROCEDURE = alter_op_test_fn, COMMUTATOR = ===, NEGATOR = !==, RESTRICT = customcontsel, JOIN = contjoinsel, HASHES, MERGES ) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OP_FAMILY_STMT | 35154c12cbd52e5a04046f47 | ALTER OPERATOR FAMILY gist_int2_ops USING gist ADD FUNCTION 11 (int2, int2) gbt_int2_sortsupport (internal) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 3519e1f7d1521d7b25a988a1 | CREATE OPERATOR \|\| ( LEFTARG = ltree, RIGHTARG = ltree, PROCEDURE = ltree_addltree ) |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CLOSE_PORTAL_STMT | 35428797ca9ee43070aa064b | CLOSE cursor_stats_2 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OP_FAMILY_STMT | 3544fd338fbdd6de3528ea7c | -- Add operators that are new in 9.1. We do it like this, leaving them -- "loose" in the operator family rather than bound into the opclass, because -- that's the only state that can be reproduced ... |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OWNER_STMT | 3558fee922cf14cc2d6549e4 | -- OK ALTER OPERATOR FAMILY alt_opf3 USING hash OWNER TO regress_alter_generic_user2 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 35b7e4bbe1b94b2d92a61757 | CREATE OPERATOR <= ( PROCEDURE = isnle, LEFTARG = ean13, RIGHTARG = issn, COMMUTATOR = >=, NEGATOR = >, RESTRICT = scalarltsel, JOIN = scalarltjoinsel) |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_FETCH_STMT | 35bc9a6f639318fa178a1b63 | FETCH 19 in foo19 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 35f4eca469048a93fbcaa122 | CREATE OPERATOR ~<~ ( LEFTARG = CITEXT, RIGHTARG = CITEXT, NEGATOR = ~>=~, COMMUTATOR = ~>~, PROCEDURE = citext_pattern_lt, RESTRICT = scalarltsel, JOIN = scalarltjoinsel ) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_OP_CLASS_STMT | 3604c37d306a93e21f1b68b6 | CREATE OPERATOR CLASS int8_ops DEFAULT FOR TYPE int8 USING gin AS OPERATOR 1 <, OPERATOR 2 <=, OPERATOR 3 =, OPERATOR 4 >=, OPERATOR 5 >, FUNCTION 1 btint8cmp(int8,int8), FUNCTION 2 gin_extract_val... |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 3607864512b389fa4d894e92 | CREATE OPERATOR <-> ( LEFTARG = oid, RIGHTARG = oid, PROCEDURE = oid_dist, COMMUTATOR = '<->' ) |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_FETCH_STMT | 3647cd62f26ce039c85a8c78 | fetch backward 1 in c3 |
-| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_EXPLAIN_STMT | 3659b473914020ee1abb49b4 | -- All pruned. explain (verbose, costs off) execute update_part_abc_view (3, 'a') |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_COMMENT_STMT | 366101609437446040c06dac | COMMENT ON LANGUAGE plpython3u IS 'PL/Python3U untrusted procedural language' |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OPERATOR_STMT | 36831c106e0b96eeff28de6d | ALTER OPERATOR === (boolean, boolean) SET (JOIN = contjoinsel) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OP_FAMILY_STMT | 36b1416609329ac0c1b67a40 | ALTER OPERATOR FAMILY gist_interval_ops USING gist ADD FUNCTION 9 (interval, interval) gbt_intv_fetch (internal) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_ROLE_STMT | 36c469ebdf34211a59de6918 | CREATE ROLE regress_test_def_replication |
-| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_SELECT_STMT | 36da4bd9cc2d72f9dc4ec868 | -- delete (array) select delete('a=>1 , b=>2, c=>3'::hstore, ARRAY['d','e']) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OP_FAMILY_STMT | 36f3af81b34235f796202a36 | ALTER OPERATOR FAMILY isn_ops USING hash ADD OPERATOR 1 = (ismn13, ean13), OPERATOR 1 = (ismn13, ismn) |
-| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_PREPARE_STMT | 36f9ad9b551c15d18d34dca7 | prepare foom as merge into target t using (select 1 as sid) s on (t.tid = s.sid) when matched then update set balance = 1 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OPERATOR_STMT | 3706c1774703ef2640fad864 | ALTER OPERATOR ? (_lquery, _ltree) SET (RESTRICT = matchingsel, JOIN = matchingjoinsel) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OP_FAMILY_STMT | 371187350fe214307c91c8ba | ALTER OPERATOR FAMILY alt_opf4 USING btree DROP -- int4 vs int2 OPERATOR 1 (int4, int2) , OPERATOR 2 (int4, int2) , OPERATOR 3 (int4, int2) , OPERATOR 4 (int4, int2) , OPERATOR 5 (int4, int2) , FUN... |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 3727759436ae554d6f457f2f | CREATE COLLATION ignore_accents (provider = icu, locale = '@colStrength=primary;colCaseLevel=yes', deterministic = false) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OPERATOR_STMT | 3727ef7e207f04ab35cbd732 | ALTER OPERATOR =(ltree, ltree) SET (HASHES) |
-| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_PREPARE_STMT | 373081d79174f06952d2b796 | -- -- Check that pruning with composite range partitioning works correctly when -- a combination of runtime parameters is specified, not all of whose values -- are available at the same time -- pre... |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FUNCTION_STMT | 376121d7df02237a461b90ed | CREATE PROCEDURE ptest11(a OUT int, VARIADIC b int[]) LANGUAGE SQL AS $$ SELECT b[1] + b[2] $$ |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 3767446da846955fd8b6ced3 | CREATE OPERATOR #*# ( leftarg = int8, rightarg = type_op4, procedure = fn_op4 ) |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_COMMENT_STMT | 379460deaff8eb03610b6d6b | COMMENT ON AGGREGATE nosuchagg (*) IS 'should fail' |
-| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_EXECUTE_STMT | 37b2973d17fe7a67edb3b01d | EXECUTE foo |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OP_FAMILY_STMT | 38006891148f2f683f095423 | -- invalid options parsing function ALTER OPERATOR FAMILY alt_opf4 USING btree ADD FUNCTION 7 btint42cmp(int4, int2) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OPERATOR_STMT | 384237fb7d8cd7eacc14089f | ALTER OPERATOR ?& (hstore, text[]) SET (RESTRICT = matchingsel, JOIN = matchingjoinsel) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 38cc0d9c6d84f762a0100514 | CREATE OPERATOR > ( PROCEDURE = isngt, LEFTARG = issn, RIGHTARG = issn13, COMMUTATOR = <, NEGATOR = <=, RESTRICT = scalargtsel, JOIN = scalargtjoinsel ) |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_FETCH_STMT | 38d103f64b244c35d47b9774 | fetch backward 1 in c5 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_OP_CLASS_STMT | 391aee09112c636e4967af27 | CREATE OPERATOR CLASS ean13_ops DEFAULT FOR TYPE ean13 USING btree FAMILY isn_ops AS OPERATOR 1 <, OPERATOR 2 <=, OPERATOR 3 =, OPERATOR 4 >=, OPERATOR 5 >, FUNCTION 1 btean13cmp(ean13, ean13) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_ROLE_STMT | 393d83320e1cd4d557848f65 | CREATE ROLE regress_vacuum |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DROP_STMT | 394aa9dca9806e28af3b2e1f | drop operator public.<^(int, int) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DROP_STMT | 396842d1617a53bc26fd3d7d | DROP OPERATOR CLASS IF EXISTS test_operator_class USING btree |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OP_FAMILY_STMT | 399e99956fa3dc37effa3a84 | ALTER OPERATOR FAMILY gist_timestamp_ops USING gist ADD FUNCTION 12 ("any", "any") gist_translate_cmptype_btree (int) |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_COMMENT_STMT | 39a4baa80576fdc279521fc1 | -- Test comments COMMENT ON OPERATOR ###### (NONE, int4) IS 'bad prefix' |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 39a64dcba0857bf83e1248b9 | CREATE OPERATOR !~~* ( PROCEDURE = texticnlike, LEFTARG = citext, RIGHTARG = citext, NEGATOR = ~~*, RESTRICT = icnlikesel, JOIN = icnlikejoinsel ) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 39a8b53896bacc55a7686108 | -- Should fail. At least rightarg should be mandatorily specified CREATE OPERATOR #@%# ( procedure = factorial ) |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_FETCH_STMT | 39a90cfb242771ba84b73774 | fetch backward all in c3 |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_SEC_LABEL_STMT | 39b246d239fe5a4ff90c9f23 | SECURITY LABEL ON COLUMN customer.ccredit IS 'system_u:object_r:sepgsql_secret_table_t:s0' |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 39d3d00b3117cdf8bb522dd2 | CREATE OPERATOR > ( PROCEDURE = isngt, LEFTARG = isbn, RIGHTARG = isbn, COMMUTATOR = <, NEGATOR = <=, RESTRICT = scalargtsel, JOIN = scalargtjoinsel ) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_OP_FAMILY_STMT | 39e4d3e4ef3c86c6a3fdd7dd | CREATE OPERATOR FAMILY alt_nsp6.alt_opf6 USING btree |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_SEC_LABEL_STMT | 3a0d8b9feea055517a30b8d8 | SECURITY LABEL ON TABLE flavians IS 'system_u:object_r:sepgsql_table_t:s0' |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OP_FAMILY_STMT | 3a0d94fd8e13d2b09ce398da | ALTER OPERATOR FAMILY isn_ops USING hash ADD OPERATOR 1 = (issn13, ean13), OPERATOR 1 = (issn13, issn) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_ROLE_STMT | 3a121bfb9088511477ababcd | ALTER USER regress_authenticated_user_ssa superuser |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OP_FAMILY_STMT | 3a337f9c0385387fb027ac3f | ALTER OPERATOR FAMILY gist_macaddr_ops USING gist ADD OPERATOR 6 <> (macaddr, macaddr) , FUNCTION 9 (macaddr, macaddr) gbt_macad_fetch (internal) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 3a3527f1f55739b915fddb68 | --not-indexed CREATE OPERATOR ^@ ( LEFTARG = ltree, RIGHTARG = ltxtquery, PROCEDURE = ltxtq_exec, COMMUTATOR = '^@', RESTRICT = contsel, JOIN = contjoinsel ) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 3a3e979c8cdd9638bf1f1a81 | -- P N N P -- should ERROR: tf2p(anyarray, int) not matched by tf2p(int[],anyelement) CREATE AGGREGATE myaggn14a(BASETYPE = int, SFUNC = tf2p, STYPE = anyarray, FINALFUNC = ffnp, INITCOND = '{}') |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 3a4d73d4a5bdece135218008 | CREATE AGGREGATE myaggn06b(BASETYPE = int, SFUNC = tf2p, STYPE = int[], INITCOND = '{}') |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_COMMENT_STMT | 3a6b50772f9f8c82ef21e7e3 | COMMENT ON COLLATION test0 IS 'US English' |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_FETCH_STMT | 3aad428c4ed3a964ab2fec81 | FETCH all in foo22 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OPERATOR_STMT | 3abdad864632956233667788 | ALTER OPERATOR === (boolean, real) SET (MERGES = false) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_ROLE_STMT | 3ad18806b84fd1cc0e6f5b44 | -- error ALTER USER nonexistent WITH NOREPLICATION |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CLOSE_PORTAL_STMT | 3ae8da4d36b0faf03faee289 | CLOSE foo22 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 3aeb8f85eee549e2e1eb688b | CREATE OPERATOR >= ( PROCEDURE = isnge, LEFTARG = isbn, RIGHTARG = ean13, COMMUTATOR = <=, NEGATOR = <, RESTRICT = scalargtsel, JOIN = scalargtjoinsel ) |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_COMMENT_STMT | 3b3ac17375f24f0111be430b | COMMENT ON COLUMN default_test_row.f1 IS 'good comment' |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_COMMENT_STMT | 3b3bb6f2e28021a757668cac | COMMENT ON FUNCTION seg_over_left(seg, seg) IS 'overlaps or is left of' |
-| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEALLOCATE_STMT | 3b50e92e7cc582e75d6fbea1 | DEALLOCATE st4 |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_COMMENT_STMT | 3b91805f5661867be503de98 | -- ALTER FOREIGN TABLE COMMENT ON FOREIGN TABLE ft1 IS 'foreign table' |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 3bb0cdf28cacf033f686ac57 | CREATE OPERATOR <> ( PROCEDURE = isnne, LEFTARG = ean13, RIGHTARG = ismn, COMMUTATOR = <>, NEGATOR = =, RESTRICT = neqsel, JOIN = neqjoinsel) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OP_FAMILY_STMT | 3bc62054b4f76139a3a7ba5d | ALTER OPERATOR FAMILY gist_trgm_ops USING gist ADD OPERATOR 9 %>> (text, text), OPERATOR 10 <->>> (text, text) FOR ORDER BY pg_catalog.float_ops |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 3bc9f8ede5b2f393e28c2df3 | CREATE TEXT SEARCH DICTIONARY alt_ts_dict2 (template=simple) |
-| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_EXECUTE_STMT | 3be9da962e0858979f12d2b8 | EXECUTE async_pt_query (2000, 505) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 3c12f42740fb4b0946327e4d | CREATE OPERATOR ~~ ( PROCEDURE = texticlike, LEFTARG = citext, RIGHTARG = text, NEGATOR = !~~, RESTRICT = iclikesel, JOIN = iclikejoinsel ) |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_FETCH_STMT | 3c33384fd069c212e66476ca | FETCH NEXT FROM c |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 3c6ce208b65d513cc464ab8d | create aggregate my_sum(int4) ( stype = avg_state, sfunc = avg_transfn, finalfunc = sum_finalfn ) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_ROLE_STMT | 3c7baea5f5430361758dbe5a | -- This is borderline unsafe in that an additional login-capable user exists -- during the test run. Under installcheck, a too-permissive pg_hba.conf -- might allow unwanted logins as regress_authe... |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OP_FAMILY_STMT | 3c933c93157d3ad26336a889 | ALTER OPERATOR FAMILY gist_vbit_ops USING gist ADD OPERATOR 6 <> (varbit, varbit) , FUNCTION 9 (varbit, varbit) gbt_var_fetch (internal) |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_FETCH_STMT | 3c9b6b595a31bd9df4fae435 | FETCH backward 12 in foo12 |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_SEC_LABEL_STMT | 3cc5df2e7a0d0288feee03c6 | SECURITY LABEL ON TABLE t3 IS 'system_u:object_r:sepgsql_fixed_table_t:s0' |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_ROLE_STMT | 3cff08cda3bb0731b679b5ea | CREATE ROLE regress_multi_conn_user2 SUPERUSER |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 3d01434f1dcf7a50edace6b3 | CREATE OPERATOR > ( PROCEDURE = isngt, LEFTARG = ean13, RIGHTARG = ismn, COMMUTATOR = <, NEGATOR = <=, RESTRICT = scalargtsel, JOIN = scalargtjoinsel) |
-| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEALLOCATE_STMT | 3d25a171187718ce9b64ee06 | DEALLOCATE st2 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_ROLE_STMT | 3d27c3f8a8692db7431ff119 | CREATE ROLE regress_rol_op1 |
-| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_EXECUTE_STMT | 3d573a7439198bc4eee824a7 | execute update_part_abc_view (1, 'd') |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_FETCH_STMT | 3d8061fb2a6b734c573f6c76 | FETCH RELATIVE 0 FROM c1 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 3d99651bfdef6dc12f2a096e | CREATE COLLATION testcoll_upper_first (provider = icu, locale = '@colCaseFirst=upper') |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DROP_STMT | 3da6fb6ccf748f3f8249cdc8 | DROP OPERATOR === (boolean, boolean) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DROP_STMT | 3dc85865194239370b49691b | drop operator class at_test_sql_partop using btree |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_COMMENT_STMT | 3e1ba0c8f169f87bdebb6892 | COMMENT ON TRIGGER before_ins_stmt_trig ON main_table IS 'right' |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DROP_STMT | 3e3204a3af52890f7c41253e | DROP OPERATOR FAMILY alt_opf12 USING btree |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 3e49825ef06f416262ae6c83 | --------------- geo_distance as operator <@> CREATE OPERATOR <@> ( LEFTARG = point, RIGHTARG = point, PROCEDURE = geo_distance, COMMUTATOR = <@> ) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_EXPLAIN_STMT | 3e49f56bcf518b9190daaf37 | explain (costs off) declare c2 scroll cursor for select generate_series(1,3) as g |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_OP_FAMILY_STMT | 3e4e9af14ffd98095a6caf54 | CREATE OPERATOR FAMILY alt_opf14 USING btree |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_ROLE_STMT | 3e52aa4163f4f270744ecce7 | ALTER USER regress_passwordcheck_user1 PASSWORD 'v_shrt' |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_SEC_LABEL_STMT | 3e6c025c374f3bc66f16f902 | SECURITY LABEL ON ROLE regress_seclabel_user1 IS 'classified' |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_OP_FAMILY_STMT | 3e7601516f4dd323a61f8994 | -- -- Operator families for the various operator classes: -- --------------------------------------------------- CREATE OPERATOR FAMILY isn_ops USING btree |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OPERATOR_STMT | 3e83350b1628cdc5a36c6258 | ALTER OPERATOR >= (citext, citext) SET ( RESTRICT = scalargesel, JOIN = scalargejoinsel ) |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_FETCH_STMT | 3eaa5d2666bca974ea41b5bc | FETCH ALL FROM c |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OPERATOR_STMT | 3f24f641e7e0e332de3a191d | ALTER OPERATOR ^@> (_ltree, ltree) SET (RESTRICT = matchingsel, JOIN = matchingjoinsel) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_ROLE_SET_STMT | 3f2fb13479edc1322219b32b | ALTER ROLE CURRENT_USER SET application_name to 'FOO' |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_ROLE_STMT | 3f768eef573e281ccc22386e | CREATE ROLE regress_maintain |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_OP_FAMILY_STMT | 3f9c90e05140c34db80ee9de | CREATE OPERATOR FAMILY alt_opf13 USING hash |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 3fa568a661409bdef6abd75a | CREATE OPERATOR < ( PROCEDURE = isnlt, LEFTARG = ismn, RIGHTARG = ean13, COMMUTATOR = >, NEGATOR = >=, RESTRICT = scalarltsel, JOIN = scalarltjoinsel) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_ROLE_STMT | 3fb113d0dce84338cfc0798c | CREATE ROLE regress_bypassrls BYPASSRLS |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_COMMENT_STMT | 3fb37c7aa8f2dea91cccab32 | COMMENT ON TYPE isbn13 IS 'International Standard Book Number 13 (ISBN13)' |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 3fbeffd076dc1d41c3d2fd4c | CREATE OPERATOR ===!!! ( leftarg = integer, rightarg = integer, procedure = int4ne, negator = ===!!! ) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DROP_STMT | 3fc109581789d3f7f4b3e8fe | -- Cleanup drop operator class my_op_class using btree |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 3fd1f1ba0ccd05dd4dabe8c5 | CREATE TEXT SEARCH PARSER addr_ts_prs (start = prsd_start, gettoken = prsd_nexttoken, end = prsd_end, lextypes = prsd_lextype) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 3fed16eda941f570c2364cbc | -- Should fail. Invalid attribute CREATE OPERATOR #@%# ( rightarg = int8, procedure = factorial, invalid_att = int8 ) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_ROLE_SET_STMT | 400dbb9efa6f8e58ea743678 | ALTER ROLE "Public" SET application_name to 'BARBAR' |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_COMMENT_STMT | 4033cb5ba284b6e26c06dde2 | COMMENT ON FUNCTION seg_le(seg, seg) IS 'less than or equal' |
-| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_EXECUTE_STMT | 405520e43fdb946274cd691b | execute update_part_abc_view (2, 'a') |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 406a4181b63b55ae7e16d247 | -- obsolete: CREATE OPERATOR @ ( LEFTARG = hstore, RIGHTARG = hstore, PROCEDURE = hs_contains, COMMUTATOR = '~', RESTRICT = contsel, JOIN = contjoinsel ) |
-| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_PREPARE_STMT | 4082afc1b42e6e2aa4103cc4 | PREPARE q3(text, int, float, boolean, smallint) AS SELECT * FROM tenk1 WHERE string4 = $1 AND (four = $2 OR ten = $3::bigint OR true = $4 OR odd = $5::int) ORDER BY unique1 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 408b09c01b5e0eb68c34e3d3 | CREATE OPERATOR !~ ( PROCEDURE = texticregexne, LEFTARG = citext, RIGHTARG = text, NEGATOR = ~, RESTRICT = icregexnesel, JOIN = icregexnejoinsel ) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_ROLE_STMT | 409731a33edd96ae4cee5607 | -- error CREATE ROLE "pg_abcdef" |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_SEC_LABEL_STMT | 40bcc44dc53f6c18971876a1 | SECURITY LABEL ON COLUMN dummy_seclabel_tbl1.a IS 'unclassified' |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OP_FAMILY_STMT | 40bdeb58ef404e6fada876de | ALTER OPERATOR FAMILY gist_float4_ops USING gist ADD FUNCTION 9 (float4, float4) gbt_float4_fetch (internal) |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DECLARE_CURSOR_STMT | 40c10ee92dd4aa572bbf9a0d | DECLARE c1 CURSOR FOR SELECT * FROM uctest FOR UPDATE |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DECLARE_CURSOR_STMT | 40d301d0efb8f8f84730d955 | DECLARE foo12 SCROLL CURSOR FOR SELECT * FROM tenk2 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_ROLE_STMT | 40e000d1e30de367e571c759 | -- privileges tests CREATE USER regress_seq_user |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 40e4c1c2560c9d8b5b6026d5 | -- P N P P -- should ERROR: tf2p(anyarray, anyelement) not matched by tf2p(int[],anyelement) CREATE AGGREGATE myaggp16a(BASETYPE = anyelement, SFUNC = tf2p, STYPE = anyarray, FINALFUNC = ffp, INITC... |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_ROLE_STMT | 40ef340c896f478e1d60a955 | CREATE ROLE regress_stats_user1 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DROP_STMT | 40f2320138bdd33a105b3396 | DROP OPERATOR FAMILY alt_opf4 USING btree |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 4108039c94007e2b048824c0 | CREATE OPERATOR > ( PROCEDURE = isngt, LEFTARG = issn, RIGHTARG = issn, COMMUTATOR = <, NEGATOR = <=, RESTRICT = scalargtsel, JOIN = scalargtjoinsel ) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DROP_STMT | 41123c200fb6da94a736b3b4 | -- no such operator by that name drop operator === (int4, int4) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 413b23e4d360c7bd91914664 | CREATE OPERATOR >= ( PROCEDURE = isnge, LEFTARG = ismn, RIGHTARG = ismn, COMMUTATOR = <=, NEGATOR = <, RESTRICT = scalargtsel, JOIN = scalargtjoinsel ) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_ROLE_STMT | 4150d66c5d107ee52e937a13 | -- error CREATE ROLE pg_abcdef |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 417dd7164cf40232652ef4ec | CREATE OPERATOR = (procedure = ad_eq, leftarg = arrdomain, rightarg = arrdomain) |
-| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_EXECUTE_STMT | 4187c3a0ebbf81c4b1287164 | EXECUTE q3('bool') |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_ROLE_STMT | 419cbe3d229a15c9a2fa10ee | CREATE ROLE regress_test_replication WITH REPLICATION |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_OP_FAMILY_STMT | 41acd83a274eae96d7ed2746 | create operator family my_op_family using btree |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_ROLE_STMT | 41b3b87ebf49280716c963b5 | CREATE ROLE regress_test_role_canlogin WITH LOGIN |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 41d6eabddf6f529c5bea5475 | CREATE TEXT SEARCH DICTIONARY xsyn ( TEMPLATE = xsyn_template ) |
-| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_PREPARE_STMT | 41e965de700ba5ae53ce06a6 | PREPARE data_sel AS SELECT generate_series(1,3) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_ROLE_STMT | 41f00a0d55ea7a618a68461c | CREATE GROUP regress_priv_group2 WITH ADMIN regress_priv_user1 USER regress_priv_user2 |
-| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEALLOCATE_STMT | 41fad13e9f5994ff4bbad300 | deallocate ab_q4 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_ROLE_STMT | 420c54d22a8920af145632de | CREATE ROLE regress_test_indirect |
-| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_PREPARE_STMT | 421386e1fd35f855cd706745 | -- fail (infinite recursion via view) -- prepared statement with regress_rls_alice privilege PREPARE p1(int) AS SELECT * FROM t1 WHERE a <= $1 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OPERATOR_STMT | 423e54830f2630ee8efddda8 | ALTER OPERATOR ~ (_ltree, lquery) SET (RESTRICT = matchingsel, JOIN = matchingjoinsel) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 424dbb5cf2dbfd2b2d0a9294 | CREATE OPERATOR = ( PROCEDURE = isneq, LEFTARG = isbn13, RIGHTARG = isbn13, COMMUTATOR = =, NEGATOR = <>, RESTRICT = eqsel, JOIN = eqjoinsel, MERGES, HASHES) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OPERATOR_STMT | 425c794f513ac08a5592279f | ALTER OPERATOR >= (issn13, issn) SET ( RESTRICT = scalargesel, JOIN = scalargejoinsel) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OP_FAMILY_STMT | 42868909bfc811d1e05eda90 | ALTER OPERATOR FAMILY gist_numeric_ops USING gist ADD FUNCTION 11 (numeric, numeric) gbt_numeric_sortsupport (internal) |
-| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_PREPARE_STMT | 42e9456102fa145602f98dde | prepare r as select current_user, * from rls_f() |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DROP_STMT | 4315bc5454893f00e5d1f2da | DROP OPERATOR FAMILY alt_opf19 USING btree |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_ROLE_STMT | 434e1579a98e08ec1201f4a7 | create role regress_coldesc_role |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FUNCTION_STMT | 435afb0c60c66440b8bae153 | CREATE OR REPLACE FUNCTION perl_out_params(f1 out integer, f2 out text, f3 out text) AS $$ return {f2 => 'hello', f1 => 1, f3 => 'world'}; $$ LANGUAGE plperl |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OPERATOR_STMT | 436dcb08c1a1540cffab2766 | ALTER OPERATOR <= (ean13, upc) SET ( RESTRICT = scalarlesel, JOIN = scalarlejoinsel) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_OP_CLASS_STMT | 4397e35811f47a3882e1153d | -- Create the operator class CREATE OPERATOR CLASS gist_time_ops DEFAULT FOR TYPE time USING gist AS OPERATOR 1 < , OPERATOR 2 <= , OPERATOR 3 = , OPERATOR 4 >= , OPERATOR 5 > , FUNCTION 1 gbt_time... |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FUNCTION_STMT | 43b9e73fb53708a61ec2df7a | -- can't remove the default once it exists create or replace function dfunc(a variadic int[]) returns int as $$ select array_upper($1, 1) $$ language sql |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 43d3b32a8b588ceac6c8af3e | CREATE OPERATOR <= ( PROCEDURE = isnle, LEFTARG = isbn13, RIGHTARG = ean13, COMMUTATOR = >=, NEGATOR = >, RESTRICT = scalarltsel, JOIN = scalarltjoinsel) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 43e39d11dc1efb780b19c3d9 | -- create or replace aggregate CREATE AGGREGATE myavg (numeric) ( stype = internal, sfunc = numeric_avg_accum, finalfunc = numeric_avg ) |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_COMMENT_STMT | 43ed67646fd37abba333a9ca | COMMENT ON SEQUENCE sequence_test2 IS 'will work' |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 43f3f292a39b4153ab21ea7c | CREATE OPERATOR ~* ( PROCEDURE = texticregexeq, LEFTARG = citext, RIGHTARG = citext, NEGATOR = !~*, RESTRICT = icregexeqsel, JOIN = icregexeqjoinsel ) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_OP_CLASS_STMT | 441804702c5a6a8095014294 | -- Create the operator class CREATE OPERATOR CLASS gist_bytea_ops DEFAULT FOR TYPE bytea USING gist AS OPERATOR 1 < , OPERATOR 2 <= , OPERATOR 3 = , OPERATOR 4 >= , OPERATOR 5 > , FUNCTION 1 gbt_by... |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OP_FAMILY_STMT | 441d1a2ee59f2bec63473888 | ALTER OPERATOR FAMILY gist_float8_ops USING gist ADD OPERATOR 6 <> (float8, float8) , OPERATOR 15 <-> (float8, float8) FOR ORDER BY pg_catalog.float_ops , FUNCTION 8 (float8, float8) gbt_float8_dis... |
-| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_SELECT_STMT | 4433475880cc628e3177896a | select delete('a=>1 , b=>2, c=>3'::hstore, 'b') |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 443f9d0af7fafee9db5a40ef | CREATE OPERATOR ^? ( LEFTARG = _lquery, RIGHTARG = _ltree, PROCEDURE = _lt_q_rregex, COMMUTATOR = '^?', RESTRICT = contsel, JOIN = contjoinsel ) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OP_FAMILY_STMT | 4450c9f92ebdb589bd2f196c | ALTER OPERATOR FAMILY alt_opf19 USING btree ADD FUNCTION 5 (int4, int2) btint42cmp(int4, int2) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 447f29a3eb7fe8460e64e73d | CREATE OPERATOR === ( LEFTARG = boolean, RIGHTARG = real, PROCEDURE = alter_op_test_fn_bool_real ) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 4487f9a413c7ca24db7cac4b | CREATE OPERATOR <> ( PROCEDURE = isnne, LEFTARG = ean13, RIGHTARG = ean13, COMMUTATOR = <>, NEGATOR = =, RESTRICT = neqsel, JOIN = neqjoinsel) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 449cc84628324823d32525e6 | -- P N -- should ERROR: stfnp(anyarray) not matched by stfnp(int[]) CREATE AGGREGATE myaggp02a(*) (SFUNC = stfnp, STYPE = anyarray, FINALFUNC = ffp, INITCOND = '{}') |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DECLARE_CURSOR_STMT | 44af882a28698328a53af0f7 | DECLARE foo18 SCROLL CURSOR FOR SELECT * FROM tenk2 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 455139cffc3fb7b890914640 | CREATE OPERATOR ? ( LEFTARG = _ltree, RIGHTARG = _lquery, PROCEDURE = _lt_q_regex, COMMUTATOR = '?', RESTRICT = contsel, JOIN = contjoinsel ) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 45657b63f2e25091846968f4 | CREATE OPERATOR >= ( LEFTARG = seg, RIGHTARG = seg, PROCEDURE = seg_ge, COMMUTATOR = '<=', NEGATOR = '<', RESTRICT = scalargtsel, JOIN = scalargtjoinsel ) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_OP_CLASS_STMT | 45b88df5c43afd2f396d609d | CREATE OPERATOR CLASS btree_hstore_ops DEFAULT FOR TYPE hstore USING btree AS OPERATOR 1 #<# , OPERATOR 2 #<=# , OPERATOR 3 = , OPERATOR 4 #>=# , OPERATOR 5 #># , FUNCTION 1 hstore_cmp(hstore,hstore) |
-| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_EXECUTE_STMT | 45c11e3268593447e5416ccc | execute s |
-| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEALLOCATE_STMT | 45cc7ceea7f56ab267897c1b | deallocate update_part_abc_view |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 46173a87d06a1a8b3da5fed0 | CREATE TEXT SEARCH TEMPLATE intdict_template ( LEXIZE = dintdict_lexize, INIT = dintdict_init ) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_OP_CLASS_STMT | 462fe037350233fa0dfbf005 | CREATE OPERATOR CLASS gist_hstore_ops DEFAULT FOR TYPE hstore USING gist AS OPERATOR 7 @> , OPERATOR 9 ?(hstore,text) , OPERATOR 10 ?\|(hstore,text[]) , OPERATOR 11 ?&(hstore,text[]) , --OPERATOR 8 ... |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DECLARE_CURSOR_STMT | 465bdbfd9652237d8ea93a85 | declare c1 cursor for select * from int8_tbl limit 10 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 466d3fd9924b28aa06135984 | CREATE OPERATOR ~ ( PROCEDURE = texticregexeq, LEFTARG = citext, RIGHTARG = text, NEGATOR = !~, RESTRICT = icregexeqsel, JOIN = icregexeqjoinsel ) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 467d5c858c5dfb8d56362c17 | CREATE OPERATOR <@ ( LEFTARG = ltree, RIGHTARG = _ltree, PROCEDURE = _ltree_r_isparent, COMMUTATOR = '@>', RESTRICT = contsel, JOIN = contjoinsel ) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 468db3702de0b714eb489994 | CREATE OPERATOR < ( PROCEDURE = isnlt, LEFTARG = ismn13, RIGHTARG = ismn, COMMUTATOR = >, NEGATOR = >=, RESTRICT = scalarltsel, JOIN = scalarltjoinsel) |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DECLARE_CURSOR_STMT | 468fba2a70b4a47000aaaa27 | DECLARE cursor_stats_1 CURSOR WITH HOLD FOR SELECT 2 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 471ed318b74c09d62317db39 | CREATE OPERATOR @@ ( LEFTARG = _int4, RIGHTARG = query_int, PROCEDURE = boolop, COMMUTATOR = '~~', RESTRICT = _int_matchsel, JOIN = contjoinsel ) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OP_FAMILY_STMT | 4733067a24def819b745ef45 | ALTER OPERATOR FAMILY gist__intbig_ops USING gist DROP OPERATOR 14 (_int4, _int4) |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DECLARE_CURSOR_STMT | 477558dbafd7d31debfe2a1d | DECLARE foo20 CURSOR FOR SELECT * FROM onek WHERE unique1 = 57 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_ROLE_STMT | 478277eeb85b7c48b42c4ab6 | CREATE ROLE regress_alter_generic_user6 |
-| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_PREPARE_STMT | 47841d6c09a068016a4f9e06 | prepare foo(bool) as select count(*) from tenk1 a left join tenk1 b on (a.unique2 = b.unique1 and exists (select 1 from tenk1 c where c.thousand = b.unique2 and $1)) |
-| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_EXECUTE_STMT | 4792c411ba9a4a5a1be6b2da | execute mt_q1(25) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OP_FAMILY_STMT | 4795fb9b5e63ef916ece2c1c | ALTER OPERATOR FAMILY citext_ops USING hash ADD FUNCTION 2 citext_hash_extended(citext, int8) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 47afe1a67f68b1f28cc600d2 | CREATE TEXT SEARCH DICTIONARY hunspell_num ( Template=ispell, DictFile=hunspell_sample_num, AffFile=hunspell_sample_num ) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_ROLE_SET_STMT | 47b3060c1864f5681e06d95d | ALTER USER ALL SET application_name to 'SLAP' |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_FETCH_STMT | 47b8b4ddf54a5f1207810a2c | fetch all from rf_cur |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DECLARE_CURSOR_STMT | 47d92446e871eae20a88c593 | DECLARE foo23 SCROLL CURSOR FOR SELECT * FROM tenk1 ORDER BY unique2 |
-| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_PREPARE_STMT | 47dc6b082bb279f0fcb1873d | PREPARE p2 AS SELECT * FROM my_property_secure WHERE f_leak(passwd) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 47e4c7711defb23c922f9871 | create operator @<= ( leftarg = int4, rightarg = int4, procedure = tcl_int4le ) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 4825fe3b1750eecd2676b95b | CREATE OPERATOR >= ( PROCEDURE = isnge, LEFTARG = ean13, RIGHTARG = isbn13, COMMUTATOR = <=, NEGATOR = <, RESTRICT = scalargtsel, JOIN = scalargtjoinsel ) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OP_FAMILY_STMT | 48341c0d827b4ada40cd0aae | ALTER OPERATOR FAMILY alt_opf17 USING btree ADD OPERATOR 1 < (int4, int4), OPERATOR 1 < (int4, int4) |
-| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_PREPARE_STMT | 48426443fff427cb2911d49f | PREPARE p1 AS SELECT * FROM my_property_normal WHERE f_leak(passwd) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OWNER_STMT | 486a0c1cac31387d37a790e9 | -- OK ALTER AGGREGATE alt_agg3(int) OWNER TO regress_alter_generic_user2 |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_COMMENT_STMT | 48a515bb13acf9471f3aee19 | COMMENT ON ACCESS METHOD dummy_index_am IS 'dummy index access method' |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OPERATOR_STMT | 48bae82be5af676a34f91f37 | ALTER OPERATOR ^? (_lquery, _ltree) SET (RESTRICT = matchingsel, JOIN = matchingjoinsel) |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_COMMENT_STMT | 48e107a87f50ffd923e896c5 | comment on constraint at_partitioned_id_name_key on at_partitioned is 'parent constraint' |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 48ee1a561404496961015666 | -- N N P N -- should ERROR: tfnp(int[], anyelement) not matched by tfnp(int[], int) CREATE AGGREGATE myaggn07a(BASETYPE = anyelement, SFUNC = tfnp, STYPE = int[], FINALFUNC = ffnp, INITCOND = '{}') |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FUNCTION_STMT | 48f4b2c258306757215e6e2e | -- pg_freespace shows the recorded space avail at each block in a relation CREATE FUNCTION pg_freespace(rel regclass, blkno OUT bigint, avail OUT int2) RETURNS SETOF RECORD AS $$ SELECT blkno, pg_f... |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_RENAME_STMT | 4900dc2b3848890f2fd5de8d | -- failed (not owner) ALTER AGGREGATE alt_agg1(int) RENAME TO alt_agg4 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 49023386e0ac1fe4dce325fb | -- a regconfig constant referring to this text search configuration -- is initially unshippable CREATE TEXT SEARCH CONFIGURATION public.custom_search (COPY = pg_catalog.english) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 49090839a62290dd145be548 | create operator = ( procedure = int8alias2eq, leftarg = int8alias2, rightarg = int8alias2, commutator = =, restrict = eqsel, join = eqjoinsel, merges ) |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_FETCH_STMT | 494611236c1ce96b6a3b0652 | FETCH FROM current_check_cursor |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 497d5e8b800a5aeec7e5f672 | -- test ordered-set aggs using built-in support functions create aggregate my_percentile_disc(float8 ORDER BY anyelement) ( stype = internal, sfunc = ordered_set_transition, finalfunc = percentile_... |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 49d136825436e68b3c673de2 | CREATE OPERATOR <> ( LEFTARG = int_custom, RIGHTARG = int_custom, FUNCTION = int_custom_ne, COMMUTATOR = <>, NEGATOR = =, RESTRICT = neqsel, JOIN = neqjoinsel ) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_OP_CLASS_STMT | 49e4587301f3544e78a742cc | CREATE OPERATOR CLASS tcl_int4_ops FOR TYPE int4 USING btree AS OPERATOR 1 @<, OPERATOR 2 @<=, OPERATOR 3 @=, OPERATOR 4 @>=, OPERATOR 5 @>, FUNCTION 1 tcl_int4cmp(int4,int4) |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_FETCH_STMT | 4a04ce95e6d96a43a60b6342 | FETCH all in foo13 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 4a087724a0d853ff989b3a7a | CREATE OPERATOR @ ( LEFTARG = ltree, RIGHTARG = ltxtquery, PROCEDURE = ltxtq_exec, COMMUTATOR = '@', RESTRICT = contsel, JOIN = contjoinsel ) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 4a1f3630f7cf1ca7546151cc | CREATE AGGREGATE myaggp18b(BASETYPE = int, SFUNC = tfp, STYPE = anyarray, INITCOND = '{}') |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_ROLE_STMT | 4a4a3e6eac2a126fdf10fb55 | CREATE ROLE regress_test_bypassrls WITH BYPASSRLS |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 4a7268aa04250fe81aaba6a3 | create aggregate least_agg(variadic items anyarray) ( stype = anyelement, sfunc = least_accum ) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 4a8235272f39133d209c664a | CREATE OPERATOR <> ( PROCEDURE = isnne, LEFTARG = issn13, RIGHTARG = issn13, COMMUTATOR = <>, NEGATOR = =, RESTRICT = neqsel, JOIN = neqjoinsel) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OPERATOR_STMT | 4a8bef75f8b3410d4f5b4ad0 | ALTER OPERATOR >= (issn, issn) SET ( RESTRICT = scalargesel, JOIN = scalargejoinsel) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_ROLE_STMT | 4aa2707ca4a8e13b5aa0d077 | -- alter owner to superuser should work alter role regress_evt_user superuser |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DECLARE_CURSOR_STMT | 4aaff2b0ac087c170e99399e | DECLARE c1 CURSOR FOR SELECT * FROM uctest |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_OP_CLASS_STMT | 4acf14ee923d07e57c43f1fa | CREATE OPERATOR CLASS int2_ops DEFAULT FOR TYPE int2 USING gin AS OPERATOR 1 <, OPERATOR 2 <=, OPERATOR 3 =, OPERATOR 4 >=, OPERATOR 5 >, FUNCTION 1 btint2cmp(int2,int2), FUNCTION 2 gin_extract_val... |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_OP_CLASS_STMT | 4b065b8b0a03c5d433871d2d | -- Create the operator class CREATE OPERATOR CLASS gist_timestamp_ops DEFAULT FOR TYPE timestamp USING gist AS OPERATOR 1 < , OPERATOR 2 <= , OPERATOR 3 = , OPERATOR 4 >= , OPERATOR 5 > , FUNCTION ... |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DECLARE_CURSOR_STMT | 4b0d2b18bf4c0dbf975af38a | DECLARE foo24 NO SCROLL CURSOR FOR SELECT * FROM tenk1 ORDER BY unique2 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 4b2162400d599b940c88b994 | CREATE OPERATOR > ( LEFTARG = cube, RIGHTARG = cube, PROCEDURE = cube_gt, COMMUTATOR = '<', NEGATOR = '<=', RESTRICT = scalargtsel, JOIN = scalargtjoinsel ) |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_FETCH_STMT | 4b23f8adca523bfee2e31113 | FETCH LAST c |
-| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_EXECUTE_STMT | 4b2ffccddb53f566e8404161 | execute t |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_SEC_LABEL_STMT | 4b379a881f28de00d40659a3 | SECURITY LABEL ON SCHEMA my_schema_2 IS 'system_u:object_r:sepgsql_regtest_invisible_schema_t:s0' |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FUNCTION_STMT | 4b43939bc3695b3aa7ebbc8c | CREATE FUNCTION pg_check_visible(regclass, t_ctid OUT tid) RETURNS SETOF tid AS 'MODULE_PATHNAME', 'pg_check_visible' LANGUAGE C STRICT |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 4b46d4970b86ea735c4d3922 | CREATE OPERATOR <->>> ( LEFTARG = text, RIGHTARG = text, PROCEDURE = strict_word_similarity_dist_commutator_op, COMMUTATOR = '<<<->' ) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 4b73c454c1017628ac89943d | CREATE OPERATOR = ( PROCEDURE = isneq, LEFTARG = ean13, RIGHTARG = ean13, COMMUTATOR = =, NEGATOR = <>, RESTRICT = eqsel, JOIN = eqjoinsel, MERGES, HASHES) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 4ba81b09930dccd04c5ab0fa | CREATE AGGREGATE sum_int_randomrestart (int4) ( stype = int4, sfunc = int4pl, mstype = int4, msfunc = int4pl, minvfunc = sum_int_randrestart_minvfunc ) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_ROLE_STMT | 4bba5bb454e0ddc89c52e8bf | CREATE ROLE "user" |
-| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_EXECUTE_STMT | 4bc86356519e79281d328a17 | execute q (1, 1) |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DECLARE_CURSOR_STMT | 4bcafd52342817be43496dd9 | DECLARE foo3 SCROLL CURSOR FOR SELECT * FROM tenk1 ORDER BY unique2 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 4c0841d8b905a7f9c946594b | CREATE AGGREGATE addr_nsp.genaggr(int4) (sfunc = int4pl, stype = int4) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OPERATOR_STMT | 4c3cf61a2a1c92d341b1e825 | ALTER OPERATOR ^@ (_ltree, ltxtquery) SET (RESTRICT = matchingsel, JOIN = matchingjoinsel) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 4c4af4b6dca4616cac8f9658 | CREATE OPERATOR @ ( LEFTARG = _ltree, RIGHTARG = ltxtquery, PROCEDURE = _ltxtq_exec, COMMUTATOR = '@', RESTRICT = contsel, JOIN = contjoinsel ) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_ROLE_SET_STMT | 4c68c24678e8e2d0a501fb2e | ALTER USER CURRENT_ROLE RESET application_name |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OP_FAMILY_STMT | 4c6c3009624ccce9bb77afb5 | ALTER OPERATOR FAMILY gist_bytea_ops USING gist ADD FUNCTION 9 (bytea, bytea) gbt_var_fetch (internal) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 4c729be8c6fca8a63e3b34a2 | CREATE OPERATOR < ( PROCEDURE = isnlt, LEFTARG = ean13, RIGHTARG = issn13, COMMUTATOR = >, NEGATOR = >=, RESTRICT = scalarltsel, JOIN = scalarltjoinsel) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DROP_STMT | 4ca845f5c6afe1bc81f9bf6e | DROP AGGREGATE test_aggregate_exists(*) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OWNER_STMT | 4cc343561620ea3a5c65b271 | -- error ALTER AGGREGATE testagg6(int2) OWNER TO "public" |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 4cd006e3032df2b6cf308810 | -- N N N P -- should CREATE CREATE AGGREGATE myaggp06a(BASETYPE = int, SFUNC = tf2p, STYPE = int[], FINALFUNC = ffp, INITCOND = '{}') |
-| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_EXECUTE_STMT | 4cd85fb56b0aae6f405c6016 | EXECUTE foo ('bad') |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_OP_FAMILY_STMT | 4cf5a53abf3ccf1d7b42a403 | -- Should fail. In gist throw an error when giving different data types for function argument -- without defining left / right type in ALTER OPERATOR FAMILY ... ADD FUNCTION CREATE OPERATOR FAMILY ... |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 4cfd811e8ed2a2c2fd1b3666 | CREATE COLLATION test0 FROM "C" |
-| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEALLOCATE_STMT | 4d20fa4d64713f6f0f85c732 | deallocate tenk1_count |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DECLARE_CURSOR_STMT | 4d35181f2cb32ee5df34693b | DECLARE foo2 SCROLL CURSOR FOR SELECT * FROM tenk2 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_OP_CLASS_STMT | 4d3e7ad35b50c38a596e1186 | -- Create the operator class CREATE OPERATOR CLASS gist_cash_ops DEFAULT FOR TYPE money USING gist AS OPERATOR 1 < , OPERATOR 2 <= , OPERATOR 3 = , OPERATOR 4 >= , OPERATOR 5 > , FUNCTION 1 gbt_cas... |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OP_FAMILY_STMT | 4d7a2cb2ab91156c9e57bfe4 | ALTER OPERATOR FAMILY gist_vbit_ops USING gist ADD FUNCTION 11 (varbit, varbit) gbt_varbit_sortsupport (internal) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 4d8559895d5e56f373f50b17 | CREATE OPERATOR ~ ( PROCEDURE = texticregexeq, LEFTARG = citext, RIGHTARG = citext, NEGATOR = !~, RESTRICT = icregexeqsel, JOIN = icregexeqjoinsel ) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 4d9a190d2b0bf82c4e0985de | CREATE OPERATOR >= ( LEFTARG = cube, RIGHTARG = cube, PROCEDURE = cube_ge, COMMUTATOR = '<=', NEGATOR = '<', RESTRICT = scalargtsel, JOIN = scalargtjoinsel ) |
-| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_PREPARE_STMT | 4dad6e575c93f05d399d7c58 | PREPARE st7 AS INSERT INTO ft1 (c1,c2,c3) VALUES (1001,101,'foo') |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_FETCH_STMT | 4dd190fe550acd9254a96b24 | FETCH 16 in foo16 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_OP_FAMILY_STMT | 4ddb6fd68cb906210ed4a744 | -- Should work. Textbook case of ALTER OPERATOR FAMILY ... ADD OPERATOR with FOR ORDER BY CREATE OPERATOR FAMILY alt_opf11 USING gist |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DROP_STMT | 4de48c77bf02d49cf65551e2 | DROP AGGREGATE IF EXISTS foo(no_such_type) |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_COMMENT_STMT | 4de5d27ed334532dfd9ded1f | COMMENT ON AGGREGATE newavg (int4) IS NULL |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_ROLE_STMT | 4dfd554fae7780998932629d | -- error CREATE ROLE regress_testrol0 SUPERUSER LOGIN |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_SEC_LABEL_STMT | 4e38c1b17f0879b3f0016a4f | SECURITY LABEL ON COLUMN t2.b IS 'system_u:object_r:sepgsql_ro_table_t:s0' |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_ROLE_STMT | 4e51ffeec26e859338b3bec8 | CREATE USER regress_dummy_seclabel_user1 WITH CREATEROLE |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_COMMENT_STMT | 4e60a463bfffa42dc41efd76 | COMMENT ON COLUMN ft1.c1 IS 'foreign column' |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OP_FAMILY_STMT | 4e7fd87e7c5b136184c49524 | ALTER OPERATOR FAMILY gist_macaddr_ops USING gist ADD FUNCTION 9 (macaddr, macaddr) gbt_macad_fetch (internal) |
-| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_PREPARE_STMT | 4e969696440965b598331682 | prepare t as select current_user, * from rls_f() |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_SEC_LABEL_STMT | 4ec4f1e4da601b58dbfc9c06 | SECURITY LABEL ON TABLE var_tbl IS 'system_u:object_r:sepgsql_regtest_var_table_t:s0' |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OPERATOR_STMT | 4eded08435bfa15df6e57972 | ALTER OPERATOR <= (ean13, isbn13) SET ( RESTRICT = scalarlesel, JOIN = scalarlejoinsel) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 4eea6ca0490759623291c543 | -- ok, skipped CREATE COLLATION IF NOT EXISTS test0 (locale = 'foo') |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FUNCTION_STMT | 4ef948b36c6e1011411caecd | -- Show visibility map and page-level visibility information for each block. CREATE FUNCTION pg_visibility(regclass, blkno OUT bigint, all_visible OUT boolean, all_frozen OUT boolean, pd_all_visibl... |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_SEC_LABEL_STMT | 4f01c370eeef4820760da773 | SECURITY LABEL ON COLUMN t1p_tens.o IS 'system_u:object_r:sepgsql_table_t:s0' |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OPERATOR_STMT | 4f1ae096af8122222901b1a4 | ALTER OPERATOR >= (issn, issn13) SET ( RESTRICT = scalargesel, JOIN = scalargejoinsel) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OP_FAMILY_STMT | 4f22d3f4523fff86c902d7cc | alter operator family integer_ops using btree add operator 3 = (int8alias1, int8alias1) |
-| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_PREPARE_STMT | 4f2d39915dea42b43dd38aea | -- test prepared statement prepare tenk1_count(integer) As select count((unique1)) from tenk1 where hundred > $1 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_OP_CLASS_STMT | 4f30c59902dcec52def89a6e | -- Create the operator class CREATE OPERATOR CLASS gist_text_ops DEFAULT FOR TYPE text USING gist AS OPERATOR 1 < , OPERATOR 2 <= , OPERATOR 3 = , OPERATOR 4 >= , OPERATOR 5 > , FUNCTION 1 gbt_text... |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 4f59ba2b7ba506523757ae66 | CREATE OPERATOR <-> ( LEFTARG = int2, RIGHTARG = int2, PROCEDURE = int2_dist, COMMUTATOR = '<->' ) |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_FETCH_STMT | 4f9daa2e3633ab3d193e17c7 | FETCH ABSOLUTE 4 FROM foo25ns |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DROP_STMT | 4f9e5a9ecf750e3afa09f18b | -- no such aggregate for type drop aggregate newcnt (float4) |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_SEC_LABEL_STMT | 4fb969f47573ed4ba8b8ddfa | SECURITY LABEL ON COLUMN t5.f IS 'system_u:object_r:sepgsql_ro_table_t:s0' |
-| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_EXECUTE_STMT | 4fbc6bb602ca7c0b8d63ae40 | EXECUTE get_nnconstraint_info('{constr_parent2, constr_child2}') |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 4ff3d8765f3dabaa1f63fb5e | -- this should fail because stype isn't compatible with arg create aggregate build_group(int8, integer) ( SFUNC = add_group, STYPE = int2[] ) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OP_FAMILY_STMT | 4ff5bf9608f9227d8e04f102 | ALTER OPERATOR FAMILY gist_cidr_ops USING gist ADD FUNCTION 11 (cidr, cidr) gbt_inet_sortsupport (internal) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_ROLE_STMT | 4ffc225b72289e02ab105878 | -- error CREATE ROLE pg_abc |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 503172bac9e96940be8f6170 | create operator @= ( leftarg = int4, rightarg = int4, procedure = tcl_int4eq ) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_ROLE_STMT | 504c32bf7c85926385d8b186 | CREATE USER regress_priv_user2 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_ROLE_STMT | 50505a1e4e377bf7d8a368bc | -- -- Install the plperl and plperlu extensions -- -- Before going ahead with the to-be-tested installations, verify that -- a non-superuser is allowed to install plperl (but not plperlu) when -- s... |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_FETCH_STMT | 506b75633ed1b2daa4c8426d | FETCH 1 in foo1 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_ROLE_STMT | 50a81a64716f55ccb6ee6f8b | CREATE ROLE regress_passwd8 PASSWORD 'md501234567890123456789012345678901zz' |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_COMMENT_STMT | 50e71d9dd9a464caa3200f69 | COMMENT ON TABLE attmp IS 'table comment' |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 5165468b280c4c9ebc83634c | CREATE OPERATOR ? ( LEFTARG = _lquery, RIGHTARG = _ltree, PROCEDURE = _lt_q_rregex, COMMUTATOR = '?', RESTRICT = contsel, JOIN = contjoinsel ) |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_COMMENT_STMT | 5174b01a0b38629ca1113a4a | -- OK comment on event trigger regress_event_trigger is 'test comment' |
-| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_EXECUTE_STMT | 517eb21d8d2b38c2c9efe1b1 | execute s1(10) |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DECLARE_CURSOR_STMT | 5183c302b81072ebc519342e | DECLARE foo21 SCROLL CURSOR FOR SELECT * FROM tenk1 ORDER BY unique2 |
-| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_EXPLAIN_STMT | 51ae7349b6c802c564bfd74c | explain (costs off) execute hp_q1('xxx') |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_COMMENT_STMT | 51f4f2a0b070c6bf7b3e5c5f | COMMENT ON TYPE enum_test IS 'ENUM test' |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DECLARE_CURSOR_STMT | 51f5ba58442fdd299abc9c8a | DECLARE ctt CURSOR FOR SELECT create_temp_tab() |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CLOSE_PORTAL_STMT | 51f6974e237d9e04e5290281 | CLOSE foo17 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FUNCTION_STMT | 5226ccb814c106cecf7a998c | -- Mix of IN/OUT parameters. CREATE OR REPLACE PROCEDURE in_out(i int, i2 OUT int, i3 INOUT int) AS $$ DECLARE r int; BEGIN i2 := i; i3 := i3 + i; END; $$ LANGUAGE plpgsql |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_ROLE_STMT | 5255d0216ea53e722b455568 | ALTER ROLE regress_replication REPLICATION |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DROP_STMT | 525c71844dde6714d10fa93b | DROP AGGREGATE IF EXISTS test_aggregate_exists(int) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DROP_ROLE_STMT | 5262eb2138fd8983ed37c342 | DROP GROUP regress_test_g1 |
-| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_PREPARE_STMT | 5265fe752b7707c95e1bebdc | PREPARE q1 AS SELECT 2 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 5268c3516d4939cdeb65f18d | -- N P P P -- should ERROR: tfp(int[],anyelement) not matched by tfp(anyarray,anyelement) CREATE AGGREGATE myaggn12a(BASETYPE = anyelement, SFUNC = tfp, STYPE = int[], FINALFUNC = ffnp, INITCOND = ... |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OPERATOR_STMT | 5294a4c313b0259e52d6a0b6 | ALTER OPERATOR === (boolean, boolean) SET (RESTRICT = NONE) |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_FETCH_STMT | 52d09684fdcc92e022c78a50 | FETCH BACKWARD 1 FROM foo24 |
-| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_EXECUTE_STMT | 52d526d5235885240ecb78d6 | execute foom |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_ROLE_SET_STMT | 530cc36a66b4c4b94a8029a9 | ALTER ROLE regress_host_resource_admin RESET max_stack_depth |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_RENAME_STMT | 538454d9dac3a4795e3c6712 | -- failed (name conflict) ALTER OPERATOR CLASS alt_opc1 USING hash RENAME TO alt_opc3 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 53889ecee2f937c797c19d53 | -- left out basetype create aggregate newcnt1 (sfunc = int4inc, stype = int4, initcond = '0') |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_ROLE_STMT | 5391ffe328dc0e4a9d767e6c | ALTER USER CURRENT_USER WITH REPLICATION |
-| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_PREPARE_STMT | 53b013cfb9e284c8853002d2 | -- custom plan should be chosen initially PREPARE st4(int) AS SELECT * FROM ft1 t1 WHERE t1.c1 = $1 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 53c595387c96f6c7b30e0add | CREATE OPERATOR = ( PROCEDURE = isneq, LEFTARG = isbn, RIGHTARG = isbn, COMMUTATOR = =, NEGATOR = <>, RESTRICT = eqsel, JOIN = eqjoinsel, MERGES, HASHES) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 53c752a924806225e05f753f | create aggregate aggfns(integer,integer,text) ( sfunc = aggfns_trans, stype = aggtype[], sspace = 10000, initcond = '{}' ) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 53db3a0fee228d58a3d9c0df | CREATE OPERATOR ~ ( LEFTARG = lquery, RIGHTARG = _ltree, PROCEDURE = _ltq_rregex, COMMUTATOR = '~', RESTRICT = contsel, JOIN = contjoinsel ) |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_COMMENT_STMT | 53fe0f7c488940b0d82b75ef | COMMENT ON FUNCTION seg_overlap(seg, seg) IS 'overlaps' |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 5429748e2ec9965b8beea8b7 | CREATE TEXT SEARCH DICTIONARY hunspell_long ( Template=ispell, DictFile=hunspell_sample_long, AffFile=hunspell_sample_long ) |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_COMMENT_STMT | 5475b0b0ead55b67afa6237a | COMMENT ON FUNCTION cube_eq(cube, cube) IS 'same as' |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_COMMENT_STMT | 548e3b74a0e557d10002d851 | COMMENT ON CONSTRAINT comment_test_positive_col_check ON comment_test IS 'CHECK constraint on comment_test.positive_col' |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_FETCH_STMT | 549c7db1b802b14b809145d6 | fetch 1 in c4 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 549f82e3b81cebdcdeee88a2 | CREATE OPERATOR = ( LEFTARG = cube, RIGHTARG = cube, PROCEDURE = cube_eq, COMMUTATOR = '=', NEGATOR = '<>', RESTRICT = eqsel, JOIN = eqjoinsel, MERGES ) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 54b12e860546ec822f435c95 | CREATE OPERATOR ^<@ ( LEFTARG = ltree, RIGHTARG = ltree, PROCEDURE = ltree_risparent, COMMUTATOR = '^@>', RESTRICT = contsel, JOIN = contjoinsel ) |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_SEC_LABEL_STMT | 54b5ff848c88ec11720a8d93 | SECURITY LABEL ON TABLE tpart IS 'system_u:object_r:sepgsql_ro_table_t:s0' |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 54c8240370081317fc5b62bf | CREATE OPERATOR < ( PROCEDURE = isnlt, LEFTARG = issn13, RIGHTARG = issn, COMMUTATOR = >, NEGATOR = >=, RESTRICT = scalarltsel, JOIN = scalarltjoinsel) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 54dd3a2154f3db5ff28d68be | -- commands that should succeed CREATE AGGREGATE priv_testagg1b(priv_testdomain1) (sfunc = int4_sum, stype = bigint) |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_FETCH_STMT | 54e139189aa0570423430879 | FETCH 4 in foo4 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 54eefbdda7a3655718667686 | CREATE AGGREGATE regtest_agg ( sfunc1 = int4pl, basetype = int4, stype1 = int4, initcond1 = '0' ) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_ROLE_STMT | 54f3104afc08ee17f9bbcde7 | ALTER ROLE regress_test_createrole WITH NOCREATEROLE |
-| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_EXPLAIN_STMT | 54f45e36e9220e05bd3a81e5 | -- Both partitions allowed by IN clause, then both excluded again by <> clauses. explain (analyze, costs off, summary off, timing off, buffers off) execute q1 (1,2,2,1) |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_COMMENT_STMT | 54f60cbc49f07dfb4ee3bf0e | COMMENT ON FUNCTION tg_hub_adjustslots(bpchar, integer, integer) IS 'function with args' |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OPERATOR_STMT | 5529baf66dc694a5a6f80e4e | ALTER OPERATOR >= (ismn, ean13) SET ( RESTRICT = scalargesel, JOIN = scalargejoinsel) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 553484e130cf86f48c9ed5d4 | -- zero-argument aggregate CREATE AGGREGATE newcnt (*) ( sfunc = int8inc, stype = int8, initcond = '0', parallel = safe ) |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_FETCH_STMT | 5539e69e90e31cd14ef2b7f2 | FETCH all in foo24 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 554ef089019eb3d7e663e830 | CREATE OPERATOR <= ( PROCEDURE = isnle, LEFTARG = ismn, RIGHTARG = ean13, COMMUTATOR = >=, NEGATOR = >, RESTRICT = scalarltsel, JOIN = scalarltjoinsel) |
-| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_EXECUTE_STMT | 5571a8b968501bcb5bcf771f | EXECUTE vprep |
-| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_PREPARE_STMT | 557f14053e7a70fe02f9712e | PREPARE q5(int, text) AS SELECT * FROM tenk1 WHERE unique1 = $1 OR stringu1 = $2 ORDER BY unique1 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OP_FAMILY_STMT | 5587b033da74304eed208582 | ALTER OPERATOR FAMILY gist_inet_ops USING gist ADD FUNCTION 11 (inet, inet) gbt_inet_sortsupport (internal) |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DECLARE_CURSOR_STMT | 55bf67707e8f086422d37cd5 | DECLARE foo4 SCROLL CURSOR FOR SELECT * FROM tenk2 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OP_FAMILY_STMT | 55d00862efb1c74a3dae6626 | -- invalid indexing_method ALTER OPERATOR FAMILY alt_opf4 USING btree ADD OPERATOR 6 < (int4, int2) |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_SEC_LABEL_STMT | 5601ef560ffa361f54689518 | SECURITY LABEL FOR 'dummy' ON ROLE regress_seclabel_user1 IS 'classified' |
-| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEALLOCATE_STMT | 5606441174fe8fa07e3ae40b | deallocate ab_q3 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 5616cb5052c6bc26ae48dadb | CREATE OPERATOR > ( PROCEDURE = isngt, LEFTARG = ean13, RIGHTARG = ismn13, COMMUTATOR = <, NEGATOR = <=, RESTRICT = scalargtsel, JOIN = scalargtjoinsel) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_ROLE_STMT | 564c32bcba28f1e8e58ee582 | -- -- Test extension script protection against search path overriding -- CREATE ROLE regress_seg_role |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_SEC_LABEL_STMT | 567362377ce49e3c6a1f45ad | SECURITY LABEL ON COLUMN t1p_ones.o IS 'system_u:object_r:sepgsql_table_t:s0' |
-| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_PREPARE_STMT | 56951fbc80945655ad95c53b | PREPARE prepstmt2(bigint) AS SELECT * FROM pcachetest WHERE q1 = $1 |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_SEC_LABEL_STMT | 56aa951fb6711ea86871298f | SECURITY LABEL ON TABLE seclabel_tbl3 IS 'unclassified' |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 56b29ba54113a4dba6fcd0da | CREATE OPERATOR = ( PROCEDURE = isneq, LEFTARG = ean13, RIGHTARG = upc, COMMUTATOR = =, NEGATOR = <>, RESTRICT = eqsel, JOIN = eqjoinsel, MERGES, HASHES) |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_FETCH_STMT | 56cde73b224b12fe8059098b | fetch 1 in c1 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 5736816d21185b9de6918e61 | CREATE OPERATOR >= ( PROCEDURE = isnge, LEFTARG = ean13, RIGHTARG = issn, COMMUTATOR = <=, NEGATOR = <, RESTRICT = scalargtsel, JOIN = scalargtjoinsel) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 573dfeded7ae713f5c9b5e66 | -- N P P N -- should ERROR: tf1p(int[],anyelement) not matched by tf1p(anyarray,int) CREATE AGGREGATE myaggp11a(BASETYPE = anyelement, SFUNC = tf1p, STYPE = int[], FINALFUNC = ffp, INITCOND = '{}') |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_ROLE_SET_STMT | 5746684cacc0e4e16186bdef | ALTER USER "Public" RESET application_name |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CLOSE_PORTAL_STMT | 57567edbce901fcb7070969e | CLOSE foo6 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_ROLE_STMT | 575c076c504fa201ce666e51 | CREATE ROLE regress_tablespace_user2 login |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_ROLE_STMT | 577d3fc3f5f5d09b36d4e5b3 | -- privileges CREATE USER regress_user11 |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_FETCH_STMT | 578b74944da6c123028f7731 | fetch 1 from cur |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 578fc8d6f1b6d01a78f6bcf4 | CREATE OPERATOR < ( PROCEDURE = isnlt, LEFTARG = issn, RIGHTARG = ean13, COMMUTATOR = >, NEGATOR = >=, RESTRICT = scalarltsel, JOIN = scalarltjoinsel) |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_COMMENT_STMT | 579f07bc57127bfaf1bdc4d0 | COMMENT ON OPERATOR ###### (int4, int8) IS 'bad infix' |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_SEC_LABEL_STMT | 57a655944de2a827a5fc9f1a | SECURITY LABEL ON COLUMN t1p_ones.q IS 'system_u:object_r:sepgsql_secret_table_t:s0' |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OP_FAMILY_STMT | 57a9cfd1607b5cc086acc009 | ALTER OPERATOR FAMILY gist__intbig_ops USING gist ADD FUNCTION 10 (_int4) g_intbig_options (internal) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_ROLE_STMT | 57c51d0008862a5497ff0e13 | -- test the case when the referenced table is owned by a different user create role regress_other_partitioned_fk_owner |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OPERATOR_STMT | 57e2ec8f631fed75f84117f8 | ALTER OPERATOR @=(real, boolean) SET (COMMUTATOR = ===) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 57f613066ac9db2881a2c2b9 | -- fails CREATE COLLATION testx (provider = icu, locale = '@colStrength=primary;nonsense=yes') |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 57fe782139f2f5e6359326e9 | CREATE OPERATOR < ( PROCEDURE = isnlt, LEFTARG = issn13, RIGHTARG = ean13, COMMUTATOR = >, NEGATOR = >=, RESTRICT = scalarltsel, JOIN = scalarltjoinsel) |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_FETCH_STMT | 580b262e7bee7a1c58b7e21b | FETCH FORWARD 1 FROM foocur |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 582201df9a7727f156bea6ab | CREATE TEXT SEARCH TEMPLATE alt_ts_temp2 (lexize=dsimple_lexize) |
-| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_EXPLAIN_STMT | 583b2715a1eacf1292a184fe | EXPLAIN (VERBOSE, COSTS OFF) EXECUTE st8 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OPERATOR_STMT | 58555be8c1420e4fb9374049 | ALTER OPERATOR >= (upc, ean13) SET ( RESTRICT = scalargesel, JOIN = scalargejoinsel) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OP_FAMILY_STMT | 5857a2b6d4de0a0ca06d1ab6 | -- function number should be between 1 and 6 ALTER OPERATOR FAMILY alt_opf4 USING btree ADD STORAGE invalid_storage |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OP_FAMILY_STMT | 5887c3775821eaa786fc5cd6 | ALTER OPERATOR FAMILY gist_int2_ops USING gist ADD OPERATOR 6 <> (int2, int2) , OPERATOR 15 <-> (int2, int2) FOR ORDER BY pg_catalog.integer_ops , FUNCTION 8 (int2, int2) gbt_int2_distance (interna... |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_COMMENT_STMT | 58c54bc5cad8ac99a8ef295f | COMMENT ON CONSTRAINT the_constraint ON constraint_comments_tbl IS NULL |
-| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_PREPARE_STMT | 58e6736eb6ccfbd2263b2bf8 | -- used in prepare statements PREPARE pp AS SELECT xmltable.* FROM (SELECT data FROM xmldata) x, LATERAL XMLTABLE('/ROWS/ROW' PASSING data COLUMNS id int PATH '@id', _id FOR ORDINALITY, country_nam... |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_COMMENT_STMT | 58eb5a7c2ed242949271ebf8 | COMMENT ON INDEX comment_test_child_fk IS 'Index backing the FOREIGN KEY of comment_test_child' |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 58fe16e76ec0877ad6221dfa | -- -- Text Search Parser -- CREATE TEXT SEARCH PARSER alt_ts_prs1 (start = prsd_start, gettoken = prsd_nexttoken, end = prsd_end, lextypes = prsd_lextype) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OPERATOR_STMT | 592279f10a32b0defe37febf | ALTER OPERATOR ^~ (lquery, _ltree) SET (RESTRICT = matchingsel, JOIN = matchingjoinsel) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 594355b084b13d46a5ee14f7 | CREATE AGGREGATE testns.agg1(int) (sfunc = int4pl, stype = int4) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 59445f11d00b9711a62bf8b5 | -- obsolete: CREATE OPERATOR @ ( LEFTARG = _int4, RIGHTARG = _int4, PROCEDURE = _int_contains, COMMUTATOR = '~', RESTRICT = _int_contains_sel, JOIN = _int_contains_joinsel ) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_ROLE_STMT | 595c0a2ab860a7bfc09b2d8e | CREATE ROLE regress_bttest_role |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CHECK_POINT_STMT | 5970e22d3e35a98074f4a286 | CHECKPOINT |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_FETCH_STMT | 59715e62c244afe20ae5ed9c | fetch backward all in c4 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 597f781801b2342093221139 | -- test that aggs with the same sfunc and initcond share the same agg state create aggregate my_sum_init(int4) ( stype = avg_state, sfunc = avg_transfn, finalfunc = sum_finalfn, initcond = '(10,0)' ) |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_FETCH_STMT | 59ac0e6c1840fcd034e0800c | FETCH FIRST c |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 59e7fed087dedb416dadb7fe | ALTER TABLE t2 ADD COLUMN c domain3 default left(random()::text,3) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 5a497b83111d7ad5ce9baede | CREATE OPERATOR >= ( LEFTARG = ltree, RIGHTARG = ltree, PROCEDURE = ltree_ge, COMMUTATOR = '<=', NEGATOR = '<', RESTRICT = contsel, JOIN = contjoinsel ) |
-| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_EXPLAIN_STMT | 5aa160f18176a9a13464272f | EXPLAIN (COSTS OFF) EXECUTE plancache_test |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DROP_STMT | 5ab14ce155a4f76136e2d367 | DROP OPERATOR @= (real, boolean) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_ROLE_STMT | 5abb12f38778834cba198a55 | -- permissions with LOCK TABLE CREATE USER regress_locktable_user |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_RENAME_STMT | 5abe7d1091fffc63b132a3cb | ALTER OPERATOR FAMILY alt_opf3 USING hash RENAME TO alt_opf4 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 5abfa85a1cadb3cfaa77094c | -- LC_CTYPE CREATE COLLATION coll_dup_chk (LC_CTYPE = "POSIX", LC_CTYPE = "NONSENSE", LC_COLLATE = "POSIX") |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_ROLE_STMT | 5acd9eee8cfcb951f9b65f74 | -- User with no access CREATE USER regress_stats_user1 |
-| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_EXECUTE_STMT | 5adacf39b1725b22272fb79a | EXECUTE get_nnconstraint_info('{notnull_tbl1, notnull_chld0}') |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 5b091c35c05d4df6605be628 | -- test that attributes not handled by icu_set_collation_attributes() -- (handled by ucol_open() directly) also work CREATE COLLATION testcoll_de_phonebook (provider = icu, locale = 'de@collation=p... |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OP_FAMILY_STMT | 5b28a34a8155922227194c85 | ALTER OPERATOR FAMILY gist_time_ops USING gist ADD FUNCTION 11 (time, time) gbt_time_sortsupport (internal) |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_COMMENT_STMT | 5b3e97f3f6026e16c4683b6d | COMMENT ON COLUMN comment_test.id IS 'Column ''id'' on comment_test' |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 5b3ed4495474cc9b909a2ea3 | CREATE COLLATION testcoll_numeric (provider = icu, locale = '@colNumeric=yes') |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_ROLE_STMT | 5b513fd489e70372420e9937 | ALTER ROLE regress_role_normal NOINHERIT NOLOGIN CONNECTION LIMIT 7 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OP_FAMILY_STMT | 5b7f869fb7672a7a7befbe66 | ALTER OPERATOR FAMILY gist_oid_ops USING gist ADD FUNCTION 12 ("any", "any") gist_translate_cmptype_btree (int) |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_COMMENT_STMT | 5b9b1dcc44fe7c4465e6f2d2 | COMMENT ON COLUMN ctlt1.a IS 'A' |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_OP_FAMILY_STMT | 5baf6dc6c3a341caaba77d0a | -- Should fail. Ensure that DROP requests for missing OPERATOR / FUNCTIONS -- return appropriate message in ALTER OPERATOR FAMILY ... DROP OPERATOR / FUNCTION CREATE OPERATOR FAMILY alt_opf18 USING... |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 5bafcb0f08af515ccca9dd8f | CREATE OPERATOR %> ( LEFTARG = text, RIGHTARG = text, PROCEDURE = word_similarity_commutator_op, COMMUTATOR = '<%', RESTRICT = contsel, JOIN = contjoinsel ) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 5be85fa2043724325b1d0182 | CREATE OPERATOR ^~ ( LEFTARG = _ltree, RIGHTARG = lquery, PROCEDURE = _ltq_regex, COMMUTATOR = '^~', RESTRICT = contsel, JOIN = contjoinsel ) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DROP_STMT | 5bed62ca027e79759ea77321 | DROP OPERATOR FAMILY IF EXISTS no_such_schema.float_ops USING btree |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_COMMENT_STMT | 5c41e182ec10e8a38f8625fb | COMMENT ON ROLE regress_hasprivs IS 'add the comment back' |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 5c7895b6b5a3932b8c48faa5 | CREATE OPERATOR >= ( PROCEDURE = isnge, LEFTARG = ismn13, RIGHTARG = ismn, COMMUTATOR = <=, NEGATOR = <, RESTRICT = scalargtsel, JOIN = scalargtjoinsel ) |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_COMMENT_STMT | 5c80c2ac5a0729ba24617b14 | COMMENT ON LANGUAGE plperl IS 'PL/Perl procedural language' |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OPERATOR_STMT | 5c871ea14d98da1c58199728 | ALTER OPERATOR >= (ltree, ltree) SET (RESTRICT = scalargesel, JOIN = scalargejoinsel) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_ROLE_SET_STMT | 5cb3b28d600dd75073766457 | ALTER USER "current_user" SET application_name to 'FOOFOO' |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_COMMENT_STMT | 5ce8c0943f158d22ed4c45f9 | COMMENT ON FOREIGN DATA WRAPPER dummy IS 'useless' |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 5cea2af0590f028d5ae73eb6 | CREATE AGGREGATE alt_agg2 ( sfunc1 = int4mi, basetype = int4, stype1 = int4, initcond = -100 ) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_OP_CLASS_STMT | 5ceeccb0231c23eaf2c5fae4 | CREATE OPERATOR CLASS int4_custom_ops FOR TYPE int4 USING btree AS OPERATOR 1 < (int4, int4), OPERATOR 2 <= (int4, int4), OPERATOR 3 = (int4, int4), OPERATOR 4 >= (int4, int4), OPERATOR 5 > (int4, ... |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 5d111120b55bf145b16c065b | -- PROVIDER CREATE COLLATION coll_dup_chk (PROVIDER = icu, PROVIDER = NONSENSE, LC_COLLATE = "POSIX", LC_CTYPE = "POSIX") |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OPERATOR_STMT | 5d41806fb5622cd7c15ec417 | ALTER OPERATOR <= (isbn13, isbn) SET ( RESTRICT = scalarlesel, JOIN = scalarlejoinsel) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 5d487c2f9025b0fef6d3abbf | CREATE OPERATOR = ( PROCEDURE = isneq, LEFTARG = issn13, RIGHTARG = issn13, COMMUTATOR = =, NEGATOR = <>, RESTRICT = eqsel, JOIN = eqjoinsel, MERGES, HASHES) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_ROLE_STMT | 5d7fb35db0cbc06ee518dd50 | CREATE GROUP regress_priv_group1 |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_COMMENT_STMT | 5d85d9421f131c58676fa3ff | -- Test comments COMMENT ON FUNCTION tg_hub_adjustslots_wrong(bpchar, integer, integer) IS 'function with args' |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_ROLE_STMT | 5dceb4c471da4467bafdaf2b | CREATE ROLE regress_rls_frank |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OWNER_STMT | 5df90aa978311863705621aa | ALTER OPERATOR CLASS alt_opc2 USING hash OWNER TO regress_alter_generic_user1 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 5e3eefaa30ec1bb38512aa2a | CREATE OPERATOR <= ( LEFTARG = ltree, RIGHTARG = ltree, PROCEDURE = ltree_le, COMMUTATOR = '>=', NEGATOR = '>', RESTRICT = contsel, JOIN = contjoinsel ) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DROP_STMT | 5ec6ac8d56da182dbddd9847 | DROP OPERATOR <<< (int, int) |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_COMMENT_STMT | 5ec9614174206a3f298c4397 | COMMENT ON CONSTRAINT ctlt2_c_not_null ON ctlt2 IS 't2_c_not_null' |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OPERATOR_STMT | 5ecb58563b1bd24cb2e8cc83 | ALTER OPERATOR <= (ismn13, ismn13) SET ( RESTRICT = scalarlesel, JOIN = scalarlejoinsel) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 5ecebd178d56c4cdac98fd7d | -- P N N N -- should ERROR: tfnp(anyarray, int) not matched by tfnp(int[],int) CREATE AGGREGATE myaggp13a(BASETYPE = int, SFUNC = tfnp, STYPE = anyarray, FINALFUNC = ffp, INITCOND = '{}') |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_FETCH_STMT | 5ee55ebfdfd4c840a698a39c | FETCH 23 in foo23 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_ROLE_STMT | 5ef9a9c9d174cef9d35fdf8d | CREATE ROLE regress_role_nopriv |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_COMMENT_STMT | 5f66d4dde17d067d8366dc47 | COMMENT ON LANGUAGE plperlu IS 'PL/PerlU untrusted procedural language' |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 5f9387289d410625cdefa7af | -- commands that should fail CREATE AGGREGATE priv_testagg1a(priv_testdomain1) (sfunc = int4_sum, stype = bigint) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 5fb60da5d5aba1c6b5f4b196 | CREATE OPERATOR !~~* ( PROCEDURE = texticnlike, LEFTARG = citext, RIGHTARG = text, NEGATOR = ~~*, RESTRICT = icnlikesel, JOIN = icnlikejoinsel ) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 6013023a7659753c7f214dca | CREATE OPERATOR ~~ ( PROCEDURE = texticlike, LEFTARG = citext, RIGHTARG = citext, NEGATOR = !~~, RESTRICT = iclikesel, JOIN = iclikejoinsel ) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 601f9de1d18aaac298799244 | CREATE OPERATOR <= ( PROCEDURE = isnle, LEFTARG = upc, RIGHTARG = upc, COMMUTATOR = >=, NEGATOR = >, RESTRICT = scalarltsel, JOIN = scalarltjoinsel) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 6037e78c1a311587d29f28c4 | CREATE OPERATOR <= ( PROCEDURE = isnle, LEFTARG = issn, RIGHTARG = ean13, COMMUTATOR = >=, NEGATOR = >, RESTRICT = scalarltsel, JOIN = scalarltjoinsel) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_ROLE_STMT | 603e2c91754118913ea7bd0e | ALTER USER regress_passwordcheck_user1 PASSWORD 'md507a112732ed9f2087fa90b192d44e358' |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 6067fa2dc91ece3b6e5e9325 | CREATE AGGREGATE min(citext) ( SFUNC = citext_smaller, STYPE = citext, SORTOP = <, PARALLEL = SAFE, COMBINEFUNC = citext_smaller ) |
-| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_PREPARE_STMT | 6086e9b6d56d3a4c64114977 | PREPARE foo AS SELECT 1 |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DECLARE_CURSOR_STMT | 608867c24083195c9178f936 | DECLARE foo24 CURSOR FOR SELECT * FROM onek2 WHERE unique1 = 50 |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_FETCH_STMT | 60d2920dbfa11eea1bd1bae4 | FETCH 10 FROM c |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 61049981a02ed1aa8246a93a | CREATE OPERATOR ?@> ( LEFTARG = _ltree, RIGHTARG = ltree, PROCEDURE = _ltree_extract_isparent ) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_ROLE_SET_STMT | 610873eb75ac9c177d7691d9 | -- Make a per-role setting that regress_host_resource_admin can't change ALTER ROLE regress_host_resource_admin SET lc_messages = 'C' |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 611b7b47573b4509d1ebcaab | -- fails CREATE COLLATION mycoll1 FROM "C" |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 6123743f10c0205faca87b0b | CREATE OPERATOR <-> ( LEFTARG = date, RIGHTARG = date, PROCEDURE = date_dist, COMMUTATOR = '<->' ) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_ROLE_STMT | 61650fda64ad858ba875f28b | ALTER ROLE regress_test_replication WITH NOREPLICATION |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 6177f34c035878496c222070 | CREATE OPERATOR ~<=~ ( LEFTARG = CITEXT, RIGHTARG = CITEXT, NEGATOR = ~>~, COMMUTATOR = ~>=~, PROCEDURE = citext_pattern_le, RESTRICT = scalarltsel, JOIN = scalarltjoinsel ) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 61c4bd2f82490eb3bd109517 | CREATE OPERATOR >= ( PROCEDURE = isnge, LEFTARG = ismn13, RIGHTARG = ean13, COMMUTATOR = <=, NEGATOR = <, RESTRICT = scalargtsel, JOIN = scalargtjoinsel ) |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_SEC_LABEL_STMT | 61c983ad73c90a0d9d759faa | SECURITY LABEL ON ROLE regress_seclabel_user3 IS 'unclassified' |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 61cd8ee2ded2fd4f840cf0f5 | CREATE OPERATOR <= ( PROCEDURE = isnle, LEFTARG = isbn, RIGHTARG = isbn, COMMUTATOR = >=, NEGATOR = >, RESTRICT = scalarltsel, JOIN = scalarltjoinsel) |
-| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_EXECUTE_STMT | 61d107b13903d25f89a7d3f8 | EXECUTE q3(5::smallint, 10.5::float, false, 4::bigint, 'bytea') |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_ROLE_STMT | 6200d750e2b5be4522a8d0d2 | CREATE ROLE regress_replication_bypassrls REPLICATION BYPASSRLS |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_ROLE_STMT | 6253dfc60ea236f6d7d28b7b | CREATE ROLE regress_stats_superuser SUPERUSER |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_ROLE_STMT | 625a46326fde9602b0414b18 | CREATE ROLE regress_passwd6 PASSWORD 'SCRAM-SHA-256$1234' |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 626f6459c113ddd611b1ffd4 | CREATE OPERATOR < ( PROCEDURE = isnlt, LEFTARG = ean13, RIGHTARG = ismn, COMMUTATOR = >, NEGATOR = >=, RESTRICT = scalarltsel, JOIN = scalarltjoinsel) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 62934c5566d72f3cf0f218a6 | CREATE OPERATOR ^@> ( LEFTARG = ltree, RIGHTARG = _ltree, PROCEDURE = _ltree_r_risparent, COMMUTATOR = '^<@', RESTRICT = contsel, JOIN = contjoinsel ) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 62ded6ce683473a2b16899f1 | -- N P P N -- should ERROR: tf1p(int[],anyelement) not matched by tf1p(anyarray,int) CREATE AGGREGATE myaggn11a(BASETYPE = anyelement, SFUNC = tf1p, STYPE = int[], FINALFUNC = ffnp, INITCOND = '{}') |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 62e84815a7fc41076936640b | CREATE OPERATOR %>> ( LEFTARG = text, RIGHTARG = text, PROCEDURE = strict_word_similarity_commutator_op, COMMUTATOR = '<<%', RESTRICT = contsel, JOIN = contjoinsel ) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_OP_CLASS_STMT | 62eb1454e6a903d063134bd9 | ---- Create the operator class CREATE OPERATOR CLASS gist_bpchar_ops DEFAULT FOR TYPE bpchar USING gist AS OPERATOR 1 < , OPERATOR 2 <= , OPERATOR 3 = , OPERATOR 4 >= , OPERATOR 5 > , FUNCTION 1 gb... |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 62f3c335bdb04c7ec3cc8772 | CREATE OPERATOR = ( PROCEDURE = isneq, LEFTARG = ean13, RIGHTARG = ismn, COMMUTATOR = =, NEGATOR = <>, RESTRICT = eqsel, JOIN = eqjoinsel, MERGES, HASHES) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_ROLE_STMT | 62f5f200d8b22ed9a322034e | create user regress_user_ectest |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 632c71f2c326c3c5b5d3a715 | CREATE OPERATOR ^@> ( LEFTARG = ltree, RIGHTARG = ltree, PROCEDURE = ltree_isparent, COMMUTATOR = '^<@', RESTRICT = contsel, JOIN = contjoinsel ) |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DISCARD_STMT | 633764cf5744d1ab3ab3836a | DISCARD TEMP |
-| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_EXPLAIN_STMT | 637948178851259826b72fa7 | explain (analyze, costs off, summary off, timing off, buffers off) execute ab_q1 (2, 4) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_ROLE_STMT | 638443eddb3503217f245139 | -- error -- Test quoting and dequoting of user names in ACLs CREATE ROLE "regress_""quoted" |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OWNER_STMT | 639766a3d9798be474d02a65 | -- failed (no role membership) ALTER OPERATOR FAMILY alt_opf2 USING hash OWNER TO regress_alter_generic_user3 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_ROLE_STMT | 63a6e0226a9cf6cebaf290d7 | -- -- Mixed ownership inheritance tree -- create role regress_alice |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_FETCH_STMT | 63b5bfdc49d8ce83da859f02 | fetch backward all from rf_cur |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OPERATOR_STMT | 63b7ebc97b9d9a860a9f09fe | ALTER OPERATOR ?\| (hstore, text[]) SET (RESTRICT = matchingsel, JOIN = matchingjoinsel) |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_FETCH_STMT | 63c3b2890afa122a0b98ca4d | fetch all in c1 |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DECLARE_CURSOR_STMT | 63e3511d3e35b5b10e5cfbef | DECLARE cx CURSOR WITH HOLD FOR SELECT * FROM uctest |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 63fbdbf1701af30bc03e6649 | CREATE OPERATOR <= ( PROCEDURE = isnle, LEFTARG = ean13, RIGHTARG = isbn13, COMMUTATOR = >=, NEGATOR = >, RESTRICT = scalarltsel, JOIN = scalarltjoinsel) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_ROLE_STMT | 63fd88974c1ed5f1fa07617d | CREATE ROLE "Public" |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_ROLE_STMT | 641f6d6d723d09cffd8739d9 | ALTER ROLE regress_test_bypassrls WITH BYPASSRLS |
-| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_PREPARE_STMT | 642ab1823873969ceb85fd45 | prepare s as select current_user, * from rls_f() |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_ROLE_STMT | 64379d6bd3aa7ed925ff19bf | -- ==================================================================== -- Check that userid to use when querying the remote table is correctly -- propagated into foreign rels present in subqueries... |
-| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_PREPARE_STMT | 64445eb75777faf6632c6acb | -- =================================================================== -- parameterized queries -- =================================================================== -- simple join PREPARE st1(int... |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OP_FAMILY_STMT | 644b1e90a0bec27a049a3223 | alter operator family integer_ops using hash add function 1 hashint8alias1(int8alias1) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_ROLE_STMT | 64511afd5f7ea5d98c8d1873 | CREATE ROLE regress_write_all_data IN ROLE pg_write_all_data |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_ROLE_STMT | 64594ff75f62b5ca51724851 | ALTER USER "current_user" WITH REPLICATION |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_ROLE_STMT | 645e8688e5d659975ce14e75 | ALTER ROLE regress_test_role_canlogin WITH NOLOGIN |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DROP_ROLE_STMT | 647a4be57c73bd706d28469c | DROP GROUP regress_priv_group2 |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DECLARE_CURSOR_STMT | 6490dc44726689e91c5a6afc | DECLARE foo9 SCROLL CURSOR FOR SELECT * FROM tenk1 ORDER BY unique2 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_ROLE_STMT | 649a36de6747034669992ec6 | CREATE USER regress_priv_user8 |
-| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEALLOCATE_STMT | 64b6510b6741237c24af7b55 | DEALLOCATE PREPARE stat_select |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_ROLE_STMT | 64e8a9b6be4495a4b767214e | CREATE GROUP regress_test_g1 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 64f93279260399b993b3dad8 | -- N N P P -- should CREATE CREATE AGGREGATE myaggn08a(BASETYPE = anyelement, SFUNC = tf2p, STYPE = int[], FINALFUNC = ffnp, INITCOND = '{}') |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_COMMENT_STMT | 65050eeac691ce7300b35daa | COMMENT ON LARGE OBJECT 42 IS 'the ultimate answer' |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CLOSE_PORTAL_STMT | 65119ff929d75be71875b869 | CLOSE foo4 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 651ed22e9713cd16abad87b4 | CREATE TEXT SEARCH DICTIONARY ispell ( Template=ispell, DictFile=ispell_sample, AffFile=ispell_sample ) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_ROLE_STMT | 6595174be2d26b2885f5a25d | ALTER ROLE CURRENT_ROLE WITH NOREPLICATION |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_OP_CLASS_STMT | 65c8f0462463fa17318a775a | -- Create the operator class CREATE OPERATOR CLASS gist_int4_ops DEFAULT FOR TYPE int4 USING gist AS OPERATOR 1 < , OPERATOR 2 <= , OPERATOR 3 = , OPERATOR 4 >= , OPERATOR 5 > , FUNCTION 1 gbt_int4... |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DROP_STMT | 65ced19d7c3248b78c39988c | DROP AGGREGATE IF EXISTS test_aggregate_exists(*) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 65d95d010c29790e89bab758 | create operator = (procedure=bogus_int8_text_eq, leftarg=int8, rightarg=text) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 65fd7b70cb2486f8607443da | CREATE OPERATOR >= ( PROCEDURE = isnge, LEFTARG = upc, RIGHTARG = ean13, COMMUTATOR = <=, NEGATOR = <, RESTRICT = scalargtsel, JOIN = scalargtjoinsel ) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_OP_CLASS_STMT | 66239da96e2a757ad0ef8332 | CREATE OPERATOR CLASS timetz_ops DEFAULT FOR TYPE timetz USING gin AS OPERATOR 1 <, OPERATOR 2 <=, OPERATOR 3 =, OPERATOR 4 >=, OPERATOR 5 >, FUNCTION 1 timetz_cmp(timetz,timetz), FUNCTION 2 gin_ex... |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 66458f2bf8d7b00e7fabf84c | CREATE OPERATOR ^@ ( LEFTARG = ltxtquery, RIGHTARG = _ltree, PROCEDURE = _ltxtq_rexec, COMMUTATOR = '^@', RESTRICT = contsel, JOIN = contjoinsel ) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_ROLE_STMT | 6665ae09c1e26d31aec7a30a | create role regress_multirange_owner |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 666824728f4f50f823ad60d5 | CREATE TEXT SEARCH TEMPLATE addr_ts_temp (lexize=dsimple_lexize) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_ROLE_STMT | 666a0f7c3f149c32c35430e9 | CREATE ROLE regress_priv_role |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 669dbabcdbe6700d64bcfa7d | -- P P -- should ERROR: ffnp(anyarray) not matched by ffnp(int[]) CREATE AGGREGATE myaggn04a(*) (SFUNC = stfp, STYPE = anyarray, FINALFUNC = ffnp, INITCOND = '{}') |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OP_FAMILY_STMT | 669f140fb528b0dad46e4f9c | ALTER OPERATOR FAMILY gist_timetz_ops USING gist ADD FUNCTION 11 (timetz, timetz) gbt_time_sortsupport (internal) |
-| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_PREPARE_STMT | 66bd9756731e119d651cdad5 | -- altering FDW options requires replanning PREPARE st6 AS SELECT * FROM ft1 t1 WHERE t1.c1 = t1.c2 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 66c044ac858b2008d46f2c82 | CREATE OPERATOR > ( PROCEDURE = isngt, LEFTARG = ismn13, RIGHTARG = ismn, COMMUTATOR = <, NEGATOR = <=, RESTRICT = scalargtsel, JOIN = scalargtjoinsel ) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 66d5db70c19960201d664a23 | CREATE OPERATOR > ( PROCEDURE = isngt, LEFTARG = isbn, RIGHTARG = ean13, COMMUTATOR = <, NEGATOR = <=, RESTRICT = scalargtsel, JOIN = scalargtjoinsel ) |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_SEC_LABEL_STMT | 66f151a32ffdc7a1a172bae3 | SECURITY LABEL ON FUNCTION f2() IS 'system_u:object_r:sepgsql_trusted_proc_exec_t:s0' |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_ROLE_STMT | 67084c592004ffed341978a5 | CREATE ROLE regress_dump_test_super SUPERUSER |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 670b23e91a234f53092748b9 | create operator pg_temp.@@ (leftarg = int4, rightarg = int4, procedure = int4mi) |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_SEC_LABEL_STMT | 6720e10f954cf86897ab3b9b | SECURITY LABEL ON FUNCTION f3() IS 'system_u:object_r:sepgsql_trusted_proc_exec_t:s0' |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_ROLE_STMT | 674cbb99850b82b5091651c9 | create role regress_fn_owner |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OBJECT_SCHEMA_STMT | 676183eee1dfe131b41a1b4c | -- failed (not aggregate) ALTER AGGREGATE alt_func1(int) SET SCHEMA alt_nsp2 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_OP_CLASS_STMT | 677d77b0516481374b8f7484 | CREATE OPERATOR CLASS numeric_ops DEFAULT FOR TYPE numeric USING gin AS OPERATOR 1 <, OPERATOR 2 <=, OPERATOR 3 =, OPERATOR 4 >=, OPERATOR 5 >, FUNCTION 1 gin_numeric_cmp(numeric,numeric), FUNCTION... |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 67b4da1557894b96740e86f3 | create collation mycollation from "POSIX" |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 67bc521ec2f0e5ce61d638e4 | CREATE COLLATION testcoll_rulesx (provider = icu, locale = '', rules = '!!wrong!!') |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_ROLE_STMT | 67c7947becc117825472bf41 | ALTER ROLE regress_createdb NOSUPERUSER |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 67d30b0b401aecd236d91a6d | -- can't change return type: CREATE OR REPLACE AGGREGATE myavg (numeric) ( stype = numeric, sfunc = numeric_add, finalfunc = numeric_out ) |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DECLARE_CURSOR_STMT | 67ea94a8f066bcf5f83a7d11 | DECLARE c1 CURSOR FOR SELECT * FROM ucview |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_ROLE_STMT | 67ec569c159ba9ea9cbf0b77 | CREATE ROLE regress_lr_superuser SUPERUSER |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 68088de8391380746bab848f | CREATE AGGREGATE myaggn16b(BASETYPE = anyelement, SFUNC = tf2p, STYPE = anyarray, INITCOND = '{}') |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DROP_STMT | 6808b4fbca57ac8142b09c8f | drop operator class part_test_int4_ops2 using hash |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_OP_CLASS_STMT | 6810c3ba6ef2fd4e1e8c750c | -- Create the operator class CREATE OPERATOR CLASS gist_bool_ops DEFAULT FOR TYPE bool USING gist AS OPERATOR 1 < , OPERATOR 2 <= , OPERATOR 3 = , OPERATOR 4 >= , OPERATOR 5 > , OPERATOR 6 <> , FUN... |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DECLARE_CURSOR_STMT | 682f0cd57e7d50bc29f95c99 | DECLARE foo1 SCROLL CURSOR FOR SELECT * FROM tenk1 ORDER BY unique2 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OP_FAMILY_STMT | 683e07cdf2da6b0579b3e82b | ALTER OPERATOR FAMILY gist_macaddr8_ops USING gist ADD FUNCTION 12 ("any", "any") gist_translate_cmptype_btree (int) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_EXPLAIN_STMT | 685d6fbdaaa5d1a92bd99c6d | EXPLAIN (costs off) DECLARE c1 CURSOR FOR SELECT stringu1 FROM onek WHERE stringu1 = 'DZAAAA' |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 68642c323ba22b43123be0cd | CREATE OPERATOR @> ( LEFTARG = seg, RIGHTARG = seg, PROCEDURE = seg_contains, COMMUTATOR = '<@', RESTRICT = contsel, JOIN = contjoinsel ) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 68c9ea841c76a1ae339b0c01 | -- Case3 (R = N) && (B = A) -- ------------------------ -- S tf1 -- ------- -- N N -- should CREATE CREATE AGGREGATE myaggn01a(*) (SFUNC = stfnp, STYPE = int4[], FINALFUNC = ffnp, INITCOND = '{}') |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_COMMENT_STMT | 68eae0cfcb88505c646a6d9c | COMMENT ON FUNCTION cube_overlap(cube, cube) IS 'overlaps' |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_ROLE_STMT | 68f46e1fbe3e0e47c02985bf | ALTER ROLE regress_passwd2 PASSWORD 'foo' |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_ROLE_STMT | 691a792224436ceb6e27dbe2 | ALTER ROLE regress_role_limited BYPASSRLS |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_OP_CLASS_STMT | 6921496331a84d8c5ff0cfb6 | CREATE OPERATOR CLASS gist_seg_ops DEFAULT FOR TYPE seg USING gist AS OPERATOR 1 << , OPERATOR 2 &< , OPERATOR 3 && , OPERATOR 4 &> , OPERATOR 5 >> , OPERATOR 6 = , OPERATOR 7 @> , OPERATOR 8 <@ , ... |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_ROLE_STMT | 6927e86798c31a88930763e5 | ALTER ROLE "current_role" WITH REPLICATION |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 692f362ae75d564c22f0d6c6 | CREATE AGGREGATE testagg8(int2) (SFUNC = int2_sum, STYPE = int8) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OP_FAMILY_STMT | 695e53e8541af77a9c7b5209 | ALTER OPERATOR FAMILY gist_cidr_ops USING gist ADD FUNCTION 12 ("any", "any") gist_translate_cmptype_btree (int) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_ROLE_STMT | 6964a64b5e78248cf77943a1 | CREATE ROLE regress_heaptest_role |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OPERATOR_STMT | 6976b60f858357b4f971bd05 | ALTER OPERATOR >= (ean13, issn13) SET ( RESTRICT = scalargesel, JOIN = scalargejoinsel) |
-| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEALLOCATE_STMT | 6988acb6af9094d6f4b13265 | deallocate ps2 |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_COMMENT_STMT | 698ffaf27df1944b77488b46 | COMMENT ON FUNCTION cube_le(cube, cube) IS 'lower than or equal to' |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OP_FAMILY_STMT | 69927e4a2356914e19c24e3a | ALTER OPERATOR FAMILY gist_uuid_ops USING gist ADD FUNCTION 12 ("any", "any") gist_translate_cmptype_btree (int) |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_COMMENT_STMT | 6994338a5162f9eed44c2e2c | COMMENT ON FUNCTION seg_right(seg, seg) IS 'is right of' |
-| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_EXPLAIN_STMT | 69945017f68fcf1f5375ad9a | -- Ensure the xy_1 subplan is not pruned. explain (analyze, costs off, summary off, timing off, buffers off) execute ab_q6(1) |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DECLARE_CURSOR_STMT | 699f498646aee6dd378980c1 | DECLARE c1 INSENSITIVE CURSOR FOR SELECT * FROM uctest |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_COMMENT_STMT | 69b3e0786d27a9fe219338eb | COMMENT ON FUNCTION cube_contained(cube, cube) IS 'contained in' |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_SEC_LABEL_STMT | 69b48af0b0caaf497d690e59 | SECURITY LABEL ON VIEW dummy_seclabel_view1 IS 'classified' |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 69f1f316d678930751891c0d | CREATE OPERATOR ~~* ( PROCEDURE = texticlike, LEFTARG = citext, RIGHTARG = citext, NEGATOR = !~~*, RESTRICT = iclikesel, JOIN = iclikejoinsel ) |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_SEC_LABEL_STMT | 69f51c200ac5074bf499751d | SECURITY LABEL ON COLUMN t2 IS 'system_u:object_r:sepgsql_ro_table_t:s0' |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_OP_CLASS_STMT | 6a2f5dbfb835fc66b67ad50b | CREATE OPERATOR CLASS bpchar_ops DEFAULT FOR TYPE bpchar USING gin AS OPERATOR 1 <, OPERATOR 2 <=, OPERATOR 3 =, OPERATOR 4 >=, OPERATOR 5 >, FUNCTION 1 bpcharcmp(bpchar, bpchar), FUNCTION 2 gin_ex... |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_OP_FAMILY_STMT | 6a3f15c5e3027432b91b9cb3 | CREATE OPERATOR FAMILY alt_opf4 USING btree |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 6a3f24a7cbf129c4e16afd3c | CREATE OPERATOR <> ( PROCEDURE = isnne, LEFTARG = ean13, RIGHTARG = isbn13, COMMUTATOR = <>, NEGATOR = =, RESTRICT = neqsel, JOIN = neqjoinsel) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 6a4d6e905d60010a60ea8c0c | CREATE AGGREGATE rwagg(anyarray) ( STYPE = anyarray, SFUNC = rwagg_sfunc, FINALFUNC = rwagg_finalfunc ) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OP_FAMILY_STMT | 6a78fc245d812ace8aea436d | -- Should fail. Not allowed to have cross-type equalimage function. ALTER OPERATOR FAMILY alt_opf18 USING btree ADD FUNCTION 4 (int4, int2) btequalimage(oid) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_ROLE_STMT | 6a82e5fd6cef613f90097c38 | CREATE USER regress_priv_user10 |
-| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_SELECT_STMT | 6a98e0026e1a701787406dc2 | -- delete (hstore) select delete('aa=>1 , b=>2, c=>3'::hstore, 'aa=>4, b=>2'::hstore) |
-| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_PREPARE_STMT | 6a9fb6861ed8ed3711a556a3 | PREPARE async_pt_query (int, int) AS INSERT INTO result_tbl SELECT * FROM async_pt WHERE a < $1 AND b === $2 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_OP_CLASS_STMT | 6ab888277ce2682e3d599ad7 | -- register the opclass for indexing (not as default) CREATE OPERATOR CLASS gist__intbig_ops FOR TYPE _int4 USING gist AS OPERATOR 3 &&, OPERATOR 6 = (anyarray, anyarray), OPERATOR 7 @>, OPERATOR 8... |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_ROLE_STMT | 6acc1172b8c68b27a96af0ab | CREATE ROLE regress_grantor3 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_OP_CLASS_STMT | 6ad9f943e858e4ba85816a87 | create operator class part_test_int4_ops2 for type int4 using hash as operator 1 ===, function 2 part_hashint4_noop(int4, int8) |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_COMMENT_STMT | 6afa2ac5f3c39f3d20c00e32 | COMMENT ON CONSTRAINT constrname ON FKTABLE IS 'fk constraint comment' |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 6b09e7f6068ec2bfcfaeaba4 | -- P P N N -- should ERROR: we have no way to resolve S CREATE AGGREGATE myaggp17a(BASETYPE = int, SFUNC = tf1p, STYPE = anyarray, FINALFUNC = ffp, INITCOND = '{}') |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_OP_CLASS_STMT | 6b0c835b3045a47507245859 | CREATE OPERATOR CLASS citext_pattern_ops FOR TYPE CITEXT USING btree AS OPERATOR 1 ~<~ (citext, citext), OPERATOR 2 ~<=~ (citext, citext), OPERATOR 3 = (citext, citext), OPERATOR 4 ~>=~ (citext, ci... |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_ROLE_STMT | 6b173cc4099ca29d9f6f0cc2 | CREATE USER regress_sepgsql_test_user |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 6b1a390fe643090d20850d35 | CREATE COLLATION case_insensitive (provider = icu, locale = '@colStrength=secondary', deterministic = false) |
-| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_PREPARE_STMT | 6b42830e82e6ab935443d355 | -- subquery using stable function (can't be sent to remote) PREPARE st2(int) AS SELECT * FROM ft1 t1 WHERE t1.c1 < $2 AND t1.c3 IN (SELECT c3 FROM ft2 t2 WHERE c1 > $1 AND date(c4) = '1970-01-17'::... |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OPERATOR_STMT | 6b6eb71768c7b1e92f46a2cc | ALTER OPERATOR <= (ean13, isbn) SET ( RESTRICT = scalarlesel, JOIN = scalarlejoinsel) |
-| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_EXECUTE_STMT | 6b8657c2484aae1ea9ff604f | EXECUTE st3(20, 30) |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_COMMENT_STMT | 6bc00e741a249dcc2e817e90 | -- Test comments COMMENT ON TYPE bad IS 'bad comment' |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OP_FAMILY_STMT | 6bf4a25d306eba2bd4b346de | ALTER OPERATOR FAMILY isn_ops USING hash ADD OPERATOR 1 = (issn, ean13), OPERATOR 1 = (issn, issn13) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 6c196d2c8b5ecfe857f594a6 | -- N N P P -- should CREATE CREATE AGGREGATE myaggp08a(BASETYPE = anyelement, SFUNC = tf2p, STYPE = int[], FINALFUNC = ffp, INITCOND = '{}') |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DECLARE_CURSOR_STMT | 6c63d235bf8022cb8cb9ffd5 | DECLARE foo18 CURSOR FOR SELECT * FROM onek WHERE unique1 = 55 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 6c65c81fb17381e8ff8ae607 | CREATE OPERATOR = ( PROCEDURE = isneq, LEFTARG = ismn, RIGHTARG = ismn, COMMUTATOR = =, NEGATOR = <>, RESTRICT = eqsel, JOIN = eqjoinsel, MERGES, HASHES) |
-| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEALLOCATE_STMT | 6c9155f75f13eb050725bed4 | DEALLOCATE st |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OP_FAMILY_STMT | 6c9d075ed4af15db32586414 | ALTER OPERATOR FAMILY gist_cube_ops USING gist drop function 4 (cube) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DROP_ROLE_STMT | 6cadbd2fb6db0ac9c910f0d4 | DROP GROUP regress_priv_group1 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 6cb3ae2fe61653baff0c6313 | CREATE OPERATOR < ( LEFTARG = int_custom, RIGHTARG = int_custom, FUNCTION = int_custom_lt, COMMUTATOR = >, NEGATOR = >=, RESTRICT = scalarltsel, JOIN = scalarltjoinsel ) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DROP_STMT | 6cb468075bf8feb96304b2b5 | DROP OPERATOR CLASS test_operator_class USING btree |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DECLARE_CURSOR_STMT | 6d09874d78491d1b7c83e250 | declare foo cursor for select * from trans_abc |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 6d1dafee946723fb99ab5c63 | CREATE OPERATOR -> ( LEFTARG = hstore, RIGHTARG = text, PROCEDURE = fetchval ) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_ROLE_STMT | 6d3545075c95d5c7f1b2b3bc | CREATE USER regress_test_user |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 6d60e4465c770a351179bbd6 | CREATE OPERATOR # ( LEFTARG = _int4, RIGHTARG = int4, PROCEDURE = idx ) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 6d85253495e0ae7a1f37a4bf | -- DETERMINISTIC CREATE COLLATION coll_dup_chk (DETERMINISTIC = TRUE, DETERMINISTIC = NONSENSE, LOCALE = '') |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_FETCH_STMT | 6da4b96e53b21533475fd1a6 | FETCH 17 in foo17 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_ROLE_STMT | 6da5f90dc4a2cf73081977a2 | CREATE ROLE regress_rls_dob_role2 |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_COMMENT_STMT | 6dc8527151cf35b531f19f26 | comment on constraint at_partitioned_0_id_name_key on at_partitioned_0 is 'child 0 constraint' |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_ROLE_STMT | 6dd6eeee6f0cceca46b8f8c0 | CREATE ROLE regress_passwd_empty PASSWORD '' |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 6df18f541f17fd803621aea2 | CREATE AGGREGATE testagg7(int2) (SFUNC = int2_sum, STYPE = int8) |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_COMMENT_STMT | 6e02f4dbddd96833438e9b19 | COMMENT ON FUNCTION seg_over_right(seg, seg) IS 'overlaps or is right of' |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_OP_CLASS_STMT | 6e25e36c340c1d01efc09c72 | -- Create the operator classes for indexing CREATE OPERATOR CLASS cube_ops DEFAULT FOR TYPE cube USING btree AS OPERATOR 1 < , OPERATOR 2 <= , OPERATOR 3 = , OPERATOR 4 >= , OPERATOR 5 > , FUNCTION... |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_SEC_LABEL_STMT | 6e27221a2e6f2b4da19beb7e | SECURITY LABEL ON TABLE foo_ptbl IS 'system_u:object_r:sepgsql_regtest_foo_table_t:s0' |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 6e407aa40cca42113ccbcb73 | CREATE AGGREGATE newavg ( sfunc = int4_avg_accum, basetype = int4, stype = _int8, finalfunc = int8_avg, initcond1 = '{0,0}' ) |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_FETCH_STMT | 6e6ca0955801adec8ec715b2 | move backward all in c |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OP_FAMILY_STMT | 6eb0a1c45ba831b1ec3ae982 | ALTER OPERATOR FAMILY gist_date_ops USING gist ADD FUNCTION 9 (date, date) gbt_date_fetch (internal) |
-| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_EXPLAIN_STMT | 6ec1ac978cf9176f4ab285c4 | -- Single partition should be scanned. explain (analyze, costs off, summary off, timing off, buffers off) execute part_abc_q1 (1, 2, 3) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 6efe3f969fe29b4fde05dbf5 | CREATE OPERATOR > ( PROCEDURE = isngt, LEFTARG = isbn13, RIGHTARG = isbn13, COMMUTATOR = <, NEGATOR = <=, RESTRICT = scalargtsel, JOIN = scalargtjoinsel ) |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CLOSE_PORTAL_STMT | 6f36d67e2d06df275f0a8f5e | CLOSE foo24 |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_COMMENT_STMT | 6f3ac905e9a0452289d1585f | COMMENT ON TRANSFORM FOR bool LANGUAGE plperlu IS 'transform between bool and Perl' |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OP_FAMILY_STMT | 6f3e2c349a8398e5b469fef9 | ALTER OPERATOR FAMILY isn_ops USING btree ADD OPERATOR 1 < (ismn, ean13), OPERATOR 1 < (ismn, ismn13), OPERATOR 2 <= (ismn, ean13), OPERATOR 2 <= (ismn, ismn13), OPERATOR 3 = (ismn, ean13), OPERATO... |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_OP_CLASS_STMT | 6f79d6355b6217bae0442347 | CREATE OPERATOR CLASS isbn_ops DEFAULT FOR TYPE isbn USING hash FAMILY isn_ops AS OPERATOR 1 =, FUNCTION 1 hashisbn(isbn) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_ROLE_SET_STMT | 6fd01273786fa1e36b613d49 | -- fail ALTER ROLE regress_host_resource_admin SET max_stack_depth = '1MB' |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_FETCH_STMT | 6fdf3bcaffea01afdad69ea7 | -- Can update row 4 through cursor, which is the next visible row FETCH RELATIVE 1 FROM current_check_cursor |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_ROLE_STMT | 6fed88fa93dc0f1cd7863f81 | -- error ALTER ROLE "public" WITH NOREPLICATION |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_ROLE_STMT | 700d81f5edda150e2a7c9d83 | CREATE ROLE regress_rol_op5 |
-| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_EXECUTE_STMT | 702c60c2046e26b93f40f208 | execute p2 |
-| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_PREPARE_STMT | 704d157016a3bbee414f9f33 | PREPARE foom2 (integer, integer) AS MERGE INTO target t USING (SELECT 1) s ON t.tid = $1 WHEN MATCHED THEN UPDATE SET balance = $2 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 705fcd0d8a9309433e2ffc88 | -- P N P N -- should ERROR: tfnp(anyarray, anyelement) not matched by tfnp(int[],int) CREATE AGGREGATE myaggn15a(BASETYPE = anyelement, SFUNC = tfnp, STYPE = anyarray, FINALFUNC = ffnp, INITCOND = ... |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_ROLE_SET_STMT | 7083018fe60a4ead995a4ba2 | ALTER USER "Public" SET application_name to 'BARBAR' |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OPERATOR_STMT | 70a89423ebaa1e0c2efe02cc | ALTER OPERATOR >= (isbn13, isbn13) SET ( RESTRICT = scalargesel, JOIN = scalargejoinsel) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 70b273d8cfb63c28d71edacd | CREATE AGGREGATE wrongreturntype (float8) ( stype = float8, sfunc = float8pl, mstype = float8, msfunc = float8pl, minvfunc = float8mi_int ) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 70c9cd0259bcc6110aad8520 | create operator alter1.=(procedure = alter1.same, leftarg = alter1.ctype, rightarg = alter1.ctype) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_OP_CLASS_STMT | 70d37a8a9f7ee07da1feb85b | -- Create the operator class CREATE OPERATOR CLASS gist_numeric_ops DEFAULT FOR TYPE numeric USING gist AS OPERATOR 1 < , OPERATOR 2 <= , OPERATOR 3 = , OPERATOR 4 >= , OPERATOR 5 > , FUNCTION 1 gb... |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_COMMENT_STMT | 70e14ff81dc0599a3664f3d7 | COMMENT ON STATISTICS ab1_a_b_stats IS 'new comment' |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OP_FAMILY_STMT | 70ea98c89ec9ca83fae6fefd | ALTER OPERATOR FAMILY gist_enum_ops USING gist ADD OPERATOR 6 <> (anyenum, anyenum) , FUNCTION 9 (anyenum, anyenum) gbt_enum_fetch (internal) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 70f9fddbb2cdd33122a5c6ef | CREATE OPERATOR <<-> ( LEFTARG = text, RIGHTARG = text, PROCEDURE = word_similarity_dist_op, COMMUTATOR = '<->>' ) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 7106f4ccc5436f6268c575b2 | -- P P P P -- should CREATE CREATE AGGREGATE myaggp20a(BASETYPE = anyelement, SFUNC = tfp, STYPE = anyarray, FINALFUNC = ffp, INITCOND = '{}') |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 71186ccf032fafa7d3507809 | -- stable because depends on pg_trgm.similarity_threshold CREATE OPERATOR % ( LEFTARG = text, RIGHTARG = text, PROCEDURE = similarity_op, COMMUTATOR = '%', RESTRICT = contsel, JOIN = contjoinsel ) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_ROLE_STMT | 71237d739f63a2c96d51a255 | CREATE USER regress_dummy_seclabel_user3 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 71821efc2041d8e55747629b | -- failed (name conflict) -- invalid: non-lowercase quoted identifiers CREATE TEXT SEARCH TEMPLATE tstemp_case ("Init" = init_function) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OP_FAMILY_STMT | 71963c20e0bb18ccc1dfad56 | ALTER OPERATOR FAMILY gist_text_ops USING gist ADD OPERATOR 6 <> (text, text) , FUNCTION 9 (text, text) gbt_var_fetch (internal) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OBJECT_SCHEMA_STMT | 71aa1da9a9a41eed692f1c7a | -- OK ALTER AGGREGATE alt_agg2(int) SET SCHEMA alt_nsp2 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_OP_CLASS_STMT | 71aafe10a0fbe44e5e80e4f8 | CREATE OPERATOR CLASS timestamptz_ops DEFAULT FOR TYPE timestamptz USING gin AS OPERATOR 1 <, OPERATOR 2 <=, OPERATOR 3 =, OPERATOR 4 >=, OPERATOR 5 >, FUNCTION 1 timestamptz_cmp(timestamptz,timest... |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OPERATOR_STMT | 71e1c0053244d1a4cac449eb | ALTER OPERATOR @> (ltree, ltree) SET (RESTRICT = matchingsel, JOIN = matchingjoinsel) |
-| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_EXPLAIN_STMT | 71ef75356fb9123d9c6df102 | explain (costs off) execute test_mode_pp(2) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OP_FAMILY_STMT | 720aa347ad4981b3e30b4bed | ALTER OPERATOR FAMILY gist_macaddr_ops USING gist ADD FUNCTION 12 ("any", "any") gist_translate_cmptype_btree (int) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 72322bbef314d83576226d95 | -- serialfunc must have correct parameters CREATE AGGREGATE myavg (numeric) ( stype = internal, sfunc = numeric_avg_accum, serialfunc = numeric_avg_deserialize, deserialfunc = numeric_avg_deseriali... |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 724d25f1f8560f29669f9dfc | CREATE OPERATOR <<<-> ( LEFTARG = text, RIGHTARG = text, PROCEDURE = strict_word_similarity_dist_op, COMMUTATOR = '<->>>' ) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_ROLE_STMT | 726357aeddf45d11308cd682 | CREATE ROLE regress_nosuch_admin_recursive ADMIN regress_nosuch_admin_recursive |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 7273a9bd1c0bb096c5269d20 | CREATE OPERATOR <= ( PROCEDURE = isnle, LEFTARG = isbn, RIGHTARG = isbn13, COMMUTATOR = >=, NEGATOR = >, RESTRICT = scalarltsel, JOIN = scalarltjoinsel) |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CLOSE_PORTAL_STMT | 728474b639d1f15412fa32e7 | CLOSE foo7 |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_FETCH_STMT | 728a2f7cc7d45ca3f89c1ec3 | FETCH c |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_ROLE_SET_STMT | 72aa884e75dd7ac0a877c6c5 | -- error ALTER USER PUBLIC SET application_name to 'BOMB' |
-| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_PREPARE_STMT | 72abab243ff7a7f67654276b | prepare ab_q6 as select * from ( select tableoid::regclass,a,b from ab union all select tableoid::regclass,x,y from xy_1 union all select tableoid::regclass,a,b from ab ) ab where a = $1 and b = (s... |
-| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_SELECT_STMT | 72dfd064172702a3d8996480 | select delete('a=>1 , b=>2, c=>3'::hstore, ARRAY['a','c']) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_OP_CLASS_STMT | 72ea98f399ae55cfaadc567d | -- Create the operator class CREATE OPERATOR CLASS gist_oid_ops DEFAULT FOR TYPE oid USING gist AS OPERATOR 1 < , OPERATOR 2 <= , OPERATOR 3 = , OPERATOR 4 >= , OPERATOR 5 > , FUNCTION 1 gbt_oid_co... |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_SEC_LABEL_STMT | 73418340332a817c2d017619 | SECURITY LABEL ON TABLE t5 IS 'system_u:object_r:sepgsql_table_t:s0' |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OWNER_STMT | 736cf95322825be451aa296c | ALTER OPERATOR @+@(int4, int4) OWNER TO regress_alter_generic_user2 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_OP_CLASS_STMT | 7370bc0cde1b054b1fa30fa5 | CREATE OPERATOR CLASS ismn13_ops DEFAULT FOR TYPE ismn13 USING btree FAMILY isn_ops AS OPERATOR 1 <, OPERATOR 2 <=, OPERATOR 3 =, OPERATOR 4 >=, OPERATOR 5 >, FUNCTION 1 btismn13cmp(ismn13, ismn13) |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_FETCH_STMT | 7383fb110afb0edb20396d78 | FETCH 13 in foo13 |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_COMMENT_STMT | 7391521b8e42b138bac0eacf | COMMENT ON FUNCTION _int_contained(_int4, _int4) IS 'contained in' |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CLOSE_PORTAL_STMT | 739e23db05b9524c1280c8d7 | CLOSE foo23 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 739ef3dd6beaf6ffe4fd9b38 | CREATE OPERATOR <> ( PROCEDURE = isnne, LEFTARG = ismn, RIGHTARG = ismn, COMMUTATOR = <>, NEGATOR = =, RESTRICT = neqsel, JOIN = neqjoinsel) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_ROLE_STMT | 73a2c195f54f301242d0bd16 | -- -- MERGE -- CREATE USER regress_merge_privs |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DECLARE_CURSOR_STMT | 73a58a03460adc12c2e9ab5c | DECLARE foo14 SCROLL CURSOR FOR SELECT * FROM tenk2 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 73ad57799f82914e11d1ffb1 | CREATE TEXT SEARCH PARSER alt_ts_prs2 (start = prsd_start, gettoken = prsd_nexttoken, end = prsd_end, lextypes = prsd_lextype) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 73bfb50de43ca53067cabd0b | CREATE AGGREGATE testagga(int2) (SFUNC = int2_sum, STYPE = int8) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FUNCTION_STMT | 73c518c5234c680a2dbad702 | -- Show visibility map information for each block in a relation. CREATE FUNCTION pg_visibility_map(regclass, blkno OUT bigint, all_visible OUT boolean, all_frozen OUT boolean) RETURNS SETOF record ... |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_ROLE_STMT | 743b176c5e6deb185e564b63 | CREATE USER regress_user_ast |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_COMMENT_STMT | 743b7799cdb89f84c755d61d | COMMENT ON FUNCTION seg_contains(seg, seg) IS 'contains' |
-| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEALLOCATE_STMT | 743e3d1735e8abd0eb16e63c | DEALLOCATE PREPARE q1 |
-| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_EXECUTE_STMT | 74540272731705c08d0aed18 | EXECUTE q3('bytea', 5::smallint, 10.5::float, false, 4::bigint, true) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DROP_ROLE_STMT | 749683d806da4b278f94b812 | DROP GROUP regress_dep_group |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 749f980ceb31352d9cc6bede | CREATE TEXT SEARCH DICTIONARY hunspell_err ( Template=ispell, DictFile=ispell_sample, AffFile=hunspell_sample_num ) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 74ce314efee28609ea61c598 | CREATE OPERATOR <@ ( LEFTARG = _int4, RIGHTARG = _int4, PROCEDURE = _int_contained, COMMUTATOR = '@>', RESTRICT = _int_contained_sel, JOIN = _int_contained_joinsel ) |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_FETCH_STMT | 750754d040b4f15f0329d43d | FETCH FROM foo26 |
-| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEALLOCATE_STMT | 75196cda9bed5b1bbb70fd2e | deallocate part_abc_q1 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OPERATOR_STMT | 752005cd91be72263c1561f5 | ALTER OPERATOR === (boolean, boolean) SET (RESTRICT = contsel) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_OP_CLASS_STMT | 755948a718e6caa04f30d69b | -- Create the operator class CREATE OPERATOR CLASS gist_timestamptz_ops DEFAULT FOR TYPE timestamptz USING gist AS OPERATOR 1 < , OPERATOR 2 <= , OPERATOR 3 = , OPERATOR 4 >= , OPERATOR 5 > , FUNCT... |
-| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_EXPLAIN_STMT | 755f19908911084095b13765 | -- we will not have access to the expression index's stats here: explain (costs off) select p2.a, p1.c from permtest_parent p1 inner join permtest_parent p2 on p1.a = p2.a and left(p1.c, 3) ~ 'a1$' |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OP_FAMILY_STMT | 755ff846e489f0b340103f8a | ALTER OPERATOR FAMILY gist_interval_ops USING gist ADD FUNCTION 12 ("any", "any") gist_translate_cmptype_btree (int) |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DECLARE_CURSOR_STMT | 7565f672f520a38e5d40d904 | DECLARE foo11 SCROLL CURSOR FOR SELECT * FROM tenk1 ORDER BY unique2 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_ROLE_STMT | 7576e3f1e4f02f32e4d5a5af | ALTER USER regress_test_user_canlogin WITH LOGIN |
-| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_EXPLAIN_STMT | 7579348fd0e67be3bbc2376c | explain (costs off) select * from permtest_parent p1 inner join permtest_parent p2 on p1.a = p2.a and left(p1.c, 3) ~ 'a1$' |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_FETCH_STMT | 75b90204e8136d33fdcdb134 | FETCH 14 in foo14 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 75f24f8d2e69316d66b53620 | -- FROM conflicts with any other option CREATE COLLATION coll_dup_chk (FROM = "C", VERSION = "1") |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_ROLE_STMT | 76214a4ad025cca96f2816cf | -- Test ALTER LARGE OBJECT OWNER CREATE ROLE regress_lo_user |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 76675ccaf57adbe0b868f957 | -- fails CREATE COLLATION builtin2 ( PROVIDER = builtin, LOCALE = "en_US" ) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 767829c8f32c9691c71b3428 | -- fails CREATE COLLATION regress_pg_c_utf8 ( provider = builtin, locale = 'C.UTF8') |
-| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_EXPLAIN_STMT | 769f58a4dda16c44a495c2bb | EXPLAIN (COSTS OFF) EXECUTE plancache_test2 |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_FETCH_STMT | 76d010f48c04f19fa20379eb | FETCH backward 7 in foo17 |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_FETCH_STMT | 76e18745e196814e5bd8f79c | FETCH backward 8 in foo16 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 772f7fa414ebd82d281caf36 | create operator @> ( leftarg = int4, rightarg = int4, procedure = tcl_int4gt ) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_ROLE_STMT | 77741acf24ca0452c1c2e818 | -- check join pushdown in situations where multiple userids are involved CREATE ROLE regress_view_owner SUPERUSER |
-| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEALLOCATE_STMT | 7775f47e80ced7a37f220111 | DEALLOCATE st7 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_OP_CLASS_STMT | 77802d02e4a9b6640e9c962f | -- Create the operator class CREATE OPERATOR CLASS gist_enum_ops DEFAULT FOR TYPE anyenum USING gist AS OPERATOR 1 < , OPERATOR 2 <= , OPERATOR 3 = , OPERATOR 4 >= , OPERATOR 5 > , FUNCTION 1 gbt_e... |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 77854858b135332b7a046325 | CREATE OPERATOR = ( PROCEDURE = isneq, LEFTARG = ismn13, RIGHTARG = ean13, COMMUTATOR = =, NEGATOR = <>, RESTRICT = eqsel, JOIN = eqjoinsel, MERGES, HASHES) |
-| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_EXECUTE_STMT | 778d5af02ca509cba494fe2b | execute foo(false) |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_FETCH_STMT | 7796a5f82b0303f0fd7f2c3e | FETCH all in foo25 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OP_FAMILY_STMT | 77a71a42b0f84179e065f742 | ALTER OPERATOR FAMILY gin_trgm_ops USING gin ADD OPERATOR 7 %> (text, text), FUNCTION 6 (text, text) gin_trgm_triconsistent (internal, int2, text, int4, internal, internal, internal) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OP_FAMILY_STMT | 77d95490adf4bd89eb105888 | ALTER OPERATOR FAMILY gist_bit_ops USING gist ADD OPERATOR 6 <> (bit, bit) , FUNCTION 9 (bit, bit) gbt_var_fetch (internal) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_ROLE_STMT | 7801fec2851226e01de4029d | ALTER ROLE regress_test_superuser WITH SUPERUSER |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DECLARE_CURSOR_STMT | 7803bfcd676f20e1589c8746 | DECLARE c CURSOR FOR SELECT * FROM tenk2 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_ROLE_STMT | 780f177bba430b55f913663e | CREATE USER regress_conversion_user WITH NOCREATEDB NOCREATEROLE |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OPERATOR_STMT | 7812d18b6edcee5201982776 | ALTER OPERATOR <= (isbn, ean13) SET ( RESTRICT = scalarlesel, JOIN = scalarlejoinsel) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OPERATOR_STMT | 782de18096db168f1f96d11e | ALTER OPERATOR ? (_ltree, _lquery) SET (RESTRICT = matchingsel, JOIN = matchingjoinsel) |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_SEC_LABEL_STMT | 78763c5139be279488350394 | SECURITY LABEL ON SCHEMA dummy_seclabel_test IS 'unclassified' |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OPERATOR_STMT | 78841b1446e30590d1343b06 | ALTER OPERATOR >= (issn, ean13) SET ( RESTRICT = scalargesel, JOIN = scalargejoinsel) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OPERATOR_STMT | 78cb411506f687b8036bc73f | ALTER OPERATOR === (boolean, real) SET (COMMUTATOR = @=) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_ROLE_STMT | 790d1f5e039e8fbf54b9ce71 | CREATE ROLE regress_test_createdb WITH CREATEDB |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OP_FAMILY_STMT | 79280e89ddb282226981a01b | ALTER OPERATOR FAMILY gist_macaddr8_ops USING gist ADD OPERATOR 6 <> (macaddr8, macaddr8) , FUNCTION 9 (macaddr8, macaddr8) gbt_macad8_fetch (internal) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 79477e705b165010c5b64af9 | CREATE OPERATOR #%# ( leftarg = int8, -- fail, postfix is no longer supported procedure = factorial ) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OP_FAMILY_STMT | 7969b9b6324958b63c4994c4 | -- Ok ALTER OPERATOR FAMILY alt_opf19 USING btree DROP FUNCTION 5 (int4, int4) |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DECLARE_CURSOR_STMT | 79f7d7f99002a1b28cd82341 | DECLARE pgss_cursor CURSOR FOR SELECT * FROM pgss_matv |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 7a08c636652709acb1489313 | -- Testing USING OPERATOR() in ORDER BY within aggregate. -- For this, we need user defined operators along with operator family and -- operator class. Create those and then add them in extension. ... |
-| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_EXECUTE_STMT | 7a14de17331a0c5dadd31859 | EXECUTE pgss_test(1) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_ROLE_STMT | 7a16feab18e665dda4049792 | ALTER USER "session_user" WITH REPLICATION |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 7a1accd8cd5c8b0d162eb49e | CREATE OPERATOR > ( PROCEDURE = isngt, LEFTARG = upc, RIGHTARG = ean13, COMMUTATOR = <, NEGATOR = <=, RESTRICT = scalargtsel, JOIN = scalargtjoinsel ) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OP_FAMILY_STMT | 7a1f7ba366c4dce87d84f4a7 | ALTER OPERATOR FAMILY gist_date_ops USING gist ADD FUNCTION 12 ("any", "any") gist_translate_cmptype_btree (int) |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_COMMENT_STMT | 7a3170622e0a68216297c670 | COMMENT ON SERVER s1 IS 'foreign server' |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 7a36cb4c76569d78777b4027 | CREATE AGGREGATE myaggp12b(BASETYPE = anyelement, SFUNC = tfp, STYPE = int[], INITCOND = '{}') |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OPERATOR_STMT | 7a493c0a5e8e57018b675c6c | ALTER OPERATOR ^? (_lquery, ltree) SET (RESTRICT = matchingsel, JOIN = matchingjoinsel) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 7a4949231fba9aae02720f6c | CREATE COLLATION testcoll_lower_first (provider = icu, locale = '@colCaseFirst=lower') |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OBJECT_SCHEMA_STMT | 7a4977334ea80e933c1feeca | -- failed (no role membership) ALTER OPERATOR CLASS alt_opc3 USING hash SET SCHEMA alt_nsp2 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 7a705d000f3a2cc24779e5a9 | CREATE OPERATOR ~ ( LEFTARG = _ltree, RIGHTARG = lquery, PROCEDURE = _ltq_regex, COMMUTATOR = '~', RESTRICT = contsel, JOIN = contjoinsel ) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 7a80f47470297df9dfd32e99 | -- rules CREATE COLLATION testcoll_rules1 (provider = icu, locale = '', rules = '&a < g') |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_ROLE_STMT | 7aa85f679b9a39044711e4fa | CREATE ROLE regress_stat_set_2 |
-| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_PREPARE_STMT | 7ac0ee23bec8e4da32f18cbd | prepare ab_q4 (int, int) as select avg(a) from ab where a between $1 and $2 and b < 4 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 7ad3217fe28ecedc4b36dbb9 | -- aggregate combine and serialization functions -- can't specify just one of serialfunc and deserialfunc CREATE AGGREGATE myavg (numeric) ( stype = internal, sfunc = numeric_avg_accum, serialfunc ... |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_EXPLAIN_STMT | 7adddd570f622d9d2dac1cdd | explain (costs off) declare c1 scroll cursor for select (select 42) as x |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 7af75ea102980fc7589362ad | CREATE OPERATOR <> ( PROCEDURE = isnne, LEFTARG = ismn13, RIGHTARG = ismn, COMMUTATOR = <>, NEGATOR = =, RESTRICT = neqsel, JOIN = neqjoinsel) |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DECLARE_CURSOR_STMT | 7b0af97041e26efe87f007d1 | declare c1 cursor for select count_tt1_v(), count_tt1_s() |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DECLARE_CURSOR_STMT | 7b0d438d17cd066ab7cd5d12 | DECLARE c CURSOR FOR SELECT * from hash_split_heap WHERE keycol = 1 |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_COMMENT_STMT | 7b1ec8d4c0a1dff540795196 | COMMENT ON RULE rule_1 ON datatype_table IS 'RULE test' |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 7b32aea05874245a7c811461 | CREATE OPERATOR <=> ( LEFTARG = cube, RIGHTARG = cube, PROCEDURE = distance_chebyshev, COMMUTATOR = '<=>' ) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 7b37e00eed2f195055525adb | CREATE OPERATOR \| ( LEFTARG = _int4, RIGHTARG = int4, PROCEDURE = intset_union_elem ) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 7b3a98997a0d92ec14eeb8b2 | -- -- Test PG_C_UTF8 -- CREATE COLLATION regress_pg_c_utf8 ( provider = builtin, locale = 'C_UTF8') |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_ROLE_STMT | 7b3db8464495ace8de6636f1 | CREATE ROLE regress_read_server_files IN ROLE pg_read_server_files |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_COMMENT_STMT | 7b47555cd0c318cb6f86c7e5 | COMMENT ON FUNCTION rboolop(query_int, _int4) IS 'boolean operation with array' |
-| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_PREPARE_STMT | 7b49343c4fecb5425cc7041a | PREPARE selectsource(int) AS SELECT $1 |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_SEC_LABEL_STMT | 7b688027ed86bf8425a0ea83 | SECURITY LABEL ON TABLE t2 IS 'invalid security context' |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_OP_CLASS_STMT | 7b6f930cc09e66186893f730 | create operator class at_test_sql_partop for type int4 using btree as operator 1 < (int4, int4), operator 2 <= (int4, int4), operator 3 = (int4, int4), operator 4 >= (int4, int4), operator 5 > (int... |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CLOSE_PORTAL_STMT | 7b7821c8c578f1026b0e9051 | CLOSE foo25ns |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 7c03c273b32fa0eea15dc113 | CREATE OPERATOR <= ( PROCEDURE = isnle, LEFTARG = ismn, RIGHTARG = ismn, COMMUTATOR = >=, NEGATOR = >, RESTRICT = scalarltsel, JOIN = scalarltjoinsel) |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_FETCH_STMT | 7c1548d6823e932be9f52306 | FETCH backward 2 in foo22 |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_COMMENT_STMT | 7c62cf8a7c7600404d33ad10 | COMMENT ON LARGE OBJECT 2121 IS 'testing comments' |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OPERATOR_STMT | 7c77e8eabe9d15719e7d4766 | ALTER OPERATOR <@ (ltree, ltree) SET (RESTRICT = matchingsel, JOIN = matchingjoinsel) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_ROLE_STMT | 7c8b38c9a866b42af9aa814a | CREATE USER regress_selinto_user |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OP_FAMILY_STMT | 7ca5325e7e0f8928c1e54da6 | ALTER OPERATOR FAMILY alt_opf7 USING btree ADD OPERATOR 1 < (int4, int2) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 7cbebadebb0ce6753ce21b69 | -- -- Check that gen_partprune_steps() detects self-contradiction from clauses -- regardless of the order of the clauses (Here we use a custom operator to -- prevent the equivclass.c machinery from... |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_ROLE_STMT | 7cdd92822fe83fcea7dc206b | CREATE ROLE regress_test_r1 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 7ce3bd63ac344daaa5384e06 | CREATE OPERATOR ~~ ( LEFTARG = query_int, RIGHTARG = _int4, PROCEDURE = rboolop, COMMUTATOR = '@@', RESTRICT = _int_matchsel, JOIN = contjoinsel ) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 7ce664094784a11fe9f2afd3 | CREATE AGGREGATE alt_agg2 ( sfunc1 = int4mi, basetype = int4, stype1 = int4, initcond = 0 ) |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_COMMENT_STMT | 7cf41c87f9180502e42b24e1 | -- test comments COMMENT ON AGGREGATE newavg_wrong (int4) IS 'an agg comment' |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 7d0205598b57a990410f8598 | CREATE TEXT SEARCH DICTIONARY tsdict_case ( Template = ispell, "DictFile" = ispell_sample, "AffFile" = ispell_sample ) |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CLOSE_PORTAL_STMT | 7d04a00b026ae337e85bf487 | CLOSE foo3 |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DECLARE_CURSOR_STMT | 7d12bbc24e62e368d51bb878 | DECLARE foo1 CURSOR WITH HOLD FOR SELECT 1 |
-| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_EXECUTE_STMT | 7d3a18144d44bece09c9b2d4 | execute test_mode_pp(1) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OPERATOR_STMT | 7d4c6c364d885e12ba045d60 | ALTER OPERATOR >= (ean13, upc) SET ( RESTRICT = scalargesel, JOIN = scalargejoinsel) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 7d5872edd4b52f1af969d0c3 | -- -- CREATE AGGREGATE -- sfunc/finalfunc type disagreement create aggregate newavg2 (sfunc = int4pl, basetype = int4, stype = int4, finalfunc = int2um, initcond = '0') |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_ROLE_STMT | 7d68598d8cb36cb10e535c76 | ALTER ROLE regress_role_limited SUPERUSER |
-| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_SELECT_STMT | 7db3ae4d14069c763d6b6851 | select delete('aa=>1 , b=>2, c=>3'::hstore, ''::hstore) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OP_FAMILY_STMT | 7dbfba3d1c70e4df227fa555 | ALTER OPERATOR FAMILY gist_int8_ops USING gist ADD FUNCTION 11 (int8, int8) gbt_int8_sortsupport (internal) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 7dc7d47df83a908449910f1d | CREATE OPERATOR #<=# ( LEFTARG = hstore, RIGHTARG = hstore, PROCEDURE = hstore_le, COMMUTATOR = #>=#, NEGATOR = #>#, RESTRICT = scalarltsel, JOIN = scalarltjoinsel ) |
-| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_EXECUTE_STMT | 7dc9ac9c6ee9bf9e78fe31d6 | EXECUTE get_nnconstraint_info('{notnull_tbl1_child, notnull_tbl1}') |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_ROLE_STMT | 7de68ff28d3cb8d19bcc1dac | CREATE ROLE regress_group_direct_manager |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 7dea38a3d3da67af0af9e374 | CREATE OPERATOR ~>=~ ( LEFTARG = CITEXT, RIGHTARG = CITEXT, NEGATOR = ~<~, COMMUTATOR = ~<=~, PROCEDURE = citext_pattern_ge, RESTRICT = scalargtsel, JOIN = scalargtjoinsel ) |
-| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_EXPLAIN_STMT | 7dec6d8ff71f8eb30bc58364 | EXPLAIN (VERBOSE, COSTS OFF) EXECUTE async_pt_query (3000, 505) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 7e0ac19043bab90ae3509937 | -- invalid: non-lowercase quoted identifiers CREATE AGGREGATE case_agg ( -- old syntax "Sfunc1" = int4pl, "Basetype" = int4, "Stype1" = int4, "Initcond1" = '0', "Parallel" = safe ) |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_COMMENT_STMT | 7e3849e3dbf8a5aed302c376 | COMMENT ON VIEW toyemp IS NULL |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DECLARE_CURSOR_STMT | 7e73796c6febcb17b94c90fb | DECLARE tablesample_cur SCROLL CURSOR FOR SELECT id FROM test_tablesample TABLESAMPLE SYSTEM (50) REPEATABLE (0) |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DISCARD_STMT | 7e74d98f37359180eecb5cab | DISCARD ALL |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_ROLE_STMT | 7e9b337fe54da5a6caed4acd | -- initial setup CREATE USER regress_rls_alice NOLOGIN |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 7eb55ec1a4b67369feed36a0 | CREATE OPERATOR @-@ ( leftarg = int4, rightarg = int4, procedure = int4mi ) |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DECLARE_CURSOR_STMT | 7ec07235828ac99cc22631b3 | DECLARE c CURSOR FOR SELECT f1,count(*) FROM uctest GROUP BY f1 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 7ec6771d68709f32b7e7eea3 | CREATE OPERATOR %% ( RIGHTARG = hstore, PROCEDURE = hstore_to_array ) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 7ee342a9a9023fe5f0c30f5d | CREATE OPERATOR !~~ ( PROCEDURE = texticnlike, LEFTARG = citext, RIGHTARG = text, NEGATOR = ~~, RESTRICT = icnlikesel, JOIN = icnlikejoinsel ) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 7ee5e9460ec6fc5cd289c56d | CREATE OPERATOR > ( PROCEDURE = isngt, LEFTARG = ean13, RIGHTARG = issn, COMMUTATOR = <, NEGATOR = <=, RESTRICT = scalargtsel, JOIN = scalargtjoinsel) |
-| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_EXECUTE_STMT | 7f219d4d3359afc005ce7878 | EXECUTE get_nnconstraint_info('{constr_parent3, constr_child3}') |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 7f42703c274ccb6a746a66b7 | CREATE OPERATOR <-> ( LEFTARG = text, RIGHTARG = text, PROCEDURE = similarity_dist, COMMUTATOR = '<->' ) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DROP_STMT | 7f44a44147c8bbeeb37ef30e | DROP OPERATOR IF EXISTS @#@ (int, int) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 7f47a4efd5b7241a983f78af | CREATE OPERATOR > ( PROCEDURE = isngt, LEFTARG = ean13, RIGHTARG = upc, COMMUTATOR = <, NEGATOR = <=, RESTRICT = scalargtsel, JOIN = scalargtjoinsel) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DROP_STMT | 7f5b301709c35135491f31e0 | DROP OPERATOR FAMILY IF EXISTS test_operator_family USING btree |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 7fa29ef0db43c30f76b3cd5f | CREATE OPERATOR = ( PROCEDURE = isneq, LEFTARG = upc, RIGHTARG = ean13, COMMUTATOR = =, NEGATOR = <>, RESTRICT = eqsel, JOIN = eqjoinsel, MERGES, HASHES) |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_SEC_LABEL_STMT | 7fc0bd67bd7d106c47cd2946 | SECURITY LABEL ON ROLE regress_dummy_seclabel_user4 IS 'unclassified' |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_ROLE_STMT | 7fc44ecdbc926f7a7dcbb983 | -- =================================================================== -- Tests for permissions -- =================================================================== CREATE ROLE regress_pg_walinspect |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 7fccdadd45a33d2fddbdf2dd | CREATE OPERATOR <= ( PROCEDURE = isnle, LEFTARG = issn13, RIGHTARG = ean13, COMMUTATOR = >=, NEGATOR = >, RESTRICT = scalarltsel, JOIN = scalarltjoinsel) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_ROLE_STMT | 7fe42f5d5b8eb32265bb3ee9 | -- is a superuser CREATE ROLE regress_file_fdw_user LOGIN |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_ROLE_STMT | 8002334bf367379a384a5b26 | CREATE ROLE regress_role_limited_admin CREATEROLE |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OPERATOR_STMT | 802895d3afa42d99dfb1fe24 | ALTER OPERATOR <= (isbn13, isbn13) SET ( RESTRICT = scalarlesel, JOIN = scalarlejoinsel) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_ROLE_STMT | 803ba4ea692b1410e3e3a1bc | CREATE ROLE regress_origin_replication REPLICATION |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 80af574ba5bc8a202ab0210e | -- fails CREATE COLLATION regress_pg_unicode_fast ( provider = builtin, locale = 'PG_UNICODE_FAST') |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 80b025cad981159482eb469c | CREATE OPERATOR <> ( PROCEDURE = isnne, LEFTARG = ismn, RIGHTARG = ismn13, COMMUTATOR = <>, NEGATOR = =, RESTRICT = neqsel, JOIN = neqjoinsel) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_OP_CLASS_STMT | 81067bb967c586648581467d | -- Create the operator class CREATE OPERATOR CLASS gist_int8_ops DEFAULT FOR TYPE int8 USING gist AS OPERATOR 1 < , OPERATOR 2 <= , OPERATOR 3 = , OPERATOR 4 >= , OPERATOR 5 > , FUNCTION 1 gbt_int8... |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_ROLE_STMT | 811aeb3c2fdfaf6e11b497c0 | CREATE ROLE regress_test_def_role_canlogin |
-| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_EXECUTE_STMT | 81360be88f2edd7960667ec3 | EXECUTE q3('AAAAxx', 5::smallint, 10.5::float, false, 4::bigint) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_ROLE_STMT | 813c2fb5d9d6a663c97cfd4e | CREATE ROLE regress_rol_op3 |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DECLARE_CURSOR_STMT | 81bac932bf787a228b2b04c4 | DECLARE foo23 CURSOR FOR SELECT * FROM onek WHERE unique1 = 60 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 81bacba7e2f369a53f622a89 | -- Non-extension, non-function objects. CREATE COLLATION s.coll (LOCALE="C") |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 81bf3c244a7228d84338918a | CREATE OPERATOR < ( PROCEDURE = isnlt, LEFTARG = ismn13, RIGHTARG = ean13, COMMUTATOR = >, NEGATOR = >=, RESTRICT = scalarltsel, JOIN = scalarltjoinsel) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 81c586c3b2cc240acd81723a | CREATE OPERATOR = ( PROCEDURE = isneq, LEFTARG = ean13, RIGHTARG = isbn13, COMMUTATOR = =, NEGATOR = <>, RESTRICT = eqsel, JOIN = eqjoinsel, MERGES, HASHES) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FUNCTION_STMT | 81e61619450e5611be0087b0 | CREATE PROCEDURE ptestx(a VARIADIC int[], b OUT int) LANGUAGE SQL AS $$ SELECT a[1] $$ |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_ROLE_STMT | 8200526bb371229e9cb6a49f | ALTER ROLE regress_passwd9 PASSWORD 'SCRAM-SHA-256$00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000... |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_ROLE_STMT | 820179ab315c9220263723b5 | CREATE USER regress_passwordcheck_user1 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OWNER_STMT | 82166b91071971e7e5cfe93c | ALTER AGGREGATE testagg6(int2) OWNER TO "Public" |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OPERATOR_STMT | 8222e8407c58c54a038231a0 | ALTER OPERATOR <= (upc, upc) SET ( RESTRICT = scalarlesel, JOIN = scalarlejoinsel) |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_COMMENT_STMT | 822f48aaa59e276183a47752 | COMMENT ON LANGUAGE plsample IS 'PL/Sample procedural language' |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_OP_CLASS_STMT | 826e7fb1a6d869e893985474 | -- B-tree support CREATE OPERATOR CLASS ltree_ops DEFAULT FOR TYPE ltree USING btree AS OPERATOR 1 < , OPERATOR 2 <= , OPERATOR 3 = , OPERATOR 4 >= , OPERATOR 5 > , FUNCTION 1 ltree_cmp(ltree, ltree) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 82739b6bfae230c6627347f6 | CREATE OPERATOR #*# ( leftarg = type_op3, rightarg = int8, procedure = fn_op3 ) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_OP_CLASS_STMT | 827c7a12ead15277ae3a85db | -- Create the operator class CREATE OPERATOR CLASS gist_macaddr_ops DEFAULT FOR TYPE macaddr USING gist AS OPERATOR 1 < , OPERATOR 2 <= , OPERATOR 3 = , OPERATOR 4 >= , OPERATOR 5 > , FUNCTION 1 gb... |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_COMMENT_STMT | 82a6f56cf44e9a22b26fef06 | COMMENT ON AGGREGATE newcnt (*) IS 'an agg(*) comment' |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_COMMENT_STMT | 82f6d141ce03c70f5c182498 | COMMENT ON FOREIGN TABLE ft1 IS NULL |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DECLARE_CURSOR_STMT | 830c4b9dd7189d851c0c0543 | DECLARE xc CURSOR WITH HOLD FOR SELECT * FROM testxmlschema.test1 ORDER BY 1, 2 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 830ea687b8d2bc54a8596ec2 | create aggregate cleast_agg(variadic items anycompatiblearray) ( stype = anycompatible, sfunc = cleast_accum ) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 837b8ee255b2c679c0ace3b2 | CREATE OPERATOR <-> ( LEFTARG = float4, RIGHTARG = float4, PROCEDURE = float4_dist, COMMUTATOR = '<->' ) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_OP_FAMILY_STMT | 839668c9cd1579a2cf4c34cf | CREATE OPERATOR FAMILY isn_ops USING hash |
-| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_EXECUTE_STMT | 83b6c42e98b0bd7c75372a11 | execute s1(0) |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_COMMENT_STMT | 83dc14e83af7518859ffaa6e | COMMENT ON TABLE attmp IS NULL |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_ROLE_STMT | 83e0c0b5c7cc2e56bcbdf6da | CREATE ROLE regress_roleoption_donor |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DECLARE_CURSOR_STMT | 83f82264b67afc45c44ab536 | DECLARE c CURSOR FOR SELECT unique2/0 FROM tenk1 ORDER BY unique2 |
-| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_EXECUTE_STMT | 8410604eff6da00c85d6468f | -- Ensure we see just the xy_1 row. execute ab_q6(100) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 8430e68b41a96cc2a7fbca6e | CREATE OPERATOR ? ( LEFTARG = _lquery, RIGHTARG = ltree, PROCEDURE = lt_q_rregex, COMMUTATOR = '?', RESTRICT = contsel, JOIN = contjoinsel ) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 84548f2c59f9b4547516d5b9 | create operator = ( procedure = int8alias1eq, leftarg = int8, rightarg = int8alias1, restrict = eqsel, join = eqjoinsel, merges ) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OP_FAMILY_STMT | 845a19340e374fe88fa13667 | ALTER OPERATOR FAMILY gist_oid_ops USING gist ADD FUNCTION 11 (oid, oid) gbt_oid_sortsupport (internal) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_ROLE_STMT | 8460d3355cfaa380e272d50c | CREATE ROLE regress_minimal |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OP_FAMILY_STMT | 84634fa9f9d08fd8ea2b437f | ALTER OPERATOR FAMILY gist_int4_ops USING gist ADD OPERATOR 6 <> (int4, int4) , OPERATOR 15 <-> (int4, int4) FOR ORDER BY pg_catalog.integer_ops , FUNCTION 8 (int4, int4) gbt_int4_distance (interna... |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 84702e4634370cc1a36b78b7 | CREATE OPERATOR >= ( PROCEDURE = isnge, LEFTARG = ismn, RIGHTARG = ismn13, COMMUTATOR = <=, NEGATOR = <, RESTRICT = scalargtsel, JOIN = scalargtjoinsel ) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OP_FAMILY_STMT | 84754d09b7bd4cfe52d7c28e | ALTER OPERATOR FAMILY gist_bool_ops USING gist ADD FUNCTION 12 ("any", "any") gist_translate_cmptype_btree (int) |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_COMMENT_STMT | 849909a35cc73365014ab21e | COMMENT ON AGGREGATE newavg (int4) IS 'an agg comment' |
-| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_EXECUTE_STMT | 84a369e7de267e3c1769a43d | EXECUTE p2(2) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OP_FAMILY_STMT | 84acc381db04d530e2a0a5fe | ALTER OPERATOR FAMILY gist_timestamptz_ops USING gist ADD FUNCTION 11 (timestamptz, timestamptz) gbt_ts_sortsupport (internal) |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_COMMENT_STMT | 84ad440bb9696b7d6b82c7dd | COMMENT ON STATISTICS ctlt1_a_b_stat IS 'ab stats' |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 84b2ff86e2b20d4be47af0d6 | -- -- ISMN operators: -- --------------------------------------------------- CREATE OPERATOR < ( PROCEDURE = isnlt, LEFTARG = ismn, RIGHTARG = ismn, COMMUTATOR = >, NEGATOR = >=, RESTRICT = scalarl... |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_OP_CLASS_STMT | 84c0024d82448c223e0c2ed4 | -- Create the operator class CREATE OPERATOR CLASS gist_float4_ops DEFAULT FOR TYPE float4 USING gist AS OPERATOR 1 < , OPERATOR 2 <= , OPERATOR 3 = , OPERATOR 4 >= , OPERATOR 5 > , FUNCTION 1 gbt_... |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 84df56c3f23eb3ce6facc2a9 | CREATE OPERATOR <-> ( LEFTARG = timestamptz, RIGHTARG = timestamptz, PROCEDURE = tstz_dist, COMMUTATOR = '<->' ) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_RENAME_STMT | 84e2dd3d3f9ed57d72f214d8 | ALTER ROLE regress_passwd2_new RENAME TO regress_passwd2 |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_SEC_LABEL_STMT | 84e33c0eebc1bb523c99ab68 | SECURITY LABEL ON TABLE t1p IS 'system_u:object_r:sepgsql_table_t:s0' |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_RENAME_STMT | 84f8be1cb2514e0160ea89fc | ALTER AGGREGATE alt_func1(int) RENAME TO alt_func3 |
-| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_EXECUTE_STMT | 850abaa09765f574fa5a6fe9 | EXECUTE get_nnconstraint_info('{notnull_part1_upg, notnull_part1_1_upg, notnull_part1_2_upg, notnull_part1_3_upg}') |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OWNER_STMT | 850d989235828be56057f51c | -- failed (no role membership) ALTER OPERATOR CLASS alt_opc2 USING hash OWNER TO regress_alter_generic_user3 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 8512fa2515f7d3cf6e0b5f11 | -- obsolete: CREATE OPERATOR @ ( LEFTARG = seg, RIGHTARG = seg, PROCEDURE = seg_contains, COMMUTATOR = '~', RESTRICT = contsel, JOIN = contjoinsel ) |
-| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_EXECUTE_STMT | 852097201871e2f29c1fe6e7 | execute update_part_abc_view (3, 'a') |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 853452acd6fbec4b2d8878dd | CREATE OPERATOR && ( LEFTARG = cube, RIGHTARG = cube, PROCEDURE = cube_overlap, COMMUTATOR = '&&', RESTRICT = areasel, JOIN = areajoinsel ) |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_COMMENT_STMT | 8536020fc74ae4ad14a43c7d | COMMENT ON TYPE ismn13 IS 'International Standard Music Number 13 (ISMN13)' |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 853c9083d9b56e58ee99d716 | create aggregate my_avg_init2(int4) ( stype = avg_state, sfunc = avg_transfn, finalfunc = avg_finalfn, initcond = '(4,0)' ) |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_FETCH_STMT | 853e67724992db5bd20d452f | fetch next from rf_cur |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_ROLE_STMT | 8564fff47f5d0f555fcc0f84 | -- -- CREATE_SCHEMA -- -- Schema creation with elements. CREATE ROLE regress_create_schema_role SUPERUSER |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_NOTIFY_STMT | 857e7d5ec670394dfbd28899 | NOTIFY notify_async2 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OPERATOR_STMT | 85b7f1b4bbf713d6f3f1a71a | ALTER OPERATOR ^@ (ltree, ltxtquery) SET (RESTRICT = matchingsel, JOIN = matchingjoinsel) |
-| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_EXPLAIN_STMT | 85f8ead15119e49a5dc0f4c2 | EXPLAIN (VERBOSE, COSTS OFF) EXECUTE st2(10, 20) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 862d6884779a3b135eeec5cd | --not-indexed CREATE OPERATOR ^? ( LEFTARG = ltree, RIGHTARG = _lquery, PROCEDURE = lt_q_regex, COMMUTATOR = '^?', RESTRICT = contsel, JOIN = contjoinsel ) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_RENAME_STMT | 86415b36f74a788ca5ce274e | alter aggregate my_rank(VARIADIC "any" ORDER BY VARIADIC "any") rename to test_rank |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_OP_CLASS_STMT | 8646dc4299acf06f0ad07902 | -- Create the operator class CREATE OPERATOR CLASS gist_macaddr8_ops DEFAULT FOR TYPE macaddr8 USING gist AS OPERATOR 1 < , OPERATOR 2 <= , OPERATOR 3 = , OPERATOR 4 >= , OPERATOR 5 > , FUNCTION 1 ... |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_COMMENT_STMT | 8650a5d90671b447b8e71f72 | COMMENT ON CONVERSION myconv IS NULL |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 8686d2f929b02266ef6c8647 | CREATE AGGREGATE balk(int4) ( SFUNC = balkifnull(int8, int4), STYPE = int8, PARALLEL = SAFE, INITCOND = '0' ) |
-| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_SELECT_STMT | 868adb199e3d1b53f6354601 | select delete('a=>1 , b=>2, c=>3'::hstore, 'c') |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_ROLE_STMT | 86d9ad2f95c3fe975af5465c | CREATE ROLE regress_read_all_settings IN ROLE pg_read_all_settings |
-| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_EXPLAIN_STMT | 87141992dce74beede40c7e6 | -- Try with no matching partitions. explain (analyze, costs off, summary off, timing off, buffers off) execute q1 (0,0) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OPERATOR_STMT | 87438d55313f0a48bd23b612 | ALTER OPERATOR <@ (_ltree, ltree) SET (RESTRICT = matchingsel, JOIN = matchingjoinsel) |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DECLARE_CURSOR_STMT | 8777258e1d3d93a5b926c183 | declare c5 cursor for select * from int8_tbl order by q1 fetch first 2 rows with ties |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OP_FAMILY_STMT | 879e4d5094573f3681b97ba9 | ALTER OPERATOR FAMILY gist_date_ops USING gist ADD OPERATOR 6 <> (date, date) , OPERATOR 15 <-> (date, date) FOR ORDER BY pg_catalog.integer_ops , FUNCTION 8 (date, date) gbt_date_distance (interna... |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 87a721319c83b4b432493b08 | CREATE OPERATOR > ( PROCEDURE = isngt, LEFTARG = ismn13, RIGHTARG = ean13, COMMUTATOR = <, NEGATOR = <=, RESTRICT = scalargtsel, JOIN = scalargtjoinsel ) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 87aabb5a722790c80364f2a7 | create text search configuration alter1.cfg(parser = alter1.prs) |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_COMMENT_STMT | 87aeeae0bcd3c2754f66ea6c | -- no such table/domain COMMENT ON CONSTRAINT the_constraint ON no_comments_tbl IS 'bad comment' |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OP_FAMILY_STMT | 87b4f37965872d5c1aae19e0 | ALTER OPERATOR FAMILY gist_text_ops USING gist ADD FUNCTION 11 (text, text) gbt_text_sortsupport (internal) |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_FETCH_STMT | 87c58cea22efca4ee483552b | FETCH ABSOLUTE 13 FROM c1 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_RENAME_STMT | 87f1b09d2c5933f35d8e5f58 | -- failed (name conflict) ALTER OPERATOR CLASS alt_opc3 USING hash RENAME TO alt_opc4 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 87f36e871a545c5f27100fd2 | CREATE OPERATOR >= ( PROCEDURE = isnge, LEFTARG = upc, RIGHTARG = upc, COMMUTATOR = <=, NEGATOR = <, RESTRICT = scalargtsel, JOIN = scalargtjoinsel ) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_ROLE_STMT | 87faca390fa5ade92411977e | CREATE USER regress_test_u1 |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_FETCH_STMT | 87fada05ca6a27f65c1e8040 | FETCH all in foo19 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_ROLE_STMT | 8800c37f0ad1f1c76af7573e | ALTER USER regress_testrol2 WITH NOREPLICATION |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OBJECT_SCHEMA_STMT | 881d60dec64c599f5dd6a7f2 | -- failed (no role membership) ALTER OPERATOR @+@(int4, int4) SET SCHEMA alt_nsp2 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_ROLE_STMT | 8839130cd47f40262b3175d7 | CREATE ROLE regress_replication REPLICATION |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OP_FAMILY_STMT | 884e69657b5d28d2dba55e56 | ALTER OPERATOR FAMILY gist_bpchar_ops USING gist ADD FUNCTION 11 (bpchar, bpchar) gbt_bpchar_sortsupport (internal) |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_FETCH_STMT | 88c0b79c2089ed696fb43f2b | -- Returns rows that can be seen according to SELECT policy, like plain SELECT -- above (even rows) FETCH ABSOLUTE 1 FROM current_check_cursor |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 88d25733ff49ef72592d23e1 | CREATE OPERATOR <-> ( LEFTARG = int4, RIGHTARG = int4, PROCEDURE = int4_dist, COMMUTATOR = '<->' ) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 88e5c95faf70437847b268d4 | CREATE TEXT SEARCH DICTIONARY hunspell_invalid_2 ( Template=ispell, DictFile=hunspell_sample_long, AffFile=hunspell_sample_num ) |
-| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEALLOCATE_STMT | 89038a0713094a9412407cc4 | -- should fail DEALLOCATE PREPARE ins |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_ROLE_STMT | 890c0a65dcb5741f7bc665b5 | ALTER ROLE regress_test_replication WITH REPLICATION |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OPERATOR_STMT | 890fc0443b22c1cd6f704760 | ALTER OPERATOR === (boolean, real) SET (NEGATOR = @!=) |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_SEC_LABEL_STMT | 8941df0fb867636f51aa382f | SECURITY LABEL ON COLUMN tpart.o IS 'system_u:object_r:sepgsql_ro_table_t:s0' |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CLOSE_PORTAL_STMT | 8948f1eb791b1b72e26ff16d | CLOSE foo12 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_INDEX_STMT | 89626e24e21cb2742b073f63 | create index on permtest_parent (left(c, 3)) |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_SEC_LABEL_STMT | 896380085830dae4675402b8 | SECURITY LABEL ON ROLE regress_dummy_seclabel_user3 IS 'secret' |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 8967cbeb58fb8379a49993e2 | CREATE OPERATOR #*# ( leftarg = int8, rightarg = int8, procedure = fn_op6 ) |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_COMMENT_STMT | 897243eb873b48c68d43d593 | COMMENT ON FUNCTION seg_cmp(seg, seg) IS 'btree comparison function' |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DECLARE_CURSOR_STMT | 8979d168519aeacae1b2616a | DECLARE c CURSOR FOR SELECT * FROM tenk1 JOIN tenk2 USING (unique1) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_ROLE_STMT | 897c9151e808dc5297b4d9a5 | -- -- Test non-SELECT rule on security invoker view. -- Should use view owner's permissions. -- CREATE USER regress_rule_user1 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_ROLE_STMT | 897ef213e993ef3fcbfcf7cb | CREATE ROLE regress_test_role_super SUPERUSER |
-| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_EXECUTE_STMT | 89a37a5282ee561fac86ac9d | EXECUTE ins(2, ARRAY[1,2,3]) |
-| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEALLOCATE_STMT | 89b6ddcce0d4afe683d28913 | DEALLOCATE PREPARE ALL |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 89c03770e792a3275d2d484a | -- N P N P -- should CREATE CREATE AGGREGATE myaggp10a(BASETYPE = int, SFUNC = tfp, STYPE = int[], FINALFUNC = ffp, INITCOND = '{}') |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 89dc2146d9d86e2a8d4c8689 | CREATE OPERATOR = ( PROCEDURE = isneq, LEFTARG = upc, RIGHTARG = upc, COMMUTATOR = =, NEGATOR = <>, RESTRICT = eqsel, JOIN = eqjoinsel, MERGES, HASHES) |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_COMMENT_STMT | 8a03dd344ab3cf4c8c6d552e | comment on index at_partitioned_id_name_key is 'parent index' |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_ROLE_STMT | 8a571725672dec07a44f3880 | -- -- SUBSCRIPTION -- CREATE ROLE regress_subscription_user LOGIN SUPERUSER |
-| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_EXECUTE_STMT | 8a60137161c8b009ab563f4b | EXECUTE get_nnconstraint_info('{notnull_tbl1_copy}') |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_SEC_LABEL_STMT | 8a64cae518faf306fb2d9df4 | SECURITY LABEL ON ROLE regress_seclabel_user1 IS '...invalid label...' |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_SEC_LABEL_STMT | 8a69eac114f14299e0dc3059 | SECURITY LABEL ON TABLE t2 IS 'system_u:object_r:sepgsql_ro_table_t:s0' |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OP_FAMILY_STMT | 8a6f3b28c0c902cb65b2b791 | ALTER OPERATOR FAMILY hash_hstore_ops USING hash ADD FUNCTION 2 hstore_hash_extended(hstore, int8) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 8ab196ba5cb2b6546a4a39a2 | CREATE COLLATION case_sensitive (provider = icu, locale = '') |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OPERATOR_STMT | 8b08103fe150c89be3621580 | ALTER OPERATOR <= (isbn, isbn13) SET ( RESTRICT = scalarlesel, JOIN = scalarlejoinsel) |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_SEC_LABEL_STMT | 8b1eb45edaa8a5f28f19a7a6 | SECURITY LABEL ON FUNCTION auth_func(text,text) IS 'system_u:object_r:sepgsql_regtest_trusted_proc_exec_t:s0' |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 8b26985d52923df55f4204d6 | CREATE TEXT SEARCH DICTIONARY hunspell_invalid_1 ( Template=ispell, DictFile=hunspell_sample_long, AffFile=ispell_sample ) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 8b2914cab9345de277bafa05 | CREATE AGGREGATE testagg2(int2) (SFUNC = int2_sum, STYPE = int8) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_ROLE_STMT | 8b2f6e0bb5627c3b144fee37 | CREATE ROLE regress_test_not_me |
-| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_EXECUTE_STMT | 8b35679ba51263eeba96d8e2 | execute v |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_COMMENT_STMT | 8b3a1a80f908634001e71912 | comment on column atacc1.a is 'testing' |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 8b47a301197248bbf2ee1ca5 | CREATE OPERATOR <-> ( LEFTARG = time, RIGHTARG = time, PROCEDURE = time_dist, COMMUTATOR = '<->' ) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 8b508da3d269477756e8e20d | CREATE TEXT SEARCH DICTIONARY intdict ( TEMPLATE = intdict_template ) |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_COMMENT_STMT | 8b6213bd4aae34205df7fd6c | comment on domain domaindroptest is 'About to drop this..' |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OPERATOR_STMT | 8b7413151aaa0f26ea05c75e | ALTER OPERATOR >= (ean13, isbn) SET ( RESTRICT = scalargesel, JOIN = scalargejoinsel) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 8b99c87c32d2b93e3c6c7a5c | CREATE AGGREGATE myaggn08b(BASETYPE = anyelement, SFUNC = tf2p, STYPE = int[], INITCOND = '{}') |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DECLARE_CURSOR_STMT | 8bef306bbb77e065be7735ec | DECLARE foo13 CURSOR FOR SELECT * FROM onek WHERE unique1 = 50 |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_SEC_LABEL_STMT | 8c0e04b33716e3e8c8414e37 | SECURITY LABEL ON COLUMN t1p_tens.p IS 'system_u:object_r:sepgsql_ro_table_t:s0' |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DECLARE_CURSOR_STMT | 8c1cda8f35c69e944e5ea3f7 | DECLARE foo10 SCROLL CURSOR FOR SELECT * FROM tenk2 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FUNCTION_STMT | 8c20006255d2cd321d521928 | -- -- Test built-in conversion functions. -- -- Helper function to test a conversion. Uses the test_enc_conversion function -- that was created in the create_function_0 test. create or replace func... |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_RENAME_STMT | 8c762a833db29e37656a1066 | -- failed (name conflict) ALTER AGGREGATE alt_agg1(int) RENAME TO alt_agg3 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 8c79a59478e77fc65cfc27da | -- P P N P -- should ERROR: tfp(anyarray, int) not matched by tfp(anyarray, anyelement) CREATE AGGREGATE myaggp18a(BASETYPE = int, SFUNC = tfp, STYPE = anyarray, FINALFUNC = ffp, INITCOND = '{}') |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_FETCH_STMT | 8c8a92db2d7a34a4309bd09e | fetch all in c5 |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_FETCH_STMT | 8c8fdf24cc4334c78eedd7f4 | fetch all in held_portal |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_ROLE_STMT | 8cb14754ffe1f0802297a28d | CREATE ROLE regress_nosuch_super IN ROLE regress_role_super |
-| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEALLOCATE_STMT | 8cc80a7f53a7e106c8032e2f | DEALLOCATE st8 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 8d0fff0493c082ea88193737 | -- -- Now the operators: -- -- -- EAN13 operators: -- --------------------------------------------------- CREATE OPERATOR < ( PROCEDURE = isnlt, LEFTARG = ean13, RIGHTARG = ean13, COMMUTATOR = >, N... |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 8d2003b8735200593cdec1e5 | -- -- ISSN operators: -- --------------------------------------------------- CREATE OPERATOR < ( PROCEDURE = isnlt, LEFTARG = issn, RIGHTARG = issn, COMMUTATOR = >, NEGATOR = >=, RESTRICT = scalarl... |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_ROLE_STMT | 8d402ef9257af0fa67cfdb0c | ALTER ROLE regress_test_createrole WITH CREATEROLE |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OBJECT_SCHEMA_STMT | 8d5669c0f85a1f6ea7358c81 | -- failed (no role membership) ALTER AGGREGATE alt_agg3(int) SET SCHEMA alt_nsp2 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 8d5a2b0f52405b1c7cf5a07b | CREATE OPERATOR + ( LEFTARG = _int4, RIGHTARG = int4, PROCEDURE = intarray_push_elem ) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 8da53358ab7e8087355f101e | CREATE OPERATOR <> ( PROCEDURE = isnne, LEFTARG = ean13, RIGHTARG = isbn, COMMUTATOR = <>, NEGATOR = =, RESTRICT = neqsel, JOIN = neqjoinsel) |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DECLARE_CURSOR_STMT | 8da8fc0f100dc501dadcb083 | DECLARE foo17 SCROLL CURSOR FOR SELECT * FROM tenk1 ORDER BY unique2 |
-| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_EXECUTE_STMT | 8db4c210abb0fb338a5384c3 | EXECUTE stat_select (1) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 8dba5b7f322f5e7f74905a0b | create aggregate first_el_agg_f8(float8) ( SFUNC = array_append, STYPE = float8[], FINALFUNC = first_el ) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_OP_CLASS_STMT | 8ddfb32052b30faebaa43d9d | CREATE OPERATOR CLASS isbn13_ops DEFAULT FOR TYPE isbn13 USING btree FAMILY isn_ops AS OPERATOR 1 <, OPERATOR 2 <=, OPERATOR 3 =, OPERATOR 4 >=, OPERATOR 5 >, FUNCTION 1 btisbn13cmp(isbn13, isbn13) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_OP_CLASS_STMT | 8dfe5e7c892372026b7e928b | CREATE OPERATOR CLASS issn13_ops DEFAULT FOR TYPE issn13 USING btree FAMILY isn_ops AS OPERATOR 1 <, OPERATOR 2 <=, OPERATOR 3 =, OPERATOR 4 >=, OPERATOR 5 >, FUNCTION 1 btissn13cmp(issn13, issn13) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 8e0ed7621c7233468ae1b825 | CREATE OPERATOR <> ( PROCEDURE = isnne, LEFTARG = ismn13, RIGHTARG = ismn13, COMMUTATOR = <>, NEGATOR = =, RESTRICT = neqsel, JOIN = neqjoinsel) |
-| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_PREPARE_STMT | 8e186588555a1dd7425c14f6 | -- ok PREPARE test AS UPDATE writetest SET a = 0 |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_COMMENT_STMT | 8e65561c861f333e7f7d43c2 | COMMENT ON TYPE ean13 IS 'International European Article Number (EAN13)' |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 8ebc87c178569560a85e8cdd | CREATE OPERATOR <> ( PROCEDURE = isnne, LEFTARG = issn, RIGHTARG = ean13, COMMUTATOR = <>, NEGATOR = =, RESTRICT = neqsel, JOIN = neqjoinsel) |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_SEC_LABEL_STMT | 8ec6b4592925ea4df5d895d5 | SECURITY LABEL ON TABLE t4 IS 'system_u:object_r:sepgsql_secret_table_t:s0' |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OP_FAMILY_STMT | 8f104b3fa62e4d1f19739f4b | ALTER OPERATOR FAMILY gist_bit_ops USING gist ADD FUNCTION 11 (bit, bit) gbt_bit_sortsupport (internal) |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_COMMENT_STMT | 8f496d39fd8a28b905410739 | COMMENT ON TRANSFORM FOR jsonb LANGUAGE plperlu IS 'transform between jsonb and Perl' |
-| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_EXECUTE_STMT | 8f658bbc46f9fbbb6ebb1dac | execute mt_q1(15) |
-| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEALLOCATE_STMT | 8fb66f6c19fa4b9ab573201c | deallocate hp_q1 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DROP_STMT | 8fc3139cacf9203b6bede734 | DROP OPERATOR ==== (real, boolean) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 905f930f46bd3b1883b66f1d | CREATE OPERATOR < ( PROCEDURE = isnlt, LEFTARG = isbn13, RIGHTARG = ean13, COMMUTATOR = >, NEGATOR = >=, RESTRICT = scalarltsel, JOIN = scalarltjoinsel) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 9065cd91800475d6027932b4 | CREATE AGGREGATE myaggp03b(*) (SFUNC = stfp, STYPE = int4[], INITCOND = '{}') |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_ROLE_STMT | 907e92c0a7169e8166134ae6 | CREATE ROLE regress_publication_user3 |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_COMMENT_STMT | 9083201471d79b5c920059c7 | comment on index at_partitioned_0_id_name_key is 'child 0 index' |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 9094cbf9b3110a87d41037ff | CREATE OPERATOR ?~ ( LEFTARG = _ltree, RIGHTARG = lquery, PROCEDURE = _ltq_extract_regex ) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_OP_CLASS_STMT | 909e86dda48ed5f6c9ad0fe7 | CREATE OPERATOR CLASS varbit_ops DEFAULT FOR TYPE varbit USING gin AS OPERATOR 1 <, OPERATOR 2 <=, OPERATOR 3 =, OPERATOR 4 >=, OPERATOR 5 >, FUNCTION 1 varbitcmp(varbit,varbit), FUNCTION 2 gin_ext... |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DECLARE_CURSOR_STMT | 90a1762659281fa64fc9f3da | DECLARE cursor_stats_1 CURSOR WITH HOLD FOR SELECT 1 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OPERATOR_STMT | 90b23042d7922e95ebd810d4 | ALTER OPERATOR ~ (ltree, lquery) SET (RESTRICT = matchingsel, JOIN = matchingjoinsel) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DROP_STMT | 90e4798de521f3cd06e88685 | DROP OPERATOR FAMILY IF EXISTS test_operator_family USING no_such_am |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DECLARE_CURSOR_STMT | 90e7e1e2aa4ffaef8b9681df | DECLARE foo5 SCROLL CURSOR FOR SELECT * FROM tenk1 ORDER BY unique2 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_ROLE_STMT | 90f633f62f1fc2389eaef4fc | CREATE ROLE regress_connection_limit CONNECTION LIMIT 5 |
-| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_SELECT_STMT | 914e4842ee5f5cb7e67a8d6c | select delete('a=>null , b=>2, c=>3'::hstore, 'a') |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_OP_CLASS_STMT | 91aa37fb5aa58fe2bf739127 | CREATE OPERATOR CLASS ean13_ops DEFAULT FOR TYPE ean13 USING hash FAMILY isn_ops AS OPERATOR 1 =, FUNCTION 1 hashean13(ean13) |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_SEC_LABEL_STMT | 91b42d032026df8b5c3fff9c | SECURITY LABEL ON COLUMN t1p.q IS 'system_u:object_r:sepgsql_secret_table_t:s0' |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_ROLE_STMT | 91e129f6c662bbbf97f5d389 | create role regress_parallel_worker |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_COMMENT_STMT | 91e25dd437b536b4c79ed488 | COMMENT ON SUBSCRIPTION regress_testsub IS 'test subscription' |
-| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_EXECUTE_STMT | 91e2e4f1d268634ff8f01a88 | execute mt_q1(35) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 92081d5ea673ec9442e927b5 | CREATE OPERATOR > ( PROCEDURE = isngt, LEFTARG = ismn, RIGHTARG = ismn, COMMUTATOR = <, NEGATOR = <=, RESTRICT = scalargtsel, JOIN = scalargtjoinsel ) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 921099da5b1d0e79ba4e0348 | CREATE OPERATOR @> ( LEFTARG = ltree, RIGHTARG = _ltree, PROCEDURE = _ltree_r_risparent, COMMUTATOR = '<@', RESTRICT = contsel, JOIN = contjoinsel ) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 9254547f4a4248edaa4751aa | CREATE OPERATOR = ( LEFTARG = hstore, RIGHTARG = hstore, PROCEDURE = hstore_eq, COMMUTATOR = =, NEGATOR = <>, RESTRICT = eqsel, JOIN = eqjoinsel, MERGES, HASHES ) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 9260e10af3d5aff4f2c0f4ac | -- -- Test PG_UNICODE_FAST -- CREATE COLLATION regress_pg_unicode_fast ( provider = builtin, locale = 'unicode') |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_COMMENT_STMT | 926e7199562f4fe8c6defb8d | COMMENT ON COLUMN ft1.c1 IS 'ft1.c1' |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 9293c553530a59fb1c6e6731 | CREATE AGGREGATE myaggn15b(BASETYPE = anyelement, SFUNC = tfnp, STYPE = anyarray, INITCOND = '{}') |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 92c84b7f6d4f58e1e9420e8a | -- stable because depends on pg_trgm.word_similarity_threshold CREATE OPERATOR <<% ( LEFTARG = text, RIGHTARG = text, PROCEDURE = strict_word_similarity_op, COMMUTATOR = '%>>', RESTRICT = contsel, ... |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_ROLE_STMT | 92d1439b47534aa2a116cb99 | ALTER ROLE regress_createdb CREATEDB |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OPERATOR_STMT | 92feda5b04bddaf90f2d2d4e | ALTER OPERATOR <= (ean13, issn) SET ( RESTRICT = scalarlesel, JOIN = scalarlejoinsel) |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_COMMENT_STMT | 93023eb990bc1d86f77ef893 | COMMENT ON CONSTRAINT comment_test_pk ON comment_test IS 'PRIMARY KEY constraint of comment_test' |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 931723728d92cf2a80754afc | CREATE OPERATOR < ( PROCEDURE = isnlt, LEFTARG = ean13, RIGHTARG = upc, COMMUTATOR = >, NEGATOR = >=, RESTRICT = scalarltsel, JOIN = scalarltjoinsel) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_ROLE_STMT | 9328be7c4e7440f168086960 | -- Failure for unauthorized user CREATE ROLE regress_reindexuser NOLOGIN |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DROP_STMT | 934dd8fe1aa531594606a85f | DROP OPERATOR IF EXISTS no_such_schema.+ (int, int) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 9354bb949b3432ea863eca63 | CREATE OPERATOR <@ ( LEFTARG = seg, RIGHTARG = seg, PROCEDURE = seg_contained, COMMUTATOR = '@>', RESTRICT = contsel, JOIN = contjoinsel ) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 93928c2b251ec04ec09c3ba1 | CREATE OPERATOR > ( LEFTARG = ltree, RIGHTARG = ltree, PROCEDURE = ltree_gt, COMMUTATOR = '<', NEGATOR = '<=', RESTRICT = contsel, JOIN = contjoinsel ) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 93969719a3d1b4b6379cc111 | CREATE OPERATOR = ( PROCEDURE = isneq, LEFTARG = ean13, RIGHTARG = issn13, COMMUTATOR = =, NEGATOR = <>, RESTRICT = eqsel, JOIN = eqjoinsel, MERGES, HASHES) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 93b989748ed28789894876fa | CREATE OPERATOR <> ( PROCEDURE = isnne, LEFTARG = isbn13, RIGHTARG = isbn, COMMUTATOR = <>, NEGATOR = =, RESTRICT = neqsel, JOIN = neqjoinsel) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 93e777219536a9ec47c5385b | create text search parser alter1.prs(start = prsd_start, gettoken = prsd_nexttoken, end = prsd_end, lextypes = prsd_lextype) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_OP_CLASS_STMT | 93f2d5140b83f1add16fdc91 | CREATE OPERATOR CLASS enum_ops DEFAULT FOR TYPE anyenum USING gin AS OPERATOR 1 <, OPERATOR 2 <=, OPERATOR 3 =, OPERATOR 4 >=, OPERATOR 5 >, FUNCTION 1 gin_enum_cmp(anyenum,anyenum), FUNCTION 2 gin... |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OPERATOR_STMT | 9409bcff7ec4cc54151d0ae3 | ALTER OPERATOR ^? (ltree, _lquery) SET (RESTRICT = matchingsel, JOIN = matchingjoinsel) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 940efbeb412df5c2e9c1d47b | CREATE OPERATOR & ( LEFTARG = _int4, RIGHTARG = _int4, COMMUTATOR = &, PROCEDURE = _int_inter ) |
-| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEALLOCATE_STMT | 94dce3af609249a6ee265c31 | DEALLOCATE PREPARE q2 |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_FETCH_STMT | 94e02a7e4fe9d6743186603d | FETCH FROM foo25 |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_COMMENT_STMT | 94ea13f4e3d0c2ef3cf7f57e | COMMENT ON FUNCTION seg_different(seg, seg) IS 'different' |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 94f70dd7238e0b99cc2820e8 | CREATE COLLATION builtin2 ( PROVIDER = builtin ) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OP_FAMILY_STMT | 95069a2fdfff75a0f14648ca | ALTER OPERATOR FAMILY gist_timetz_ops USING gist ADD FUNCTION 12 ("any", "any") gist_translate_cmptype_btree (int) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 953c020cc1fbd72f6ac7a6f3 | CREATE AGGREGATE testagg1(int2) (SFUNC = int2_sum, STYPE = int8) |
-| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_PREPARE_STMT | 957685535b2dc5378d6c8a8c | PREPARE foo AS SELECT id, keywords, title, body, created FROM articles GROUP BY id |
-| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_PREPARE_STMT | 957f0c40a365fc21966f72a6 | PREPARE q2 AS SELECT 2 AS b |
-| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_PREPARE_STMT | 95d67e0b7395544beb18a1b9 | -- should fail PREPARE ins(int, int[]) AS INSERT INTO rw_view1 VALUES($1, $2) |
-| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_EXECUTE_STMT | 9641e4c94b29dbdcc7b614b2 | -- ok EXECUTE test |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DROP_STMT | 965508c4346319e71d3b7773 | DROP OPERATOR FAMILY test_operator_family USING no_such_am |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_OP_CLASS_STMT | 965e701a75556307737be700 | -- Create the operator class CREATE OPERATOR CLASS gist_float8_ops DEFAULT FOR TYPE float8 USING gist AS OPERATOR 1 < , OPERATOR 2 <= , OPERATOR 3 = , OPERATOR 4 >= , OPERATOR 5 > , FUNCTION 1 gbt_... |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 9668a9561b305b58856e7e86 | CREATE AGGREGATE invalidsumdouble (float8) ( stype = float8, sfunc = float8pl, mstype = float8, msfunc = float8pl, minvfunc = float8mi_n ) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_RENAME_STMT | 96b86c785b167da7daf1810f | ALTER ROLE regress_hasprivs RENAME TO regress_tenant |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_RENAME_STMT | 96b8786f7f3b65ca1d6a8441 | ALTER OPERATOR FAMILY alt_opf1 USING hash RENAME TO alt_opf2 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_ROLE_STMT | 96b95f964d0042d3c8ad0748 | ALTER ROLE regress_role_limited REPLICATION |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_FETCH_STMT | 97048de3105ad88ea35ae1e3 | fetch 1 in c5 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OP_FAMILY_STMT | 97189cf862aae55596414088 | ALTER OPERATOR FAMILY isn_ops USING btree ADD OPERATOR 1 < (ean13, isbn13), OPERATOR 1 < (ean13, ismn13), OPERATOR 1 < (ean13, issn13), OPERATOR 1 < (ean13, isbn), OPERATOR 1 < (ean13, ismn), OPERA... |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_COMMENT_STMT | 972e930d99ada10076d1fc64 | -- test comments COMMENT ON CONVERSION myconv_bad IS 'foo' |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_OP_CLASS_STMT | 9757c9389278dcdfb203352c | CREATE OPERATOR CLASS macaddr_ops DEFAULT FOR TYPE macaddr USING gin AS OPERATOR 1 <, OPERATOR 2 <=, OPERATOR 3 =, OPERATOR 4 >=, OPERATOR 5 >, FUNCTION 1 macaddr_cmp(macaddr,macaddr), FUNCTION 2 g... |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_ROLE_STMT | 976aa747685e77576d2735d1 | CREATE USER regress_matview_user |
-| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_PREPARE_STMT | 9779e9c61e68e67be35f96d7 | prepare mt_q1 (int) as select a from ma_test where a >= $1 and a % 10 = 5 order by b |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DROP_STMT | 978eda74599852e6e3b312d0 | -- bad aggregate type drop aggregate newcnt (nonesuch) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 9799d92152e299069ee55515 | -- P N N P -- should ERROR: tf2p(anyarray, int) not matched by tf2p(int[],anyelement) CREATE AGGREGATE myaggp14a(BASETYPE = int, SFUNC = tf2p, STYPE = anyarray, FINALFUNC = ffp, INITCOND = '{}') |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_ROLE_STMT | 97ba7f9f7ae210022965200a | CREATE ROLE "current_role" |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DROP_STMT | 97e4b257e912d1c8c0aa33c1 | DROP OPERATOR CLASS test_operator_class USING no_such_am |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_ROLE_STMT | 97edaa1faa1f76ecdd4ab2cf | CREATE ROLE regress_testrol1 SUPERUSER LOGIN IN ROLE regress_testrol2 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 98138f262106cdcbb92dd00b | CREATE OPERATOR <<< (procedure = op_leak, leftarg = record, rightarg = record, restrict = scalarltsel) |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_COMMENT_STMT | 982f88c7307861d4d5aea881 | COMMENT ON ROLE regress_hasprivs IS '' |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_OP_CLASS_STMT | 98349c1af0ef91852e518679 | CREATE OPERATOR CLASS gin__int_ops FOR TYPE _int4 USING gin AS OPERATOR 3 &&, OPERATOR 6 = (anyarray, anyarray), OPERATOR 7 @>, OPERATOR 8 <@, OPERATOR 13 @, OPERATOR 14 ~, OPERATOR 20 @@ (_int4, q... |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_SEC_LABEL_STMT | 983ca38ecb2c09d617750842 | SECURITY LABEL ON TABLE auth_tbl IS 'system_u:object_r:sepgsql_secret_table_t:s0' |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_FETCH_STMT | 9896ab081d1a818033555219 | FETCH backward 15 in foo9 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OPERATOR_STMT | 98ceca0ef80c95fc5756d6d7 | ALTER OPERATOR <= (isbn, isbn) SET ( RESTRICT = scalarlesel, JOIN = scalarlejoinsel) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_ROLE_STMT | 98e10ad8f7e1ea7de30c3689 | CREATE ROLE regress_rol_lock1 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OP_FAMILY_STMT | 99044bcd2233ac41ae16bc57 | ALTER OPERATOR FAMILY alt_opf9 USING gist ADD OPERATOR 1 < (int4, int4) FOR ORDER BY float_ops |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_ROLE_STMT | 9929cd7149b6358710644e60 | ALTER ROLE regress_test_superuser WITH NOSUPERUSER |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_SEC_LABEL_STMT | 992aa98dcba3659a5bc590d8 | SECURITY LABEL ON TABLE julio_claudians IS 'system_u:object_r:sepgsql_regtest_foo_table_t:s0' |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OP_FAMILY_STMT | 99407f7a794ebdaeebaa1538 | ALTER OPERATOR FAMILY alt_opf14 USING btree ADD FUNCTION 1 fn_opf14(int4) |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_SEC_LABEL_STMT | 994a547ea6658bb101afffb7 | SECURITY LABEL FOR 'unknown_seclabel' ON ROLE regress_dummy_seclabel_user1 IS 'unclassified' |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 996912093a170ac7e3ee4b52 | -- -- ISMN13 operators: -- --------------------------------------------------- CREATE OPERATOR < ( PROCEDURE = isnlt, LEFTARG = ismn13, RIGHTARG = ismn13, COMMUTATOR = >, NEGATOR = >=, RESTRICT = s... |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_ROLE_STMT | 9981680672a041a2b07a6866 | -- -- Test replication slot directory functions -- CREATE ROLE regress_slot_dir_funcs |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 9999cbdee8fa23e05f19fe4f | create operator @>= ( leftarg = int4, rightarg = int4, procedure = tcl_int4ge ) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DROP_STMT | 99bf44f40e70e0b716abd376 | DROP OPERATOR !==(bigint, bigint) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 99d405db196be70e3b9e4836 | -- fails create aggregate least_agg(int8) ( stype = int8, sfunc = least_accum ) |
-| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_EXPLAIN_STMT | 9a015694eb1433f3e6c08971 | explain (analyze, costs off, summary off, timing off, buffers off) execute ab_q3 (2, 2) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DROP_STMT | 9a2dac42e9b0f8c4ec6bc78b | DROP OPERATOR FAMILY alt_opf11 USING gist |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OPERATOR_STMT | 9a3cb0beaef4120dc3694d0c | ALTER OPERATOR <= (issn13, ean13) SET ( RESTRICT = scalarlesel, JOIN = scalarlejoinsel) |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_FETCH_STMT | 9a3d23b4e316d76d0e9bf662 | FETCH 1 FROM c1 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_OP_CLASS_STMT | 9a4963245567734374848bee | create operator class alter1.ctype_hash_ops default for type alter1.ctype using hash as operator 1 alter1.=(alter1.ctype, alter1.ctype) |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_SEC_LABEL_STMT | 9a5e9a1185339463d117241a | SECURITY LABEL ON COLUMN t1p_ones.p IS 'system_u:object_r:sepgsql_ro_table_t:s0' |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 9a5ea6902372f1eee55e7b63 | CREATE OPERATOR <= ( PROCEDURE = isnle, LEFTARG = issn, RIGHTARG = issn, COMMUTATOR = >=, NEGATOR = >, RESTRICT = scalarltsel, JOIN = scalarltjoinsel) |
-| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_PREPARE_STMT | 9a814e5076a3ebe68bf2748d | prepare pstmt_def_insert (int) as insert into pc_list_part_def values($1) |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_FETCH_STMT | 9ab77014c7e4d7a010c6e9d8 | FETCH backward 16 in foo8 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_ROLE_STMT | 9acda2b0a45ff422592dffbe | CREATE ROLE regress_log_memory |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OPERATOR_STMT | 9ad1a33542f0e1454882f08c | ALTER OPERATOR @!=(boolean, real) SET (NEGATOR = ===) |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_FETCH_STMT | 9b051930dd15ce74c6f75df6 | FETCH 22 in foo22 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_OP_CLASS_STMT | 9b49df60433ed36ab90aff28 | -- Opclasses CREATE OPERATOR CLASS int4_ops DEFAULT FOR TYPE int4 USING bloom AS OPERATOR 1 =(int4, int4), FUNCTION 1 hashint4(int4) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OP_FAMILY_STMT | 9b49f64e55e7ba6d4a78cfd8 | alter operator family integer_ops using btree add operator 3 = (int8alias1, int8alias2) |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_COMMENT_STMT | 9b86f172a0de7093b99adc0e | COMMENT ON INDEX comment_test_index IS 'Simple index on comment_test' |
-| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_EXECUTE_STMT | 9bfcd97dfda3a3d556607d8f | EXECUTE prep1 |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_COMMENT_STMT | 9c00709c49b6719648881432 | COMMENT ON CONSTRAINT the_constraint ON constraint_comments_tbl IS 'no, the comment' |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 9c0a50087b891d21bff2e1eb | CREATE AGGREGATE regress_pg_dump_schema.test_agg(int2) (SFUNC = int2_sum, STYPE = int8) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 9c0f6341af062a842229900f | CREATE OPERATOR <> ( PROCEDURE = isnne, LEFTARG = upc, RIGHTARG = upc, COMMUTATOR = <>, NEGATOR = =, RESTRICT = neqsel, JOIN = neqjoinsel) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 9c25be6d3d806b908945ebb1 | CREATE OPERATOR ^<@ ( LEFTARG = ltree, RIGHTARG = _ltree, PROCEDURE = _ltree_r_isparent, COMMUTATOR = '^@>', RESTRICT = contsel, JOIN = contjoinsel ) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 9c3731ed5993ad7b239c2ef7 | -- P P N N -- should ERROR: ffnp(anyarray) not matched by ffnp(int[]) CREATE AGGREGATE myaggn17a(BASETYPE = int, SFUNC = tf1p, STYPE = anyarray, FINALFUNC = ffnp, INITCOND = '{}') |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_FETCH_STMT | 9c7b4013ddd200cf0336567d | FETCH 1 IN cursor_stats_1 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 9c924fb8d64130f056b6644b | CREATE OPERATOR !~~ ( PROCEDURE = texticnlike, LEFTARG = citext, RIGHTARG = citext, NEGATOR = ~~, RESTRICT = icnlikesel, JOIN = icnlikejoinsel ) |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_COMMENT_STMT | 9c9f97110929623129b77732 | comment on table event_trigger_fire1 is 'here is a comment' |
-| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_SELECT_STMT | 9c9ffbf0c08d709d9d5ebc3c | select delete('a=>1 , b=>2, c=>3'::hstore, '{}'::text[]) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OPERATOR_STMT | 9ca71a932b770a6818896d6a | ALTER OPERATOR >= (ean13, ismn13) SET ( RESTRICT = scalargesel, JOIN = scalargejoinsel) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 9cfd0c8ea82efd9506929c3a | CREATE OPERATOR <> ( PROCEDURE = isnne, LEFTARG = isbn13, RIGHTARG = ean13, COMMUTATOR = <>, NEGATOR = =, RESTRICT = neqsel, JOIN = neqjoinsel) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_ROLE_STMT | 9d3df4f343c42e77783cf821 | -- DEFAULT MONITORING ROLES CREATE ROLE regress_role_haspriv |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_OP_CLASS_STMT | 9d4d3cb2d76c846769461a08 | create operator class myint_ops default for type myint using hash as operator 1 = (myint, myint), function 1 myinthash(myint) |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_COMMENT_STMT | 9d4edd952a8b85de3716409b | COMMENT ON CONSTRAINT inv_ck ON DOMAIN constraint_comments_dom IS 'comment on invalid constraint' |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_OP_CLASS_STMT | 9d79e5adb5bd0c9f9ebeafb3 | CREATE OPERATOR CLASS gist_ltree_ops DEFAULT FOR TYPE ltree USING gist AS OPERATOR 1 < , OPERATOR 2 <= , OPERATOR 3 = , OPERATOR 4 >= , OPERATOR 5 > , OPERATOR 10 @> , OPERATOR 11 <@ , OPERATOR 12 ... |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CLOSE_PORTAL_STMT | 9d87fafbe7f8151a3db6c54d | CLOSE ALL |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 9db3c032fc287d1c574d5d27 | CREATE TEXT SEARCH CONFIGURATION hunspell_tst ( COPY=ispell_tst ) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 9dd2c11ea1db4d6b2bef74c6 | CREATE OPERATOR >= ( PROCEDURE = isnge, LEFTARG = isbn13, RIGHTARG = isbn, COMMUTATOR = <=, NEGATOR = <, RESTRICT = scalargtsel, JOIN = scalargtjoinsel ) |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_FETCH_STMT | 9debef68d87ea0056ace2bd7 | -- Fetch 1 tuple, keeping the cursor open FETCH 1 FROM foo |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 9df6f512650ea1d08c685cce | CREATE OPERATOR @+@ ( leftarg = int4, rightarg = int4, procedure = int4pl ) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_ROLE_SET_STMT | 9e023b18bd554f3557607d1d | ALTER ROLE ALL SET application_name to 'SLAP' |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_OP_CLASS_STMT | 9e0326cd282dda14e82cb86b | create operator class part_test_int4_ops for type int4 using hash as operator 1 =, function 2 part_hashint4_noop(int4, int8) |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CLOSE_PORTAL_STMT | 9e39dd403e86ca6e6e39e75d | CLOSE foo11 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DROP_STMT | 9e6b229b5d6e4a4a0721102e | DROP OPERATOR ~ (cube, cube) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 9e83a991077296589915709d | CREATE OPERATOR <> ( PROCEDURE = isnne, LEFTARG = isbn, RIGHTARG = ean13, COMMUTATOR = <>, NEGATOR = =, RESTRICT = neqsel, JOIN = neqjoinsel) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FUNCTION_STMT | 9e8927878e2e1757dd17ddc3 | CREATE FUNCTION test_in_out_params_multi(first in text, second out text, third out text) AS $$ return (first + '_record_in_to_out_1', first + '_record_in_to_out_2'); $$ LANGUAGE plpython3u |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 9e9355a313f1d437f1f35458 | CREATE OPERATOR #>=# ( LEFTARG = hstore, RIGHTARG = hstore, PROCEDURE = hstore_ge, COMMUTATOR = #<=#, NEGATOR = #<#, RESTRICT = scalargtsel, JOIN = scalargtjoinsel ) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 9e9512c92aceb1d96154ec40 | CREATE OPERATOR <@ ( LEFTARG = hstore, RIGHTARG = hstore, PROCEDURE = hs_contained, COMMUTATOR = '@>', RESTRICT = contsel, JOIN = contjoinsel ) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 9eafc8a56755e2c1ab9db10c | CREATE OPERATOR === ( leftarg = integer, rightarg = integer, procedure = int4eq, negator = === ) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 9edfd31868a0d0a73cd9d5b7 | CREATE OPERATOR @> ( LEFTARG = cube, RIGHTARG = cube, PROCEDURE = cube_contains, COMMUTATOR = '<@', RESTRICT = contsel, JOIN = contjoinsel ) |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_FETCH_STMT | 9ee32a72eae337bcdc540187 | FETCH backward 11 in foo13 |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_FETCH_STMT | 9f2a4fb2a2b30b69f4f1bb71 | FETCH 11 in foo11 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_ROLE_STMT | 9f31659195008183e841b6a9 | CREATE ROLE regress_passwd7 PASSWORD 'md5012345678901234567890123456789zz' |
-| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_PREPARE_STMT | 9febf11a56d039f5dc508614 | PREPARE test_prepare_pgss AS select generate_series(1, 10) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | 9fffa5afb9b92cbbd1bfbd50 | CREATE OPERATOR < ( PROCEDURE = isnlt, LEFTARG = upc, RIGHTARG = ean13, COMMUTATOR = >, NEGATOR = >=, RESTRICT = scalarltsel, JOIN = scalarltjoinsel) |
-| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_EXECUTE_STMT | a019cb926557fd0d65bc6842 | EXECUTE p1(1, 2, 3, 4, 5) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | a021d78664bdd4985e6b115e | create operator public.>^ ( leftarg = int4, rightarg = int4, procedure = int4gt ) |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DECLARE_CURSOR_STMT | a0568cbe8ed59c5c2a1f79b7 | DECLARE foo8 SCROLL CURSOR FOR SELECT * FROM tenk2 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | a06482249292088f67443c0f | CREATE OPERATOR = ( PROCEDURE = isneq, LEFTARG = issn, RIGHTARG = issn, COMMUTATOR = =, NEGATOR = <>, RESTRICT = eqsel, JOIN = eqjoinsel, MERGES, HASHES) |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_COMMENT_STMT | a078f7a1db41ef193a8bfd04 | COMMENT ON TABLE parted_col_comment IS 'Am partitioned table' |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OP_FAMILY_STMT | a0ae7a2548587c3a207a9108 | ALTER OPERATOR FAMILY gist_float8_ops USING gist ADD FUNCTION 12 ("any", "any") gist_translate_cmptype_btree (int) |
-| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_PREPARE_STMT | a0b31e4eb1b2fc4e92f310b9 | PREPARE vprep AS SELECT * FROM pcacheview |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_COMMENT_STMT | a0c3f60a48e7b7a4ba6005e9 | COMMENT ON STATISTICS ctlt1_expr_stat IS 'ab expr stats' |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_COMMENT_STMT | a0d78980e6639003c4d30d0a | COMMENT ON FUNCTION tg_hub_adjustslots(bpchar, integer, integer) IS NULL |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_ROLE_STMT | a0da8011cbc21a8de4735186 | CREATE ROLE regress_rls_eve |
-| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_EXECUTE_STMT | a0e0b786a06369c8f52dc378 | execute pstmt_def_insert(null) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_ROLE_SET_STMT | a0e2019fd9c887547cfd7303 | ALTER ROLE regress_authenticated_user_ssa SET session_authorization = regress_session_user |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_ROLE_STMT | a10559a456a32b3ced2b3195 | CREATE ROLE regress_rls_group2 NOLOGIN |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DECLARE_CURSOR_STMT | a11d6559deadee5f6cd87951 | DECLARE c CURSOR FOR SELECT ctid, * FROM tidscan |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | a1240e471d17691fd1f12f71 | -- multi-arg polymorphic CREATE AGGREGATE mysum2(anyelement,anyelement) (SFUNC = sum3, STYPE = anyelement, INITCOND = '0') |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_COMMENT_STMT | a18e3c7d6239b91b96020921 | COMMENT ON LANGUAGE pltcl IS 'PL/Tcl procedural language' |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OP_FAMILY_STMT | a1aeea8185f251948afd5cad | ALTER OPERATOR FAMILY gist_trgm_ops USING gist ADD OPERATOR 11 pg_catalog.= (text, text) |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_COMMENT_STMT | a1b075f4ebd48d16224320c6 | COMMENT ON VIEW toyemp IS 'is a view' |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_ROLE_STMT | a1c98d2190867f06ba61e7c5 | CREATE USER regress_rls_dave NOLOGIN |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DECLARE_CURSOR_STMT | a1df557f520fc7fd92df20b2 | DECLARE current_check_cursor SCROLL CURSOR FOR SELECT * FROM current_check |
-| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_PREPARE_STMT | a1fc39fdbe55738aa06ba8fe | -- value of $1 should not be sent to remote PREPARE st5(user_enum,int) AS SELECT * FROM ft1 t1 WHERE c8 = $1 and c1 = $2 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | a206efb92f31311ad62397ee | CREATE OPERATOR > ( PROCEDURE = isngt, LEFTARG = ean13, RIGHTARG = isbn13, COMMUTATOR = <, NEGATOR = <=, RESTRICT = scalargtsel, JOIN = scalargtjoinsel ) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | a229062a5e3b4b140fd220d4 | CREATE TEXT SEARCH TEMPLATE xsyn_template ( LEXIZE = dxsyn_lexize, INIT = dxsyn_init ) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | a2344efe7aba5a44f9bc747f | CREATE AGGREGATE myaggn13b(BASETYPE = int, SFUNC = tfnp, STYPE = anyarray, INITCOND = '{}') |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | a24c2bface2219e0f6d16b1a | CREATE OPERATOR < ( PROCEDURE = isnlt, LEFTARG = isbn, RIGHTARG = isbn13, COMMUTATOR = >, NEGATOR = >=, RESTRICT = scalarltsel, JOIN = scalarltjoinsel) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | a24fa383896ea3b092c81b97 | create operator public.=^ ( leftarg = int4, rightarg = int4, procedure = int4lt ) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OP_FAMILY_STMT | a253686c6e2af713178aca07 | ALTER OPERATOR FAMILY alt_opf4 USING btree ADD -- int4 vs int2 OPERATOR 1 < (int4, int2) , OPERATOR 2 <= (int4, int2) , OPERATOR 3 = (int4, int2) , OPERATOR 4 >= (int4, int2) , OPERATOR 5 > (int4, ... |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | a26c78d5943cb39ebbd55ae5 | CREATE AGGREGATE myaggp11b(BASETYPE = anyelement, SFUNC = tf1p, STYPE = int[], INITCOND = '{}') |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_ROLE_STMT | a27336d821868ae76b350758 | CREATE ROLE regress_s1 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | a2d1f3501ef113d49c442708 | CREATE OPERATOR = ( PROCEDURE = isneq, LEFTARG = isbn, RIGHTARG = ean13, COMMUTATOR = =, NEGATOR = <>, RESTRICT = eqsel, JOIN = eqjoinsel, MERGES, HASHES) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OPERATOR_STMT | a2e01ab94872020c9f691265 | ALTER OPERATOR ~ (hstore, hstore) SET (RESTRICT = matchingsel, JOIN = matchingjoinsel) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OPERATOR_STMT | a2e5173d9062e43f18e8516c | ALTER OPERATOR ^@ (ltxtquery, _ltree) SET (RESTRICT = matchingsel, JOIN = matchingjoinsel) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_OP_CLASS_STMT | a2e93788459a82f48c523474 | CREATE OPERATOR CLASS float8_ops DEFAULT FOR TYPE float8 USING gin AS OPERATOR 1 <, OPERATOR 2 <=, OPERATOR 3 =, OPERATOR 4 >=, OPERATOR 5 >, FUNCTION 1 btfloat8cmp(float8,float8), FUNCTION 2 gin_e... |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_ROLE_STMT | a2ebd6532a4eb9bb3310a3d2 | CREATE USER regress_alter_table_user1 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | a2effd3d0d48352505caf0d9 | CREATE COLLATION mycoll3 FROM "default" |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_ROLE_STMT | a301ba6387a22be960416235 | ------ ---- Test pg_buffercache_evict* functions ------ CREATE ROLE regress_buffercache_normal |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_ROLE_STMT | a3055128be5e60f0c0698186 | -- error ALTER USER "public" WITH NOREPLICATION |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DROP_STMT | a30a0ac1a71cc3ab81f61140 | DROP OPERATOR !! (NONE, priv_testdomain1) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | a317fe8a550b45de87f0f73f | -- -- CREATE_OPERATOR -- CREATE OPERATOR ## ( leftarg = path, rightarg = path, function = path_inter, commutator = ## ) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | a3421df8d1d6141d9edad1c6 | CREATE OPERATOR = ( PROCEDURE = isneq, LEFTARG = ismn, RIGHTARG = ean13, COMMUTATOR = =, NEGATOR = <>, RESTRICT = eqsel, JOIN = eqjoinsel, MERGES, HASHES) |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_COMMENT_STMT | a3d61c3436e0371b24491170 | COMMENT ON PUBLICATION testpub_default IS 'test publication' |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | a3e182a74485f5ad8bd77fb6 | -- -- OPERATORS -- CREATE OPERATOR && ( LEFTARG = _int4, RIGHTARG = _int4, PROCEDURE = _int_overlap, COMMUTATOR = '&&', RESTRICT = _int_overlap_sel, JOIN = _int_overlap_joinsel ) |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_FETCH_STMT | a40ea56528a8da427562b2dd | FETCH ABSOLUTE 12 FROM c1 |
-| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_EXPLAIN_STMT | a443bbe82806d37399e5ddd6 | explain (verbose, costs off) execute update_part_abc_view (2, 'a') |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CLOSE_PORTAL_STMT | a447a4d3b539e069e48b966c | CLOSE c |
-| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_PREPARE_STMT | a447c74b5e2445bc9471fc2d | -- subquery using immutable function (can be sent to remote) PREPARE st3(int) AS SELECT * FROM ft1 t1 WHERE t1.c1 < $2 AND t1.c3 IN (SELECT c3 FROM ft2 t2 WHERE c1 > $1 AND date(c5) = '1970-01-17':... |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | a462ba9e21389bcb57f90c33 | CREATE OPERATOR = ( PROCEDURE = isneq, LEFTARG = ismn13, RIGHTARG = ismn, COMMUTATOR = =, NEGATOR = <>, RESTRICT = eqsel, JOIN = eqjoinsel, MERGES, HASHES) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_ROLE_STMT | a467937b7f64397c1d5bc526 | CREATE ROLE regress_test_def_bypassrls |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | a4a511b14327a4619da8505a | CREATE OPERATOR >= ( LEFTARG = CITEXT, RIGHTARG = CITEXT, NEGATOR = <, COMMUTATOR = <=, PROCEDURE = citext_ge, RESTRICT = scalargtsel, JOIN = scalargtjoinsel ) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_ROLE_STMT | a4ab9d59b5662b497789ab37 | CREATE ROLE regress_passwd9 PASSWORD 'alterediterationcount' |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | a4ce880d3abbddbb5fba0729 | CREATE OPERATOR >= ( PROCEDURE = isnge, LEFTARG = isbn, RIGHTARG = isbn13, COMMUTATOR = <=, NEGATOR = <, RESTRICT = scalargtsel, JOIN = scalargtjoinsel ) |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_COMMENT_STMT | a4d05e7e6ec1f2aaaaefc510 | COMMENT ON TABLE attmp_wrong IS 'table comment' |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_ROLE_STMT | a4e001c1a986b6d59cc78219 | CREATE ROLE regress_rls_dob_role1 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DROP_STMT | a50806b37ce7cb9afb6692ff | DROP OPERATOR ###### (int4, int8) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | a550dc3c9f9fb9409301fed3 | CREATE OPERATOR <% ( leftarg = point, rightarg = widget, procedure = pt_in_widget, commutator = >% , negator = >=% ) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | a565177a0b4556aca91c55e2 | CREATE AGGREGATE testagg3(int2) (SFUNC = int2_sum, STYPE = int8) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OWNER_STMT | a56873f909b8fbce211db4db | -- OK ALTER OPERATOR CLASS alt_opc3 USING hash OWNER TO regress_alter_generic_user2 |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_COMMENT_STMT | a5693a790369ed75a76b40a5 | COMMENT ON COLUMN default_test_row.f1 IS NULL |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | a56a64a566e0916e10cb325c | CREATE OPERATOR ? ( LEFTARG = hstore, RIGHTARG = text, PROCEDURE = exist, RESTRICT = contsel, JOIN = contjoinsel ) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | a5dd78191e8160cecbea7a93 | CREATE OPERATOR <> ( PROCEDURE = isnne, LEFTARG = ean13, RIGHTARG = ismn13, COMMUTATOR = <>, NEGATOR = =, RESTRICT = neqsel, JOIN = neqjoinsel) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OP_FAMILY_STMT | a5fe251e9fb8d3b27f18ff81 | ALTER OPERATOR FAMILY gist_int2_ops USING gist ADD FUNCTION 12 ("any", "any") gist_translate_cmptype_btree (int) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | a6191a1744f5dd0a268d4aa2 | CREATE OPERATOR > ( PROCEDURE = isngt, LEFTARG = isbn13, RIGHTARG = ean13, COMMUTATOR = <, NEGATOR = <=, RESTRICT = scalargtsel, JOIN = scalargtjoinsel ) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OP_FAMILY_STMT | a64f69820b670b09d448350e | ALTER OPERATOR FAMILY gist_time_ops USING gist ADD FUNCTION 9 (time, time) gbt_time_fetch (internal) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_ROLE_STMT | a6565d8a848e22b7189cde8c | ALTER ROLE regress_createdb NOCREATEDB |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OWNER_STMT | a65bdc115d960f7a41abbffe | ALTER AGGREGATE testagg3(int2) OWNER TO CURRENT_ROLE |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | a6a637b5f0c92c39861b4de0 | CREATE OPERATOR ~~* ( PROCEDURE = texticlike, LEFTARG = citext, RIGHTARG = text, NEGATOR = !~~*, RESTRICT = iclikesel, JOIN = iclikejoinsel ) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_ROLE_STMT | a70f6989eec5c59ef456b8ad | CREATE ROLE regress_testrol2 SUPERUSER |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_FETCH_STMT | a7303b46e22cb0e70e6fc726 | FETCH 3 in foo3 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | a734ad5cf3f4430b4b78396c | create aggregate aggfstr(integer,integer,text) ( sfunc = aggf_trans, stype = aggtype[], initcond = '{}' ) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | a7369d4689b8d350345bcde9 | CREATE OPERATOR = ( PROCEDURE = isneq, LEFTARG = issn, RIGHTARG = ean13, COMMUTATOR = =, NEGATOR = <>, RESTRICT = eqsel, JOIN = eqjoinsel, MERGES, HASHES) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_OP_CLASS_STMT | a74a270ab2f928fa96b35976 | -- Create the operator classes for indexing CREATE OPERATOR CLASS seg_ops DEFAULT FOR TYPE seg USING btree AS OPERATOR 1 < , OPERATOR 2 <= , OPERATOR 3 = , OPERATOR 4 >= , OPERATOR 5 > , FUNCTION 1... |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DROP_STMT | a767cfc83b2857f0fdf427a9 | DROP OPERATOR FAMILY alt_opf8 USING btree |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_ROLE_STMT | a76e7a509b33a9f74e73dbe8 | CREATE ROLE regress_nosuch_createdb CREATEDB |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | a7924ad0d365d9259a4ee7f1 | CREATE AGGREGATE logging_agg_nonstrict (anyelement) ( stype = text, sfunc = logging_sfunc_nonstrict, mstype = text, msfunc = logging_msfunc_nonstrict, minvfunc = logging_minvfunc_nonstrict ) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FUNCTION_STMT | a7f30b7d34ee49090d5fde31 | -- Show visibility map and page-level visibility information. CREATE FUNCTION pg_visibility(regclass, blkno bigint, all_visible OUT boolean, all_frozen OUT boolean, pd_all_visible OUT boolean) RETU... |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_ROLE_STMT | a881358cdf3d6c5a7ae827b6 | CREATE USER regress_dep_user2 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_ROLE_SET_STMT | a8877f6a6f5bc0fa5a71b2da | ALTER ROLE regress_rol_lock1 SET search_path = lock_schema1 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OPERATOR_STMT | a88d1203f7c6b41a6a8a839f | ALTER OPERATOR <= (ismn13, ismn) SET ( RESTRICT = scalarlesel, JOIN = scalarlejoinsel) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_ROLE_STMT | a89e4cc7d84c7982624350e5 | ALTER ROLE regress_test_bypassrls WITH NOBYPASSRLS |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OP_FAMILY_STMT | a8a041dfad4ee7ffa9cb9763 | ALTER OPERATOR FAMILY isn_ops USING btree ADD OPERATOR 1 < (isbn, ean13), OPERATOR 1 < (isbn, isbn13), OPERATOR 2 <= (isbn, ean13), OPERATOR 2 <= (isbn, isbn13), OPERATOR 3 = (isbn, ean13), OPERATO... |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | a8a1bfae95b50f9fe9171800 | -- not STRICT; allows (null::rectype,hstore) CREATE OPERATOR #= ( LEFTARG = anyelement, RIGHTARG = hstore, PROCEDURE = populate_record ) |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_SEC_LABEL_STMT | a8ba149a086854283583cf0d | SECURITY LABEL ON TABLE dummy_seclabel_tbl1 IS 'top secret' |
-| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEALLOCATE_STMT | a8ba6dc2df4da352b61a2d43 | DEALLOCATE get_nnconstraint_info |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OP_FAMILY_STMT | a9081b36e0c26bcf43f0a2d8 | ALTER OPERATOR FAMILY gist_timestamptz_ops USING gist ADD OPERATOR 6 <> (timestamptz, timestamptz) , OPERATOR 15 <-> (timestamptz, timestamptz) FOR ORDER BY pg_catalog.interval_ops , FUNCTION 8 (ti... |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_SEC_LABEL_STMT | a90b3b0271853e7ff46b3adb | SECURITY LABEL ON TABLE t1 IS 'system_u:object_r:sepgsql_table_t:s0' |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_FETCH_STMT | a9192e5171163bb0dab548c1 | FETCH ABSOLUTE 1 FROM foo24 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_ROLE_STMT | a9203731e1f2b04dc82ce035 | CREATE ROLE "session_user" |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_OP_CLASS_STMT | a933bb3e19ac53595e6f5aac | -- Also test old-style where the STORAGE clause is disallowed CREATE OPERATOR CLASS name_ops_old FOR TYPE name USING spgist AS OPERATOR 1 < , OPERATOR 2 <= , OPERATOR 3 = , OPERATOR 4 >= , OPERATOR... |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_OP_FAMILY_STMT | a9417bf331db6db9fa22d6d2 | -- Should fail. duplicate operator number / function number in ALTER OPERATOR FAMILY ... ADD FUNCTION CREATE OPERATOR FAMILY alt_opf17 USING btree |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OPERATOR_STMT | a944a4db71aff1dc809c8aa8 | ALTER OPERATOR @ (_int4, _int4) SET (RESTRICT = _int_contains_sel, JOIN = _int_contains_joinsel) |
-| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_EXECUTE_STMT | a95406ed67a14fc7c8c9bee5 | execute q |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DROP_STMT | a95429785d2120f7929206b2 | DROP OPERATOR \|>(bigint, bigint) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_ROLE_STMT | a986db0be28261065ba58f93 | -- has priv and user mapping CREATE ROLE regress_no_priv_user LOGIN |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OP_FAMILY_STMT | a9968ca7e5993e1917d86baf | ALTER OPERATOR FAMILY alt_opf13 USING hash ADD FUNCTION 1 fn_opf13(int4) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | a9b42d7942f7faad5e0baceb | -- test that we can't use part of an existing commutator or negator pair -- as a commutator or negator CREATE OPERATOR === ( leftarg = integer, rightarg = integer, procedure = int4eq, commutator = = ) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DROP_STMT | a9c41c45f3e2d2151e252853 | DROP OPERATOR FAMILY alt_opf14 USING btree |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_OP_CLASS_STMT | a9cb94fb308792c2d1672117 | -- create the operator class for gist CREATE OPERATOR CLASS gist_trgm_ops FOR TYPE text USING gist AS OPERATOR 1 % (text, text), FUNCTION 1 gtrgm_consistent (internal, text, smallint, oid, internal... |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OPERATOR_STMT | a9d43f1f5f470ed26d3f02b3 | ALTER OPERATOR ^@ (ltxtquery, ltree) SET (RESTRICT = matchingsel, JOIN = matchingjoinsel) |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_COMMENT_STMT | a9dabd839b4a0fb35f61b995 | COMMENT ON TRIGGER trigger_1 ON datatype_table IS 'TRIGGER test' |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_ROLE_STMT | a9e4fde379acd7d2281d74df | CREATE ROLE regress_foreign_data_user LOGIN SUPERUSER |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_FETCH_STMT | aa1432f7b7908e09249dade7 | FETCH all in foo17 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | aa1870ad05cff16ecbc355c5 | CREATE OPERATOR #># ( LEFTARG = hstore, RIGHTARG = hstore, PROCEDURE = hstore_gt, COMMUTATOR = #<#, NEGATOR = #<=#, RESTRICT = scalargtsel, JOIN = scalargtjoinsel ) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | aa2a960f51f764b341d5b1a1 | CREATE OPERATOR ?<@ ( LEFTARG = _ltree, RIGHTARG = ltree, PROCEDURE = _ltree_extract_risparent ) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_ROLE_SET_STMT | aa4267021badb52508bd2a48 | ALTER ROLE "current_user" SET application_name to 'FOOFOO' |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OP_FAMILY_STMT | aa77d896a9933ed4ee42fb6c | ALTER OPERATOR FAMILY gist_vbit_ops USING gist ADD FUNCTION 9 (varbit, varbit) gbt_var_fetch (internal) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | aa7bcd0bd10231f5fc57b45d | CREATE OPERATOR <-> ( LEFTARG = interval, RIGHTARG = interval, PROCEDURE = interval_dist, COMMUTATOR = '<->' ) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | aa865ad5d8f89c6000ad527a | -- can change stype: CREATE OR REPLACE AGGREGATE myavg (numeric) ( stype = numeric, sfunc = numeric_add ) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DROP_STMT | aaa9de993a53334259b3efc6 | DROP OPERATOR CLASS test_int4_ops USING btree |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_ROLE_STMT | aada4a5ffc51716767b4c0f6 | CREATE ROLE regress_nosuch_recursive ROLE regress_nosuch_recursive |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | ab036b40a1c7570dc9d55c97 | CREATE TEXT SEARCH DICTIONARY hunspell_err ( Template=ispell, DictFile=hunspell_sample_num, AffFile=hunspell_sample_long ) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | ab2332c24868169417abd34c | -- N P P P -- should ERROR: tfp(int[],anyelement) not matched by tfp(anyarray,anyelement) CREATE AGGREGATE myaggp12a(BASETYPE = anyelement, SFUNC = tfp, STYPE = int[], FINALFUNC = ffp, INITCOND = '... |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | ab674a6214a82d5b7f7f44f1 | CREATE OPERATOR === ( leftarg = integer, rightarg = integer, procedure = int4eq, negator = <> ) |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_COMMENT_STMT | aba5348e684600edb61f21c8 | COMMENT ON OPERATOR ###### (int4, NONE) IS 'bad postfix' |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_RENAME_STMT | abdcdd31f010681613b807ae | -- failed (name conflicts) ALTER AGGREGATE alt_agg3(int) RENAME TO alt_agg4 |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_COMMENT_STMT | ac41bd38a7ac14bc1eddd580 | COMMENT ON INDEX six IS '' |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_OP_CLASS_STMT | ac618a929e7387491a41d0ee | CREATE OPERATOR CLASS issn_ops DEFAULT FOR TYPE issn USING hash FAMILY isn_ops AS OPERATOR 1 =, FUNCTION 1 hashissn(issn) |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_COMMENT_STMT | aca6c17a86bc3d15abd142a1 | COMMENT ON CONSTRAINT id_notnull_constraint ON comment_test IS 'NOT NULL constraint of comment_test' |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | acb9c3dba42c7c191fda25cc | create aggregate my_half_sum(int4) ( stype = int4, sfunc = sum_transfn, finalfunc = halfsum_finalfn ) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | acd617af7e7ef132a3e099e4 | create operator =(procedure = same, leftarg = ctype, rightarg = ctype) |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_FETCH_STMT | acdb54759de31a246a8a79c4 | -- scroll beyond beginning FETCH BACKWARD FROM c |
-| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_PREPARE_STMT | acdbbe9429143e593e1e9d6c | PREPARE role_inval AS SELECT * FROM t1 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | acf1667506de5cafeb5657dd | CREATE OPERATOR ? ( LEFTARG = ltree, RIGHTARG = _lquery, PROCEDURE = lt_q_regex, COMMUTATOR = '?', RESTRICT = contsel, JOIN = contjoinsel ) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DROP_STMT | acfe1bae948535d8a15d9691 | drop operator class custom_opclass using hash |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_FETCH_STMT | ad0360148a2baa1da4c450a3 | fetch all from c1 |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_FETCH_STMT | ad0b19c9e10b8794e68bb204 | fetch 1 in c2 |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_COMMENT_STMT | ad9100ac2311e1372afb6f0e | COMMENT ON FUNCTION seg_left(seg, seg) IS 'is left of' |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OPERATOR_STMT | adcfd94bc24f31253f5fe02e | ALTER OPERATOR >= (isbn13, ean13) SET ( RESTRICT = scalargesel, JOIN = scalargejoinsel) |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DECLARE_CURSOR_STMT | add0def8084bfd8e7533b1c2 | declare c2 cursor with hold for select count_tt1_v(), count_tt1_s() |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | adde0674716357c402a92532 | create aggregate my_avg(int4) ( stype = avg_state, sfunc = avg_transfn, finalfunc = avg_finalfn ) |
-| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_PREPARE_STMT | ae1a17a7c3a2d4773d8df3dd | prepare v as select current_user, * from rls_f() |
-| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_EXPLAIN_STMT | ae2faafd9b465b043c962e13 | explain (analyze, costs off, summary off, timing off, buffers off) execute ps2(1) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_ROLE_STMT | ae3fe026c1edaa248710f31f | CREATE ROLE regress_nosuch_dbowner IN ROLE pg_database_owner |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_OP_CLASS_STMT | ae4d9b4f82968640f91b2110 | -- CREATE OPERATOR CLASS without FAMILY clause should report -- both CREATE OPERATOR FAMILY and CREATE OPERATOR CLASS CREATE OPERATOR CLASS evttrigopclass FOR TYPE int USING btree AS STORAGE int |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DECLARE_CURSOR_STMT | ae539ff7c07362c1925397b8 | DECLARE foo17 CURSOR FOR SELECT * FROM onek WHERE unique1 = 54 |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DECLARE_CURSOR_STMT | ae6a3ba9e3623b03ee21a74c | DECLARE foo6 SCROLL CURSOR FOR SELECT * FROM tenk2 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_ROLE_STMT | ae87f2de2f1382b404f3b648 | -- error ALTER USER SESSION_ROLE WITH NOREPLICATION |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_ROLE_STMT | ae89827908ed3ce2b18182f5 | ALTER ROLE regress_passwd2 PASSWORD 'role_pwd2' |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_SEC_LABEL_STMT | aefde3c35946d5f17003631d | SECURITY LABEL ON TABLE dummy_seclabel_tbl2 IS 'classified' |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | af00a887e79f2c38a800d559 | CREATE AGGREGATE logging_agg_strict (text) ( stype = text, sfunc = logging_sfunc_strict, mstype = text, msfunc = logging_msfunc_strict, minvfunc = logging_minvfunc_strict ) |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DECLARE_CURSOR_STMT | af037d601eb207fa7305e9d5 | DECLARE foo CURSOR WITH HOLD FOR SELECT 1 |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_SEC_LABEL_STMT | af174ae9d4b109c3c9c311ae | SECURITY LABEL ON TABLE foo_tbl IS 'system_u:object_r:sepgsql_regtest_foo_table_t:s0' |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | af28abd4fa147e38671b09a1 | -- N P N N -- should CREATE CREATE AGGREGATE myaggp09a(BASETYPE = int, SFUNC = tf1p, STYPE = int[], FINALFUNC = ffp, INITCOND = '{}') |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_ROLE_STMT | af4b035ff3284edb52c64a01 | CREATE ROLE regress_tenant2 |
-| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEALLOCATE_STMT | af4dd2e63a7639d92b0a4a3d | deallocate ab_q2 |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_COMMENT_STMT | af5cae82e581479daf38edea | COMMENT ON CONSTRAINT comment_test_child_fk ON comment_test_child IS 'FOREIGN KEY constraint of comment_test_child' |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OP_FAMILY_STMT | af6acadccd007f4d2ecfa047 | ALTER OPERATOR FAMILY gist_timetz_ops USING gist ADD OPERATOR 6 <> (timetz, timetz) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | af6df3be9e5ff20006fc5b12 | CREATE OPERATOR <@ ( LEFTARG = cube, RIGHTARG = cube, PROCEDURE = cube_contained, COMMUTATOR = '@>', RESTRICT = contsel, JOIN = contjoinsel ) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | af81e9092200af20644b1fb1 | create aggregate build_group(anyelement, integer) ( SFUNC = add_group, STYPE = anyarray ) |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_FETCH_STMT | af96d29b547326cba7e3a733 | FETCH 21 in foo21 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FUNCTION_STMT | afc533a43bfd12ca685cd60c | CREATE FUNCTION dup (f1 anyelement, f2 out anyelement, f3 out anyarray) AS 'select $1, array[$1,$1]' LANGUAGE sql |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_COMMENT_STMT | afefb540acc16cba46cf7907 | COMMENT ON CONSTRAINT the_constraint ON DOMAIN constraint_comments_dom IS NULL |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_ROLE_STMT | b0024c38fb697826623869a9 | CREATE USER regress_view_user3 |
-| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEALLOCATE_STMT | b00b5eef3fdeb8123d653122 | deallocate ps1 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OPERATOR_STMT | b01bf450f7a51a6ffe47009e | ALTER OPERATOR >= (cube, cube) SET ( RESTRICT = scalargesel, JOIN = scalargejoinsel ) |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_SEC_LABEL_STMT | b01c458d667ea6b6675d4d02 | SECURITY LABEL ON COLUMN t1p_tens.q IS 'system_u:object_r:sepgsql_secret_table_t:s0' |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OPERATOR_STMT | b0250b70c1a6cafa21ced48e | ALTER OPERATOR @> (_int4, _int4) SET (RESTRICT = _int_contains_sel, JOIN = _int_contains_joinsel) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | b02e8938b1e75061e9482208 | CREATE TEXT SEARCH CONFIGURATION alt_ts_conf2 (copy=english) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | b0341b0eaac40ba535782fdb | -- these are obsolete/deprecated: CREATE OPERATOR @ ( LEFTARG = cube, RIGHTARG = cube, PROCEDURE = cube_contains, COMMUTATOR = '~', RESTRICT = contsel, JOIN = contjoinsel ) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | b0416efeae02fbb9719115b5 | CREATE OPERATOR > ( PROCEDURE = isngt, LEFTARG = ean13, RIGHTARG = ean13, COMMUTATOR = <, NEGATOR = <=, RESTRICT = scalargtsel, JOIN = scalargtjoinsel ) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_ROLE_STMT | b051df840d93f6275dfe64c6 | CREATE USER regress_rls_exempt_user BYPASSRLS NOLOGIN |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | b06bfe3e5e99aac61067e1ea | CREATE OPERATOR ^<@ ( LEFTARG = _ltree, RIGHTARG = ltree, PROCEDURE = _ltree_risparent, COMMUTATOR = '^@>', RESTRICT = contsel, JOIN = contjoinsel ) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | b07722e8b73c45817e09dce9 | -- fail, duplicate name CREATE COLLATION IF NOT EXISTS test0 FROM "C" |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OPERATOR_STMT | b08fd1b1357734be49e07a61 | ALTER OPERATOR <= (issn, issn) SET ( RESTRICT = scalarlesel, JOIN = scalarlejoinsel) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OP_FAMILY_STMT | b0923f323826677abeed1051 | ALTER OPERATOR FAMILY alt_opf10 USING btree ADD OPERATOR 1 < (int4, int4) FOR ORDER BY float_ops |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | b0973efda8e3f535e00043ae | CREATE OPERATOR === ( LEFTARG = int, RIGHTARG = int, PROCEDURE = int4eq, COMMUTATOR = === ) |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_SEC_LABEL_STMT | b09f50e2244b4e09be00b350 | SECURITY LABEL ON SUBSCRIPTION dummy_sub IS 'classified' |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_SEC_LABEL_STMT | b0b3819178725fbb5f39e439 | SECURITY LABEL ON TABLE dummy_seclabel_tbl1 IS '...invalid label...' |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_FETCH_STMT | b0b8b8cb1b3e1b303ece4b86 | FETCH backward 6 in foo18 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OPERATOR_STMT | b0bfa036a9a601825374daa4 | ALTER OPERATOR ~ (lquery, _ltree) SET (RESTRICT = matchingsel, JOIN = matchingjoinsel) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_OP_FAMILY_STMT | b0cff3cbde0fa3d51278f186 | -- Should fail. Ensure correct ordering methods in ALTER OPERATOR FAMILY ... ADD OPERATOR .. FOR ORDER BY CREATE OPERATOR FAMILY alt_opf10 USING btree |
-| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_PREPARE_STMT | b0d465337760b1da246ed433 | prepare p1 as select f1 from abc |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_ROLE_STMT | b0dfb1d07cfafc439d21da0a | CREATE USER regress_alter_op_user |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OP_FAMILY_STMT | b0e8d8c256e3aa27667b37d1 | ALTER OPERATOR FAMILY gist_cube_ops USING gist ADD OPERATOR 15 ~> (cube, int) FOR ORDER BY float_ops, OPERATOR 16 <#> (cube, cube) FOR ORDER BY float_ops, OPERATOR 17 <-> (cube, cube) FOR ORDER BY ... |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_OP_CLASS_STMT | b11c23050beec86cf816a7ce | CREATE OPERATOR CLASS issn_ops DEFAULT FOR TYPE issn USING btree FAMILY isn_ops AS OPERATOR 1 <, OPERATOR 2 <=, OPERATOR 3 =, OPERATOR 4 >=, OPERATOR 5 >, FUNCTION 1 btissncmp(issn, issn) |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_COMMENT_STMT | b147aa63b75790be1872f7e7 | COMMENT ON FUNCTION _int_different(_int4, _int4) IS 'different' |
-| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_EXPLAIN_STMT | b14add42706e2cab9fc9b65a | EXPLAIN (VERBOSE, COSTS OFF) EXECUTE st5('foo', 1) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OPERATOR_STMT | b157b0262cba3d1a989edada | ALTER OPERATOR ? (_lquery, ltree) SET (RESTRICT = matchingsel, JOIN = matchingjoinsel) |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DECLARE_CURSOR_STMT | b16835dc882234caaa087339 | declare c1 scroll cursor for select (select 42) as x |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_ROLE_STMT | b186560e62d483e56cb92d1c | CREATE ROLE regress_display_role |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_SEC_LABEL_STMT | b18beda84434e0aba336e1e2 | SECURITY LABEL FOR 'unknown_seclabel' ON TABLE dummy_seclabel_tbl1 IS 'classified' |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DROP_STMT | b1a8bf178cb751ee1b4ba626 | drop operator public.=^(int, int) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OP_FAMILY_STMT | b2153c978bbc196281fe3a8d | ALTER OPERATOR FAMILY alt_opf4 USING invalid_index_method ADD OPERATOR 1 < (int4, int2) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_ROLE_STMT | b23c71979748b88e6d63aa45 | -- =================================================================== -- access rights and superuser -- =================================================================== -- Non-superuser cannot ... |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OP_FAMILY_STMT | b25085bfb6897921d615f40b | ALTER OPERATOR FAMILY gist_cash_ops USING gist ADD FUNCTION 12 ("any", "any") gist_translate_cmptype_btree (int) |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_FETCH_STMT | b288d291448f1ae88ba77f32 | fetch all from c2 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_RENAME_STMT | b29af6c6d5a1b350a196a708 | -- failed (not owner) ALTER OPERATOR CLASS alt_opc1 USING hash RENAME TO alt_opc4 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OP_FAMILY_STMT | b2b96680d3bdfecc49adb8b3 | ALTER OPERATOR FAMILY alt_opf7 USING btree DROP OPERATOR 1 (int4, int2, int8) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | b2ce8b6aba16db650c6c0bb1 | CREATE COLLATION testcoll_error1 (provider = icu, locale = '@colNumeric=lower') |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OPERATOR_STMT | b2e9c7f98db752fde8d311a9 | ALTER OPERATOR ^~ (_ltree, lquery) SET (RESTRICT = matchingsel, JOIN = matchingjoinsel) |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_COMMENT_STMT | b2f2d241a19b774ae0fbccdd | COMMENT ON TRANSFORM FOR bool LANGUAGE plperl IS 'transform between bool and Perl' |
-| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_EXECUTE_STMT | b2fb19f7f9d01e08f3354c97 | -- now ok EXECUTE get_nnconstraint_info('{notnull_tbl1}') |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_COMMENT_STMT | b31b9ea47b83460218acd4e0 | COMMENT ON TEXT SEARCH DICTIONARY xsyn IS 'eXtended synonym dictionary' |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_ROLE_STMT | b36bdeab73f9a65cea3377cc | CREATE USER regress_seclabel_user2 |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_COMMENT_STMT | b37a270aee7595f2495981b6 | -- Test comments COMMENT ON VIEW noview IS 'no view' |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OP_FAMILY_STMT | b3a7368541b78fc0c511f825 | -- operator without argument types ALTER OPERATOR FAMILY alt_opf4 USING btree ADD FUNCTION 0 btint42cmp(int4, int2) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_ROLE_STMT | b3a8b348189c3b6b91953427 | CREATE ROLE regress_tablespace_user1 login |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DECLARE_CURSOR_STMT | b3ca3a756f1e36bdd873a69e | DECLARE foo22 CURSOR FOR SELECT * FROM onek WHERE unique1 = 59 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OBJECT_SCHEMA_STMT | b3ef1d853f2814eb3479f04c | -- OK ALTER OPERATOR FAMILY alt_opf2 USING hash SET SCHEMA alt_nsp2 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_ROLE_STMT | b4061dd2cd36242bb591b500 | ALTER ROLE regress_passwd_empty PASSWORD 'SCRAM-SHA-256$4096:hpFyHTUsSWcR7O9P$LgZFIt6Oqdo27ZFKbZ2nV+vtnYM995pDh9ca6WSi120=:qVV5NeluNfUPkwm7Vqat25RjSPLkGeoZBQs6wVv+um4=' |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OPERATOR_STMT | b420b3ca2534b3793a07b937 | ALTER OPERATOR ^<@ (ltree, ltree) SET (RESTRICT = matchingsel, JOIN = matchingjoinsel) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OPERATOR_STMT | b443e81c50067e51956860a9 | ALTER OPERATOR % (text, text) SET (RESTRICT = matchingsel, JOIN = matchingjoinsel) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OPERATOR_STMT | b4be1b6180a0782ccd534536 | ALTER OPERATOR <@ (hstore, hstore) SET (RESTRICT = matchingsel, JOIN = matchingjoinsel) |
-| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_PREPARE_STMT | b4c0ea15b6fa1709c9d8db74 | PREPARE st8 AS SELECT count(c3) FROM ft1 t1 WHERE t1.c1 === t1.c2 |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CLOSE_PORTAL_STMT | b4c522c6f2978424eba23c2f | CLOSE foo10 |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_FETCH_STMT | b4d285fb922e4e66d3c76966 | FETCH NEXT FROM c1 |
-| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_EXECUTE_STMT | b5022ee1b9f2c4906196ff5c | EXECUTE get_nnconstraint_info('{constr_parent, constr_child}') |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_ROLE_STMT | b5133288b572a99452729ed3 | CREATE ROLE regress_passwd_sha_len1 PASSWORD 'SCRAM-SHA-256$4096:A6xHKoH/494E941doaPOYg==$Ky+A30sewHIH3VHQLRN9vYsuzlgNyGNKCh37dy96RqwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA... |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DECLARE_CURSOR_STMT | b51e3221aefb0c4921984e65 | DECLARE foo15 CURSOR FOR SELECT * FROM onek WHERE unique1 = 52 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_OP_CLASS_STMT | b53ca1b688ec2c5d267cb7a5 | CREATE OPERATOR CLASS gist_timetz_ops DEFAULT FOR TYPE timetz USING gist AS OPERATOR 1 < , OPERATOR 2 <= , OPERATOR 3 = , OPERATOR 4 >= , OPERATOR 5 > , FUNCTION 1 gbt_timetz_consistent (internal, ... |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_ROLE_STMT | b571c160d57d7718c151b9e9 | -- error ALTER USER PUBLIC WITH NOREPLICATION |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DROP_STMT | b5746d55c529be483469d4b1 | DROP OPERATOR IF EXISTS # (NONE, no_such_schema.no_such_type) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | b589e311f2aa43c75dda2d4f | CREATE OPERATOR < ( PROCEDURE = isnlt, LEFTARG = ismn, RIGHTARG = ismn13, COMMUTATOR = >, NEGATOR = >=, RESTRICT = scalarltsel, JOIN = scalarltjoinsel) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_ROLE_STMT | b5afdedbaba7582efa80de67 | ALTER ROLE regress_bypassrls NOBYPASSRLS |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_COMMENT_STMT | b5b4bf8d4c6b313e400376fd | COMMENT ON ROLE regress_role_normal IS 'some comment' |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_ROLE_STMT | b5c7f024af502d375d5be969 | CREATE ROLE regress_read_all_data IN ROLE pg_read_all_data |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OPERATOR_STMT | b5d7e493f9ac74328519ed9b | ALTER OPERATOR <= (issn, issn13) SET ( RESTRICT = scalarlesel, JOIN = scalarlejoinsel) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | b5de9728207c18ce44a6f0eb | -- P P -- should ERROR: we have no way to resolve S CREATE AGGREGATE myaggp04a(*) (SFUNC = stfp, STYPE = anyarray, FINALFUNC = ffp, INITCOND = '{}') |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_ROLE_STMT | b5fa914bfd23ac1213b121ca | CREATE ROLE regress_lr_replication REPLICATION |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | b610e744ff8321402cde5636 | CREATE OPERATOR <> ( LEFTARG = hstore, RIGHTARG = hstore, PROCEDURE = hstore_ne, COMMUTATOR = <>, NEGATOR = =, RESTRICT = neqsel, JOIN = neqjoinsel ) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DROP_STMT | b620d823167eb1c15e646e4e | drop operator family my_op_family using btree |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_COMMENT_STMT | b624343ff0fe4ac1b9c3041e | COMMENT ON CONSTRAINT the_constraint ON DOMAIN constraint_comments_dom IS 'no, another comment' |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_ROLE_STMT | b62bf085b3ae7a1ba1881b14 | CREATE ROLE regress_host_resource_newadmin NOSUPERUSER |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CLOSE_PORTAL_STMT | b64229cdf09cfed1c35518fc | CLOSE foo8 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | b6434498745acdebfb0746e2 | -- N N N P -- should CREATE CREATE AGGREGATE myaggn06a(BASETYPE = int, SFUNC = tf2p, STYPE = int[], FINALFUNC = ffnp, INITCOND = '{}') |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | b64e98e254b8acd3b4353445 | CREATE OPERATOR \| ( LEFTARG = _int4, RIGHTARG = _int4, COMMUTATOR = \|, PROCEDURE = _int_union ) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_ROLE_STMT | b680c920d65546da8ce9b750 | CREATE ROLE regress_dump_test_role |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | b683ca6b7b2b40aa937804d8 | -- N N P N -- should ERROR: tfnp(int[], anyelement) not matched by tfnp(int[], int) CREATE AGGREGATE myaggp07a(BASETYPE = anyelement, SFUNC = tfnp, STYPE = int[], FINALFUNC = ffp, INITCOND = '{}') |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | b69eea199de4924a214a0243 | CREATE AGGREGATE alt_agg1 ( sfunc1 = int4pl, basetype = int4, stype1 = int4, initcond = 0 ) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_ROLE_SET_STMT | b6a1947d4ee8090bdaa98e24 | ALTER ROLE SESSION_USER RESET application_name |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | b6fb392be521805f3b6523fa | CREATE OPERATOR <\| ( PROCEDURE = int8lt, LEFTARG = bigint, RIGHTARG = bigint ) |
-| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_PREPARE_STMT | b72e9605dc336f956a10b4af | PREPARE q8 AS UPDATE tenk1 SET stringu1 = $2 WHERE unique1 = $1 |
-| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_PREPARE_STMT | b73f9b2c4409d479393b25a8 | prepare prep_stmt as select length(stringu1) from tenk1 group by length(stringu1) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | b74f4386c620b97f5a218038 | CREATE OPERATOR >= ( PROCEDURE = isnge, LEFTARG = issn, RIGHTARG = issn13, COMMUTATOR = <=, NEGATOR = <, RESTRICT = scalargtsel, JOIN = scalargtjoinsel ) |
-| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_PREPARE_STMT | b75223fa3aab343ff0775265 | PREPARE q1 AS SELECT 1 AS a |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_FETCH_STMT | b754681ac883d9bdf392f1be | FETCH NEXT FROM tablesample_cur |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | b76fa8918017f4584756edf8 | create text search template alter1.tmpl(init = dsimple_init, lexize = dsimple_lexize) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | b7745079a21263fe9a6a7367 | CREATE OPERATOR @> ( LEFTARG = hstore, RIGHTARG = hstore, PROCEDURE = hs_contains, COMMUTATOR = '<@', RESTRICT = contsel, JOIN = contjoinsel ) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | b7797fdf7b4cfa055132d926 | -- Operators for int_custom, for btree operator class CREATE OPERATOR = ( LEFTARG = int_custom, RIGHTARG = int_custom, FUNCTION = int_custom_eq, COMMUTATOR = =, NEGATOR = <>, RESTRICT = eqsel, JOIN... |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OP_FAMILY_STMT | b7bd97dc097102efff3a3ee1 | -- Add operators and support functions that are new in 9.1. We do it like -- this, leaving them "loose" in the operator family rather than bound into -- the gist_trgm_ops opclass, because that's th... |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DECLARE_CURSOR_STMT | b7c0693279aca4f8cb56efe3 | declare rf_cur scroll cursor for select * from rows from(generate_series(1,5),generate_series(1,2)) with ordinality as g(i,j,o) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_ROLE_STMT | b7c1757373efdbc9b737c408 | CREATE ROLE regress_passwd_sha_len0 PASSWORD 'SCRAM-SHA-256$4096:A6xHKoH/494E941doaPOYg==$Ky+A30sewHIH3VHQLRN9vYsuzlgNyGNKCh37dy96Rqw=:COPdlNiIkrsacU5QoxydEuOH6e/KfiipeETb/bPw8ZI=' |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_ROLE_STMT | b7c51d0e097cfb2a98bf91cf | CREATE ROLE regress_datdba_after |
-| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_EXECUTE_STMT | b806570373fa71f46c27a779 | execute p1 |
-| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_PREPARE_STMT | b84a1015fc4ea982203bbea4 | -- Ensure we correctly prune unneeded partitions when there is an IS NULL qual prepare hp_q1 (text) as select * from hp where a is null and b = $1 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_ROLE_STMT | b891a83a64e28e00079917fa | CREATE ROLE regress_rls_group1 NOLOGIN |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_OP_CLASS_STMT | b8c375e6e857f75b9483fbcb | CREATE OPERATOR CLASS varchar_ops DEFAULT FOR TYPE varchar USING gin AS OPERATOR 1 <(text,text), OPERATOR 2 <=(text,text), OPERATOR 3 =(text,text), OPERATOR 4 >=(text,text), OPERATOR 5 >(text,text)... |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_ROLE_STMT | b8d1cf8193e6a00c2b0ad508 | CREATE ROLE regress_nosuch_replication_bypassrls REPLICATION BYPASSRLS |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_COMMENT_STMT | b8dc0072364cecfd93657173 | -- ok COMMENT ON TRANSFORM FOR hstore LANGUAGE plperl IS 'test' |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OP_FAMILY_STMT | b8e0e0c4fc27f7a2d22d118c | ALTER OPERATOR FAMILY isn_ops USING btree ADD OPERATOR 1 < (ismn13, ean13), OPERATOR 1 < (ismn13, ismn), OPERATOR 2 <= (ismn13, ean13), OPERATOR 2 <= (ismn13, ismn), OPERATOR 3 = (ismn13, ean13), O... |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_FETCH_STMT | b8e2bf421ba25cc28320ce00 | -- Ensure we get two rows. fetch backward all from cur |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | b905e43b91d022d78355ded4 | CREATE OPERATOR !~ ( PROCEDURE = texticregexne, LEFTARG = citext, RIGHTARG = citext, NEGATOR = ~, RESTRICT = icregexnesel, JOIN = icregexnejoinsel ) |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_FETCH_STMT | b9249ac9b21d9aa75a3ee7fb | MOVE BACKWARD ALL IN xc |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | b928f9dcc9032d7434223245 | -- this makes a shell "point <<@@ polygon" operator too CREATE OPERATOR @@>> ( PROCEDURE = poly_contain_pt, LEFTARG = polygon, RIGHTARG = point, COMMUTATOR = <<@@ ) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DROP_STMT | b92cd380e9b5900952c75141 | DROP OPERATOR FAMILY alt_opf7 USING btree |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_COMMENT_STMT | b978fbd69483b104ee9eb81f | COMMENT ON FUNCTION seg_same(seg, seg) IS 'same as' |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_COMMENT_STMT | b9ac1ea75f809f49b66a28ff | COMMENT ON COLUMN parted_col_comment.a IS 'Partition key' |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_ROLE_STMT | b9d025eaa164372473e1cdae | CREATE USER regress_dep_user3 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_ROLE_STMT | b9e650fee124280d6c32aaa8 | -- -- PUBLICATION -- CREATE ROLE regress_publication_user LOGIN SUPERUSER |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_ROLE_STMT | b9f90496648c06c076864908 | ALTER USER SESSION_USER WITH REPLICATION |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OP_FAMILY_STMT | ba0f1e2929fc8ed310ccb3ba | ALTER OPERATOR FAMILY gist_trgm_ops USING gist ADD OPERATOR 7 %> (text, text), OPERATOR 8 <->> (text, text) FOR ORDER BY pg_catalog.float_ops |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_ROLE_STMT | ba135712e7f6b98f69e677e1 | CREATE ROLE regress_role_normal |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OP_FAMILY_STMT | ba151bb53a9f80fadf233b6a | ALTER OPERATOR FAMILY gist_float4_ops USING gist ADD FUNCTION 11 (float4, float4) gbt_float4_sortsupport (internal) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OP_FAMILY_STMT | ba18b539b7e72b2363a18f87 | ALTER OPERATOR FAMILY alt_opf15 USING hash ADD FUNCTION 1 fn_opf15(int4, int2) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OP_FAMILY_STMT | ba1a709a46613a1a18e6e413 | ALTER OPERATOR FAMILY gist_enum_ops USING gist ADD FUNCTION 12 ("any", "any") gist_translate_cmptype_btree (int) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | ba45b86828b63a4d5a5d0274 | CREATE OPERATOR @#@ (leftarg = int8, rightarg = int8, procedure = int8xor) |
-| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_PREPARE_STMT | ba4c60e3798166bc91d29592 | prepare update_part_abc_view as update part_abc_view set b = $2 where a = $1 returning * |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DECLARE_CURSOR_STMT | ba598f0d6f608a69f5529c5f | declare c cursor for select * from int8_tbl limit nochange(3) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | ba5bc6793cf1a03aa72ebe68 | CREATE OPERATOR >= ( PROCEDURE = isnge, LEFTARG = isbn13, RIGHTARG = ean13, COMMUTATOR = <=, NEGATOR = <, RESTRICT = scalargtsel, JOIN = scalargtjoinsel ) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OPERATOR_STMT | ba61ac5f0e792ec7d1db6b67 | ALTER OPERATOR >= (ean13, ismn) SET ( RESTRICT = scalargesel, JOIN = scalargejoinsel) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OP_FAMILY_STMT | ba6f030efcc425de4d8fb1c3 | ALTER OPERATOR FAMILY gist_oid_ops USING gist ADD FUNCTION 9 (oid, oid) gbt_oid_fetch (internal) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | ba7150876d3c4703baa31321 | CREATE OPERATOR > ( PROCEDURE = isngt, LEFTARG = isbn, RIGHTARG = isbn13, COMMUTATOR = <, NEGATOR = <=, RESTRICT = scalargtsel, JOIN = scalargtjoinsel ) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | ba78917793e765bfdce81b9b | CREATE OPERATOR <-> ( LEFTARG = cube, RIGHTARG = cube, PROCEDURE = cube_distance, COMMUTATOR = '<->' ) |
-| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_EXPLAIN_STMT | baab6edff6c90bf1c003b92a | explain (costs off) execute q (1, 1) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_ROLE_STMT | bad2ae6fd88d9eb8a70f0b05 | CREATE ROLE regress_passwd10 PASSWORD 'SCRAM-SHA-256$000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000... |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FUNCTION_STMT | bae0e37cf59e9a77ec5afff1 | -- Show tupleids of non-frozen tuples if any in all_frozen pages -- for a relation. CREATE FUNCTION pg_check_frozen(regclass, t_ctid OUT tid) RETURNS SETOF tid AS 'MODULE_PATHNAME', 'pg_check_froze... |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_ROLE_STMT | baf18f16fec500a8dbff58ef | ALTER ROLE regress_test_role_super NOSUPERUSER |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | baf41e4b50546954887ff527 | CREATE TEXT SEARCH CONFIGURATION testcfg (PARSER = testparser) |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_FETCH_STMT | bb1b37f5e2a249a5f36f316c | FETCH all in foo16 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OP_FAMILY_STMT | bb24391c183fd2ea6dbb2c61 | ALTER OPERATOR FAMILY isn_ops USING btree ADD OPERATOR 1 < (isbn13, ean13), OPERATOR 1 < (isbn13, isbn), OPERATOR 2 <= (isbn13, ean13), OPERATOR 2 <= (isbn13, isbn), OPERATOR 3 = (isbn13, ean13), O... |
-| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_PREPARE_STMT | bb4881252691c11c8a42a085 | prepare part_abc_q1 (int, int, int) as select * from part_abc where a = $1 and b = $2 and c = $3 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | bb50ea043cbeca7fbb11cfd5 | CREATE OPERATOR <> ( LEFTARG = cube, RIGHTARG = cube, PROCEDURE = cube_ne, COMMUTATOR = '<>', NEGATOR = '=', RESTRICT = neqsel, JOIN = neqjoinsel ) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_ROLE_STMT | bb5c10a11b283f3a728d1424 | CREATE ROLE regress_lr_normal |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | bb687d9141897b441e9b4678 | CREATE OPERATOR = ( PROCEDURE = isneq, LEFTARG = isbn13, RIGHTARG = ean13, COMMUTATOR = =, NEGATOR = <>, RESTRICT = eqsel, JOIN = eqjoinsel, MERGES, HASHES) |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_FETCH_STMT | bbcc14be23d14abe53d33443 | MOVE BACKWARD ALL IN c1 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OPERATOR_STMT | bc560b6a2da369c875e9fbc8 | ALTER OPERATOR === (boolean, boolean) SET (JOIN = non_existent_func) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_ROLE_STMT | bc5edbd736ba013ab872a6c0 | CREATE ROLE regress_write_server_files IN ROLE pg_write_server_files |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OP_FAMILY_STMT | bc601c22774b79de73939d9f | alter operator family integer_ops using hash add operator 1 = (int8, int8alias1) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_ROLE_STMT | bc6851cf96ee0e43cb522fd3 | CREATE ROLE regress_passwd1 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_ROLE_SET_STMT | bc805bc8df86939e9ea930de | -- fail, not superuser ALTER ROLE regress_host_resource_admin SET lc_messages = 'POSIX' |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_COMMENT_STMT | bc83d2119ee79bf80b3f1b69 | comment on constraint at_partitioned_1_id_name_key on at_partitioned_1 is 'child 1 constraint' |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_OP_CLASS_STMT | bc87f9f1e3e00b48a189a676 | CREATE OPERATOR CLASS timestamp_ops DEFAULT FOR TYPE timestamp USING gin AS OPERATOR 1 <, OPERATOR 2 <=, OPERATOR 3 =, OPERATOR 4 >=, OPERATOR 5 >, FUNCTION 1 timestamp_cmp(timestamp,timestamp), FU... |
-| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_PREPARE_STMT | bccecdd0b49d54851618a5f3 | -- Runtime pruning after optimizer pruning prepare ab_q1 (int, int) as select a from ab where a between $1 and $2 and b < 3 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_ROLE_STMT | bd08941db0055b788ac10956 | CREATE USER regress_range_parted_user |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_COMMENT_STMT | bd222918e468beb6284b6ba8 | COMMENT ON CONSTRAINT the_constraint ON constraint_comments_tbl IS 'yes, the comment' |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CLOSE_PORTAL_STMT | bd288c30c45690383f55b131 | CLOSE foo9 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | bd428f4ad2188e84820059f7 | CREATE OPERATOR < ( PROCEDURE = isnlt, LEFTARG = isbn13, RIGHTARG = isbn, COMMUTATOR = >, NEGATOR = >=, RESTRICT = scalarltsel, JOIN = scalarltjoinsel) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_ROLE_STMT | bd4da63d7906186aa2ca7983 | ALTER ROLE regress_passwd1 PASSWORD 'md5cd3578025fe2c3d7ed1b9a9b26238b70' |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OP_FAMILY_STMT | bd581d782e39b8d60775bbb2 | ALTER OPERATOR FAMILY gist_cash_ops USING gist ADD FUNCTION 11 (money, money) gbt_cash_sortsupport (internal) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | bd5df6053b9860bb9fe6bb35 | CREATE OPERATOR = ( PROCEDURE = isneq, LEFTARG = issn13, RIGHTARG = issn, COMMUTATOR = =, NEGATOR = <>, RESTRICT = eqsel, JOIN = eqjoinsel, MERGES, HASHES) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DROP_STMT | bd716bb50250ebbfc2669f50 | DROP OPERATOR @#@ (int8, int8) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_ROLE_STMT | bd9c33e36f1e5deaa559a0b4 | CREATE USER regress_addr_user |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | bdce093b76e94e04733bdb53 | CREATE OPERATOR ^@ ( LEFTARG = _ltree, RIGHTARG = ltxtquery, PROCEDURE = _ltxtq_exec, COMMUTATOR = '^@', RESTRICT = contsel, JOIN = contjoinsel ) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FUNCTION_STMT | bdeb9ee8029c75fbc6357865 | create or replace function dfunc(a variadic int[] default array[]::int[]) returns int as $$ select array_upper($1, 1) $$ language sql |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OP_FAMILY_STMT | be3128a736951f712049ab15 | ALTER OPERATOR FAMILY gist_inet_ops USING gist ADD FUNCTION 12 ("any", "any") gist_translate_cmptype_btree (int) |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DECLARE_CURSOR_STMT | be4d8b2ee9f6d1e8a23276c3 | DECLARE c CURSOR FOR SELECT unique2 FROM tenk1 ORDER BY unique2 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OPERATOR_STMT | be60344ff07175ae2b1cd9b1 | ALTER OPERATOR >= (upc, upc) SET ( RESTRICT = scalargesel, JOIN = scalargejoinsel) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OP_FAMILY_STMT | be80a040d3bd94bcf40bb46f | -- Add operators that are new in 9.3. ALTER OPERATOR FAMILY gist_trgm_ops USING gist ADD OPERATOR 5 pg_catalog.~ (text, text), OPERATOR 6 pg_catalog.~* (text, text) |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_SEC_LABEL_STMT | be8a6decc085700fbb195374 | SECURITY LABEL ON FUNCTION customer_credit(int) IS 'system_u:object_r:sepgsql_trusted_proc_exec_t:s0' |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_SEC_LABEL_STMT | bea604a98624a7ccaeb1f3df | SECURITY LABEL ON TABLE dummy_seclabel_tbl1 IS 'secret' |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | bebf5622ebd4cd69387b5944 | --CREATE OPERATOR = ( -- LEFTARG = _int4, -- RIGHTARG = _int4, -- PROCEDURE = _int_same, -- COMMUTATOR = '=', -- NEGATOR = '<>', -- RESTRICT = eqsel, -- JOIN = eqjoinsel, -- SORT1 = '<', -- SORT2 =... |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_ROLE_SET_STMT | bec329abeaf16e0c0feed13d | ALTER USER CURRENT_USER SET application_name to 'FOO' |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_ROLE_STMT | bee55654afc30a2b90b07ef1 | ALTER ROLE "current_user" WITH REPLICATION |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | beeee107166fe2e47ac92da2 | CREATE OPERATOR \|> ( PROCEDURE = int8gt, LEFTARG = bigint, RIGHTARG = bigint, NEGATOR = <\|, COMMUTATOR = <\| ) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | befa924032cb4224a53573d6 | CREATE OPERATOR <= ( PROCEDURE = isnle, LEFTARG = upc, RIGHTARG = ean13, COMMUTATOR = >=, NEGATOR = >, RESTRICT = scalarltsel, JOIN = scalarltjoinsel) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OPERATOR_STMT | befe98ec4ead68021f301021 | ALTER OPERATOR <<% (text, text) SET (RESTRICT = matchingsel, JOIN = matchingjoinsel) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_ROLE_STMT | bf3ac1b2a057303663fbbcdf | CREATE ROLE regress_login LOGIN |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_FETCH_STMT | bf3e0480970cdb4e0a2c4217 | FETCH 7 in foo7 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OP_FAMILY_STMT | bf488cee787519b02d765041 | ALTER OPERATOR FAMILY alt_opf18 USING btree DROP OPERATOR 1 (int4, int4) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | bf495d78df0ae26651e83dbb | CREATE OPERATOR === ( PROCEDURE = int8eq, LEFTARG = bigint, RIGHTARG = bigint, COMMUTATOR = === ) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OP_FAMILY_STMT | bf5d03b4864c1ed3d12ac13a | ALTER OPERATOR FAMILY gist_numeric_ops USING gist ADD FUNCTION 9 (numeric, numeric) gbt_var_fetch (internal) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | bf6c94b3c9a6af0a7e8b6e81 | -- fail, need lc_ctype CREATE COLLATION testx (locale = 'nonsense') |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | bf6e650d734cc1c56a1cf522 | CREATE TEXT SEARCH DICTIONARY hunspell_invalid_3 ( Template=ispell, DictFile=hunspell_sample_num, AffFile=ispell_sample ) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | bf7e27ff43f7acf8d67751f6 | CREATE OPERATOR > ( LEFTARG = int_custom, RIGHTARG = int_custom, FUNCTION = int_custom_gt, COMMUTATOR = <, NEGATOR = <=, RESTRICT = scalargtsel, JOIN = scalargtjoinsel ) |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_FETCH_STMT | bf9fcf7f6df22d17a53a5a74 | fetch all from test2 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OPERATOR_STMT | bfae4f1b7a1ee3af9dda8b6d | ALTER OPERATOR === (boolean, boolean) SET (RESTRICT = NONE, JOIN = NONE) |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_COMMENT_STMT | bfbef1a65200c50f07ce6d6d | COMMENT ON FUNCTION cube_gt(cube, cube) IS 'greater than' |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | bfc1dc4022e28d504f7a50c2 | CREATE AGGREGATE logging_agg_nonstrict_initcond (anyelement) ( stype = text, sfunc = logging_sfunc_nonstrict, mstype = text, msfunc = logging_msfunc_nonstrict, minvfunc = logging_minvfunc_nonstrict... |
-| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_SELECT_STMT | bfc6a24702858c34e97fd0e8 | ---- -- test sorting of large datums VALUES ---- -- Ensure the order is correct and values look intact SELECT LEFT(a,10),b FROM (VALUES(REPEAT('a', 512 * 1024),1),(REPEAT('b', 512 * 1024),2)) v(a,b... |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_COMMENT_STMT | bfcd9d6757271bbac349d989 | -- no such constraint COMMENT ON CONSTRAINT no_constraint ON constraint_comments_tbl IS 'yes, the comment' |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | bfcdf9d43221cf8165af817a | CREATE OPERATOR > ( LEFTARG = seg, RIGHTARG = seg, PROCEDURE = seg_gt, COMMUTATOR = '<', NEGATOR = '<=', RESTRICT = scalargtsel, JOIN = scalargtjoinsel ) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | bfd2c7002c7cbb234ae012b3 | CREATE AGGREGATE case_agg(float8) ( "Stype" = internal, "Sfunc" = ordered_set_transition, "Finalfunc" = percentile_disc_final, "Finalfunc_extra" = true, "Finalfunc_modify" = read_write, "Parallel" ... |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_ROLE_STMT | bfe42b43d294f6359e58dd64 | CREATE ROLE regress_inroles ROLE regress_role_super, regress_createdb, regress_createrole, regress_login, regress_inherit, regress_connection_limit, regress_encrypted_password, regress_password_null |
-| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_PREPARE_STMT | c00311c7093bcda403894eb6 | PREPARE prepstmt AS SELECT * FROM pcachetest |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_FETCH_STMT | c013c051e45bbb1dc78e6896 | FETCH backward 22 in foo2 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_ROLE_STMT | c02c486e7e4f3cbe24a02920 | -- fail ALTER GROUP regress_priv_group2 DROP USER regress_priv_user2 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | c044f996e0d0803d39ff0f8b | CREATE TEXT SEARCH DICTIONARY hunspell ( Template=ispell, DictFile=ispell_sample, AffFile=hunspell_sample ) |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_SEC_LABEL_STMT | c04eec90e12a2cd9e9878559 | SECURITY LABEL ON ROLE regress_dummy_seclabel_user2 IS 'unclassified' |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_ROLE_STMT | c05b3595e9fe2587e00dc4da | CREATE USER regress_alter_generic_user1 IN ROLE regress_alter_generic_user3 |
-| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_EXECUTE_STMT | c0acf8b8e70d2f1c6cd5c1d4 | EXECUTE stat_select (2) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OPERATOR_STMT | c0b064b5901f8a24ea71585f | ALTER OPERATOR #>=# (hstore, hstore) SET ( RESTRICT = scalargesel, JOIN = scalargejoinsel ) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_EXPLAIN_STMT | c0cb4f2234654c9f60c0d263 | EXPLAIN (ANALYZE, COSTS OFF, SUMMARY OFF, TIMING OFF, BUFFERS OFF) DECLARE foocur CURSOR FOR SELECT * FROM stats_track_tab |
-| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_PREPARE_STMT | c0ddfa46c872a88b10f56b2b | -- Ensure a mix of PARAM_EXTERN and PARAM_EXEC Params work together at -- different levels of partitioning. prepare ab_q2 (int, int) as select a from ab where a between $1 and $2 and b < (select 3) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OPERATOR_STMT | c10a042c6a5fe580007fb53f | ALTER OPERATOR <= (ismn, ismn13) SET ( RESTRICT = scalarlesel, JOIN = scalarlejoinsel) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_ROLE_STMT | c111cde333ec5da81865fcd7 | ALTER USER regress_testrol1 WITH NOREPLICATION |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DECLARE_CURSOR_STMT | c118de11811d2df8f9ef0913 | DECLARE foo19 SCROLL CURSOR FOR SELECT * FROM tenk1 ORDER BY unique2 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DROP_STMT | c12578a162361a8f1af143fb | -- Remove @ and ~ DROP OPERATOR @ (hstore, hstore) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OPERATOR_STMT | c13b86f264d3aac4224dc1b5 | ALTER OPERATOR === (boolean, real) SET (COMMUTATOR = ====) |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_UNLISTEN_STMT | c15649a5fc62d4e7851c0818 | UNLISTEN * |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | c15ed0f54c0700f0f40046c0 | CREATE OPERATOR @#@ ( rightarg = int8, -- prefix procedure = factorial ) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OP_FAMILY_STMT | c1b5023fc0539231e4399fe8 | ALTER OPERATOR FAMILY alt_opf11 USING gist ADD OPERATOR 1 < (int4, int4) FOR ORDER BY float_ops |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DROP_STMT | c1d1c34fe33974732b286759 | DROP OPERATOR =#>(integer, integer) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OP_FAMILY_STMT | c1dcc2336d4f6c3159a37db5 | ALTER OPERATOR FAMILY isn_ops USING hash ADD OPERATOR 1 = (upc, ean13) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | c2252b3cbfffaddf0282c126 | CREATE OPERATOR <= ( LEFTARG = cube, RIGHTARG = cube, PROCEDURE = cube_le, COMMUTATOR = '>=', NEGATOR = '>', RESTRICT = scalarltsel, JOIN = scalarltjoinsel ) |
-| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_EXECUTE_STMT | c22a5097a7debbbf3bbc51de | EXECUTE st2(101, 121) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OP_FAMILY_STMT | c25724aca04a0588b9010aec | ALTER OPERATOR FAMILY gist_interval_ops USING gist ADD OPERATOR 6 <> (interval, interval) , OPERATOR 15 <-> (interval, interval) FOR ORDER BY pg_catalog.interval_ops , FUNCTION 8 (interval, interva... |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_SEC_LABEL_STMT | c25a1524d379201823f6fd41 | SECURITY LABEL ON TABLE dummy_seclabel_tbl1 IS 'classified' |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DROP_STMT | c25f90e45d9fb87d39d3f5a9 | DROP OPERATOR IF EXISTS + (no_such_schema.no_such_type, no_such_schema.no_such_type) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_OP_CLASS_STMT | c27ef5fc810336468e9b623d | CREATE OPERATOR CLASS upc_ops DEFAULT FOR TYPE upc USING btree FAMILY isn_ops AS OPERATOR 1 <, OPERATOR 2 <=, OPERATOR 3 =, OPERATOR 4 >=, OPERATOR 5 >, FUNCTION 1 btupccmp(upc, upc) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OP_FAMILY_STMT | c29315999722bfc8e6150b72 | ALTER OPERATOR FAMILY gist_int8_ops USING gist ADD FUNCTION 12 ("any", "any") gist_translate_cmptype_btree (int) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | c2a199043239541c4087ca4f | CREATE OPERATOR < ( PROCEDURE = isnlt, LEFTARG = isbn, RIGHTARG = ean13, COMMUTATOR = >, NEGATOR = >=, RESTRICT = scalarltsel, JOIN = scalarltjoinsel) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_OP_CLASS_STMT | c2b7c3ff20e4553ad235c0b3 | CREATE OPERATOR CLASS issn13_ops DEFAULT FOR TYPE issn13 USING hash FAMILY isn_ops AS OPERATOR 1 =, FUNCTION 1 hashissn13(issn13) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | c2bf554ec96f588efcc4fd80 | -- -- OPERATORS -- CREATE OPERATOR < ( LEFTARG = cube, RIGHTARG = cube, PROCEDURE = cube_lt, COMMUTATOR = '>', NEGATOR = '>=', RESTRICT = scalarltsel, JOIN = scalarltjoinsel ) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | c2e1620bf628061360069f92 | CREATE AGGREGATE myaggp20b(BASETYPE = anyelement, SFUNC = tfp, STYPE = anyarray, INITCOND = '{}') |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | c2e4f3853e2a18cadeeb41cb | CREATE OPERATOR <> ( PROCEDURE = isnne, LEFTARG = upc, RIGHTARG = ean13, COMMUTATOR = <>, NEGATOR = =, RESTRICT = neqsel, JOIN = neqjoinsel) |
-| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_EXPLAIN_STMT | c2eda5eaa689ac126aa28549 | explain (analyze, costs off, summary off, timing off, buffers off) execute ab_q1 (2, 2) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | c31e05a5c06f31ab946fdfed | CREATE COLLATION ctest_nondet (locale = 'en_US.utf8', deterministic = false) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OP_FAMILY_STMT | c33d9711f1d5eb85194d39ef | ALTER OPERATOR FAMILY gist_float8_ops USING gist ADD FUNCTION 9 (float8, float8) gbt_float8_fetch (internal) |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DECLARE_CURSOR_STMT | c34c9c1b1f02e30c9ed04698 | DECLARE c1 CURSOR FOR SELECT MIN(f1) FROM uctest FOR UPDATE |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | c3519cd19fdc16c04f239155 | CREATE OPERATOR > ( PROCEDURE = isngt, LEFTARG = ismn, RIGHTARG = ean13, COMMUTATOR = <, NEGATOR = <=, RESTRICT = scalargtsel, JOIN = scalargtjoinsel ) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | c370b69ce619eb194a49dffb | -- test language tags CREATE COLLATION lt_insensitive (provider = icu, locale = 'en-u-ks-level1', deterministic = false) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | c3c3dfd86b01e3fb469d8ff1 | CREATE OPERATOR >>> (procedure = leak2, leftarg = integer, rightarg = integer, restrict = scalargtsel) |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_COMMENT_STMT | c3ec9d4d92f8dc7f92a7427f | COMMENT ON TRANSFORM FOR jsonb LANGUAGE plperl IS 'transform between jsonb and Perl' |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_UNLISTEN_STMT | c3fcc45846bf3b561cec5ed6 | UNLISTEN notify_async2 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DROP_STMT | c415c3470920f2813e7c5ce0 | DROP OPERATOR <<< (record, record) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | c41881af7dbce21b04b69386 | CREATE OPERATOR @> ( LEFTARG = ltree, RIGHTARG = ltree, PROCEDURE = ltree_isparent, COMMUTATOR = '<@', RESTRICT = ltreeparentsel, JOIN = contjoinsel ) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OPERATOR_STMT | c425ba6e93e12b6ae30d6e8f | ALTER OPERATOR >= (issn13, ean13) SET ( RESTRICT = scalargesel, JOIN = scalargejoinsel) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | c42636aa948671d3cfddc64a | CREATE TEXT SEARCH CONFIGURATION evttrig_tscfg (COPY = pg_catalog.simple) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OPERATOR_STMT | c4267ee4809bd59986fb17f6 | ALTER OPERATOR === (boolean, boolean) SET (JOIN = NONE) |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DECLARE_CURSOR_STMT | c42872fa68e73757deb9add7 | DECLARE foo16 SCROLL CURSOR FOR SELECT * FROM tenk2 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OPERATOR_STMT | c43e39bd4d4c7b23a130962d | ALTER OPERATOR ? (ltree, _lquery) SET (RESTRICT = matchingsel, JOIN = matchingjoinsel) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | c44658f0b9bcbab9ec7930fa | CREATE OPERATOR = ( PROCEDURE = isneq, LEFTARG = ean13, RIGHTARG = isbn, COMMUTATOR = =, NEGATOR = <>, RESTRICT = eqsel, JOIN = eqjoinsel, MERGES, HASHES) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | c44c311580c54d8b6c79073d | CREATE OPERATOR ?& ( LEFTARG = hstore, RIGHTARG = text[], PROCEDURE = exists_all, RESTRICT = contsel, JOIN = contjoinsel ) |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_SEC_LABEL_STMT | c454e5dd3ce4b4be7150d08e | SECURITY LABEL FOR 'dummy' ON TABLE seclabel_tbl1 IS 'classified' |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | c45942fdf7e3e55b8b34ffa0 | CREATE OPERATOR !==== ( LEFTARG = boolean, RIGHTARG = real, PROCEDURE = alter_op_test_fn_bool_real ) |
-| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_PREPARE_STMT | c495ac274aebd5f441bf71b1 | prepare ps2 as select * from mc3p where a <= $1 and abs(b) < (select 3) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | c4abce6e482b6d7ae59928d3 | CREATE OPERATOR <@ ( LEFTARG = ltree, RIGHTARG = ltree, PROCEDURE = ltree_risparent, COMMUTATOR = '@>', RESTRICT = ltreeparentsel, JOIN = contjoinsel ) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | c4b00c27407e78769114202c | -- Try to cover all the possible states: -- -- Note: in Cases 1 & 2, we are trying to return P. Therefore, if the transfn -- is stfnp, tfnp, or tf2p, we must use ffp as finalfn, because stfnp, tfnp... |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DROP_STMT | c4d59c60c15411c6c6550078 | DROP OPERATOR ~ (seg, seg) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | c4dc90a1bc57b20c36b7d4ce | CREATE OPERATOR < ( LEFTARG = CITEXT, RIGHTARG = CITEXT, NEGATOR = >=, COMMUTATOR = >, PROCEDURE = citext_lt, RESTRICT = scalarltsel, JOIN = scalarltjoinsel ) |
-| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_EXPLAIN_STMT | c4e988037c46291cb79cff23 | explain (analyze, costs off, summary off, timing off, buffers off) execute q1 (2,2) |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_COMMENT_STMT | c4f30ed1b075ddfbe9effd9d | COMMENT ON ROLE regress_hasprivs IS 'some comment' |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_ROLE_STMT | c4f94f4c2a880a6a47832cf1 | CREATE ROLE regress_r1 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | c5007eaafb0d270358ecf2a0 | CREATE AGGREGATE logging_agg_strict_initcond (anyelement) ( stype = text, sfunc = logging_sfunc_strict, mstype = text, msfunc = logging_msfunc_strict, minvfunc = logging_minvfunc_strict, initcond =... |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_OP_CLASS_STMT | c504a8b8113e6f0d80b18249 | CREATE OPERATOR CLASS hash_ltree_ops DEFAULT FOR TYPE ltree USING hash AS OPERATOR 1 = , FUNCTION 1 hash_ltree(ltree), FUNCTION 2 hash_ltree_extended(ltree, bigint) |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_COMMENT_STMT | c505b69a7eb5b00493787877 | COMMENT ON TYPE ismn IS 'International Standard Music Number (ISMN)' |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_LISTEN_STMT | c52fcb57594969ccabd4e0d0 | LISTEN foo_event |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_OP_CLASS_STMT | c532783535e7b03d073161e2 | CREATE OPERATOR CLASS ismn13_ops DEFAULT FOR TYPE ismn13 USING hash FAMILY isn_ops AS OPERATOR 1 =, FUNCTION 1 hashismn13(ismn13) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_ROLE_SET_STMT | c54346cc81cf83886350a23d | ALTER ROLE regress_host_resource_admin RESET ALL |
-| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_EXPLAIN_STMT | c5568b651abddb535107e691 | -- Only the unpruned partition should be shown in the list of relations to be -- updated explain (verbose, costs off) execute update_part_abc_view (1, 'd') |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OP_FAMILY_STMT | c5b4b689ac6bcafc21afda10 | ALTER OPERATOR FAMILY gist_int2_ops USING gist ADD FUNCTION 9 (int2, int2) gbt_int2_fetch (internal) |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_FETCH_STMT | c5dcd49dd4f62bcf949122c7 | FETCH BACKWARD FROM foo25 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_ROLE_STMT | c5fd0e29584818c1148eff32 | CREATE GROUP regress_dep_group |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_OP_CLASS_STMT | c609f51b2b629e14437c7b94 | CREATE OPERATOR CLASS alt_opc2 FOR TYPE macaddr USING hash AS STORAGE macaddr |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | c6124ddd875c7292d8a3abee | CREATE OPERATOR === ( LEFTARG = boolean, RIGHTARG = boolean, PROCEDURE = fn_op2, COMMUTATOR = ===, NEGATOR = !==, RESTRICT = contsel, JOIN = contjoinsel, SORT1, SORT2, LTCMP, GTCMP, HASHES, MERGES ) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_OP_CLASS_STMT | c6132012ffbe596f82e4bd00 | CREATE OPERATOR CLASS part_test_int4_ops_bad FOR TYPE int4 USING hash AS FUNCTION 2 part_hashint4_error(int4, int8) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_ROLE_SET_STMT | c6205f3709d9f6d27d4f563d | ALTER USER CURRENT_ROLE SET application_name to 'BAZ' |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | c62345b72f424e05a80a79bc | CREATE OPERATOR >= ( LEFTARG = int_custom, RIGHTARG = int_custom, FUNCTION = int_custom_ge, COMMUTATOR = <=, NEGATOR = <, RESTRICT = scalargesel, JOIN = scalargejoinsel ) |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_SEC_LABEL_STMT | c64a7255600ee780879b2ca9 | SECURITY LABEL FOR 'dummy' ON TABLE dummy_seclabel_tbl1 IS 'unclassified' |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OWNER_STMT | c65b201ae604115ca92a5316 | -- failed (not aggregate) ALTER AGGREGATE alt_func1(int) OWNER TO regress_alter_generic_user3 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OP_FAMILY_STMT | c660c55be3772116bad4582d | ALTER OPERATOR FAMILY alt_opf19 USING btree ADD FUNCTION 5 test_opclass_options_func(internal, text[], bool) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OPERATOR_STMT | c679d70114dd0420e39e7bb5 | ALTER OPERATOR <= (ean13, ismn) SET ( RESTRICT = scalarlesel, JOIN = scalarlejoinsel) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OP_FAMILY_STMT | c68e2379bff015d52e8b719a | ALTER OPERATOR FAMILY gist_numeric_ops USING gist ADD FUNCTION 12 ("any", "any") gist_translate_cmptype_btree (int) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | c69165d01e6614ec396160a4 | CREATE OPERATOR <<< (procedure = op_leak, leftarg = int, rightarg = int, restrict = scalarltsel) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OP_FAMILY_STMT | c6b113863752da024d7c251c | ALTER OPERATOR FAMILY alt_opf5 USING btree ADD OPERATOR 1 < (int4, int2), FUNCTION 1 btint42cmp(int4, int2) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_ROLE_STMT | c6b1aeb8a2273c1fb9fa9786 | CREATE ROLE regress_subscription_user2 |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_FETCH_STMT | c6f31c5f2d4490da3cf820d9 | -- move beyond the final row move 3 from cur |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_COMMENT_STMT | c6f7a78eb5f3c1d890287218 | COMMENT ON FUNCTION seg_ge(seg, seg) IS 'greater than or equal' |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OPERATOR_STMT | c6fe97e3837f4ef72e9e36ee | ALTER OPERATOR > (ltree, ltree) SET (RESTRICT = scalargtsel, JOIN = scalargtjoinsel) |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DECLARE_CURSOR_STMT | c711188c2f8a0e0a1fa366b7 | DECLARE c CURSOR FOR SELECT * FROM tenk2 FOR SHARE |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | c721c65bfcda3363f510b5db | CREATE OPERATOR < ( PROCEDURE = isnlt, LEFTARG = ean13, RIGHTARG = isbn, COMMUTATOR = >, NEGATOR = >=, RESTRICT = scalarltsel, JOIN = scalarltjoinsel) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OPERATOR_STMT | c739b7f24f1717e74ea4d030 | ALTER OPERATOR %> (text, text) SET (RESTRICT = matchingsel, JOIN = matchingjoinsel) |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_COMMENT_STMT | c756cb92c893b9537ffec4f4 | COMMENT ON TYPE seg IS 'floating point interval ''FLOAT .. FLOAT'', ''.. FLOAT'', ''FLOAT ..'' or ''FLOAT''' |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_ROLE_STMT | c75f34c17ede05e5da4942a9 | ALTER ROLE regress_passwd1 PASSWORD 'role_pwd1' |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_ROLE_STMT | c78169b1b08799fa1ead2043 | CREATE ROLE regress_role_limited |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_FETCH_STMT | c7a9d098412c5e327f44105c | FETCH FROM foo25ns |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_OP_CLASS_STMT | c7c1ca817778d163369e9c7b | CREATE OPERATOR CLASS cidr_ops DEFAULT FOR TYPE cidr USING gin AS OPERATOR 1 <(inet,inet), OPERATOR 2 <=(inet,inet), OPERATOR 3 =(inet,inet), OPERATOR 4 >=(inet,inet), OPERATOR 5 >(inet,inet), FUNC... |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DISCARD_STMT | c7c6729a19a87330021087db | discard plans |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_ROLE_STMT | c7d789838d458a9255ee8ae6 | CREATE USER regress_rls_bob NOLOGIN |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_OP_CLASS_STMT | c7e22eecb366a77ab170950c | CREATE OPERATOR CLASS isbn13_ops DEFAULT FOR TYPE isbn13 USING hash FAMILY isn_ops AS OPERATOR 1 =, FUNCTION 1 hashisbn13(isbn13) |
-| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_EXECUTE_STMT | c81217d14d669151dfebe709 | EXECUTE get_nnconstraint_info('{notnull_tbl1, notnull_tbl1_1, notnull_tbl1_2, notnull_tbl1_3}') |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DECLARE_CURSOR_STMT | c816557bacb93ea64508dd8b | DECLARE foo CURSOR FOR SELECT 1 INTO int4_tbl |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OP_FAMILY_STMT | c8272884fccffe9abbd2001d | ALTER OPERATOR FAMILY gist_bit_ops USING gist ADD FUNCTION 9 (bit, bit) gbt_var_fetch (internal) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_OP_CLASS_STMT | c876000e20c0b53ff148c4ef | CREATE OPERATOR CLASS name_ops DEFAULT FOR TYPE name USING gin AS OPERATOR 1 <, OPERATOR 2 <=, OPERATOR 3 =, OPERATOR 4 >=, OPERATOR 5 >, FUNCTION 1 btnamecmp(name,name), FUNCTION 2 gin_extract_val... |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DECLARE_CURSOR_STMT | c883b23f771c1c55f479d460 | DECLARE c1 NO SCROLL CURSOR FOR SELECT * FROM cursor FOR UPDATE |
-| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_EXPLAIN_STMT | c8b680829e344613811a5782 | -- Both partitions allowed by IN clause, but one disallowed by <> clause explain (analyze, costs off, summary off, timing off, buffers off) execute q1 (1,2,2,0) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OBJECT_SCHEMA_STMT | c93479ac5f3034b3f1109f3f | -- OK ALTER OPERATOR CLASS alt_opc2 USING hash SET SCHEMA alt_nsp2 |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_COMMENT_STMT | c95391ee67cf943339da9d78 | COMMENT ON CONSTRAINT constr_parent2_a_not_null ON constr_parent2 IS 'this constraint is invalid' |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | c96dee469998d26433fc82c8 | CREATE OPERATOR > ( PROCEDURE = isngt, LEFTARG = upc, RIGHTARG = upc, COMMUTATOR = <, NEGATOR = <=, RESTRICT = scalargtsel, JOIN = scalargtjoinsel ) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | c9a13d629ffe1a41a6760a2a | CREATE OPERATOR >= ( PROCEDURE = isnge, LEFTARG = ean13, RIGHTARG = isbn, COMMUTATOR = <=, NEGATOR = <, RESTRICT = scalargtsel, JOIN = scalargtjoinsel) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DROP_STMT | c9a1e0e03a7dcc2395fb2fbf | DROP AGGREGATE test_aggregate_exists(int) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_ROLE_STMT | c9b28ecf332d0b87dbec2d4e | CREATE USER regress_priv_user5 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OWNER_STMT | c9c4cc4d19455479b7d8c795 | -- OK ALTER OPERATOR CLASS alt_opc2 USING hash OWNER TO regress_alter_generic_user2 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_OP_CLASS_STMT | c9d339c3ad050f6e0337f54e | -- Create the operator class CREATE OPERATOR CLASS gist_vbit_ops DEFAULT FOR TYPE varbit USING gist AS OPERATOR 1 < , OPERATOR 2 <= , OPERATOR 3 = , OPERATOR 4 >= , OPERATOR 5 > , FUNCTION 1 gbt_bi... |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OP_FAMILY_STMT | c9e0e808e80bd4f3593d7f15 | ALTER OPERATOR FAMILY gist_int4_ops USING gist ADD FUNCTION 9 (int4, int4) gbt_int4_fetch (internal) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | ca49d1f096b809c85f0d44f3 | CREATE OPERATOR <-> ( LEFTARG = money, RIGHTARG = money, PROCEDURE = cash_dist, COMMUTATOR = '<->' ) |
-| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_PREPARE_STMT | ca4aeecba9910d81cc7230aa | -- VtA is supported for custom plans where params are substituted with -- constants. VtA is not supported with generic plans where params prevent -- us from building a constant array. PREPARE test ... |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_COMMENT_STMT | ca6aba984f93f4f414fdf5e2 | COMMENT ON COLUMN ctlt3.a IS 'A3' |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_SEC_LABEL_STMT | ca6c3429057e5e867fa8dac0 | SECURITY LABEL ON TABLE dummy_seclabel_tbl3 IS 'unclassified' |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OPERATOR_STMT | ca7167d3c05e975195ecaa83 | ALTER OPERATOR ^? (_ltree, _lquery) SET (RESTRICT = matchingsel, JOIN = matchingjoinsel) |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_FETCH_STMT | ca79e4cfb4f6c4f8b12d2ad9 | -- should fail fetch next from test1 |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_FETCH_STMT | cad17b750ecb2c2bac84f646 | fetch 1 from curs |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | cad7fcadf16e6cd9566e15ea | -- -- Operators. -- CREATE OPERATOR = ( LEFTARG = CITEXT, RIGHTARG = CITEXT, COMMUTATOR = =, NEGATOR = <>, PROCEDURE = citext_eq, RESTRICT = eqsel, JOIN = eqjoinsel, HASHES, MERGES ) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OP_FAMILY_STMT | cafa50d79ad609c2411dfad5 | ALTER OPERATOR FAMILY gist_int8_ops USING gist ADD FUNCTION 9 (int8, int8) gbt_int8_fetch (internal) |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DECLARE_CURSOR_STMT | cb21e9f187b9ed8498273f75 | DECLARE foo2 CURSOR WITHOUT HOLD FOR SELECT 1 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OPERATOR_STMT | cb25026fde239e2686765696 | ALTER OPERATOR >= (ismn13, ismn13) SET ( RESTRICT = scalargesel, JOIN = scalargejoinsel) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | cb77b2585519d7216a42cd5a | CREATE AGGREGATE myaggp10b(BASETYPE = int, SFUNC = tfp, STYPE = int[], INITCOND = '{}') |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_COMMENT_STMT | cc012a11770b1bcd6391150f | COMMENT ON FUNCTION _int_contains(_int4, _int4) IS 'contains' |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_FETCH_STMT | cc386ca0634f7465c4897644 | FETCH backward 14 in foo10 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | cc3b89360e4cca4b3d30de21 | CREATE TEXT SEARCH PARSER testparser ( START = testprs_start, GETTOKEN = testprs_getlexeme, END = testprs_end, HEADLINE = pg_catalog.prsd_headline, LEXTYPES = testprs_lextype ) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OPERATOR_STMT | cc4c8ed2c4264e9f22301cb2 | ALTER OPERATOR ~ (lquery, ltree) SET (RESTRICT = matchingsel, JOIN = matchingjoinsel) |
-| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_EXECUTE_STMT | cc5c907e393f14ba6a90cc38 | -- error EXECUTE get_nnconstraint_info('{notnull_inhparent, notnull_inhchild, notnull_inhgrand}') |
-| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_EXPLAIN_STMT | cc968ee487ef64b7407df6ae | EXPLAIN (COSTS OFF) EXECUTE plancache_test3 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DROP_STMT | cc9d9637285f13696ba16840 | DROP AGGREGATE IF EXISTS no_such_schema.foo(int) |
-| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_PREPARE_STMT | cc9f6a6cf261246b9b96d380 | PREPARE p1(int, int, int, int, int) AS SELECT * FROM test_squash WHERE id IN ($1, $2, $3, $4, $5) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_ROLE_STMT | ccb8b3593305b808a07c7624 | CREATE ROLE regress_rol_op4 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_OP_CLASS_STMT | ccd976c0867b64e332c4741f | CREATE OPERATOR CLASS alt_opc1 FOR TYPE macaddr USING hash AS STORAGE macaddr |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | ccf6c95ef7f50efb8b389e2e | CREATE OPERATOR ^@ ( LEFTARG = ltxtquery, RIGHTARG = ltree, PROCEDURE = ltxtq_rexec, COMMUTATOR = '^@', RESTRICT = contsel, JOIN = contjoinsel ) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_ROLE_STMT | cd08882c53d4a44c6728cc89 | CREATE ROLE regress_ptnowner |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | cd113022649c2c33bf674a3a | -- N P -- should CREATE CREATE AGGREGATE myaggn03a(*) (SFUNC = stfp, STYPE = int4[], FINALFUNC = ffnp, INITCOND = '{}') |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FUNCTION_STMT | cd15a1631e2be40f3274853b | CREATE OR REPLACE FUNCTION get_from_partitioned_table(partitioned_table.a%type) RETURNS partitioned_table AS $$ DECLARE a_val partitioned_table.a%TYPE; result partitioned_table%ROWTYPE; BEGIN a_val... |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | cd40960aa358c525ebbb0cfa | CREATE OPERATOR >= ( PROCEDURE = isnge, LEFTARG = ean13, RIGHTARG = ismn, COMMUTATOR = <=, NEGATOR = <, RESTRICT = scalargtsel, JOIN = scalargtjoinsel) |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DECLARE_CURSOR_STMT | cd4f48f918694d6ce7d7932e | DECLARE c CURSOR FOR SELECT * FROM ft1 ORDER BY c1 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_ROLE_STMT | cd502a93159f9c1c959ebc36 | ALTER USER regress_passwordcheck_user1 PASSWORD 'md592350e12ac34e52dd598f90893bb3ae7' |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | cd836756e0b1b8e3cafbeff2 | create aggregate tcl_avg ( sfunc = tcl_int4_accum, basetype = int4, stype = int4[], finalfunc = tcl_int4_avg, initcond = '{0,0}' ) |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CLOSE_PORTAL_STMT | cdb373e8afc080266d958bf0 | CLOSE tablesample_cur |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OPERATOR_STMT | cde8bb83380d2d29304705f8 | ALTER OPERATOR >= (ean13, issn) SET ( RESTRICT = scalargesel, JOIN = scalargejoinsel) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_ROLE_STMT | ce01879ed4310b31e8db7d6c | CREATE ROLE regress_current_user |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DROP_STMT | ce0cbbf2e93aa18e2cd1988b | DROP OPERATOR FAMILY alt_opf13 USING hash |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OPERATOR_STMT | ce212799b20d1e877f8d12b0 | ALTER OPERATOR === (boolean, boolean) SET (RESTRICT = customcontsel, JOIN = contjoinsel) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OP_FAMILY_STMT | ce322b5410655351cb0fd57b | ALTER OPERATOR FAMILY gist_int4_ops USING gist ADD FUNCTION 12 ("any", "any") gist_translate_cmptype_btree (int) |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_FETCH_STMT | ce3852f320bde4103305968c | FETCH 1 FROM foo24 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_ROLE_STMT | ce59e40ad30c7161a31cd6b3 | ALTER USER regress_passwordcheck_user1 PASSWORD 'xyzregress_passwordcheck_user1' |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_SEC_LABEL_STMT | ce5c67bbd61f048a54513677 | SECURITY LABEL ON TABLE var_ptbl IS 'system_u:object_r:sepgsql_regtest_var_table_t:s0' |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | ceacce8677a4a8ba9adccad6 | create operator < ( procedure = int8alias1lt, leftarg = int8alias1, rightarg = int8alias1 ) |
-| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEALLOCATE_STMT | ced6fb272de48b3f351d4741 | -- cleanup DEALLOCATE st1 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_OP_CLASS_STMT | cf1703f23e4f1290bd38ece2 | CREATE OPERATOR CLASS bit_ops DEFAULT FOR TYPE bit USING gin AS OPERATOR 1 <, OPERATOR 2 <=, OPERATOR 3 =, OPERATOR 4 >=, OPERATOR 5 >, FUNCTION 1 bitcmp(bit,bit), FUNCTION 2 gin_extract_value_bit(... |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_COMMENT_STMT | cf1b7865301dbd542d0ab8b9 | COMMENT ON CONSTRAINT no_constraint ON DOMAIN constraint_comments_dom IS 'yes, another comment' |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_ROLE_SET_STMT | cf28d22043dde85c8b8aef84 | ALTER ROLE regress_testrol1 SET application_name to 'SLAM' |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_ROLE_STMT | cf3b21137f7ec4f0eb25d635 | CREATE ROLE regress_alter_function_role |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_OP_CLASS_STMT | cf464ae3b395b53a7c579bb0 | CREATE OPERATOR CLASS hash_hstore_ops DEFAULT FOR TYPE hstore USING hash AS OPERATOR 1 = , FUNCTION 1 hstore_hash(hstore) |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_COMMENT_STMT | cf4c7587438b8d242efcc29b | COMMENT ON FUNCTION cube_ne(cube, cube) IS 'different' |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DECLARE_CURSOR_STMT | cf6bee6502cc83c99cae9686 | declare c3 cursor for select * from int8_tbl offset 3 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OPERATOR_STMT | cf9837b975e3f551a492fbdb | ALTER OPERATOR <= (ltree, ltree) SET (RESTRICT = scalarlesel, JOIN = scalarlejoinsel) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_ROLE_STMT | cfb21a2a306295660d1cba9c | -- Test who runs deferred trigger functions -- setup create role regress_caller |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | cfc009469c9a3802ed3097e4 | CREATE OPERATOR <= ( PROCEDURE = isnle, LEFTARG = ismn, RIGHTARG = ismn13, COMMUTATOR = >=, NEGATOR = >, RESTRICT = scalarltsel, JOIN = scalarltjoinsel) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | cfc0677fe4adb288f8019dc0 | CREATE TEXT SEARCH CONFIGURATION synonym_tst ( COPY=english ) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | cfc09e24d5ac645186655362 | CREATE OPERATOR !! (PROCEDURE = priv_testfunc5b, RIGHTARG = priv_testdomain1) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OPERATOR_STMT | cfdabb558bb4011b36df0df8 | ALTER OPERATOR === (boolean, boolean) SET (RESTRICT = non_existent_func) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_ROLE_STMT | d00e00edad408063965574a1 | -- grantor selection CREATE ROLE regress_grantor1 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | d019a98a7249e6abc18ffc56 | CREATE OPERATOR = ( PROCEDURE = isneq, LEFTARG = issn, RIGHTARG = issn13, COMMUTATOR = =, NEGATOR = <>, RESTRICT = eqsel, JOIN = eqjoinsel, MERGES, HASHES) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | d01fe53ea28afd25a78ae4d0 | CREATE AGGREGATE testagg6(int2) (SFUNC = int2_sum, STYPE = int8) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | d04fe3c746b37c7360ad535a | CREATE OPERATOR > ( PROCEDURE = isngt, LEFTARG = issn13, RIGHTARG = ean13, COMMUTATOR = <, NEGATOR = <=, RESTRICT = scalargtsel, JOIN = scalargtjoinsel ) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | d0584f958a0ae4c17129cd52 | CREATE OPERATOR <> ( PROCEDURE = isnne, LEFTARG = isbn13, RIGHTARG = isbn13, COMMUTATOR = <>, NEGATOR = =, RESTRICT = neqsel, JOIN = neqjoinsel) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_ROLE_STMT | d068bf3a87b36caba99bd892 | CREATE USER regress_priv_user9 |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_COMMENT_STMT | d0b5887217ee7b3458e4b895 | COMMENT ON FUNCTION _int_overlap(_int4, _int4) IS 'overlaps' |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_COMMENT_STMT | d0c6af6484bf6dc28603d6d0 | COMMENT ON LANGUAGE plpgsql IS 'PL/pgSQL procedural language' |
-| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_EXECUTE_STMT | d0fe5bed44c4bd2f3f3e5403 | EXECUTE st1(1, 1) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FUNCTION_STMT | d1047e49bf57246e6b8ce04c | CREATE FUNCTION test_inout_params(first inout text) AS $$ return first + '_inout'; $$ LANGUAGE plpython3u |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | d10bcb7c7f378bb2cac4cdec | CREATE AGGREGATE myaggn01b(*) (SFUNC = stfnp, STYPE = int4[], INITCOND = '{}') |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OPERATOR_STMT | d119b940b732f62f088e1b6b | ALTER OPERATOR >= (ean13, ean13) SET ( RESTRICT = scalargesel, JOIN = scalargejoinsel) |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_SEC_LABEL_STMT | d126f1683560b22269e24166 | SECURITY LABEL ON TABLE dummy_seclabel_tbl1 IS 'unclassified' |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | d14a4179aec6ede43e91f43e | CREATE TEXT SEARCH DICTIONARY test_tsdict_exists ( Template=ispell, DictFile=ispell_sample, AffFile=ispell_sample ) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | d14def00a75b1119cd623781 | CREATE OPERATOR ~ ( LEFTARG = seg, RIGHTARG = seg, PROCEDURE = seg_contained, COMMUTATOR = '@', RESTRICT = contsel, JOIN = contjoinsel ) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_ROLE_STMT | d18efe69da534149b5109383 | CREATE ROLE regress_passwd4 PASSWORD NULL |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_ROLE_STMT | d18f914a9148aa370f633cc2 | -- error CREATE ROLE "pg_abc" |
-| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEALLOCATE_STMT | d1a83134f78e0ff26f437ff2 | deallocate q1 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DROP_STMT | d1f2d9d30a98ef8b8463b541 | -- Check that DROP on a nonexistent op behaves sanely, too DROP OPERATOR ###### (NONE, int4) |
-| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEALLOCATE_STMT | d1f399d1c46902d5418ee05f | deallocate mt_q2 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | d1f569675497e09c978d77ea | CREATE COLLATION mycoll2 ( LC_COLLATE = "POSIX", LC_CTYPE = "POSIX" ) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OPERATOR_STMT | d227a33b46bc0d2ed2b42652 | ALTER OPERATOR @> (ltree, _ltree) SET (RESTRICT = matchingsel, JOIN = matchingjoinsel) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | d23a0118a1a53a717833d048 | CREATE COLLATION test3 (lc_collate = 'en_US.utf8') |
-| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEALLOCATE_STMT | d23f3a5f3445d2a07e01e0bf | deallocate q |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | d243f8d4a2a6fdb6dd0258ec | CREATE OPERATOR > ( PROCEDURE = isngt, LEFTARG = ean13, RIGHTARG = isbn, COMMUTATOR = <, NEGATOR = <=, RESTRICT = scalargtsel, JOIN = scalargtjoinsel) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_ROLE_STMT | d25bc8727de02fd9a19ada81 | CREATE ROLE regress_file_fdw_superuser LOGIN SUPERUSER |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DROP_STMT | d260e3811eeaf790245dd48c | DROP OPERATOR CLASS IF EXISTS test_operator_class USING no_such_am |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OP_FAMILY_STMT | d28f98234a5753fd712aab89 | ALTER OPERATOR FAMILY gist_float4_ops USING gist ADD OPERATOR 6 <> (float4, float4) , OPERATOR 15 <-> (float4, float4) FOR ORDER BY pg_catalog.float_ops , FUNCTION 8 (float4, float4) gbt_float4_dis... |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_COMMENT_STMT | d2a4250256b6ee570cc97be7 | COMMENT ON FUNCTION cube_lt(cube, cube) IS 'lower than' |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CLOSE_PORTAL_STMT | d2ae1fc5fc6406827919d938 | CLOSE foo5 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_ROLE_STMT | d2d046d46ee2e7ae77dfecb1 | -- ============================================================================= -- test case for having multiple cached connections for a foreign server -- ========================================... |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_FETCH_STMT | d2d18e508b552c230f4d40e3 | FETCH 9 in foo9 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | d2d7272b2595ad2ddddc7a5f | -- The aggregate function itself -- uses the above functions to create an array of integers from an aggregation. CREATE AGGREGATE int_array_aggregate(int4) ( SFUNC = int_agg_state, STYPE = internal... |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | d2eb591d66612803e88f7541 | CREATE OPERATOR >= ( PROCEDURE = isnge, LEFTARG = issn, RIGHTARG = ean13, COMMUTATOR = <=, NEGATOR = <, RESTRICT = scalargtsel, JOIN = scalargtjoinsel ) |
-| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_EXECUTE_STMT | d349d092cf6f57a3176025c4 | execute u |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_COMMENT_STMT | d35bb4799f6d1654f22ffb74 | COMMENT ON DOMAIN japanese_postal_code IS 'DOMAIN test' |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_ROLE_STMT | d36aa323ad42639378d519d2 | CREATE ROLE regress_test_createrole WITH CREATEROLE |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_ROLE_STMT | d36c053d5cd92e0143105847 | -- -- regproc -- /* If objects exist, return oids */ CREATE ROLE regress_regrole_test |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OPERATOR_STMT | d37ae39206dbed9f30b51ddc | ALTER OPERATOR <@ (_int4, _int4) SET (RESTRICT = _int_contained_sel, JOIN = _int_contained_joinsel) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | d383cf6dd71a8402b86e27ec | CREATE OPERATOR > ( PROCEDURE = isngt, LEFTARG = issn13, RIGHTARG = issn13, COMMUTATOR = <, NEGATOR = <=, RESTRICT = scalargtsel, JOIN = scalargtjoinsel ) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | d3caf99878542d72e4c1736a | CREATE OPERATOR \|\| ( LEFTARG = text, RIGHTARG = ltree, PROCEDURE = ltree_textadd ) |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CLOSE_PORTAL_STMT | d3d38734883cb89ee53c5be8 | CLOSE foo15 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_ROLE_STMT | d411f504c40185fa54be6937 | CREATE USER regress_priv_user3 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_OP_CLASS_STMT | d420f1658fa6de8c49a85c9a | CREATE OPERATOR CLASS gist_cube_ops DEFAULT FOR TYPE cube USING gist AS OPERATOR 3 && , OPERATOR 6 = , OPERATOR 7 @> , OPERATOR 8 <@ , OPERATOR 13 @ , OPERATOR 14 ~ , OPERATOR 15 ~> (cube, int) FOR... |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_FETCH_STMT | d42c93745dfe1238694fc569 | fetch backward 1 in c4 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | d46f0676022ea468e298a732 | CREATE OPERATOR >> ( LEFTARG = seg, RIGHTARG = seg, PROCEDURE = seg_right, COMMUTATOR = '<<', RESTRICT = positionsel, JOIN = positionjoinsel ) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_ROLE_STMT | d47ce57eeb262867c14e4da5 | CREATE ROLE "current_user" |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | d498f516a6267c0e4b7fc3a9 | -- ensure combine function parameters are checked CREATE AGGREGATE myavg (numeric) ( stype = internal, sfunc = numeric_avg_accum, serialfunc = numeric_avg_serialize, deserialfunc = numeric_avg_dese... |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_OP_CLASS_STMT | d4e56bfe757884e28ef96214 | CREATE OPERATOR CLASS bool_ops DEFAULT FOR TYPE bool USING gin AS OPERATOR 1 <, OPERATOR 2 <=, OPERATOR 3 =, OPERATOR 4 >=, OPERATOR 5 >, FUNCTION 1 btboolcmp(bool,bool), FUNCTION 2 gin_extract_val... |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_COMMENT_STMT | d50f401eb463a259628fbd95 | COMMENT ON SCHEMA foo IS 'This is schema foo' |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_FETCH_STMT | d5439fb25262264b39d6e305 | FETCH c1 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | d56c9e85b84190cef27ed8b1 | CREATE OPERATOR <> ( PROCEDURE = isnne, LEFTARG = ismn, RIGHTARG = ean13, COMMUTATOR = <>, NEGATOR = =, RESTRICT = neqsel, JOIN = neqjoinsel) |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_COMMENT_STMT | d5730f9d01f950118de1995e | COMMENT ON LANGUAGE pltclu IS 'PL/TclU untrusted procedural language' |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | d57a1bc8554b56309b99420e | CREATE OPERATOR <= ( PROCEDURE = isnle, LEFTARG = ean13, RIGHTARG = issn13, COMMUTATOR = >=, NEGATOR = >, RESTRICT = scalarltsel, JOIN = scalarltjoinsel) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_OP_CLASS_STMT | d57c19a8d442f1df605875bf | -- Create the operator class CREATE OPERATOR CLASS gist_bit_ops DEFAULT FOR TYPE bit USING gist AS OPERATOR 1 < , OPERATOR 2 <= , OPERATOR 3 = , OPERATOR 4 >= , OPERATOR 5 > , FUNCTION 1 gbt_bit_co... |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_ROLE_STMT | d5881c077acaa61975a20a86 | -- Test DROP OWNED CREATE USER regress_dep_user0 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | d589548fc64dc03f7a69bf8c | CREATE TEXT SEARCH DICTIONARY thesaurus ( Template=thesaurus, DictFile=thesaurus_sample, Dictionary=english_stem ) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OP_FAMILY_STMT | d5a871c17d95c6a785292113 | ALTER OPERATOR FAMILY gist_seg_ops USING gist drop function 4 (seg) |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_COMMENT_STMT | d5d76c0893cc75e10c21166b | COMMENT ON AGGREGATE newcnt ("any") IS 'an agg(any) comment' |
-| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_PREPARE_STMT | d5de1b1d9716cfc716608cfb | PREPARE prep1 AS SELECT COUNT(*) FROM stats_plan_test |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | d5e319dd1ba9843d15b83815 | CREATE AGGREGATE priv_testagg1(int) (sfunc = int4pl, stype = int4) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | d5e3a65de68ad8fdf8a3d923 | CREATE OPERATOR \|\| ( LEFTARG = ltree, RIGHTARG = text, PROCEDURE = ltree_addtext ) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | d5f76da96aa10ed7b09c947e | CREATE OPERATOR <= ( PROCEDURE = isnle, LEFTARG = issn13, RIGHTARG = issn, COMMUTATOR = >=, NEGATOR = >, RESTRICT = scalarltsel, JOIN = scalarltjoinsel) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | d61bf2de7ad523c3a4847703 | CREATE AGGREGATE myaggp04b(*) (SFUNC = stfp, STYPE = anyarray, INITCOND = '{}') |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OBJECT_SCHEMA_STMT | d64c13c3397064bbe690b09e | -- failed (no role membership) ALTER OPERATOR FAMILY alt_opf3 USING hash SET SCHEMA alt_nsp2 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OWNER_STMT | d6967eb65e020412688644c5 | -- error ALTER AGGREGATE testagg6(int2) OWNER TO PUBLIC |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_SEC_LABEL_STMT | d6bbb611c830e1f0ddb42123 | SECURITY LABEL ON TABLE t1 IS 'system_u:object_r:sepgsql_ro_table_t:s0' |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | d6c82f09f6a290a810bf1989 | CREATE OPERATOR < ( LEFTARG = ltree, RIGHTARG = ltree, PROCEDURE = ltree_lt, COMMUTATOR = '>', NEGATOR = '>=', RESTRICT = contsel, JOIN = contjoinsel ) |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_SEC_LABEL_STMT | d70793ff1eb992e0278021be | SECURITY LABEL ON COLUMN tpart IS 'system_u:object_r:sepgsql_ro_table_t:s0' |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_ROLE_SET_STMT | d7181417e3078e0384f54567 | ALTER ROLE "current_user" RESET application_name |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_FETCH_STMT | d7258e883c2e44b7a13f84ba | fetch from foo |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DECLARE_CURSOR_STMT | d729171f104c9cee5cde80da | DECLARE c1 CURSOR FOR SELECT * FROM uctest a, uctest b WHERE a.f1 = b.f1 + 5 FOR UPDATE |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | d72c9c7f055b16eed2d2a291 | CREATE AGGREGATE myaggp19b(BASETYPE = anyelement, SFUNC = tf1p, STYPE = anyarray, INITCOND = '{}') |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_SEC_LABEL_STMT | d743e062ae5dd5c422b66163 | SECURITY LABEL ON TABLE seclabel_tbl1 IS 'classified' |
-| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_EXECUTE_STMT | d74b380069782f1aec1a6825 | execute r |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | d7511ad26b61e6553de946a9 | CREATE AGGREGATE myaggp09b(BASETYPE = int, SFUNC = tf1p, STYPE = int[], INITCOND = '{}') |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | d788353f316d3f2340cdf86a | -- -- UPC operators: -- --------------------------------------------------- CREATE OPERATOR < ( PROCEDURE = isnlt, LEFTARG = upc, RIGHTARG = upc, COMMUTATOR = >, NEGATOR = >=, RESTRICT = scalarltse... |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_ROLE_STMT | d7887071e5ddb30f429a3f31 | CREATE ROLE regress_test_def_createrole |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_COMMENT_STMT | d7a52243ec5f2294bfbefd9b | COMMENT ON TEXT SEARCH DICTIONARY intdict IS 'dictionary for integers' |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | d7cab7262e78fc10e9b3fc41 | CREATE OPERATOR @ ( LEFTARG = ltxtquery, RIGHTARG = ltree, PROCEDURE = ltxtq_rexec, COMMUTATOR = '@', RESTRICT = contsel, JOIN = contjoinsel ) |
-| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEALLOCATE_STMT | d7f7e681cd8bc82c24d348cf | DEALLOCATE p1 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_ROLE_SET_STMT | d81872cb5c2a6e88f36ab6e6 | ALTER USER ALL RESET application_name |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_FETCH_STMT | d81f57b3fcb3f81963169430 | FETCH FIRST FROM c |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_OP_CLASS_STMT | d82461ab1dda56df14cb6c4c | CREATE OPERATOR CLASS gin_hstore_ops DEFAULT FOR TYPE hstore USING gin AS OPERATOR 7 @>, OPERATOR 9 ?(hstore,text), OPERATOR 10 ?\|(hstore,text[]), OPERATOR 11 ?&(hstore,text[]), FUNCTION 1 bttextcm... |
-| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEALLOCATE_STMT | d8273b7d71e2dbd1cd7efbd3 | DEALLOCATE select1 |
-| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_PREPARE_STMT | d8282efe78ad0c3a05e5b2a1 | -- Test run-time pruning with IN lists. prepare ab_q5 (int, int, int) as select avg(a) from ab where a in($1,$2,$3) and b < 4 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OBJECT_SCHEMA_STMT | d8442613e04a258b333e73ac | alter operator family alter1.ctype_hash_ops using hash set schema alter2 |
-| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_PREPARE_STMT | d85371b51201bf2b6d91faff | PREPARE ctas_ine_query AS SELECT 1 / 0 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OWNER_STMT | d863b6b7e4a4f328683ebb65 | -- failed (not owner) ALTER OPERATOR @-@(int4, int4) OWNER TO regress_alter_generic_user3 |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_FETCH_STMT | d86d6a25fee6a2b571b045ba | FETCH NEXT c |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | d883f4f202816f0058faf068 | CREATE AGGREGATE myaggp17b(BASETYPE = int, SFUNC = tf1p, STYPE = anyarray, INITCOND = '{}') |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_COMMENT_STMT | d8d116ed72af46d8acc4b82a | COMMENT ON RULE rtest_v1_del ON rtest_v1 IS NULL |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | d8d4603b7226c30a0d4c4c8c | CREATE OPERATOR <= ( PROCEDURE = isnle, LEFTARG = ean13, RIGHTARG = upc, COMMUTATOR = >=, NEGATOR = >, RESTRICT = scalarltsel, JOIN = scalarltjoinsel) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OPERATOR_STMT | d8ecb07d88bcf8a03aeb51e3 | ALTER OPERATOR @> (_ltree, ltree) SET (RESTRICT = matchingsel, JOIN = matchingjoinsel) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | d921260c5982b5b0057964f3 | create operator = ( procedure = int8alias1eq, leftarg = int8alias1, rightarg = int8alias2, restrict = eqsel, join = eqjoinsel, merges ) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | d953e782c6b5204a100821b5 | CREATE TEXT SEARCH CONFIGURATION test_tsconfig_exists (COPY=english) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | d9882997aaf502e38c6fe435 | CREATE OPERATOR <@ ( LEFTARG = _ltree, RIGHTARG = ltree, PROCEDURE = _ltree_risparent, COMMUTATOR = '@>', RESTRICT = contsel, JOIN = contjoinsel ) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_ROLE_STMT | d9bc0da6e3f3ce97c5c62daa | -- MAINTAIN CREATE ROLE regress_no_maintain |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_ROLE_STMT | d9c9b0b644d8874a9d966db3 | ALTER ROLE regress_passwd4 PASSWORD 'foo' |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_ROLE_STMT | d9d8c30fa795a2541d68e868 | CREATE USER regress_seclabel_user1 WITH CREATEROLE |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_ROLE_STMT | d9f055365ea9479a09ff7c85 | -- make sure running as superuser works when MV owned by another role (bug #11208) CREATE ROLE regress_user_mvtest |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | da033009fe4649fac0cce97d | CREATE AGGREGATE testagg4(int2) (SFUNC = int2_sum, STYPE = int8) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | da0bbba02529a528fc7e84b4 | CREATE AGGREGATE alt_agg1 ( sfunc1 = int4pl, basetype = int4, stype1 = int4, initcond = 100 ) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | da3418a217396fffcce139b1 | -- another sort of polymorphic aggregate CREATE AGGREGATE array_larger_accum (anyarray) ( sfunc = array_larger, stype = anyarray, initcond = '{}' ) |
-| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_SELECT_STMT | da6ec012d69560c2c2a871cf | select i, left('ahoj', i), right('ahoj', i) from generate_series(-5, 5) t(i) order by i |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OWNER_STMT | da83b0c8a0a8d8200ac8e819 | ALTER OPERATOR CLASS alt_opc1 USING hash OWNER TO regress_alter_generic_user1 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OPERATOR_STMT | da8b8f7d60c326396e7094fe | ALTER OPERATOR ? (hstore, text) SET (RESTRICT = matchingsel, JOIN = matchingjoinsel) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | daab216f2f4dbd59b66006f3 | CREATE OPERATOR !~* ( PROCEDURE = texticregexne, LEFTARG = citext, RIGHTARG = citext, NEGATOR = ~*, RESTRICT = icregexnesel, JOIN = icregexnejoinsel ) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | dace52c20b800c172cb47c09 | -- -- ISSN13 operators: -- --------------------------------------------------- CREATE OPERATOR < ( PROCEDURE = isnlt, LEFTARG = issn13, RIGHTARG = issn13, COMMUTATOR = >, NEGATOR = >=, RESTRICT = s... |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | dadfa941b77164db891a7181 | CREATE TEXT SEARCH DICTIONARY addr_ts_dict (template=simple) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | db2d0c95b9012650f58ba956 | CREATE OPERATOR = ( PROCEDURE = isneq, LEFTARG = ean13, RIGHTARG = issn, COMMUTATOR = =, NEGATOR = <>, RESTRICT = eqsel, JOIN = eqjoinsel, MERGES, HASHES) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OP_FAMILY_STMT | db49fd2fa514536ac076cfc0 | ALTER OPERATOR FAMILY gist_interval_ops USING gist ADD FUNCTION 11 (interval, interval) gbt_intv_sortsupport (internal) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | db4e561e7f031db341f0eb82 | CREATE OPERATOR &> ( LEFTARG = seg, RIGHTARG = seg, PROCEDURE = seg_over_right, RESTRICT = positionsel, JOIN = positionjoinsel ) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OBJECT_SCHEMA_STMT | db811f16c0dfb78e7dea67e3 | -- OK ALTER OPERATOR @-@(int4, int4) SET SCHEMA alt_nsp2 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OP_FAMILY_STMT | db934a56c18f00d74778f303 | ALTER OPERATOR FAMILY isn_ops USING hash ADD OPERATOR 1 = (isbn, ean13), OPERATOR 1 = (isbn, isbn13) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | dbcffe72343060385a749bc0 | CREATE OPERATOR <> ( LEFTARG = seg, RIGHTARG = seg, PROCEDURE = seg_different, COMMUTATOR = '<>', NEGATOR = '=', RESTRICT = neqsel, JOIN = neqjoinsel ) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OP_FAMILY_STMT | dc1a5029007cf69ce99f9fe1 | ALTER OPERATOR FAMILY gist_date_ops USING gist ADD FUNCTION 11 (date, date) gbt_date_sortsupport (internal) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_ROLE_SET_STMT | dc73c183c2fe7d8f5a56de4d | ALTER ROLE regress_authenticated_user_sr SET ROLE = regress_current_user |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_COMMENT_STMT | dc85b8bbe494f6b29f20984f | COMMENT ON FUNCTION seg_gt(seg, seg) IS 'greater than' |
-| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_EXECUTE_STMT | dcb131e80de6aa3030f080bd | EXECUTE st1(101, 101) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_OP_CLASS_STMT | dcb5c61fcc1f1b88273d48f8 | CREATE OPERATOR CLASS isbn_ops DEFAULT FOR TYPE isbn USING btree FAMILY isn_ops AS OPERATOR 1 <, OPERATOR 2 <=, OPERATOR 3 =, OPERATOR 4 >=, OPERATOR 5 >, FUNCTION 1 btisbncmp(isbn, isbn) |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_FETCH_STMT | dcb6bf817721a55d2bc49521 | FETCH ABSOLUTE 1 FROM c1 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | dcc78d90115b7beb95b0c3fb | -- create a shell operator for ===!!! by referencing it as a commutator CREATE OPERATOR === ( leftarg = integer, rightarg = integer, procedure = int4eq, commutator = ===!!! ) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_ROLE_STMT | dccd841687f3ea1a359674b1 | ALTER ROLE CURRENT_ROLE WITH REPLICATION |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OP_FAMILY_STMT | dcf7c9a0bba2f9aba4542b87 | ALTER OPERATOR FAMILY gist_cidr_ops USING gist ADD OPERATOR 6 <> (inet, inet) |
-| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEALLOCATE_STMT | dd1244ab73780ecb180cbcee | DEALLOCATE st3 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OPERATOR_STMT | dd135dc96021fe29ec0813de | ALTER OPERATOR >= (isbn, ean13) SET ( RESTRICT = scalargesel, JOIN = scalargejoinsel) |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_COMMENT_STMT | dd1ce9751ffe10465adf16db | COMMENT ON CONSTRAINT constr_parent2_a_not_null ON constr_child2 IS 'this constraint is valid' |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_ROLE_STMT | dd214305eef5aeea9c5e2e58 | CREATE ROLE "None" |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OPERATOR_STMT | dd62a69c3c318f2e4493e597 | ALTER OPERATOR <= (isbn13, ean13) SET ( RESTRICT = scalarlesel, JOIN = scalarlejoinsel) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | dd9e596e365b58a9c1069cdd | -- failed (name conflict) -- invalid: non-lowercase quoted identifiers CREATE TEXT SEARCH PARSER tspars_case ("Start" = start_function) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_ROLE_STMT | ddccd2997df16b44b2b29cbb | -- error ALTER ROLE SESSION_ROLE WITH NOREPLICATION |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_ROLE_STMT | dddec38da29a4bb48a6ad9e5 | ALTER USER regress_test_user_canlogin WITH NOLOGIN |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OP_FAMILY_STMT | ddee0319edb799d23c565853 | ALTER OPERATOR FAMILY gist_int8_ops USING gist ADD OPERATOR 6 <> (int8, int8) , OPERATOR 15 <-> (int8, int8) FOR ORDER BY pg_catalog.integer_ops , FUNCTION 8 (int8, int8) gbt_int8_distance (interna... |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OPERATOR_STMT | de012d53c50d44e1893a0fe2 | ALTER OPERATOR <= (ismn13, ean13) SET ( RESTRICT = scalarlesel, JOIN = scalarlejoinsel) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | de061c1703391fbb83821b1d | create aggregate least_agg(int4) ( stype = int8, sfunc = least_accum ) |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_FETCH_STMT | de10a49556532edd50319679 | FETCH backward 4 in foo20 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_OP_FAMILY_STMT | de14dff383f544fee2e271ec | -- Should work. Textbook case of ALTER OPERATOR FAMILY ... ADD OPERATOR with FOR ORDER BY CREATE OPERATOR FAMILY alt_opf9 USING gist |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_FETCH_STMT | de8d40c31d0e5caa478375cd | fetch next in test1 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | de8e6a45ff2436c5591471f6 | CREATE OPERATOR <> ( PROCEDURE = isnne, LEFTARG = ismn13, RIGHTARG = ean13, COMMUTATOR = <>, NEGATOR = =, RESTRICT = neqsel, JOIN = neqjoinsel) |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_COMMENT_STMT | deb5b2ac9fbddab5aaf6a7b8 | COMMENT ON RULE rtest_v1_del ON rtest_v1 IS 'delete rule' |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OPERATOR_STMT | deb64b224aa6db7d73bfc7ea | ALTER OPERATOR @> (hstore, hstore) SET (RESTRICT = matchingsel, JOIN = matchingjoinsel) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_OP_CLASS_STMT | deb6b76fbcd62f455fe314dc | CREATE OPERATOR CLASS text_ops DEFAULT FOR TYPE text USING gin AS OPERATOR 1 <, OPERATOR 2 <=, OPERATOR 3 =, OPERATOR 4 >=, OPERATOR 5 >, FUNCTION 1 bttextcmp(text,text), FUNCTION 2 gin_extract_val... |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_ROLE_STMT | deb8d7a5d80c3a1dcd9a37b1 | ALTER ROLE regress_role_limited CREATEDB |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | decd7ece598b8e201b96bf87 | CREATE OPERATOR = ( PROCEDURE = isneq, LEFTARG = isbn, RIGHTARG = isbn13, COMMUTATOR = =, NEGATOR = <>, RESTRICT = eqsel, JOIN = eqjoinsel, MERGES, HASHES) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_RENAME_STMT | deeb8b4c9239109ffd837c02 | -- failed (name conflict) ALTER OPERATOR FAMILY alt_opf1 USING hash RENAME TO alt_opf3 |
-| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_PREPARE_STMT | df09b7d95dabbb8dfa227225 | prepare p2 as select nextval('seq') |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_COMMENT_STMT | df2c21ce7cf50a527dd33d2d | COMMENT ON FUNCTION boolop(_int4, query_int) IS 'boolean operation with array' |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | df310f4876f6fd79b79ad187 | CREATE OPERATOR @ ( LEFTARG = ltxtquery, RIGHTARG = _ltree, PROCEDURE = _ltxtq_rexec, COMMUTATOR = '@', RESTRICT = contsel, JOIN = contjoinsel ) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_ROLE_STMT | df617d62c06281377cfb282d | CREATE USER regress_test_def_user_canlogin |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_ROLE_STMT | df7366cedc94f6793bf2d43d | create role regress_no_child_access |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OP_FAMILY_STMT | df84316f9ce62c117117494b | ALTER OPERATOR FAMILY alt_opf18 USING btree DROP FUNCTION 2 (int4, int4) |
-| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_EXECUTE_STMT | dfaed31fdaf6242d3a1880b4 | execute foo(true) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_EXPLAIN_STMT | dfb6db5e2d202de5286dba13 | EXPLAIN (COSTS OFF) DECLARE c SCROLL CURSOR FOR SELECT ctid FROM tidrangescan WHERE ctid < '(1,0)' |
-| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_PREPARE_STMT | dfdba02d907d75eae27c6849 | PREPARE plancache_test AS SELECT * FROM z1 WHERE f_leak(b) |
-| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_EXPLAIN_STMT | dfe819624a5149c8a0487320 | EXPLAIN (VERBOSE, COSTS OFF) EXECUTE st6 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DROP_STMT | dfe8a2d0efd7c34747a0ce68 | drop aggregate least_agg(variadic items anyarray) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | dffedebaec621dcd0ec705f8 | CREATE OPERATOR ~ ( LEFTARG = lquery, RIGHTARG = ltree, PROCEDURE = ltq_rregex, COMMUTATOR = '~', RESTRICT = contsel, JOIN = contjoinsel ) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_ROLE_STMT | e00f05dab76ce9b8b2be9457 | CREATE ROLE regress_constraint_comments_noaccess |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_COMMENT_STMT | e02fc9042bb414cfc7652317 | COMMENT ON INDEX six IS 'good index' |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OWNER_STMT | e0d25bbab43e7f2f95dd8cdc | ALTER OPERATOR CLASS alt_opc1 USING hash OWNER TO regress_alter_generic_user2 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | e0ffa5543bf8f330923026b0 | CREATE OPERATOR ^? ( LEFTARG = _ltree, RIGHTARG = _lquery, PROCEDURE = _lt_q_regex, COMMUTATOR = '^?', RESTRICT = contsel, JOIN = contjoinsel ) |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_FETCH_STMT | e13176ac0ecfda5c95a81c6a | FETCH backward 20 in foo4 |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_LISTEN_STMT | e150a203ab79a7f445ef5b0a | LISTEN notify_async2 |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DECLARE_CURSOR_STMT | e15171ad233088f0c1a60864 | DECLARE current_check_cursor CURSOR FOR SELECT * FROM current_check_2 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DROP_STMT | e157354776ac65d9d516a33f | DROP OPERATOR FAMILY alt_opf5 USING btree |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | e217e28659fead3e83374ecf | CREATE OPERATOR ~* ( PROCEDURE = texticregexeq, LEFTARG = citext, RIGHTARG = text, NEGATOR = !~*, RESTRICT = icregexeqsel, JOIN = icregexeqjoinsel ) |
-| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_EXECUTE_STMT | e220c724b1958b272ed64939 | EXECUTE prepstmt2(123) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_ROLE_STMT | e2345b4482d5d2af2ff64c1c | CREATE ROLE regress_monitor IN ROLE pg_monitor |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_ROLE_STMT | e242567d31f23fc4f33a5e73 | ALTER ROLE regress_passwd3 PASSWORD 'SCRAM-SHA-256$4096:VLK4RMaQLCvNtQ==$6YtlR4t69SguDiwFvbVgVZtuz6gpJQQqUMZ7IQJK5yI=:ps75jrHeYU4lXCcXI4O8oIdJ3eO8o2jirjruw9phBTo=' |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DROP_STMT | e24b80586ce89af1f3ab510a | DROP OPERATOR !==== (boolean, real) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OP_FAMILY_STMT | e264e01da39caefca13290c5 | ALTER OPERATOR FAMILY gin_trgm_ops USING gin ADD OPERATOR 9 %>> (text, text) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_OP_CLASS_STMT | e29bd5330c0b3af0b306c983 | create operator class ctype_hash_ops default for type ctype using hash as operator 1 =(ctype, ctype) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_ROLE_STMT | e2a979c5a0e0c328c177f5ea | CREATE USER regress_dummy_seclabel_user2 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_OP_CLASS_STMT | e2b5c911d0be6a8f986b1e57 | create operator class part_test_text_ops for type text using hash as operator 1 =, function 2 part_hashtext_length(text, int8) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_ROLE_STMT | e2cb608cdc35d62ae609e2d8 | CREATE ROLE regress_testrolx SUPERUSER LOGIN |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OP_FAMILY_STMT | e2ce07168706a8d15887dd4d | ALTER OPERATOR FAMILY gist_bit_ops USING gist ADD FUNCTION 12 ("any", "any") gist_translate_cmptype_btree (int) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OP_FAMILY_STMT | e2d514cc60581985e5f76895 | ALTER OPERATOR FAMILY gist_ltree_ops USING gist ADD FUNCTION 10 (ltree) ltree_gist_options (internal) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | e2e7153080f699b1f3c4b3c3 | CREATE OPERATOR =#> (PROCEDURE = testpub_rf_func1, LEFTARG = integer, RIGHTARG = integer) |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DECLARE_CURSOR_STMT | e3097e330ec0f07646cc1dac | declare c cursor for select * from bar where f1 = 7 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | e3119cb7c2015bec56594da8 | CREATE OPERATOR - ( LEFTARG = _int4, RIGHTARG = _int4, PROCEDURE = intset_subtract ) |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_FETCH_STMT | e31b38c6772769a4eab89d9f | FETCH backward 10 in foo14 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_OP_CLASS_STMT | e33843854ca6e2a56d6bf094 | CREATE OPERATOR CLASS date_ops DEFAULT FOR TYPE date USING gin AS OPERATOR 1 <, OPERATOR 2 <=, OPERATOR 3 =, OPERATOR 4 >=, OPERATOR 5 >, FUNCTION 1 date_cmp(date,date), FUNCTION 2 gin_extract_valu... |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_COMMENT_STMT | e351d7011ad9c50e4b9719ef | comment on column atacc1."........pg.dropped.1........" is 'testing' |
-| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_SELECT_STMT | e39fb15b5a538d88513454e5 | select delete('aa=>1 , b=>2, c=>3'::hstore, 'aa=>NULL, c=>3'::hstore) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OP_FAMILY_STMT | e40bd76f1c10f7a81d78b171 | ALTER OPERATOR FAMILY alt_opf19 USING btree ADD FUNCTION 5 (int4) test_opclass_options_func(internal) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_ROLE_STMT | e43e857fcea31f65aa962a02 | CREATE ROLE regress_roleoption_recipient |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DROP_STMT | e443e6e71875a8e722160fed | DROP OPERATOR FAMILY alt_opf10 USING btree |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OPERATOR_STMT | e46b5663f5bb7e2b6ab7aeb1 | ALTER OPERATOR && (_int4, _int4) SET (RESTRICT = _int_overlap_sel, JOIN = _int_overlap_joinsel) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DROP_STMT | e4793298395e01e572e3720e | drop operator public.>^(int, int) |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CLOSE_PORTAL_STMT | e48d8167537f191de4d18183 | CLOSE foocur |
-| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEALLOCATE_STMT | e4970e9a70ad9e0d9783cf7b | DEALLOCATE st5 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OPERATOR_STMT | e4c5339c3392c748528a11f8 | ALTER OPERATOR @ (ltxtquery, ltree) SET (RESTRICT = matchingsel, JOIN = matchingjoinsel) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | e4d9c9273c18b89ff9e80967 | CREATE OPERATOR >= ( PROCEDURE = isnge, LEFTARG = ismn, RIGHTARG = ean13, COMMUTATOR = <=, NEGATOR = <, RESTRICT = scalargtsel, JOIN = scalargtjoinsel ) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | e52da8e9a72fc8f3b733040f | CREATE OPERATOR >= ( PROCEDURE = isnge, LEFTARG = issn13, RIGHTARG = ean13, COMMUTATOR = <=, NEGATOR = <, RESTRICT = scalargtsel, JOIN = scalargtjoinsel ) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | e5307c1c86a4af980088eadf | --not indexed CREATE OPERATOR ^@> ( LEFTARG = _ltree, RIGHTARG = ltree, PROCEDURE = _ltree_isparent, COMMUTATOR = '^<@', RESTRICT = contsel, JOIN = contjoinsel ) |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_FETCH_STMT | e56639c7635d39199fea1f04 | FETCH all in foo14 |
-| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_PREPARE_STMT | e5b2e15f3786ee444d6f8e06 | -- Test more complex cases where a not-equal condition further eliminates partitions. prepare q1 (int,int,int,int) as select * from listp where b in($1,$2) and $3 <> b and $4 <> b |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_COMMENT_STMT | e5be32ac3d276a738e4cca4b | COMMENT ON TYPE upc IS 'Universal Product Code (UPC)' |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | e5cb072dea8dff09f0e1d2f0 | CREATE OPERATOR <<< (procedure = leak, leftarg = integer, rightarg = integer, restrict = scalarltsel) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_ROLE_STMT | e60920127baf9849e3995ac9 | -- pg_current_logfile CREATE ROLE regress_current_logfile |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OPERATOR_STMT | e61d8672e93a2ad18bddbf03 | ALTER OPERATOR @@ (_int4, query_int) SET (RESTRICT = _int_matchsel) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_ROLE_STMT | e623f89f0c692ee104745246 | CREATE ROLE regress_test_def_createdb |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_ROLE_SET_STMT | e637aa5cb410c367dedabd8a | ALTER USER SESSION_USER RESET application_name |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_ROLE_STMT | e6394c887cacf54b3dfa14c6 | CREATE ROLE regress_plainrole |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_COMMENT_STMT | e64b79e3fe47618c31c81c42 | COMMENT ON TYPE cube IS 'multi-dimensional cube ''(FLOAT-1, FLOAT-2, ..., FLOAT-N), (FLOAT-1, FLOAT-2, ..., FLOAT-N)''' |
-| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_EXECUTE_STMT | e65017594c1d9d3bab1d2cd1 | EXECUTE foo ('good') |
-| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_EXECUTE_STMT | e65eab93aa712018989b10b9 | execute pstmt_def_insert(2) |
-| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_EXECUTE_STMT | e66cd3b30072a1271de9a0cd | EXECUTE st6 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | e694394615cf40b9f0d7d275 | CREATE OPERATOR <= ( PROCEDURE = isnle, LEFTARG = issn13, RIGHTARG = issn13, COMMUTATOR = >=, NEGATOR = >, RESTRICT = scalarltsel, JOIN = scalarltjoinsel) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_RENAME_STMT | e6a2212d35dee2bd50474028 | alter aggregate my_percentile_disc(float8 ORDER BY anyelement) rename to test_percentile_disc |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_FETCH_STMT | e6b3ae11a8024fec5d58f961 | FETCH FORWARD 5 pgss_cursor |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OPERATOR_STMT | e6c28119fd286af5f04c34d3 | ALTER OPERATOR <= (ismn, ean13) SET ( RESTRICT = scalarlesel, JOIN = scalarlejoinsel) |
-| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEALLOCATE_STMT | e6fa90586a52b73b91dafa7d | DEALLOCATE pstmt |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_FETCH_STMT | e705839e32eff1b6b9f7f0da | fetch absolute 1 from rf_cur |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OPERATOR_STMT | e70a5ef55e9875408c0bb4ea | ALTER OPERATOR <= (ismn, ismn) SET ( RESTRICT = scalarlesel, JOIN = scalarlejoinsel) |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_COMMENT_STMT | e70d57f500078da1ae66cc01 | COMMENT ON COLUMN ft1.c1 IS NULL |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | e714e29e025b5ae00b2a6c3f | CREATE OPERATOR > ( PROCEDURE = isngt, LEFTARG = ismn13, RIGHTARG = ismn13, COMMUTATOR = <, NEGATOR = <=, RESTRICT = scalargtsel, JOIN = scalargtjoinsel ) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | e7571793b687861735ca1400 | -- P P P N -- should ERROR: tf1p(anyarray, anyelement) not matched by tf1p(anyarray, int) CREATE AGGREGATE myaggp19a(BASETYPE = anyelement, SFUNC = tf1p, STYPE = anyarray, FINALFUNC = ffp, INITCOND... |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OPERATOR_STMT | e787d30e2c73f97fca19f5f0 | ALTER OPERATOR >= (ismn, ismn13) SET ( RESTRICT = scalargesel, JOIN = scalargejoinsel) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OP_FAMILY_STMT | e7975506bd5adc796a801dfb | alter operator family integer_ops using btree add operator 3 = (int8, int8alias1) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_RENAME_STMT | e799e2279d648133cd4832f7 | -- OK ALTER AGGREGATE alt_agg1(int) RENAME TO alt_agg2 |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_COMMENT_STMT | e79c0fb220dbad7b54a6305b | COMMENT ON COLUMN ctlt2.c IS 'C' |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OP_FAMILY_STMT | e7a839e1a408929c887bcd8b | ALTER OPERATOR FAMILY isn_ops USING hash ADD OPERATOR 1 = (ismn, ean13), OPERATOR 1 = (ismn, ismn13) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | e7b4c7623fae3a64a744c69d | CREATE OPERATOR ^~ ( LEFTARG = lquery, RIGHTARG = ltree, PROCEDURE = ltq_rregex, COMMUTATOR = '^~', RESTRICT = contsel, JOIN = contjoinsel ) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | e7be69f836c8349110324819 | CREATE OPERATOR >= ( PROCEDURE = isnge, LEFTARG = ean13, RIGHTARG = issn13, COMMUTATOR = <=, NEGATOR = <, RESTRICT = scalargtsel, JOIN = scalargtjoinsel) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_ROLE_STMT | e7cb847b7b4aced1339edc55 | CREATE USER regress_unpriv_user |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OP_FAMILY_STMT | e7d5ddc6a923801ade2d5901 | -- Likewise for the old spelling ~. ALTER OPERATOR FAMILY gist__int_ops USING gist DROP OPERATOR 14 (_int4, _int4) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_ROLE_STMT | e7d73effb6aed82609bca77c | CREATE ROLE regress_read_all_stats IN ROLE pg_read_all_stats |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DROP_STMT | e7e0f5d294e3276651d347b8 | -- fail DROP OPERATOR <<@@ (point, polygon) |
-| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_EXECUTE_STMT | e7eae7b015c4bf1e6eaadb9d | EXECUTE get_nnconstraint_info('{notnull_tbl1_child2}') |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_ROLE_SET_STMT | e7fdd0748ac1558f1fd227a6 | ALTER USER CURRENT_USER RESET application_name |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FUNCTION_STMT | e801a9d57e393c811704e343 | CREATE FUNCTION dup (f1 anycompatiblerange, f2 out anycompatible, f3 out anycompatiblearray, f4 out anycompatiblerange) AS 'select lower($1), array[lower($1), upper($1)], $1' LANGUAGE sql |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CLOSE_PORTAL_STMT | e82ae006cfe7ccc217554d95 | CLOSE foo14 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | e82d1107001bd0895282cfe1 | CREATE COLLATION test5 FROM test0 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | e83c2bcc912f0d4b9e6e4db6 | CREATE OPERATOR > ( PROCEDURE = isngt, LEFTARG = issn13, RIGHTARG = issn, COMMUTATOR = <, NEGATOR = <=, RESTRICT = scalargtsel, JOIN = scalargtjoinsel ) |
-| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_PREPARE_STMT | e83c6684ffcdf1d12181afe9 | PREPARE plancache_test3 AS WITH q AS MATERIALIZED (SELECT * FROM z2) SELECT * FROM q,z1 WHERE f_leak(z1.b) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | e85138928af14ffe977364b3 | -- N P N N -- should CREATE CREATE AGGREGATE myaggn09a(BASETYPE = int, SFUNC = tf1p, STYPE = int[], FINALFUNC = ffnp, INITCOND = '{}') |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_ROLE_STMT | e85bdc06feace95c9826f7b1 | CREATE ROLE regress_test_def_superuser |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_FETCH_STMT | e85d20ccd0f98a30ceb0aadb | FETCH 5 in foo5 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_OP_CLASS_STMT | e87c8de14fd19b2ce0011549 | -- Create the operator class CREATE OPERATOR CLASS gist_int2_ops DEFAULT FOR TYPE int2 USING gist AS OPERATOR 1 < , OPERATOR 2 <= , OPERATOR 3 = , OPERATOR 4 >= , OPERATOR 5 > , FUNCTION 1 gbt_int2... |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_ROLE_STMT | e8b18565e79fb5b54d4986d0 | ALTER ROLE regress_bypassrls BYPASSRLS |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_SEC_LABEL_STMT | e8ba19ac590c61166273837d | SECURITY LABEL ON TABLE tpart IS 'invalid security context' |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_OP_CLASS_STMT | e8d65f6884a09decaad0c40e | -- Create the operator class CREATE OPERATOR CLASS gist_date_ops DEFAULT FOR TYPE date USING gist AS OPERATOR 1 < , OPERATOR 2 <= , OPERATOR 3 = , OPERATOR 4 >= , OPERATOR 5 > , FUNCTION 1 gbt_date... |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | e8e037a91e05366a0e40c7e0 | CREATE OPERATOR = ( LEFTARG = ltree, RIGHTARG = ltree, PROCEDURE = ltree_eq, COMMUTATOR = '=', NEGATOR = '<>', RESTRICT = eqsel, JOIN = eqjoinsel, SORT1 = '<', SORT2 = '<' ) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_ROLE_STMT | e8edc45cb0eb28ff4d9ece2b | CREATE ROLE regress_alter_generic_user5 NOSUPERUSER |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_COMMENT_STMT | e8f4cb270860aeb08b8e992f | COMMENT ON TRANSFORM FOR jsonb LANGUAGE plpython3u IS 'transform between jsonb and Python' |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | e8f72c558af4100b2006eace | CREATE TEXT SEARCH CONFIGURATION dummy_tst (COPY=english) |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_FETCH_STMT | e90099e6c3c91496a7a7f77c | FETCH all in foo23 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OP_FAMILY_STMT | e92a002fc7cc223d275dff92 | ALTER OPERATOR FAMILY gist_inet_ops USING gist ADD OPERATOR 6 <> (inet, inet) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OP_FAMILY_STMT | e92e8b2a972f027fd28682ab | ALTER OPERATOR FAMILY gist_uuid_ops USING gist ADD FUNCTION 11 (uuid, uuid) gbt_uuid_sortsupport (internal) |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_FETCH_STMT | e9405160192cd4898dc5f166 | FETCH FIRST FROM tablesample_cur |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | e947081255115b12d1b0dcc1 | create aggregate tcl_sum ( sfunc = tcl_int4add, basetype = int4, stype = int4, initcond1 = 0 ) |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_SEC_LABEL_STMT | e95f47a332fd9c8e4be46537 | SECURITY LABEL ON PUBLICATION dummy_pub IS 'classified' |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OP_FAMILY_STMT | e9682c49ad7e7e3e173c91cf | -- operator # appears twice in same statement ALTER OPERATOR FAMILY alt_opf17 USING btree ADD OPERATOR 1 < (int4, int4) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_ROLE_STMT | e97c853742fee374857d48fd | CREATE ROLE regress_rolecreator CREATEROLE |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_OP_FAMILY_STMT | e9993fa374d4e361f45ccbee | CREATE OPERATOR FAMILY alt_opf2 USING hash |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_COMMENT_STMT | e99c02477bf31ce156ed4a77 | COMMENT ON INDEX ctlt1_b_key IS 'index b_key' |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_COMMENT_STMT | e9c05a493df5abbf862cf294 | COMMENT ON FUNCTION c_function_test() IS 'FUNCTION test' |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_COMMENT_STMT | e9dc80453be16ef5058e7cd2 | COMMENT ON COLUMN ctlt1.b IS 'B' |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_RENAME_STMT | e9dff8880c2274b4910e2dfb | ALTER ROLE regress_passwd2 RENAME TO regress_passwd2_new |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_COMMENT_STMT | e9e65be2ee0154b5f354aa65 | COMMENT ON CONSTRAINT noinh_con_copy_c_not_null ON noinh_con_copy IS 'not null c no inherit' |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_FETCH_STMT | e9e8b4d327e3305bd8dd4274 | -- should work FETCH ctt |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OPERATOR_STMT | e9fbbc6faba4ec504ca86428 | ALTER OPERATOR @ (_ltree, ltxtquery) SET (RESTRICT = matchingsel, JOIN = matchingjoinsel) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_ROLE_SET_STMT | ea271f1d76c67a6380996280 | ALTER ROLE regress_ae_role RESET auto_explain.bogus |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_FETCH_STMT | ea2c4717cdd339a5b8a3c680 | FETCH all in foo21 |
-| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_EXECUTE_STMT | ea3f0c59989feea06fbc780b | EXECUTE async_pt_query (3000, 505) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_OP_CLASS_STMT | ea40f85f1760d1c3f0e926a8 | -- create the operator class for gin CREATE OPERATOR CLASS gin_trgm_ops FOR TYPE text USING gin AS OPERATOR 1 % (text, text), FUNCTION 1 btint4cmp (int4, int4), FUNCTION 2 gin_extract_value_trgm (t... |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | ea41e827d7bba4d7a9aafa2d | CREATE OPERATOR <> ( PROCEDURE = isnne, LEFTARG = issn, RIGHTARG = issn, COMMUTATOR = <>, NEGATOR = =, RESTRICT = neqsel, JOIN = neqjoinsel) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OP_FAMILY_STMT | ea49d74d3f54f0ba5626a5e6 | ALTER OPERATOR FAMILY gist_bytea_ops USING gist ADD FUNCTION 11 (bytea, bytea) gbt_bytea_sortsupport (internal) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OPERATOR_STMT | ea6d2ca4bcf0a6ae76896998 | ALTER OPERATOR >= (isbn, isbn13) SET ( RESTRICT = scalargesel, JOIN = scalargejoinsel) |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DECLARE_CURSOR_STMT | ea73185be59e4f476a82e836 | DECLARE foo16 CURSOR FOR SELECT * FROM onek WHERE unique1 = 53 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | ea77c7466d616ec2a3971411 | -- invalid: non-lowercase quoted identifiers CREATE OPERATOR === ( "Leftarg" = box, "Rightarg" = box, "Procedure" = area_equal_function, "Commutator" = ===, "Negator" = !==, "Restrict" = area_restr... |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_OP_CLASS_STMT | ea7cc1daa1030bae54619473 | CREATE OPERATOR CLASS interval_ops DEFAULT FOR TYPE interval USING gin AS OPERATOR 1 <, OPERATOR 2 <=, OPERATOR 3 =, OPERATOR 4 >=, OPERATOR 5 >, FUNCTION 1 interval_cmp(interval,interval), FUNCTIO... |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OWNER_STMT | ea92345864acb107be51d6a9 | ALTER OPERATOR FAMILY alt_opf2 USING hash OWNER TO regress_alter_generic_user1 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_ROLE_SET_STMT | ead0f3f4c0c2df6d4b902b54 | ALTER USER "current_user" RESET application_name |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | ead2557c072fc4eacb3b8625 | create operator = ( procedure = int8alias1eq, leftarg = int8alias1, rightarg = int8alias1, commutator = =, restrict = eqsel, join = eqjoinsel, merges ) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | eaf84e5cda73977c409a5356 | CREATE OPERATOR <->> ( LEFTARG = text, RIGHTARG = text, PROCEDURE = word_similarity_dist_commutator_op, COMMUTATOR = '<<->' ) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OBJECT_SCHEMA_STMT | eb04f6df3243d7c36046be82 | alter operator alter1.=(alter1.ctype, alter1.ctype) set schema alter2 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OP_FAMILY_STMT | eb082db0f9347033a71c80a1 | -- procedure 1 appears twice in same statement ALTER OPERATOR FAMILY alt_opf17 USING btree ADD OPERATOR 1 < (int4, int2) , OPERATOR 2 <= (int4, int2) , OPERATOR 3 = (int4, int2) , OPERATOR 4 >= (in... |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_ROLE_STMT | eb48a87280b448335aa44f8a | ALTER USER regress_passwordcheck_user1 PASSWORD 'alessnicelongpassword' |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_ROLE_SET_STMT | eb5f627d3fa4c77baf8ee110 | ALTER ROLE SESSION_USER SET application_name to 'BAR' |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OP_FAMILY_STMT | eb6aa289137575b5ede99835 | ALTER OPERATOR FAMILY gist_vbit_ops USING gist ADD FUNCTION 12 ("any", "any") gist_translate_cmptype_btree (int) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_RENAME_STMT | eb87fd136ec603fb55c7af3c | ALTER ROLE regress_role_normal RENAME TO regress_role_abnormal |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | eb8f5461f61cdcd3a52dd369 | -- P P P P -- should ERROR: ffnp(anyarray) not matched by ffnp(int[]) CREATE AGGREGATE myaggn20a(BASETYPE = anyelement, SFUNC = tfp, STYPE = anyarray, FINALFUNC = ffnp, INITCOND = '{}') |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | eba216cbaa5a576bd468cc6a | -- nondeterministic collations CREATE COLLATION ctest_det (provider = icu, locale = '', deterministic = true) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | ec0b003e1f86ac233ceead8a | CREATE OPERATOR ==== ( LEFTARG = int, RIGHTARG = int, PROCEDURE = int4eq, COMMUTATOR = ==== ) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_ROLE_STMT | ec0cdadcaf31163159524655 | CREATE ROLE regress_passwd_sha_len2 PASSWORD 'SCRAM-SHA-256$4096:A6xHKoH/494E941doaPOYg==$Ky+A30sewHIH3VHQLRN9vYsuzlgNyGNKCh37dy96Rqw=:COPdlNiIkrsacU5QoxydEuOH6e/KfiipeETb/bPw8ZIAAAAAAAAAAAAAAAAAAA... |
-| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_EXECUTE_STMT | ec0df4b1e7fc8e2303e5bb2d | EXECUTE foo ('<bar/>') |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_OP_CLASS_STMT | ec11c51de8e33d2ec1a03f91 | -- -- Btree operator class for int_custom -- -- This is required for the type to be usable in extended statistics objects, -- for attributes and expressions. -- CREATE OPERATOR CLASS int_custom_ops... |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OP_FAMILY_STMT | ec1c799f9b115bd9f80c84cb | ALTER OPERATOR FAMILY gist_bpchar_ops USING gist ADD FUNCTION 9 (bpchar, bpchar) gbt_var_fetch (internal) |
-| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_EXPLAIN_STMT | ec5283bbd08a0b0d816cc332 | EXPLAIN (COSTS OFF) EXECUTE test(42, 3.14, '-1.5') |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OPERATOR_STMT | ec6ab1870734b3d2f26c64a8 | ALTER OPERATOR === (boolean, real) SET (NEGATOR = ===) |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_COMMENT_STMT | ec82faf8af658490ea8546cc | COMMENT ON FUNCTION _int_same(_int4, _int4) IS 'same as' |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DECLARE_CURSOR_STMT | ecc0acfca06e4de8903578ff | declare cur cursor for select left(a,10), b from (values(repeat('a', 512 * 1024),1),(repeat('b', 512),2)) v(a,b) order by v.a desc |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_COMMENT_STMT | eceddd4524f937f9ddc8a742 | COMMENT ON CONSTRAINT constrname ON FKTABLE IS NULL |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | ecf34d263f9d3d5aa5c5e778 | CREATE OPERATOR >= ( PROCEDURE = isnge, LEFTARG = isbn, RIGHTARG = isbn, COMMUTATOR = <=, NEGATOR = <, RESTRICT = scalargtsel, JOIN = scalargtjoinsel ) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OP_FAMILY_STMT | ed4a5f2cfc63b0f0c43e9e66 | ALTER OPERATOR FAMILY gist_bytea_ops USING gist ADD FUNCTION 12 ("any", "any") gist_translate_cmptype_btree (int) |
-| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_PREPARE_STMT | ed4ca30d5859e60c52c8ad20 | PREPARE p2(int) AS SELECT * FROM t1 WHERE a = $1 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_ROLE_STMT | ed630f0ad80fe2be74c3705c | ALTER GROUP regress_priv_group2 ADD USER regress_priv_user2 |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_COMMENT_STMT | ed7af8397a4248390215eecf | COMMENT ON FUNCTION cube_cmp(cube, cube) IS 'btree comparison function' |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | ed7d2551cdd052c291e938fe | -- leave a collation for pg_upgrade test CREATE COLLATION coll_icu_upgrade FROM "und-x-icu" |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | ed84c912c5c7a9f4e1cb7357 | CREATE OPERATOR <= ( PROCEDURE = isnle, LEFTARG = ismn13, RIGHTARG = ismn13, COMMUTATOR = >=, NEGATOR = >, RESTRICT = scalarltsel, JOIN = scalarltjoinsel) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | ed916b82004def793565e1ad | CREATE OPERATOR ~ ( LEFTARG = _int4, RIGHTARG = _int4, PROCEDURE = _int_contained, COMMUTATOR = '@', RESTRICT = _int_contained_sel, JOIN = _int_contained_joinsel ) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | ed9e1bf99e98bcdad001605f | CREATE OPERATOR - ( LEFTARG = hstore, RIGHTARG = hstore, PROCEDURE = delete ) |
-| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_EXPLAIN_STMT | edcbf5f978bbf24fcd36a435 | EXPLAIN (COSTS OFF) EXECUTE pstmt('1', make_some_array(1,2)) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OP_FAMILY_STMT | ede214423beea2a0280f905e | -- operator number should be between 1 and 5 ALTER OPERATOR FAMILY alt_opf4 USING btree ADD OPERATOR 1 < |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_ROLE_STMT | edf374a25d0b2a19b3e050a3 | -- check ownership of the source table CREATE ROLE regress_test_me |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_ROLE_STMT | edfd2c69bbe8afcdb5ad999f | -- fail, cannot be changed -- Finished testing superuser -- Create non-superuser with privileges to configure host resource usage CREATE ROLE regress_host_resource_admin NOSUPERUSER |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_ROLE_STMT | ee01eee2e90780ba185c551c | CREATE ROLE regress_adminroles ADMIN regress_role_super, regress_createdb, regress_createrole, regress_login, regress_inherit, regress_connection_limit, regress_encrypted_password, regress_password... |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_ROLE_STMT | ee0c59a8072e64a91036a5a3 | -- privileges CREATE USER regress_identity_user1 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | ee17edf1194bdc39e4e2397b | CREATE OPERATOR < ( PROCEDURE = isnlt, LEFTARG = ean13, RIGHTARG = isbn13, COMMUTATOR = >, NEGATOR = >=, RESTRICT = scalarltsel, JOIN = scalarltjoinsel) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_OP_CLASS_STMT | ee199e3dc5912edc4a789c40 | CREATE OPERATOR CLASS float4_ops DEFAULT FOR TYPE float4 USING gin AS OPERATOR 1 <, OPERATOR 2 <=, OPERATOR 3 =, OPERATOR 4 >=, OPERATOR 5 >, FUNCTION 1 btfloat4cmp(float4,float4), FUNCTION 2 gin_e... |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_ROLE_STMT | ee1fb5577b6ea2dc140996d1 | CREATE ROLE regress_session_user |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | ee473d00f1c7ab78a84090a6 | -- but we can make a non-poly agg from a poly sfunc if types are OK create aggregate build_group(int8, integer) ( SFUNC = add_group, STYPE = int8[] ) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_ROLE_STMT | ee5f2ae8801a0a5aed38669f | ALTER ROLE regress_priv_user1 NOINHERIT |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DECLARE_CURSOR_STMT | ee6b427a32a4b9b0874b0d40 | declare local_portal cursor for select * from toasted_data |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DECLARE_CURSOR_STMT | ee74b05840943f21466ecdc7 | -- Don't select an actual value out of the table as the order of the Append's -- subnodes may not be stable. declare cur SCROLL CURSOR for select 1 from list_part where a > (select 1) and a < (sele... |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_ROLE_STMT | ee8eff0a4900e39c0e8e0002 | CREATE ROLE regress_role_joe |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OP_FAMILY_STMT | ee90717ebdff32399b150839 | ALTER OPERATOR FAMILY gin_trgm_ops USING gin ADD OPERATOR 5 pg_catalog.~ (text, text), OPERATOR 6 pg_catalog.~* (text, text) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | ee95a25010b679481a0934b4 | create aggregate my_sum(int4) ( stype = int4, sfunc = sum_transfn ) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | eea36ab5bdba3108d692b3d2 | CREATE OPERATOR !== ( PROCEDURE = int8ne, LEFTARG = bigint, RIGHTARG = bigint, NEGATOR = ===, COMMUTATOR = !== ) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_ROLE_SET_STMT | eec7d054ddc78f67deb39041 | ALTER ROLE ALL RESET application_name |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_OP_CLASS_STMT | eec81660764253772319d032 | CREATE OPERATOR CLASS macaddr8_ops DEFAULT FOR TYPE macaddr8 USING gin AS OPERATOR 1 <, OPERATOR 2 <=, OPERATOR 3 =, OPERATOR 4 >=, OPERATOR 5 >, FUNCTION 1 macaddr8_cmp(macaddr8, macaddr8), FUNCTI... |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_ROLE_STMT | eecf96df7b4303610f0d00c2 | -- test role grantor machinery CREATE ROLE regress_group |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | eed4d5dfbfc177d2f59937f4 | CREATE TEXT SEARCH CONFIGURATION alt_ts_conf1 (copy=english) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | eed82b0001c936a7b6266787 | CREATE OPERATOR <= ( PROCEDURE = isnle, LEFTARG = issn, RIGHTARG = issn13, COMMUTATOR = >=, NEGATOR = >, RESTRICT = scalarltsel, JOIN = scalarltjoinsel) |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_COMMENT_STMT | eeed39f24ee0e4b593a526fc | COMMENT ON CONSTRAINT the_constraint ON DOMAIN no_comments_dom IS 'another bad comment' |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | ef1e17d13f1fee577f8310b6 | CREATE OPERATOR >= ( PROCEDURE = isnge, LEFTARG = ean13, RIGHTARG = ismn13, COMMUTATOR = <=, NEGATOR = <, RESTRICT = scalargtsel, JOIN = scalargtjoinsel) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OPERATOR_STMT | ef3ce2b9cb4b9032f04b2881 | ALTER OPERATOR <% (text, text) SET (RESTRICT = matchingsel, JOIN = matchingjoinsel) |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_COMMENT_STMT | ef3ea496c755e3812512b177 | COMMENT ON COLUMN ctl_table.b IS 'Column b' |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | ef3f337baaafe5572b6a7344 | -- the comparison operators have funky names (and are undocumented) -- in an attempt to discourage anyone from actually using them. they -- only exist to support the btree opclass CREATE OPERATOR #... |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_ROLE_STMT | ef43fb5fcb4028648a489215 | CREATE ROLE regress_justforcomments NOLOGIN |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_OP_CLASS_STMT | ef53edb911baec028e8b898d | CREATE OPERATOR CLASS alt_opc1 FOR TYPE uuid USING hash AS STORAGE uuid |
-| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_EXPLAIN_STMT | ef5a525a990a7191c13a4323 | explain (analyze, costs off, summary off, timing off, buffers off) execute mt_q1(15) |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_FETCH_STMT | ef6f0861b79a7f3950068829 | fetch backward all in c5 |
-| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_EXECUTE_STMT | ef8396c9f61b9df0b2e7cc20 | EXECUTE pstmt('1', make_some_array(1,2)) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | ef8c1db57b5d972b24863407 | -- P N P N -- should ERROR: tfnp(anyarray, anyelement) not matched by tfnp(int[],int) CREATE AGGREGATE myaggp15a(BASETYPE = anyelement, SFUNC = tfnp, STYPE = anyarray, FINALFUNC = ffp, INITCOND = '... |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_FETCH_STMT | efbb6eabe3dda017b6da8b2f | fetch 1 in c3 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_OP_CLASS_STMT | efdbdf7056da03679f1cecb8 | -- no fetch support, the compress function is lossy -- Create the operator class CREATE OPERATOR CLASS gist_cidr_ops DEFAULT FOR TYPE cidr USING gist AS OPERATOR 1 < (inet, inet) , OPERATOR 2 <= (i... |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_ROLE_STMT | efde7a00c7263ac327fd3715 | CREATE ROLE regress_signal_backend IN ROLE pg_signal_backend |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | efe754ed87b7ecc6719c25fa | -- LOCALE CREATE COLLATION case_sensitive (LOCALE = '', LOCALE = "NONSENSE") |
-| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEALLOCATE_STMT | efea83fedac320f2de86f9eb | DEALLOCATE ALL |
-| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_SELECT_STMT | f0478c01276a8811db9d7f3a | SELECT row_to_json(j)::jsonb FROM ( SELECT left(E'abcdefghijklmnopqrstuv"\\twxyz012345678', a) AS a FROM generate_series(0,37) a ) j |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_FETCH_STMT | f04b99bca4af7fb6138b71fc | FETCH PRIOR c |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CLOSE_PORTAL_STMT | f06c9c8ce25e62d8c1bca4b1 | CLOSE foo20 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OP_FAMILY_STMT | f07a2e6afdfdcb2d22bd4046 | ALTER OPERATOR FAMILY gist_numeric_ops USING gist ADD OPERATOR 6 <> (numeric, numeric) , FUNCTION 9 (numeric, numeric) gbt_var_fetch (internal) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | f0a6774b2db2936cd9b4f2bb | -- VERSION CREATE COLLATION coll_dup_chk (VERSION = '1', VERSION = "NONSENSE", LOCALE = '') |
-| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_SELECT_STMT | f0b12e7745f8a7440094f498 | select delete('aa=>1 , b=>2, c=>3'::hstore, 'aa=>1, b=>2, c=>3'::hstore) |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_COMMENT_STMT | f0c015e0b2d466fee59ee41b | COMMENT ON TRIGGER before_ins_stmt_trig ON main_table IS NULL |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_FETCH_STMT | f0c12d4a245c42c7ff6e631e | FETCH backward 18 in foo6 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OWNER_STMT | f0eec7fc8f46d9fe1e35ad70 | ALTER OPERATOR FAMILY alt_opf1 USING hash OWNER TO regress_alter_generic_user2 |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DECLARE_CURSOR_STMT | f10370f165fb9ff91f79d7b6 | declare c4 cursor for select * from int8_tbl offset 10 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OWNER_STMT | f104c18c552629dd08e168f5 | ALTER AGGREGATE testagg2(int2) OWNER TO "current_user" |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_ROLE_STMT | f124e5e4718c09cb114e15ec | CREATE ROLE regress_subscription_user3 IN ROLE pg_create_subscription |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_ROLE_SET_STMT | f1480fadc54f055ead6e9cac | ALTER USER regress_testrol1 SET application_name to 'SLAM' |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OP_FAMILY_STMT | f16c6795133b1dd752298852 | ALTER OPERATOR FAMILY gist__intbig_ops USING gist DROP OPERATOR 8 (_int4, _int4) |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CLOSE_PORTAL_STMT | f172a0746a01a86c748c8f50 | CLOSE foo16 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OPERATOR_STMT | f17fe090db5e61f3ce50ad85 | ALTER OPERATOR >= (seg, seg) SET ( RESTRICT = scalargesel, JOIN = scalargejoinsel ) |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DECLARE_CURSOR_STMT | f18de0ff7e57ad71ec52b8b5 | DECLARE c CURSOR FOR SELECT ctid, * FROM tidscan WHERE ctid = ANY(ARRAY['(0,1)', '(0,2)']::tid[]) |
-| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_PREPARE_STMT | f1b2c3ab7a594d4302236d0f | -- As above, but swap the PARAM_EXEC Param to the first partition level prepare ab_q3 (int, int) as select a from ab where b between $1 and $2 and a < (select 3) |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_FETCH_STMT | f1b6a01da69ee224f52b0fdf | FETCH FROM c1 |
-| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_PREPARE_STMT | f1ca5bbde6e6a5dd79ee1ff1 | PREPARE stat_select AS SELECT $1 AS a |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DECLARE_CURSOR_STMT | f1d50c4f560cfbb837569ef8 | DECLARE foo25ns NO SCROLL CURSOR WITH HOLD FOR SELECT * FROM tenk2 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OPERATOR_STMT | f1daeb171f5b763cabe0ddce | ALTER OPERATOR @ (hstore, hstore) SET (RESTRICT = matchingsel, JOIN = matchingjoinsel) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OP_FAMILY_STMT | f1e2e0de160ce34dc8967f3e | ALTER OPERATOR FAMILY gist_int4_ops USING gist ADD FUNCTION 11 (int4, int4) gbt_int4_sortsupport (internal) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_RENAME_STMT | f2259fe4ae38e2bda688d8aa | -- failed (not owner) ALTER OPERATOR FAMILY alt_opf1 USING hash RENAME TO alt_opf4 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_ROLE_STMT | f22dce34391a3c427a0fb7de | ALTER USER regress_passwordcheck_user1 PASSWORD 'a_nice_long_password' |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_SEC_LABEL_STMT | f2501f8c0499ecf5f844e1f2 | SECURITY LABEL ON FUNCTION f5(text) IS 'system_u:object_r:sepgsql_regtest_trusted_proc_exec_t:s0' |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_COMMENT_STMT | f29feef8f0ba526dcba191e8 | -- Test comments COMMENT ON TRIGGER no_such_trigger ON main_table IS 'wrong' |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | f2afe0495b676a466d497216 | -- P N P P -- should ERROR: tf2p(anyarray, anyelement) not matched by tf2p(int[],anyelement) CREATE AGGREGATE myaggn16a(BASETYPE = anyelement, SFUNC = tf2p, STYPE = anyarray, FINALFUNC = ffnp, INIT... |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | f2be05f12843463ab75d7686 | -- Should fail. Procedure should be mandatorily specified CREATE OPERATOR #@%# ( rightarg = int8 ) |
-| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_EXECUTE_STMT | f2c2917669d60251421ab01c | -- ok EXECUTE ins(10, ARRAY[4,5]) |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_FETCH_STMT | f2ce415a933b9f0c9a7e5430 | FETCH backward 13 in foo11 |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_COMMENT_STMT | f2e6511d641b4da83c363237 | -- test comments COMMENT ON INDEX six_wrong IS 'bad index' |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_COMMENT_STMT | f2e67d3a00dfb3880b799e8d | COMMENT ON TYPE default_test_row IS NULL |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OWNER_STMT | f2eb204af13a5ca96527622e | -- OK ALTER OPERATOR FAMILY alt_opf2 USING hash OWNER TO regress_alter_generic_user2 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OPERATOR_STMT | f2f8b43907e3ce12d6406b7b | ALTER OPERATOR ^~ (ltree, lquery) SET (RESTRICT = matchingsel, JOIN = matchingjoinsel) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OP_FAMILY_STMT | f31e44332734fab1b65deb0e | ALTER OPERATOR FAMILY gist_seg_ops USING gist drop function 3 (seg) |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_COMMENT_STMT | f34a31f8c69b1487b80bcb5b | COMMENT ON FUNCTION cube_ge(cube, cube) IS 'greater than or equal to' |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OP_FAMILY_STMT | f367839f804884c8838a53a5 | ALTER OPERATOR FAMILY gist_text_ops USING gist ADD FUNCTION 12 ("any", "any") gist_translate_cmptype_btree (int) |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_SEC_LABEL_STMT | f377a00aaff8e2058b71f4b4 | SECURITY LABEL ON DOMAIN dummy_seclabel_domain IS 'classified' |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_FETCH_STMT | f380e3c597fd6b2df81bd971 | FETCH backward 3 in foo21 |
-| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_EXECUTE_STMT | f38c30d46b6bdb00affe519d | EXECUTE st8 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OP_FAMILY_STMT | f38da9d68d0ae64a01f67932 | ALTER OPERATOR FAMILY gist_time_ops USING gist ADD OPERATOR 6 <> (time, time) , OPERATOR 15 <-> (time, time) FOR ORDER BY pg_catalog.interval_ops , FUNCTION 8 (time, time) gbt_time_distance (intern... |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_COMMENT_STMT | f3a40852abb572ecbfd907f3 | COMMENT ON INDEX six IS 'add the comment back' |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FUNCTION_STMT | f3b18dbfc3bc8fec3ced3725 | CREATE FUNCTION test_in_out_params(first in text, second out text) AS $$ return first + '_in_to_out'; $$ LANGUAGE plpython3u |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | f3bc07afde911b9f2677cfdc | -- aggregate that only cares about null/nonnull input CREATE AGGREGATE newcnt ("any") ( sfunc = int8inc_any, stype = int8, initcond = '0' ) |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_COMMENT_STMT | f3db0044c58a2c2c0be16b1d | COMMENT ON SEQUENCE sequence_test2 IS NULL |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | f3f14f55ad03465dff038df5 | -- old-style spelling of same (except without parallel-safe; that's too new) CREATE AGGREGATE oldcnt ( sfunc = int8inc, basetype = 'ANY', stype = int8, initcond = '0' ) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | f41fc137e2a6a9ed1416a398 | --not-indexed CREATE OPERATOR ^~ ( LEFTARG = ltree, RIGHTARG = lquery, PROCEDURE = ltq_regex, COMMUTATOR = '^~', RESTRICT = contsel, JOIN = contjoinsel ) |
-| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_EXPLAIN_STMT | f42167da48dd3eaf50021331 | -- Ensure output list looks sane when the MergeAppend has no subplans. explain (analyze, verbose, costs off, summary off, timing off, buffers off) execute mt_q2 (35) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_OP_CLASS_STMT | f449082160f3af812a996266 | -- Operator classes CREATE OPERATOR CLASS int4_ops DEFAULT FOR TYPE int4 USING dummy_index_am AS OPERATOR 1 = (int4, int4), FUNCTION 1 hashint4(int4) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OPERATOR_STMT | f46ecbf3a484ebd85b103d2f | ALTER OPERATOR <= (issn13, issn) SET ( RESTRICT = scalarlesel, JOIN = scalarlejoinsel) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_OP_CLASS_STMT | f4adc73a78b457a8f4cffa3c | CREATE OPERATOR CLASS test_int4_ops FOR TYPE int4 USING btree AS OPERATOR 1 < (int4,int4), OPERATOR 2 <= (int4,int4), OPERATOR 3 = (int4,int4), OPERATOR 4 >= (int4,int4), OPERATOR 5 > (int4,int4), ... |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_ROLE_STMT | f4b57be2cb8f7f36bcd0d9ca | CREATE ROLE regress_publication_user_dummy LOGIN NOSUPERUSER |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_OP_CLASS_STMT | f4c34d9a629cc387ed8f5516 | -- Create the operator class CREATE OPERATOR CLASS gist_uuid_ops DEFAULT FOR TYPE uuid USING gist AS OPERATOR 1 < , OPERATOR 2 <= , OPERATOR 3 = , OPERATOR 4 >= , OPERATOR 5 > , FUNCTION 1 gbt_uuid... |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_SEC_LABEL_STMT | f4d09446b9c79947b74c6b0e | SECURITY LABEL ON TABLE seclabel_tbl1 IS '...invalid label...' |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OP_FAMILY_STMT | f4f911a29af1e83c11f6c060 | -- Add operators that are new in 9.1. ALTER OPERATOR FAMILY gin_trgm_ops USING gin ADD OPERATOR 3 pg_catalog.~~ (text, text), OPERATOR 4 pg_catalog.~~* (text, text) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | f4fb3468b5806758f838d663 | -- N P N P -- should CREATE CREATE AGGREGATE myaggn10a(BASETYPE = int, SFUNC = tfp, STYPE = int[], FINALFUNC = ffnp, INITCOND = '{}') |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_FETCH_STMT | f54e0f5fd501c782658ff3e8 | fetch all in c2 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DROP_STMT | f573b1511645b8e4d09388ca | DROP OPERATOR FAMILY alt_opf18 USING btree |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | f575f2fdc811db1d6fd3734e | -- invalid: bad parallel-safety marking CREATE AGGREGATE mysum (int) ( stype = int, sfunc = int4pl, parallel = pear ) |
-| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_EXPLAIN_STMT | f5ad445d37bc52f52527adc1 | EXPLAIN (VERBOSE, COSTS OFF) EXECUTE st3(10, 20) |
-| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_EXPLAIN_STMT | f5b04b789ec7c2accec37b27 | explain (analyze, costs off, summary off, timing off, buffers off) execute q1 (1,1) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_EXPLAIN_STMT | f5b50c4e5af356f121af327c | explain (costs off) declare c1 cursor for select (select 42) as x |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OPERATOR_STMT | f5c39efc6c188ba12238a39a | ALTER OPERATOR ^@> (ltree, _ltree) SET (RESTRICT = matchingsel, JOIN = matchingjoinsel) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_ROLE_STMT | f5fb544ca27d8d1c45f12ec3 | CREATE ROLE regress_role_super SUPERUSER |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | f5fe16b5aa82d7d14333d6c4 | -- LOCALE conflicts with LC_COLLATE CREATE COLLATION coll_dup_chk (LC_COLLATE = "POSIX", LOCALE = '') |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | f602043cf14f83fb24005d44 | CREATE OPERATOR <> ( PROCEDURE = isnne, LEFTARG = ean13, RIGHTARG = upc, COMMUTATOR = <>, NEGATOR = =, RESTRICT = neqsel, JOIN = neqjoinsel) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | f60e0a132b51ed78070f3279 | CREATE OPERATOR <= ( PROCEDURE = isnle, LEFTARG = ismn13, RIGHTARG = ean13, COMMUTATOR = >=, NEGATOR = >, RESTRICT = scalarltsel, JOIN = scalarltjoinsel) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_ROLE_SET_STMT | f60e2d698cc9dbeb4ff2d124 | ALTER USER SESSION_USER SET application_name to 'BAR' |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | f61902856773bc6c324ae498 | CREATE OPERATOR \|\| ( LEFTARG = hstore, RIGHTARG = hstore, PROCEDURE = hs_concat ) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | f64bad2cd341f19b9e90b97a | -- P N -- should ERROR: stfnp(anyarray) not matched by stfnp(int[]) CREATE AGGREGATE myaggn02a(*) (SFUNC = stfnp, STYPE = anyarray, FINALFUNC = ffnp, INITCOND = '{}') |
-| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_EXPLAIN_STMT | f66be201bd3df19e4c901268 | explain (analyze, costs off, summary off, timing off, buffers off) execute ps1(1) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | f67a35b8c5c202967ea3ce8c | CREATE OPERATOR >= ( PROCEDURE = isnge, LEFTARG = issn13, RIGHTARG = issn, COMMUTATOR = <=, NEGATOR = <, RESTRICT = scalargtsel, JOIN = scalargtjoinsel ) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | f6baa8d9664b912a10d2ae9f | CREATE TEXT SEARCH CONFIGURATION ispell_tst ( COPY=english ) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_ROLE_STMT | f75b47a595e49119f73a1460 | CREATE ROLE regress_execute_server_program IN ROLE pg_execute_server_program |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_ROLE_STMT | f775f9af0cc57f0ed7a87ab3 | ALTER USER regress_passwordcheck_user1 PASSWORD 'tooshrt' |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | f796261be6ca18d66a53fe0d | create operator @< ( leftarg = int4, rightarg = int4, procedure = tcl_int4lt ) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | f7abc1b57432b591923dfc6a | CREATE OPERATOR ?\| ( LEFTARG = hstore, RIGHTARG = text[], PROCEDURE = exists_any, RESTRICT = contsel, JOIN = contjoinsel ) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | f7bc485fa7598eaf141e8462 | CREATE AGGREGATE balk(int4) ( SFUNC = int4_sum(int8, int4), STYPE = int8, COMBINEFUNC = balkifnull(int8, int8), PARALLEL = SAFE, INITCOND = '0' ) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | f7d86c2a56fa202954b0d301 | CREATE OPERATOR > ( PROCEDURE = isngt, LEFTARG = issn, RIGHTARG = ean13, COMMUTATOR = <, NEGATOR = <=, RESTRICT = scalargtsel, JOIN = scalargtjoinsel ) |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DECLARE_CURSOR_STMT | f7e0ed414c3af80a8b514321 | DECLARE foo CURSOR FOR SELECT * FROM pxtest4 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FUNCTION_STMT | f7f5169e6adf67a4d1d49083 | CREATE PROCEDURE p1(v_cnt int, v_Text inout text = NULL) AS $$ BEGIN v_Text := 'v_cnt = ' \|\| v_cnt; END $$ LANGUAGE plpgsql |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_ROLE_SET_STMT | f7f94d57a2342113e227ab31 | -- error ALTER USER nonexistent SET application_name to 'BOMB' |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_OP_FAMILY_STMT | f811f9a97a1ea4e173e51a68 | CREATE OPERATOR FAMILY alt_opf15 USING hash |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_ROLE_STMT | f84cf07f661e84ab3a43d207 | -- -- DEPENDENCIES -- CREATE USER regress_dep_user |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_ROLE_STMT | f897bbdebbce91cf2843f926 | ALTER USER "Public" WITH REPLICATION |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OPERATOR_STMT | f89d2a4611f8a5d6e8a3cd37 | ALTER OPERATOR ^~ (lquery, ltree) SET (RESTRICT = matchingsel, JOIN = matchingjoinsel) |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DECLARE_CURSOR_STMT | f8c5d7886d273d77d7634b8c | DECLARE c CURSOR FOR SELECT ctid,cmin,* FROM combocidtest |
-| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_PREPARE_STMT | f8fc95a48a51803e76295f6d | PREPARE p1(int, int, int, int, int) AS SELECT * FROM test_squash WHERE id = ANY(ARRAY[$1, $2, $3, $4, $5]) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DROP_STMT | f90454d92d2b9b1112f44ec7 | DROP AGGREGATE regtest_agg(int) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | f907c1462891b9634205bd8d | -- can't change to a different kind: CREATE OR REPLACE AGGREGATE myavg (order by numeric) ( stype = numeric, sfunc = numeric_add ) |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DECLARE_CURSOR_STMT | f939c8814274fec22827215e | DECLARE bc BINARY CURSOR FOR SELECT * FROM tenk1 |
-| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEALLOCATE_STMT | f989943239180160ae608fce | deallocate ab_q6 |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_FETCH_STMT | f9a08e0bbdc332a26321bb8d | FETCH backward 21 in foo3 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | f9b6b624295111b5220e2905 | -- P N N N -- should ERROR: tfnp(anyarray, int) not matched by tfnp(int[],int) CREATE AGGREGATE myaggn13a(BASETYPE = int, SFUNC = tfnp, STYPE = anyarray, FINALFUNC = ffnp, INITCOND = '{}') |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_ROLE_STMT | f9ec7ab44b1e0968b838a4d0 | CREATE ROLE regress_maintain_all IN ROLE pg_maintain |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | f9ee25cd89708f47b5f750cb | -- fail - user-defined collations are not allowed CREATE COLLATION user_collation FROM "C" |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | f9f9a9a2ea5b90b8b70d7591 | CREATE AGGREGATE max(citext) ( SFUNC = citext_larger, STYPE = citext, SORTOP = >, PARALLEL = SAFE, COMBINEFUNC = citext_larger ) |
-| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEALLOCATE_STMT | fa0634beb40cb28b4f006319 | deallocate pstmt_def_insert |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DROP_STMT | fa1c0407b20191bb408f653a | DROP OPERATOR === (boolean, real) |
-| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_EXPLAIN_STMT | fa246bd3bb2f44d091060a58 | explain (analyze, costs off, summary off, timing off, buffers off) execute ab_q1 (2, 2, 3) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_ROLE_STMT | fa24c90b57637d152884c458 | ALTER ROLE "session_user" WITH REPLICATION |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | fb000d46372348acb5ae4921 | CREATE OPERATOR + ( LEFTARG = _int4, RIGHTARG = _int4, COMMUTATOR = +, PROCEDURE = intarray_push_array ) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | fb251decd3ea98756e75cc8d | CREATE OPERATOR - ( LEFTARG = hstore, RIGHTARG = text[], PROCEDURE = delete ) |
-| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_SELECT_STMT | fb3d2a080874463e71772fe9 | select delete('a=>1 , b=>2, c=>3'::hstore, 'd') |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DROP_ROLE_STMT | fb6882a016d07f9c7548de68 | DROP GROUP regress_test_g2 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | fbb40aea1e2be6d6cb69a9ac | -- deserialfunc must have correct parameters CREATE AGGREGATE myavg (numeric) ( stype = internal, sfunc = numeric_avg_accum, serialfunc = numeric_avg_serialize, deserialfunc = numeric_avg_serialize ) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_ROLE_STMT | fc22dc2648ba0a793c435662 | CREATE USER regress_priv_user4 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | fc3383948df624aeceea2053 | CREATE OR REPLACE AGGREGATE sum3 (int8,int8,int8) ( stype = int8, sfunc = sum4 ) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OP_FAMILY_STMT | fca5e0e19d6671203ee5d50c | ALTER OPERATOR FAMILY alt_opf11 USING gist DROP OPERATOR 1 (int4, int4) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OP_FAMILY_STMT | fccb9de0dc82bdbb9ad7f755 | ALTER OPERATOR FAMILY gist_cash_ops USING gist ADD OPERATOR 6 <> (money, money) , OPERATOR 15 <-> (money, money) FOR ORDER BY pg_catalog.money_ops , FUNCTION 8 (money, money) gbt_cash_distance (int... |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_ROLE_STMT | fcda7792833fbde795b0c802 | CREATE ROLE regress_passwd5 PASSWORD 'md5e73a4b11df52a6068f8b39f90be36023' |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_SEC_LABEL_STMT | fcdff3aaee07fa85ce6984cc | SECURITY LABEL ON COLUMN t1p.o IS 'system_u:object_r:sepgsql_table_t:s0' |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_ROLE_STMT | fd390c5dc931914f2fd2078b | ALTER USER "current_role" WITH REPLICATION |
-| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_PREPARE_STMT | fd882e3287e0b13e9b62162e | PREPARE cprep AS SELECT name, statement, is_holdable, is_binary, is_scrollable FROM pg_cursors |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_OP_CLASS_STMT | fd8d7d25c0829b5bb4c81cd6 | CREATE OPERATOR CLASS ismn_ops DEFAULT FOR TYPE ismn USING hash FAMILY isn_ops AS OPERATOR 1 =, FUNCTION 1 hashismn(ismn) |
-| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_EXECUTE_STMT | fe1069b264ba0ab1817e2d7f | --EXPLAIN (ANALYZE ON, COSTS OFF, SUMMARY OFF, TIMING OFF) execute foom2 (1, 1) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_OP_CLASS_STMT | fe2210cfcbb39b56cb7542e9 | -- Create the operator class for indexing CREATE OPERATOR CLASS gist__int_ops DEFAULT FOR TYPE _int4 USING gist AS OPERATOR 3 &&, OPERATOR 6 = (anyarray, anyarray), OPERATOR 7 @>, OPERATOR 8 <@, OP... |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OPERATOR_STMT | fe299da5cc74e87e6f45beca | ALTER OPERATOR & (bit, bit) SET ("Restrict" = _int_contsel, "Join" = _int_contjoinsel) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OP_FAMILY_STMT | fe80ed8caba301abffa6fc99 | alter operator family integer_ops using btree add operator 1 < (int8alias1, int8alias1) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | fe83bacd767bbd20deffdb75 | CREATE TEXT SEARCH TEMPLATE unaccent ( INIT = unaccent_init, LEXIZE = unaccent_lexize ) |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DECLARE_CURSOR_STMT | fe9f539f78528bb332cbc524 | DECLARE foo13 SCROLL CURSOR FOR SELECT * FROM tenk1 ORDER BY unique2 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_ROLE_STMT | fea3063cb45a8477cc0a4612 | -- -- Tests for privileges on GUCs. -- This is unsafe because changes will affect other databases in the cluster. -- -- Test with a superuser role. CREATE ROLE regress_admin SUPERUSER |
-| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_EXECUTE_STMT | fea38391f824736e0fd074f7 | EXECUTE q1 |
-| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_EXPLAIN_STMT | fead0ed8ab315bac2ab00daa | EXPLAIN (VERBOSE, COSTS OFF) EXECUTE st1(1, 2) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | feca60ef8aba02a209fa8740 | create aggregate my_rank(VARIADIC "any" ORDER BY VARIADIC "any") ( stype = internal, sfunc = ordered_set_transition_multi, finalfunc = rank_final, finalfunc_extra = true, hypothetical ) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | fece9739c9c1eaad76269453 | CREATE OPERATOR &< ( LEFTARG = seg, RIGHTARG = seg, PROCEDURE = seg_over_left, RESTRICT = positionsel, JOIN = positionjoinsel ) |
-| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_EXECUTE_STMT | fed6b55720188959143f95a9 | EXECUTE q2('postgres') |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_ROLE_STMT | fedc8a134df77dc7ade2121c | ALTER ROLE regress_test_createdb WITH NOCREATEDB |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_ROLE_STMT | fef1c30b63306bdc95f75348 | CREATE ROLE regress_subscription_user_dummy LOGIN NOSUPERUSER |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | fef273a011f89d701cce68ef | CREATE OPERATOR ^~ ( LEFTARG = lquery, RIGHTARG = _ltree, PROCEDURE = _ltq_rregex, COMMUTATOR = '^~', RESTRICT = contsel, JOIN = contjoinsel ) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_ROLE_STMT | fef4584b6edcce210344a2f8 | CREATE USER regress_rls_carol NOLOGIN |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | fefd330c23d9574fa3e0e5b1 | CREATE AGGREGATE testagg5(int2) (SFUNC = int2_sum, STYPE = int8) |
-| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_EXECUTE_STMT | ff777e78ba55bed16d6532da | EXECUTE prepstmt |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DEFINE_STMT | ff8a5073f33ee2ecd9a40198 | CREATE OPERATOR <> ( PROCEDURE = isnne, LEFTARG = issn, RIGHTARG = issn13, COMMUTATOR = <>, NEGATOR = =, RESTRICT = neqsel, JOIN = neqjoinsel) |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_FETCH_STMT | ffb93a206b4191380bd51fa1 | FETCH backward 19 in foo5 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_ROLE_STMT | ffc4dcb7b8345cec6e930309 | ALTER ROLE regress_tenant NOINHERIT NOLOGIN CONNECTION LIMIT 7 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OP_FAMILY_STMT | ffda72248b916796dabcf43c | ALTER OPERATOR FAMILY gist_timestamp_ops USING gist ADD OPERATOR 6 <> (timestamp, timestamp) , OPERATOR 15 <-> (timestamp, timestamp) FOR ORDER BY pg_catalog.interval_ops , FUNCTION 8 (timestamp, t... |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_ROLE_STMT | fff60c164c0fe0c1bbd4721b | -- schema manipulation commands CREATE ROLE regress_test_role |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_FOREIGN_SERVER_STMT | 00248bd552e1607b5386b276 | -- ERROR ALTER SERVER file_server OPTIONS (ADD force_null '*') |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_POLICY_STMT | 00306a3d0ab89065f143fc58 | CREATE POLICY p1 ON document FOR SELECT USING (cid = (SELECT cid from category WHERE cname = 'novel')) |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OWNER_STMT | 0098c4db66442d27906e9d84 | ALTER SERVER s5 OWNER TO regress_test_role |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | 0293644918cc5b1e9d246a22 | CREATE TABLE badcompresstbl (a text COMPRESSION I_Do_Not_Exist_Compression) |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_POLICY_STMT | 034361621d936063238fcf03 | CREATE POLICY pa_target_pol ON pa_target USING (tid != 0) |
+| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DROP_USER_MAPPING_STMT | 03563ac8a5541dddd7e57f37 | DROP USER MAPPING IF EXISTS FOR user SERVER ss4 |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_POLICY_STMT | 03c34d867c391c8e5b21b318 | ALTER POLICY pp1 ON part_document USING (dauthor = current_user) |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 03f6935befd7b9ae47b30db2 | ALTER FOREIGN TABLE IF EXISTS doesnt_exist_ft1 OPTIONS (DROP delimiter, SET quote '~', ADD escape '@') |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | 0466786e3d699453fe76bbb6 | create statistics atref_stat on ((b).a is not null) from atref |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_FDW_STMT | 047c074cc536916514e5f1e9 | -- ERROR ALTER FOREIGN DATA WRAPPER foo HANDLER test_fdw_handler |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_USER_MAPPING_STMT | 0492b182499f59bd651aa1d8 | CREATE USER MAPPING FOR regress_testrolx SERVER sv9 OPTIONS (user 'regress_testrolx') |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FOREIGN_SERVER_STMT | 04a1d2b8e834630b76d2dbd1 | CREATE SERVER t2 FOREIGN DATA WRAPPER foo |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FOREIGN_SERVER_STMT | 052964d23e97fd72bcaf290a | CREATE SERVER sv9 FOREIGN DATA WRAPPER test_wrapper |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | 056fe1d6a736f39d2d4735ce | CREATE FOREIGN TABLE ft2 () INHERITS (fd_pt1) SERVER s0 OPTIONS (delimiter ',', quote '"', "be quoted" 'value') |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FDW_STMT | 05b876cdcc312c14100450ce | -- Foreign tables CREATE FOREIGN DATA WRAPPER wrapper_stats |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OWNER_STMT | 05c4f5f5846707dc0b5bd0a0 | -- ERROR ALTER FOREIGN DATA WRAPPER foo OWNER TO regress_unprivileged_role |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | 060c9d81dd013a88f156725a | CREATE STATISTICS tst on (z) from ext_stats_test1 |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | 0622d4f679e21f01e7df89c7 | CREATE FOREIGN TABLE tru_ftable (id int) SERVER loopback OPTIONS (table_name 'tru_rtable0') |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 06cb619bb32ed7c029c9a792 | ALTER FOREIGN TABLE ft1 DROP c11 |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | 06eccfa36dd2e8ae42b607ba | -- ERROR CREATE FOREIGN TABLE tbl () SERVER file_server OPTIONS ("a=b" 'true') |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | 07f491ecb5b9a902d0848e4e | CREATE STATISTICS tst ON (x \|\| 'x'), (x \|\| 'x'), (y + 1), (x \|\| 'x'), (x \|\| 'x'), (y + 1), (x \|\| 'x'), (x \|\| 'x'), (y + 1) FROM ext_stats_test |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 0886ee8847ceace5f6e06f6c | ALTER FOREIGN TABLE ft1 ALTER COLUMN c1 OPTIONS (column_name 'C 1') |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_POLICY_STMT | 08898b7e9c2b6416c887b7cc | CREATE POLICY blog_1 ON blog USING (id % 2 = 0) |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FOREIGN_SERVER_STMT | 09052e9b9d5b6e6497e91b46 | CREATE SERVER s5 VERSION '15.0' FOREIGN DATA WRAPPER foo |
+| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_IMPORT_FOREIGN_SCHEMA_STMT | 09b28bbc67426a08bbc17964 | IMPORT FOREIGN SCHEMA import_source FROM SERVER loopback INTO import_dest3 OPTIONS (import_collate 'false', import_generated 'false', import_not_null 'false') |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_USER_MAPPING_STMT | 09dda4c7504a3687798647b0 | -- ERROR CREATE USER MAPPING FOR public SERVER s9 |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | 09ff267d2977fa6603eb463d | CREATE FOREIGN TABLE table30000 ( x int ) SERVER fetch101 OPTIONS ( fetch_size '30000' ) |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OWNER_STMT | 0a3d9a926cc6654239a65165 | -- ERROR ALTER FOREIGN DATA WRAPPER foo OWNER TO regress_test_role_super |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_POLICY_STMT | 0a8c0d582dc54d1d862a8a8d | CREATE POLICY r2 ON rec2 USING (a = (SELECT x FROM rec1v WHERE y = b)) |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_USER_MAPPING_STMT | 0b3d5d7985b442493d36ae18 | CREATE USER MAPPING FOR user SERVER s8 OPTIONS (username 'test', password 'secret') |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_POLICY_STMT | 0ba073c6c7a91500f9552433 | CREATE POLICY p1 ON t1 USING (a % 2 = 0) |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_RENAME_STMT | 0be9d91833b14beb3c1bb72a | ALTER POLICY p1 ON event_trigger_test RENAME TO p2 |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | 0c1097990afafc922e4abfff | CREATE STATISTICS tststats.s8 ON a, b FROM tststats.pt |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_POLICY_STMT | 0c4c2aa6f3cd3a63d183ef84 | CREATE POLICY p2 ON t1 TO regress_rls_carol USING ((a % 4) = 0) |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | 0c83c8318029bcf85b92a6d9 | -- ERROR CREATE FOREIGN TABLE tbl () SERVER file_server OPTIONS (format 'binary', quote ':') |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_POLICY_STMT | 0ca5a8f1042a0a4e2703e030 | ALTER POLICY dep_p1 ON dep1 USING (true) |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_USER_MAPPING_STMT | 0cb901a43494c904502d552f | ALTER USER MAPPING FOR regress_test_role SERVER s6 OPTIONS (DROP username) |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_POLICY_STMT | 0ed8138117039a736db766bb | CREATE POLICY p1 ON event_trigger_test USING (FALSE) |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_POLICY_STMT | 0eedd238e2546edc852d445d | CREATE POLICY foo ON pg_description FOR SELECT USING (description NOT LIKE 'secret%') |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | 0f460acd885f4c3a074bec9f | -- ERROR CREATE FOREIGN TABLE tbl () SERVER file_server OPTIONS (format 'csv', quote '-', null '=-=') |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_FOREIGN_SERVER_STMT | 0f812c61c1eec0941e1c5c96 | -- postgres_fdw.application_name overrides application_name option -- of a server object if both settings are present. ALTER SERVER loopback2 OPTIONS (SET application_name 'fdw_wrong') |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | 0fbbee95b5046e40f6f85e6b | CREATE FOREIGN TABLE batch_cp_upd_test3_f PARTITION OF batch_cp_upd_test FOR VALUES IN (3) SERVER loopback OPTIONS (table_name 'batch_cp_upd_test3', batch_size '1') |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_POLICY_STMT | 10064636a5b28e0d0dd89cf6 | CREATE POLICY p1 ON r1 FOR SELECT USING (false) |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FOREIGN_SERVER_STMT | 103809e5bd7213b5f64b20b1 | CREATE SERVER testserver1 FOREIGN DATA WRAPPER postgres_fdw |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | 10815da084a8c3058c1ecc3d | -- fails -- SET STORAGE may need to add a TOAST table create table test_storage (a text, c text storage plain) |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | 109a2219d86b4a73e844f028 | -- ERROR CREATE FOREIGN TABLE tbl () SERVER file_server OPTIONS (format 'csv', delimiter '---') |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_USER_MAPPING_STMT | 1171d6336f3aefdaf9ec6922 | ALTER USER MAPPING FOR public SERVER fdtest OPTIONS (ADD oauth_client_id 'myID') |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_USER_MAPPING_STMT | 118e25e57812ef7e2f8919ec | -- If we add a password for our user mapping instead, we should get a different -- error because the password wasn't actually *used* when we run with trust auth. -- -- This won't work with installc... |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | 124d9df0f94d88d8e599e45e | -- ERROR CREATE FOREIGN TABLE tbl () SERVER file_server OPTIONS (log_verbosity 'unsupported') |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FOREIGN_SERVER_STMT | 14091feaa95b4728d2621391 | -- ERROR CREATE SERVER s10 FOREIGN DATA WRAPPER foo |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FOREIGN_SERVER_STMT | 1502f6ee5900b8dc4a5717f5 | -- Invalid fdw_tuple_cost option CREATE SERVER inv_scst FOREIGN DATA WRAPPER postgres_fdw OPTIONS(fdw_tuple_cost '100$%$#$#') |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_POLICY_STMT | 153e2ab11d1f9923d24f4131 | CREATE POLICY p3 ON y2 USING (a % 4 = 0) |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | 15c11f7eb4849b6e3eaeacb7 | CREATE STATISTICS alt_stat2 ON a, b FROM alt_regress_1 |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 15cdce4a2814358865ed9a96 | ALTER FOREIGN TABLE ft1 ALTER COLUMN c8 SET DATA TYPE text |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 160708f679a6e1284abf6658 | -- Disable batch inserting into foreign tables with BEFORE ROW INSERT triggers -- even if the batch_size option is enabled. ALTER FOREIGN TABLE ftable OPTIONS ( SET batch_size '10' ) |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 167451de2a3ab73144d5a910 | ALTER FOREIGN TABLE agg_csv INHERIT agg |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_FOREIGN_SERVER_STMT | 1684a9dd38261b520f176246 | -- should work ALTER SERVER loopback OPTIONS (SET dbname 'no such database') |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | 168564e82be6ff1abfee167f | CREATE STATISTICS expr_stats_1 (mcv) ON (a+b), (a-b), (2*a), (3*b) FROM expr_stats |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | 16af0265fc7643deb4ecb70c | CREATE STATISTICS parent_stat (dependencies) ON a, c FROM parent |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FDW_STMT | 178780abe55c77a4f0b0235b | CREATE FOREIGN DATA WRAPPER test_fdw HANDLER invalid_fdw_handler |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_USER_MAPPING_STMT | 17ac37f42fe2cd437eacb740 | ALTER USER MAPPING FOR SESSION_USER SERVER sv6 OPTIONS (SET user 'SESSION_USER_alt') |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | 1812f0481551136467a50a92 | -- ERROR CREATE FOREIGN TABLE tbl () SERVER file_server OPTIONS (format 'csv', quote '---') |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_FOREIGN_SERVER_STMT | 18218984c02016b0b33d2f4c | ALTER SERVER loopback2 OPTIONS (ADD async_capable 'true') |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 1848d477923da3e9cc61b858 | ALTER FOREIGN TABLE foreign_stats ADD COLUMN b integer DEFAULT 1 |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | 188864b6300249f5865b791f | CREATE FOREIGN TABLE ft1 ( c1 integer OPTIONS ("param 1" 'val1') NOT NULL, c2 text OPTIONS (param2 'val2', param3 'val3') CHECK (c2 <> ''), c3 date, CHECK (c3 BETWEEN '1994-01-01'::date AND '1994-0... |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_FDW_STMT | 19172feda99fd118d4a1787a | -- ERROR ALTER FOREIGN DATA WRAPPER foo OPTIONS (gotcha 'true') |
+| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DROP_USER_MAPPING_STMT | 1927682088893709f789da12 | -- DROP USER MAPPING IF EXISTS DROP USER MAPPING IF EXISTS FOR CURRENT_USER SERVER sv1 |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_FOREIGN_SERVER_STMT | 19465fffec8081d9bb20b853 | -- ERROR option validation ALTER SERVER s8 OPTIONS (connect_timeout '30', SET dbname 'db1', DROP host) |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | 194f0c214e4cde6039b1b160 | CREATE STATISTICS mcv_lists_partial_stats (mcv) ON a, b, c FROM mcv_lists_partial |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_FDW_STMT | 19614de4a47f91f2a6bcfb71 | -- should preserve dependency on test_fdw_handler ALTER FOREIGN DATA WRAPPER test_fdw VALIDATOR postgresql_fdw_validator |
+| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DROP_USER_MAPPING_STMT | 19626d28e0762ee85209a772 | -- We're done with the role named after a specific user and need to check the -- changes to the public mapping. DROP USER MAPPING FOR CURRENT_USER SERVER loopback_nopw |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_POLICY_STMT | 19f1782ebb8268841b17dc27 | CREATE POLICY p3 ON r1 FOR INSERT WITH CHECK (true) |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | 1a14d6dd1894aa28f789f6f4 | -- ERROR CREATE FOREIGN TABLE tbl () SERVER file_server OPTIONS (reject_limit '1') |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_USER_MAPPING_STMT | 1a1ac7e73ca91c0eb0ef4959 | CREATE USER MAPPING FOR current_user SERVER s1 |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FDW_STMT | 1aa835cf0064f00204c47b8a | -- ERROR CREATE FOREIGN DATA WRAPPER test_fdw HANDLER test_fdw_handler HANDLER invalid_fdw_handler |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_POLICY_STMT | 1ad7924cffa1612fc425d9ef | ALTER POLICY p2 ON s2 USING (x in (select a from s1 where b like '%d2%')) |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 1afbe892d09c8181a7f08163 | ALTER FOREIGN TABLE text_csv ALTER COLUMN word3 OPTIONS (force_not_null 'true') |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_POLICY_STMT | 1b0f52a2a71c4e8012aae910 | CREATE POLICY p0 ON x1 FOR ALL USING (c = current_user) |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_FOREIGN_SERVER_STMT | 1b8939db5808002aebb68536 | ALTER SERVER loopback2 OPTIONS (DROP async_capable) |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | 1bc0e1240db785cc58f0bd30 | -- check use of a boolean-returning expression CREATE STATISTICS ab1_exprstat_6 ON (case a when 1 then true else false end), b FROM ab1 |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_POLICY_STMT | 1beb4b9d545eee77dba9c001 | ALTER POLICY r2 ON rec2 USING (a = (SELECT x FROM rec1v WHERE y = b)) |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | 1c0dc685d52607e9b2d9571b | CREATE FOREIGN TABLE prem1 (f1 int, f2 text) SERVER loopback OPTIONS (table_name 'ploc1') |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_POLICY_STMT | 1c4129d3d7cd625382e40c46 | ALTER POLICY r1 ON rec1 USING (x = (SELECT a FROM rec2v WHERE b = y)) |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | 1ca411995349bb99d9f3af33 | -- error CREATE TABLE cminh(f1 TEXT COMPRESSION lz4) INHERITS(cmdata) |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | 1cd01f323368c391e8760b97 | -- ERROR CREATE FOREIGN TABLE tbl () SERVER file_server OPTIONS (format 'csv', null ' ') |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | 1cf9107e09f0c3cbe6e59aa7 | -- ERROR CREATE FOREIGN TABLE tbl () SERVER file_server OPTIONS (format 'binary', header 'true') |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | 1d02ab7736ebbff9054bbce0 | CREATE STATISTICS ctlt1_expr_stat ON (a \|\| b) FROM ctlt1 |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | 1d367d4465f8be57af71dfa6 | CREATE FOREIGN TABLE tru_ftable_parent (id int) SERVER loopback OPTIONS (table_name 'tru_rtable_parent') |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FDW_STMT | 1d8ac11e1d51a0e04afcbf17 | CREATE FOREIGN DATA WRAPPER postgres_fdw HANDLER postgres_fdw_handler VALIDATOR postgres_fdw_validator |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 1def6391805041234c04b18a | ALTER FOREIGN TABLE ft1 ALTER COLUMN c8 OPTIONS (SET p2 'V2', DROP p1) |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | 1e00645ea21bc963f2cfa41c | CREATE FOREIGN TABLE tru_pk_ftable (id int) SERVER loopback OPTIONS (table_name 'tru_pk_table') |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | 1e047afdc04ff6d44c35b033 | CREATE STATISTICS ab1_a_b_stats ON a, b FROM ab1 |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_FOREIGN_SERVER_STMT | 1e3bd9b98e42c11a00d920c9 | ALTER SERVER loopback2 OPTIONS (DROP parallel_abort) |
+| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DROP_USER_MAPPING_STMT | 1e76b9d320a1bb378ea3cb46 | DROP USER MAPPING FOR "Public" SERVER sv8 |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_POLICY_STMT | 1ee2b4904a325121b8f0c0f2 | CREATE POLICY p0 ON r1 USING (b * 10 = c) |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_USER_MAPPING_STMT | 1ee7f5ef55c0ab7dce4ce480 | ALTER USER MAPPING FOR public SERVER s4 OPTIONS (ADD modified '1') |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OBJECT_SCHEMA_STMT | 1fadefd4c35cb05f15d44392 | ALTER FOREIGN TABLE ft1 SET SCHEMA foreign_schema |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | 1fba997f582be2c1aca1fa17 | CREATE STATISTICS tststats.s7 ON a, b FROM tststats.f |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_FOREIGN_SERVER_STMT | 1fcaba6a07efc52fede0e7b0 | ALTER SERVER loopback2 OPTIONS (DROP parallel_commit) |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | 1fe584dd8f7d6d9e08cd19fc | -- create statistics with both MCV and expressions CREATE STATISTICS mcv_lists_stats (mcv) ON (mod(a,20)), (mod(b::int,10)), (mod(c,5)) FROM mcv_lists |
+| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_IMPORT_FOREIGN_SCHEMA_STMT | 20299bcabb564f8b93ffca3d | IMPORT FOREIGN SCHEMA import_source FROM SERVER loopback INTO import_dest2 OPTIONS (import_default 'true') |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | 208518c7601ccd0a17ca6def | -- ERROR CREATE FOREIGN TABLE tbl () SERVER file_server OPTIONS (force_not_null '*') |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FOREIGN_SERVER_STMT | 20aae49dbbc7212a859028f9 | CREATE SERVER sv1 FOREIGN DATA WRAPPER test_wrapper |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_POLICY_STMT | 20c374f42b69137973040c5a | CREATE POLICY p3 ON rls_tbl FOR UPDATE USING (c1 <= 3) WITH CHECK (c1 > 5) |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_FOREIGN_SERVER_STMT | 20dbaed68e0ce2f4a95b038c | ALTER SERVER loopback OPTIONS (ADD fdw_startup_cost '10000.0') |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_FOREIGN_SERVER_STMT | 21dd3fd3ca79dcbd27e09f7e | -- 0 -- 'truncatable' option ALTER SERVER loopback OPTIONS (ADD truncatable 'false') |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_RENAME_STMT | 221b917999140d83d12ecaa4 | ALTER POLICY p1 ON t1 RENAME TO p2 |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_POLICY_STMT | 22f5b81ceba5c8e8fde29c7a | CREATE POLICY p2 ON r1 FOR UPDATE USING (a < 20) WITH CHECK (true) |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_USER_MAPPING_STMT | 23f6c21618074d55f7275e94 | CREATE USER MAPPING FOR SESSION_USER SERVER sv6 OPTIONS (user 'SESSION_USER') |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_USER_MAPPING_STMT | 2439b4088c15fa8e7df88211 | ALTER USER MAPPING FOR public SERVER testserver1 OPTIONS (ADD oauth_client_id 'myID') |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_USER_MAPPING_STMT | 24688363661de6e9c8c6da1f | -- ERROR ALTER USER MAPPING FOR current_user SERVER s8 OPTIONS (username 'test') |
+| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DROP_USER_MAPPING_STMT | 246bbeb3ed08c93027003841 | DROP USER MAPPING FOR SESSION_USER SERVER sv6 |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | 258f76c2b9c71778f15b3242 | -- create statistics CREATE STATISTICS func_deps_stat (dependencies) ON (mod(a,11)), (mod(b::int, 13)), (mod(c, 7)) FROM functional_dependencies |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | 25f9eee52679d652ff8d00e2 | CREATE STATISTICS sts_sch2.fail ON a, b, c FROM sts_sch1.tbl |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FOREIGN_SERVER_STMT | 260f7ca486c7941f86c68519 | CREATE SERVER sv2 FOREIGN DATA WRAPPER test_wrapper |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_FOREIGN_SERVER_STMT | 26325383e07faef7f30ff726 | ALTER SERVER s6 VERSION '0.5' |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_POLICY_STMT | 268ba362428acfd9e4e632a1 | CREATE POLICY r1 ON rec1 USING (x = (SELECT a FROM rec2v WHERE b = y)) |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | 26c7027d64142a990bb6905f | -- update using datum from different table CREATE TABLE cmmove2(f1 text COMPRESSION pglz) |
+| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_IMPORT_FOREIGN_SCHEMA_STMT | 2713aeb2e56f2fff6e50da9c | IMPORT FOREIGN SCHEMA nonesuch FROM SERVER loopback INTO notthere |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 27163aa1d868ed6847d14d9d | -- c2positive ALTER FOREIGN TABLE ft1 DROP CONSTRAINT ft1_c2positive |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_POLICY_STMT | 2748660103ec2324c9598240 | CREATE POLICY p3 ON document FOR UPDATE USING (cid = (SELECT cid from category WHERE cname = 'novel')) WITH CHECK (dauthor = current_user) |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_USER_MAPPING_STMT | 277b6bb46a17f4a9019bcd3a | CREATE USER MAPPING FOR "user" SERVER sv5 OPTIONS (user '"USER"') |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_POLICY_STMT | 278d63c6e23c7e8217872936 | CREATE POLICY priv_test_parent_tbl_pol ON tststats.priv_test_parent_tbl USING (2 * a < 0) |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | 279b93b2015eb95e02d3832c | CREATE STATISTICS s_expr ON mod(id, 2), lower(col) FROM stats_ext_tbl |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | 27ad4e76b09e49c9e9972b15 | -- try setting compression for incompressible data type CREATE TABLE cmdata2 (f1 int COMPRESSION pglz) |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_POLICY_STMT | 27f36121a9d907fe05e7d9ea | -- fail -- only owner can change policies ALTER POLICY p1 ON document USING (true) |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | 280334941bb77ccf35ca8255 | -- Invalid batch_size option CREATE FOREIGN TABLE inv_bsz (c1 int ) SERVER loopback OPTIONS (batch_size '100$%$#$#') |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 29965512ee4bd5954a8ad8f1 | ALTER FOREIGN TABLE IF EXISTS doesnt_exist_ft1 ADD COLUMN c7 integer NOT NULL |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 29a28919c1bb4d952794f7ef | -- ERROR ALTER FOREIGN TABLE ft2 ADD CONSTRAINT fd_pt1chk2 CHECK (c2 <> '') |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_POLICY_STMT | 2a106e68ca293bed85599071 | CREATE POLICY p2 ON r2 FOR INSERT WITH CHECK (false) |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_FDW_STMT | 2a3ec4daa447e086022c544a | -- No option is allowed to be specified at foreign data wrapper level ALTER FOREIGN DATA WRAPPER postgres_fdw OPTIONS (nonexistent 'fdw') |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_USER_MAPPING_STMT | 2ae129122852e343059b1ac6 | CREATE USER MAPPING FOR CURRENT_USER SERVER loopback2 |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | 2b10caf40a1f28d7c298672f | -- create separate functional dependencies CREATE STATISTICS functional_dependencies_multi_1 (dependencies) ON a, b FROM functional_dependencies_multi |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_FDW_STMT | 2b321434d7bdb9ca5a3c6f40 | -- ERROR ALTER FOREIGN DATA WRAPPER foo HANDLER test_fdw_handler HANDLER anything |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FDW_STMT | 2be0722de1cf048c1be51ccb | -- Check that foreign tables are rejected CREATE FOREIGN DATA WRAPPER dummy |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | 2be925db852fb0d5386f17e9 | CREATE STATISTICS alt_stat1 ON a, b FROM alt_regress_2 |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | 2c015beafafbce43ce1d1624 | CREATE STATISTICS ctl_stats4_stat ON a, c FROM ctl_stats4_parent |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 2c8253fd3f4c521f202eb5e0 | ALTER FOREIGN TABLE IF EXISTS doesnt_exist_ft1 ADD COLUMN c10 integer OPTIONS (p1 'v1') |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | 2cbc48144776aad625bced4d | create foreign table rem3 (f1 int, f2 text) server loopback options(table_name 'loc3') |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | 2ccb5ab18e16e68103bcb4f6 | CREATE FOREIGN TABLE reind_fdw_10_20 PARTITION OF reind_fdw_parent FOR VALUES FROM (10) TO (20) SERVER loopback OPTIONS (table_name 'reind_local_10_20') |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_USER_MAPPING_STMT | 2cce0391b4c8f12e4638791a | CREATE USER MAPPING FOR user SERVER s4 |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | 2d829f55436731cae9fb0b6c | CREATE FOREIGN TABLE remote_tbl (a int, b int, c text) SERVER loopback OPTIONS (table_name 'base_tbl3') |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_RENAME_STMT | 2de44cbe53bf697b0d5d6a67 | -- failed (name conflict) ALTER FOREIGN DATA WRAPPER alt_fdw1 RENAME TO alt_fdw3 |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | 2def07c89bb977c9740dc729 | CREATE STATISTICS tab_expr_stats_1 (mcv) ON a, (2*a), (3*b) FROM tab_expr_stats |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_FOREIGN_SERVER_STMT | 2e0c67e80e5a939cca73eefd | -- ERROR ALTER SERVER s9 VERSION '1.1' |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_USER_MAPPING_STMT | 2e29f62999dc635b6533f3bd | -- should work again -- Test that alteration of user mapping options causes reconnection ALTER USER MAPPING FOR CURRENT_USER SERVER loopback OPTIONS (ADD user 'no such user') |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 2e82fcafad028172600bbccb | ALTER FOREIGN TABLE ft1 OPTIONS (SET table_name 'T 0') |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 2e9cab523d73531ae65571b5 | ALTER FOREIGN TABLE IF EXISTS doesnt_exist_ft1 ADD c11 integer |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | 2ed4831743c53699d38b1bda | create foreign table remp2 (b text, a int check (a in (2))) server loopback options (table_name 'loct2') |
+| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DROP_USER_MAPPING_STMT | 2ed5ac20b835a7bbbb586ac4 | DROP USER MAPPING FOR public SERVER s7 |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_POLICY_STMT | 2efea6cdaf121a8bda00fea7 | CREATE POLICY p1 ON y1 FOR SELECT USING (a % 2 = 1) |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FDW_STMT | 2f8f789d038490b5b7e12d91 | create foreign data wrapper copytest_wrapper |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_RENAME_STMT | 2fb9df10e725a4cb81ff1713 | ALTER FOREIGN TABLE IF EXISTS doesnt_exist_ft1 RENAME c1 TO foreign_column_1 |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 2fcb24ee13de89cbc67ba64d | ALTER FOREIGN TABLE ft4 OPTIONS (ADD use_remote_estimate 'true') |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_USER_MAPPING_STMT | 2ff1cfae25ea7227e0fe31d6 | ALTER USER MAPPING FOR USER SERVER sv4 OPTIONS (SET user 'USER_alt') |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FOREIGN_SERVER_STMT | 300d905bfa18031055bbc329 | CREATE SERVER s1 FOREIGN DATA WRAPPER foo |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_POLICY_STMT | 30657c1dcf492f096d1b10a1 | CREATE POLICY p1 ON s1 USING (a in (select x from s2 where y like '%2f%')) |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 30665db7de949719bbb50518 | ALTER FOREIGN TABLE IF EXISTS doesnt_exist_ft1 ALTER COLUMN c6 SET NOT NULL |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | 3075452c3460c2495b5f9853 | -- statistics without a less-than operator not supported CREATE STATISTICS tst (ndistinct) ON w from ext_stats_test1 |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | 30ace61360d2f9543a5afc49 | CREATE STATISTICS mcv_lists_multi_2 (mcv) ON c, d FROM mcv_lists_multi |
+| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DROP_USER_MAPPING_STMT | 30ed2a6d7c5da4368186538f | DROP USER MAPPING IF EXISTS FOR USER SERVER sv4 |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_USER_MAPPING_STMT | 313f8b5af12196dabe0228e1 | CREATE USER MAPPING FOR regress_unprivileged_role SERVER s10 OPTIONS (user 'secret') |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_POLICY_STMT | 3167a4889180054996abc099 | CREATE POLICY p1 ON rls_tbl USING (a < 0) |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_POLICY_STMT | 316d6c2f5925b78ce09ca10a | -- -- Test ALL policies with ON CONFLICT DO UPDATE (much the same as existing UPDATE -- tests) -- CREATE POLICY p3_with_all ON document FOR ALL USING (cid = (SELECT cid from category WHERE cname = ... |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | 3179f575019600ae4d767463 | CREATE STATISTICS alt_stat2 ON a, b FROM alt_regress_2 |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | 31ae5a4b166f6f0bf487d0c4 | CREATE FOREIGN TABLE foreign_tbl2 () INHERITS (foreign_tbl) SERVER loopback OPTIONS (table_name 'base_tbl') |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | 31bbabe5a6ec237a5fa7bde7 | CREATE STATISTICS IF NOT EXISTS ab1_a_b_stats ON a, b FROM ab1 |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | 32b3049aa9dde5f90ccec572 | -- ERROR CREATE FOREIGN TABLE tbl () SERVER file_server OPTIONS (format 'text', delimiter '.') |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | 330662f9dc0d090f09bc5f06 | CREATE STATISTICS ON a, b, c FROM sts_sch1.tbl |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | 349086ca4492e8e32afac9b1 | CREATE STATISTICS tststats.s2 ON a, b FROM tststats.ti |
+| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DROP_USER_MAPPING_STMT | 34d363856ab61402c89a2e0f | -- DROP USER MAPPING DROP USER MAPPING FOR CURRENT_USER SERVER sv1 |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | 35cb34f6c308b8f1570d85ce | CREATE STATISTICS tststats.s3 ON a, b FROM tststats.s |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_POLICY_STMT | 3676f414f8c86ab27d4af172 | CREATE POLICY p1 ON x1 FOR SELECT USING (a % 2 = 0) |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | 36f8121e59ebc606537c3302 | CREATE STATISTICS pg_temp.stats_ext_temp ON a, b FROM ab1 |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 374ad812e6ab218b04cf10e2 | -- ERROR ALTER FOREIGN TABLE ft1 DROP CONSTRAINT ft1_c9_check |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 376da0ac318df263cc732c4f | ALTER FOREIGN TABLE IF EXISTS doesnt_exist_ft1 ADD COLUMN c6 integer |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_POLICY_STMT | 379aa9d83421688e971f43da | CREATE POLICY p4 ON x1 FOR DELETE USING (a < 8) |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 38621497535540ffc416915e | ALTER FOREIGN TABLE ft1 ALTER COLUMN c8 SET STORAGE PLAIN |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FDW_STMT | 3867a1fff505c315d28b2451 | CREATE FOREIGN DATA WRAPPER file_fdw HANDLER file_fdw_handler VALIDATOR file_fdw_validator |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 3911111a5791550e10b3803b | ALTER FOREIGN TABLE ft4 OPTIONS (SET use_remote_estimate 'false') |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | 39bad7469450d77e2f122853 | CREATE FOREIGN TABLE foreign_tbl (a int, b int) SERVER loopback OPTIONS (table_name 'base_tbl') |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 3a0551eb4b94f57386607809 | ALTER FOREIGN TABLE ft1 ADD COLUMN c9 integer |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | 3a1731d0f13bc74546141d57 | -- create statistics CREATE STATISTICS func_deps_stat (dependencies) ON a, b, c FROM functional_dependencies |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FOREIGN_SERVER_STMT | 3a95979154149aa121273717 | create server copytest_server foreign data wrapper copytest_wrapper |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_FDW_STMT | 3aae3a5298ca71bf6bac82a1 | ALTER FOREIGN DATA WRAPPER foo OPTIONS (b '4') |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_POLICY_STMT | 3ab82b0dedacbed9d67ed635 | ALTER POLICY p1 ON event_trigger_test USING (TRUE) |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 3ad3cc0f5570beba5b629260 | ALTER FOREIGN TABLE ft1 OPTIONS (schema_name 'S 1', table_name 'T 1') |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | 3b2adaf37787ee8e0fc95bac | CREATE FOREIGN TABLE ftprt1_p2 PARTITION OF fprt1 FOR VALUES FROM (250) TO (500) SERVER loopback OPTIONS (TABLE_NAME 'fprt1_p2') |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | 3b3c7b50ca3c2ef107994b31 | CREATE FOREIGN TABLE ft_part2 (a INT) SERVER s0 |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | 3cb4f131c3f6ed584bf70e04 | -- expression stats may be built on a single expression column CREATE STATISTICS ab1_exprstat_1 ON (a+b) FROM ab1 |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OWNER_STMT | 3ceb6b6f63ca27b0add2eefa | -- ERROR ALTER SERVER s4 OWNER TO regress_unprivileged_role |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_POLICY_STMT | 3cfc2d037421c86544b8185c | -- Create policy on parent -- user's security level must be higher than or equal to document's CREATE POLICY pp1 ON part_document AS PERMISSIVE USING (dlevel <= (SELECT seclv FROM uaccount WHERE pg... |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FDW_STMT | 3ea4a255158a78cd479f1b67 | -- CREATE USER MAPPING CREATE FOREIGN DATA WRAPPER test_wrapper |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_USER_MAPPING_STMT | 3eda1f31414708ee0e9f2825 | CREATE USER MAPPING FOR current_user SERVER t1 OPTIONS (username 'bob', password 'boo') |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | 3efbf10f21eb781ad78fedaa | CREATE TABLE cmdata2 (f1 TEXT COMPRESSION pglz, f2 TEXT COMPRESSION lz4) |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | 3f307fc8019bac4f52786e31 | -- ERROR CREATE FOREIGN TABLE tbl () SERVER file_server OPTIONS (force_null '*') |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 3fa0b9349ded1832ed80159f | ALTER FOREIGN TABLE IF EXISTS doesnt_exist_ft1 ALTER COLUMN c7 DROP NOT NULL |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_FOREIGN_SERVER_STMT | 3fb061c42d512333f07f4ad5 | ALTER SERVER loopback OPTIONS (SET keep_connections 'on') |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | 3fd2dbf0e4a31828d0ddc736 | -- create statistics on expressions CREATE STATISTICS func_deps_stat (dependencies) ON (a * 2), upper(b), (c + 1) FROM functional_dependencies |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_POLICY_STMT | 3ff79482b4efef2e4b884db3 | CREATE POLICY p1 ON r1 AS RESTRICTIVE USING (b > 10) |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_USER_MAPPING_STMT | 4003c447ddc70908f16afc95 | -- Should not get that error once a user mapping is created CREATE USER MAPPING FOR regress_view_owner_another SERVER loopback OPTIONS (password_required 'false') |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | 406ca34ec29aad626c784436 | -- ERROR CREATE FOREIGN TABLE tbl () SERVER file_server OPTIONS (format 'text', quote ':') |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_USER_MAPPING_STMT | 406f98a42fbe7e94196ccaa5 | CREATE USER MAPPING FOR "current_user" SERVER sv2 OPTIONS (user '"current_user"') |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 4155419c9cd3dcc8b06c1536 | ALTER FOREIGN TABLE ft1 ADD COLUMN c6 integer |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_RENAME_STMT | 41947156a8959717cb611946 | ALTER FOREIGN TABLE IF EXISTS doesnt_exist_ft1 RENAME TO foreign_table_1 |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | 41da001f8cadb8d5c288c961 | CREATE TABLE cmdata2 (f1 text COMPRESSION pglz) |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_FDW_STMT | 42143b6f1d1b54044ad60437 | -- ALTER FOREIGN DATA WRAPPER ALTER FOREIGN DATA WRAPPER foo OPTIONS (nonexistent 'fdw') |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | 4232de1239e8c5097aea1883 | CREATE STATISTICS alt_stat1 ON a, b FROM alt_regress_1 |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FOREIGN_SERVER_STMT | 42f2eb2e0544d881dddf4c1c | CREATE SERVER sv3 FOREIGN DATA WRAPPER test_wrapper |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 4399e7df0eaaa72363aa6394 | ALTER FOREIGN TABLE IF EXISTS doesnt_exist_ft1 DROP COLUMN c9 |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_POLICY_STMT | 43d197f53271cbb8c6339b1d | CREATE POLICY policy_stats ON tab_policy_stats USING (a = 5) WITH CHECK (b < 5) |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 43e0b37a95431d1a5ae4bcaf | -- ERROR ALTER FOREIGN TABLE fd_pt2_1 ALTER c2 SET NOT NULL |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_USER_MAPPING_STMT | 442f4491b528907d717c95e2 | CREATE USER MAPPING FOR public SERVER s6 |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_POLICY_STMT | 445bb0c69e62d68fe071e5ca | CREATE POLICY p4 ON rls_tbl_force FOR DELETE USING (c1 = 8) |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_FDW_STMT | 4578b01c636c13abbf8465f6 | -- ERROR ALTER FOREIGN DATA WRAPPER foo OPTIONS (DROP c) |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_USER_MAPPING_STMT | 459ef9d8fc65e9c0880f7630 | create user mapping for regress_evt_user server useless_server |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | 45d17eca84a3ea459b2c1949 | -- create statistics CREATE STATISTICS mcv_lists_stats (mcv) ON a, b, d FROM mcv_lists |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_USER_MAPPING_STMT | 46794796462e9971e6d005aa | CREATE USER MAPPING FOR current_user SERVER s7 |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FOREIGN_SERVER_STMT | 4687fb727c3c8dc042f8055f | -- ERROR CREATE SERVER IF NOT EXISTS s1 FOREIGN DATA WRAPPER foo |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_POLICY_STMT | 470dda346747ba9254ea9ab8 | create policy p1 on rls_t for select to regress_rls_alice using (true) |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_FOREIGN_SERVER_STMT | 473a90d7bcbffefef88f165b | ALTER SERVER loopback OPTIONS (SET analyze_sampling 'random') |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | 48cb4932cdcb571b8ece43b8 | -- copy to existing table CREATE TABLE cmmove3(f1 text COMPRESSION pglz) |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 48d87cce436ff723f34f2399 | ALTER FOREIGN TABLE ft2 ALTER COLUMN c1 OPTIONS (column_name 'C 1') |
+| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_IMPORT_FOREIGN_SCHEMA_STMT | 48e730825a770bb213241f3e | IMPORT FOREIGN SCHEMA import_source FROM SERVER loopback INTO import_dest1 |
+| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DROP_USER_MAPPING_STMT | 49873b489d22210a5ae45267 | -- ERROR DROP USER MAPPING FOR user SERVER ss4 |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_POLICY_STMT | 4a2bbc63daff321da0c6d549 | CREATE POLICY p3 ON rls_part USING (a < 0) |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | 4a6234dfc00fcfff233b566e | CREATE STATISTICS expr_stats_1 (mcv) ON a, b, (b \|\| c), (c \|\| b) FROM expr_stats |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | 4b09e0e35b33523cfe4a86ce | CREATE STATISTICS tst ON a FROM ext_stats_test s TABLESAMPLE system (x) |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | 4b8f86231e85efde9aef70a2 | CREATE FOREIGN TABLE ft7 ( c1 int NOT NULL, c2 int NOT NULL, c3 text ) SERVER loopback3 OPTIONS (schema_name 'S 1', table_name 'T 4') |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FOREIGN_SERVER_STMT | 4b95a61c8067b2cf2335a454 | CREATE SERVER server_stats FOREIGN DATA WRAPPER wrapper_stats |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_FOREIGN_SERVER_STMT | 4bc6b2c9d9556665fdf022e8 | ALTER SERVER loopback OPTIONS (SET analyze_sampling 'system') |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 4bfa29fd196ccdc0a721217f | ALTER FOREIGN TABLE agg_bad OPTIONS (ADD log_verbosity 'silent') |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_POLICY_STMT | 4d12d9dd38e8ac2e734f9069 | -- only owner can change policies ALTER POLICY pp1 ON part_document USING (true) |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | 4d51a8132e8b4bb19ac8644f | -- ERROR CREATE FOREIGN TABLE tbl () SERVER file_server OPTIONS (format 'csv', delimiter '-', quote '-') |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | 4d8294a43b700b2668be2c8f | create statistics (mcv) ON a, b, (a+b), (a-b) FROM stts_t1 |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | 4d82ac0c70aafab3bce01a93 | -- ERROR CREATE FOREIGN TABLE tbl () SERVER file_server OPTIONS (format 'text', escape ':') |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_POLICY_STMT | 4d9b7430ef6715cd8368cbe0 | CREATE POLICY coll_p ON coll_t USING (c < ('foo'::text COLLATE "C")) |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_POLICY_STMT | 4e13ec1d4bb05742be173678 | create policy p1 on rls_t for select to regress_rls_alice using (c = current_setting('rls_test.blah')) |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | 4e43ec181a1ca9eed67145ba | -- Extended statistics with an attribute that cannot be analyzed. -- This includes all statistics kinds. CREATE STATISTICS test_stats ON data, id FROM test_table |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_POLICY_STMT | 4e77fafd0277415ce3a7eb5e | CREATE POLICY r2 ON rec2 USING (a = (SELECT x FROM rec1 WHERE y = b)) |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FOREIGN_SERVER_STMT | 4e9f840b14842bd3fee851dd | CREATE SERVER IF NOT EXISTS ext_cine_srv FOREIGN DATA WRAPPER ext_cine_fdw |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | 4ee3e922b63edf05515ea8f5 | create statistics stts_s2.stts_yama (dependencies, mcv) on col1, col3 from stts_t3 |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_FOREIGN_SERVER_STMT | 4f4a791748bc0d91fa51f9f5 | ALTER SERVER s8 OPTIONS (foo '1') |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_POLICY_STMT | 4f7ce759d114ed20e4373bd5 | CREATE POLICY genpol ON addr_nsp.gentable |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | 4fa4ff1a38b5de6b3873c3e1 | CREATE STATISTICS tststats.s9 ON a, b FROM tststats.pt1 |
+| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DROP_USER_MAPPING_STMT | 503e28f8a331d99fedf04635 | DROP USER MAPPING FOR public SERVER fdtest |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | 5064509419d66e3499cddea6 | CREATE FOREIGN TABLE ftable (a text, b int) SERVER loopback OPTIONS (table_name 'batch_table', batch_size '2') |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_USER_MAPPING_STMT | 510a6fb71cca09df9996b9e3 | CREATE USER MAPPING FOR public SERVER testserver1 OPTIONS (user 'value', password 'value') |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FOREIGN_SERVER_STMT | 512389e991daa7ca9ff8a538 | create server useless_server foreign data wrapper useless |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | 51281918cdf5ec7fe0b3deff | -- =================================================================== -- create foreign tables -- =================================================================== CREATE FOREIGN TABLE ft1 ( c0 ... |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | 514233a0536e37ea2a836b70 | CREATE STATISTICS stxdinh ON a, b FROM stxdinh |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | 525c78212651b50ac2722c04 | -- create separate MCV statistics CREATE STATISTICS mcv_lists_multi_1 (mcv) ON a, b FROM mcv_lists_multi |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_USER_MAPPING_STMT | 528f9576a2b449c7e96656cd | CREATE USER MAPPING FOR PUBLIC SERVER sv7 OPTIONS (user 'PUBLIC') |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 52935ee7a4575a5301f183a8 | ALTER FOREIGN TABLE ft1 ALTER COLUMN c4 SET DEFAULT 0 |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 52cbdd1f44f3f1245a4fdcf4 | ALTER FOREIGN TABLE agg_text OPTIONS (SET format 'text') |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 5331b3d73311918b8f31ef3c | -- =================================================================== -- conversion error -- =================================================================== ALTER FOREIGN TABLE ft1 ALTER COLUM... |
+| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_IMPORT_FOREIGN_SCHEMA_STMT | 54017858932aa39351343e76 | IMPORT FOREIGN SCHEMA import_source LIMIT TO (t5) FROM SERVER loopback INTO import_dest5 |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FOREIGN_SERVER_STMT | 5413262a1d3cd0c2f435c9b1 | CREATE SERVER sv4 FOREIGN DATA WRAPPER test_wrapper |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_FOREIGN_SERVER_STMT | 5480a35b053bd2d2f2e0dcae | ALTER SERVER loopback OPTIONS (ADD async_capable 'true') |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_FDW_STMT | 5488d8e69fa77dc38ce7037a | -- ERROR ALTER FOREIGN DATA WRAPPER foo NO VALIDATOR |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_USER_MAPPING_STMT | 54900e111e41017674d06ff6 | -- Attempt to add a valid option that's not allowed in a user mapping ALTER USER MAPPING FOR public SERVER testserver1 OPTIONS (ADD sslmode 'require') |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_USER_MAPPING_STMT | 55666b653c3689f85df47ff0 | CREATE USER MAPPING FOR current_user SERVER s9 |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | 558c861012a0f6651358b9fe | -- create statistics CREATE STATISTICS mcv_lists_stats (mcv) ON a, b, c FROM mcv_lists |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | 55ab4107ab947a08afea85ec | CREATE STATISTICS mcv_lists_arrays_stats (mcv) ON a, b, c FROM mcv_lists_arrays |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | 561c6453bdff13917a053fd2 | create foreign table rem2 (f1 int, f2 text) server loopback options(table_name 'loc2') |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_USER_MAPPING_STMT | 5648c9c3bd64d10ee0f13b6e | -- should fail ALTER USER MAPPING FOR CURRENT_USER SERVER loopback OPTIONS (DROP user) |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | 58d0707de896885951e0a3e5 | -- test creating table with compression method CREATE TABLE cmdata(f1 text COMPRESSION pglz) |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_FOREIGN_SERVER_STMT | 58fc4dd4c541c633fc730def | ALTER SERVER loopback2 OPTIONS (ADD parallel_abort 'true') |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_USER_MAPPING_STMT | 590252a4517e291e5f76acf2 | CREATE USER MAPPING FOR regress_multi_conn_user1 SERVER loopback |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_FDW_STMT | 591f256f969e930d8d3fa72d | -- ERROR ALTER FOREIGN DATA WRAPPER foo OPTIONS (ADD x '1', DROP x) |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 595a6a18cd999730faf81ab5 | ALTER FOREIGN TABLE ft1 ADD PRIMARY KEY (c7) |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | 5978d132406ec8adca27fba2 | -- ERROR CREATE FOREIGN TABLE tbl () SERVER file_server OPTIONS (format 'text', delimiter 'a') |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_POLICY_STMT | 59933f11f2b691b25ab6161e | -- should succeed -- partitioned target CREATE POLICY p1 ON dob_t2 TO regress_rls_dob_role1,regress_rls_dob_role2 USING (true) |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_POLICY_STMT | 5a63737af5bb7ab5ddb41347 | CREATE POLICY p1 ON r2 FOR SELECT USING (true) |
+| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_IMPORT_FOREIGN_SCHEMA_STMT | 5a9b5993e3c10139f2fc3d8d | IMPORT FOREIGN SCHEMA import_source LIMIT TO (t1, nonesuch, t4_part) FROM SERVER loopback INTO import_dest4 |
+| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DROP_USER_MAPPING_STMT | 5aa90f51979d073b463049fa | DROP USER MAPPING FOR regress_testrolx SERVER sv9 |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | 5b07cbbe987539ceb48a32a1 | CREATE FOREIGN TABLE fpagg_tab_p3 PARTITION OF pagg_tab FOR VALUES FROM (20) TO (30) SERVER loopback OPTIONS (table_name 'pagg_tab_p3') |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | 5b830c5f6f6817018c802016 | CREATE STATISTICS stxdinp ON (a + 1), a, b FROM stxdinp |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 5c1d4cbe10e1a5c0d301fe2f | ALTER FOREIGN TABLE ft1 ADD COLUMN c11 serial |
+| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DROP_USER_MAPPING_STMT | 5c4db08dc5486fed0f372d4d | DROP USER MAPPING FOR regress_view_owner_another SERVER loopback |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_POLICY_STMT | 5c6751af345649f0dba4b1ac | CREATE POLICY seeall ON range_parted AS PERMISSIVE FOR SELECT USING (true) |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FDW_STMT | 5cb9c44220f9b47e89fb0e19 | CREATE FOREIGN DATA WRAPPER foobar |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | 5cc460c7773178c30ac8781b | CREATE STATISTICS tst ON a FROM JSON_TABLE(jsonb '123', '$' COLUMNS (item int)) |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FOREIGN_SERVER_STMT | 5d048f8499e9890d759f958e | CREATE SERVER t1 FOREIGN DATA WRAPPER foo |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OWNER_STMT | 5d8921c2eeb8afba57f829b6 | ALTER SERVER s6 OWNER TO regress_test_indirect |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | 5e358dcaa8e9339523a46004 | CREATE STATISTICS expr_stat_comp_1 ON c0, c1 FROM expr_stats_incompatible_test |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FOREIGN_SERVER_STMT | 5e90ceaa00657c1d6c2966a3 | CREATE SERVER s3 TYPE 'oracle' FOREIGN DATA WRAPPER foo |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | 5eecb7b545865ef5514fb1ef | CREATE FOREIGN TABLE foreign_tbl (b int) SERVER loopback OPTIONS (table_name 'base_tbl') |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | 5fa2c3da9a2d0aa905175ab7 | -- ERROR CREATE FOREIGN TABLE ft1 ( c1 integer OPTIONS ("param 1" 'val1') PRIMARY KEY, c2 text OPTIONS (param2 'val2', param3 'val3'), c3 date ) SERVER s0 OPTIONS (delimiter ',', quote '"', "be quo... |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | 601506393cc4a963d9f6205f | CREATE STATISTICS ctl_table_stat ON a,b FROM ctl_table |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 6033ec9ee0d5ec1cb578da09 | ALTER FOREIGN TABLE ft1 ADD c11 integer |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 60714c72f9455648a37dc0d1 | ALTER FOREIGN TABLE IF EXISTS doesnt_exist_ft1 ALTER COLUMN c7 OPTIONS (ADD p1 'v1', ADD p2 'v2'), ALTER COLUMN c8 OPTIONS (ADD p1 'v1', ADD p2 'v2') |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_USER_MAPPING_STMT | 61b455f09061bf0695c1cdb2 | -- ERROR ALTER USER MAPPING FOR public SERVER t1 OPTIONS (ADD modified '1') |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | 61c98ccc8452422a20e04a5e | CREATE FOREIGN TABLE ft5 ( c1 int NOT NULL, c2 int NOT NULL, c3 text ) SERVER loopback OPTIONS (schema_name 'S 1', table_name 'T 4') |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_USER_MAPPING_STMT | 61f46de166c12d223a36bb03 | CREATE USER MAPPING FOR CURRENT_USER SERVER loopback_nopw |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | 6286742cb59f0750d11b52d3 | CREATE STATISTICS tst (ndistinct) ON z from ext_stats_test1 |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 6297e9d67402a501bb6faa7c | ALTER FOREIGN TABLE ft2 DROP COLUMN cx |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_USER_MAPPING_STMT | 62acc8aaf446339b60f68750 | -- ERROR CREATE USER MAPPING FOR regress_file_fdw_user SERVER file_server |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FDW_STMT | 631b1c1994e8c0d8840799fd | -- CREATE FOREIGN DATA WRAPPER CREATE FOREIGN DATA WRAPPER foo VALIDATOR bar |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_POLICY_STMT | 6348234f891c9f1344c8cd73 | CREATE POLICY p2 ON r1 FOR INSERT WITH CHECK (true) |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_FOREIGN_SERVER_STMT | 63bde991c336a5a1e0f33c69 | -- Adjust fdw_startup_cost so that we get an unordered path in the Append. ALTER SERVER loopback2 OPTIONS (ADD fdw_startup_cost '0.00') |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_FOREIGN_SERVER_STMT | 6403451ee0a9e41398867455 | ALTER SERVER loopback OPTIONS (DROP fdw_startup_cost) |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 642f7fb129f0ff189d6e8bef | ALTER FOREIGN TABLE ft1 ADD COLUMN c5 integer DEFAULT 0 |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 64850a82124c76f030ed5373 | ALTER FOREIGN TABLE ft1 ALTER COLUMN c7 DROP NOT NULL |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_POLICY_STMT | 64bef39b1f569ad8faa592bc | CREATE POLICY p4 ON r2 FOR DELETE USING (false) |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_POLICY_STMT | 6534ae0771a441ffbc4209b7 | CREATE POLICY p1 ON dob_t1 TO regress_rls_dob_role1 USING (true) |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 6591f013d18e9412563fa61e | -- =================================================================== -- local type can be different from remote type in some cases, -- in particular if similarly-named operators do equivalent thi... |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | 66c7531fcb9b759e5bda0f53 | CREATE FOREIGN TABLE fpagg_tab_p2 PARTITION OF pagg_tab FOR VALUES FROM (10) TO (20) SERVER loopback OPTIONS (table_name 'pagg_tab_p2') |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_USER_MAPPING_STMT | 67a3d59e6fe19a196f7eb47d | -- ERROR CREATE USER MAPPING FOR public SERVER file_server OPTIONS (force_not_null '*') |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_POLICY_STMT | 67aee0b7ae133f65c038fdef | CREATE POLICY p1 ON y1 FOR ALL USING (a % 2 = 0) |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_FOREIGN_SERVER_STMT | 684ca81ae2786564cba837bc | ALTER SERVER fdtest OPTIONS (ADD oauth_client_id 'myID') |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | 68a12b68816fdd30a261fabf | CREATE STATISTICS mcv_lists_uuid_stats (mcv) ON a, b, c FROM mcv_lists_uuid |
+| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DROP_USER_MAPPING_STMT | 68aa5d9aa45e5e94002de951 | DROP USER MAPPING IF EXISTS FOR public SERVER s7 |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | 68c2ecf202652e7ea45eadfd | CREATE FOREIGN TABLE foreign_part PARTITION OF temp_parted DEFAULT SERVER s0 |
+| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DROP_USER_MAPPING_STMT | 69a81fed33d5b822c1ade677 | DROP USER MAPPING FOR regress_multi_conn_user2 SERVER loopback |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_USER_MAPPING_STMT | 6a536ad23db4efac00448aab | -- ERROR duplicate CREATE USER MAPPING FOR public SERVER s4 OPTIONS ("this mapping" 'is public') |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_FOREIGN_SERVER_STMT | 6ae6b12d2b70cea3ace473be | ALTER SERVER loopback OPTIONS (analyze_sampling 'invalid') |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | 6af60af75522916a68cce710 | -- Test INCLUDING ALL -- INDEXES, IDENTITY, COMPRESSION, STORAGE are not copied. CREATE FOREIGN TABLE ctl_foreign_table2(LIKE ctl_table INCLUDING ALL) SERVER ctl_s0 |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 6b326485eb5d8eba77995949 | ALTER FOREIGN TABLE ft1 ALTER COLUMN c8 SET DATA TYPE integer |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | 6bb63e8a6b0809e130da15ad | CREATE STATISTICS tststats.s1 ON a, b FROM tststats.t |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | 6bccb1767544313bb9e53425 | CREATE FOREIGN TABLE batch_table_p0f PARTITION OF batch_table FOR VALUES WITH (MODULUS 2, REMAINDER 0) SERVER loopback OPTIONS (table_name 'batch_table_p0') |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | 6c97ecc643fe902b4e6e3ed3 | -- validator tests CREATE FOREIGN TABLE tbl () SERVER file_server OPTIONS (foo 'bar') |
+| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DROP_USER_MAPPING_STMT | 6ccfe51e184835e3057cbb1a | DROP USER MAPPING FOR USER SERVER sv4 |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FOREIGN_SERVER_STMT | 6cd141b2ce1a1d7d6d85bce2 | CREATE SERVER fetch101 FOREIGN DATA WRAPPER postgres_fdw OPTIONS( fetch_size '101' ) |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_POLICY_STMT | 6cd817d9294eead657664515 | CREATE POLICY p1 ON t1 TO regress_rls_bob USING ((a % 2) = 0) |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | 6cedd2ae49c31fec1b41258e | -- Ensure statistics are dropped when columns are CREATE STATISTICS ab1_b_c_stats ON b, c FROM ab1 |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_USER_MAPPING_STMT | 6d41b005831e988dd215253d | CREATE USER MAPPING FOR regress_multi_conn_user2 SERVER loopback |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_USER_MAPPING_STMT | 6e1513fffa0ddd39f603e63d | CREATE USER MAPPING FOR public SERVER fdtest OPTIONS (server 'localhost') |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 6e542698ea0ca012d9f49774 | -- force_not_null and force_null can be used together on the same column ALTER FOREIGN TABLE text_csv ALTER COLUMN word1 OPTIONS (force_null 'true') |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_RENAME_STMT | 6efa25b446861ff3481cfe1b | -- failed (name conflict) ALTER SERVER alt_fserv1 RENAME TO alt_fserv3 |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 6f4608a60ee8797a79bae0e8 | ALTER FOREIGN TABLE async_p1 OPTIONS (use_remote_estimate 'true') |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FOREIGN_SERVER_STMT | 7033d888589ecc351fe36d96 | CREATE SERVER sv8 FOREIGN DATA WRAPPER test_wrapper |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 704c4a1d8df86926b27fc69c | ALTER FOREIGN TABLE IF EXISTS doesnt_exist_ft1 DROP c11 |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | 7088f369b286895fbb57186c | CREATE STATISTICS tst ON a FROM foo NATURAL JOIN bar |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | 709ac68b821be0a53baff795 | CREATE STATISTICS s_col ON id, col FROM stats_ext_tbl |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | 70a5613401ff3cc6ef2ed972 | CREATE FOREIGN TABLE ft1 ( c1 integer OPTIONS ("param 1" 'val1') NOT NULL, c2 text OPTIONS (param2 'val2', param3 'val3'), c3 date, UNIQUE (c3) ) SERVER s0 OPTIONS (delimiter ',', quote '"', "be qu... |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FDW_STMT | 7140a37dd972081ef7d11d1c | CREATE FOREIGN DATA WRAPPER postgresql VALIDATOR postgresql_fdw_validator |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_FOREIGN_SERVER_STMT | 71f302efc10413350d364040 | -- We don't allow batch insert when there are any WCO constraints ALTER SERVER loopback OPTIONS (ADD batch_size '10') |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_USER_MAPPING_STMT | 72294a26fc08f9cbebb10eae | -- ERROR CREATE USER MAPPING FOR public SERVER s4 |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 723429affe9de34cb55ce696 | ALTER FOREIGN TABLE ft1 ALTER COLUMN c6 SET NOT NULL |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | 72690aa2737db7a32160a15c | CREATE STATISTICS tst (ndistinct) ON xmin from ext_stats_test1 |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | 72e4e6573afb6a49a0c2f7d0 | CREATE STATISTICS s12 (ndistinct) ON (c * 10), (d - 1) FROM ndistinct |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | 72e99bb66189dd2fefdd96de | create foreign table remt1 (a int, b text) server loopback options (table_name 'loct1') |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_USER_MAPPING_STMT | 7340c6e241ad0adb35e4b5d9 | ALTER USER MAPPING FOR public SERVER testserver1 OPTIONS (DROP user, DROP password) |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_POLICY_STMT | 7378ac52666653edb26d67a5 | CREATE POLICY pguc ON event_trigger_test USING (FALSE) |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_FOREIGN_SERVER_STMT | 73b6948233355748d81adf92 | ALTER SERVER testserver1 OPTIONS (ADD oauth_client_id 'myID') |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OWNER_STMT | 73b8068dfab5b0ff92a616af | ALTER SERVER s1 OWNER TO regress_test_role2 |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_POLICY_STMT | 759a0faddef833d71737a7b1 | CREATE POLICY policy_range_parted_wholerow on range_parted AS RESTRICTIVE for UPDATE USING (true) WITH CHECK (range_parted = row('b', 10, 112, 1, NULL)::range_parted) |
+| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_IMPORT_FOREIGN_SCHEMA_STMT | 7610230da9bb61a3fa39f6ba | -- ERROR IMPORT FOREIGN SCHEMA s1 LIMIT TO (t1) FROM SERVER s9 INTO public |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | 7625ed8c986d1a8b73cf6130 | create foreign table bar2 (f3 int) inherits (bar) server loopback options (table_name 'loct2') |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | 76680239b4e2036a10bdb2d2 | CREATE FOREIGN TABLE remote_application_name (application_name text) SERVER loopback2 OPTIONS (schema_name 'public', table_name 'my_application_name') |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | 7671d12e587259583a948eda | CREATE FOREIGN TABLE ft_part_1_2 (a INT NOT NULL) SERVER s0 |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 76baa946953b125ae070a146 | ALTER FOREIGN TABLE ft1 SET TABLESPACE ts |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_USER_MAPPING_STMT | 76d067f89be7373cc77cdb36 | -- ERROR CREATE USER MAPPING FOR current_user SERVER s4 |
+| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DROP_USER_MAPPING_STMT | 7727234b95cad3759249687b | DROP USER MAPPING IF EXISTS FOR PUBLIC SERVER sv7 |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 7745be55d6449938d470cd24 | ALTER FOREIGN TABLE foreign_tbl INHERIT parent_tbl |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 777ca9aef2e7e982004016cc | ALTER FOREIGN TABLE IF EXISTS doesnt_exist_ft1 ALTER COLUMN c8 TYPE char(10) |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FDW_STMT | 786430aacd93464d029c90c7 | create foreign data wrapper useless |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_FOREIGN_SERVER_STMT | 78c4aa206c3853500416f27d | ALTER SERVER loopback2 OPTIONS (DROP fdw_startup_cost) |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_FOREIGN_SERVER_STMT | 78cff72e3def74f035432637 | ALTER SERVER loopback2 OPTIONS (ADD parallel_commit 'true') |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | 790d8376414b9056419108ba | CREATE STATISTICS s12 (ndistinct) ON c, d FROM ndistinct |
+| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DROP_USER_MAPPING_STMT | 7a058e9702c9c1bed4c87f23 | -- ERROR DROP USER MAPPING FOR regress_test_role SERVER s6 |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_USER_MAPPING_STMT | 7a6ba6d2de86b2ea1f8012f6 | CREATE USER MAPPING FOR "Public" SERVER sv8 OPTIONS (user '"Public"') |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | 7aeaf9b3d14bc4cb7815678e | -- incorrect expressions CREATE STATISTICS tst ON (y) FROM ext_stats_test |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | 7b6695c65d5f94bfc2b01f4a | -- adding anything to the expression builds all statistics kinds CREATE STATISTICS ab1_exprstat_3 ON (a+b), a FROM ab1 |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_FOREIGN_SERVER_STMT | 7b9a6feb63bf9a4b1fcf7a3f | ALTER SERVER loopback OPTIONS (DROP parallel_abort) |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 7ba446eac665dff05b68c02f | ALTER FOREIGN TABLE IF EXISTS doesnt_exist_ft1 DROP CONSTRAINT IF EXISTS no_const |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_POLICY_STMT | 7bb83d7107f8685a3d5ef0a2 | CREATE POLICY p2 ON rls_tbl FOR SELECT USING (c1 <= 3) |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_USER_MAPPING_STMT | 7be0534be7f8066893784560 | CREATE USER MAPPING FOR public SERVER loopback3 |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_USER_MAPPING_STMT | 7bf3687205e62ee2ab3301d8 | -- Unpriv user cannot make the mapping passwordless ALTER USER MAPPING FOR CURRENT_USER SERVER loopback_nopw OPTIONS (ADD password_required 'false') |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 7c0bffb243b0d78f960b0b8e | -- ERROR ALTER FOREIGN TABLE ft1 DROP CONSTRAINT IF EXISTS no_const |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FDW_STMT | 7c341030cc20ed141816c19e | CREATE FOREIGN DATA WRAPPER addr_fdw |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | 7c70a0ed92e35d9aa898213e | CREATE STATISTICS tst ON a, b FROM nonexistent |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FDW_STMT | 7d37eb11c4d3892a68da2e30 | -- -- Foreign Data Wrapper and Foreign Server -- CREATE FOREIGN DATA WRAPPER alt_fdw1 |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_USER_MAPPING_STMT | 7d3de8ae4c6184760c939d4f | -- ERROR CREATE USER MAPPING FOR public SERVER file_server OPTIONS (force_null '*') |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FOREIGN_SERVER_STMT | 7e0a12cd6d56458d90fbdb06 | CREATE SERVER addr_fserv FOREIGN DATA WRAPPER addr_fdw |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | 7e9c80d7285f0eaca4b7a544 | create foreign table grem1 ( a int, b int generated always as (a * 2) stored, c int generated always as (a * 3) virtual ) server loopback options(table_name 'gloc1') |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_USER_MAPPING_STMT | 7eaa133e134b45db49a18ace | CREATE USER MAPPING FOR regress_no_priv_user SERVER file_server |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_USER_MAPPING_STMT | 7ee07a4215193f6da1b646b0 | CREATE USER MAPPING FOR regress_view_owner SERVER loopback |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | 7ee8393c00849feb3a22644e | CREATE STATISTICS tst ON x, x, y, x, x, (x \|\| 'x'), (y + 1), (x \|\| 'x'), (x \|\| 'x'), (y + 1) FROM ext_stats_test |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | 7f3ea467753c54c48fe02644 | -- statistics on system column not allowed CREATE STATISTICS tst on tableoid from ext_stats_test1 |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_POLICY_STMT | 7f84cd9ce9a82fde72f90c0a | -- should fail, already gone CREATE POLICY p1 ON dob_t1 TO regress_rls_dob_role1,regress_rls_dob_role2 USING (true) |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FOREIGN_SERVER_STMT | 7f87da2c7add2d24b6adee34 | CREATE SERVER s4 TYPE 'oracle' FOREIGN DATA WRAPPER foo OPTIONS (host 'a', dbname 'b') |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_POLICY_STMT | 7fee556000acf9a887235650 | CREATE POLICY comment_1 ON comment USING (blog_id < 4) |
+| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DROP_USER_MAPPING_STMT | 803bc7a4791484a10c5040c1 | -- ERROR DROP USER MAPPING IF EXISTS FOR regress_test_missing_role SERVER s4 |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FOREIGN_SERVER_STMT | 803eb25d5d5b67b153d41fa0 | CREATE SERVER sv7 FOREIGN DATA WRAPPER test_wrapper |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 809d8f0f51bd87e39c1e8559 | ALTER FOREIGN TABLE IF EXISTS doesnt_exist_ft1 DROP COLUMN no_column |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_POLICY_STMT | 80b0d61ee26bbba703bfd410 | CREATE POLICY p1 ON b1 USING (a % 2 = 0) |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | 81128ef3ea86492881a6200a | CREATE FOREIGN TABLE fd_pt2_1 PARTITION OF fd_pt2 FOR VALUES IN (1) SERVER s0 OPTIONS (delimiter ',', quote '"', "be quoted" 'value') |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 819947b630f202c6e8fa07b5 | -- =================================================================== -- test check constraints -- =================================================================== -- Consistent check constrain... |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FOREIGN_SERVER_STMT | 8203f267f06825b9506dd1e9 | CREATE SERVER alt_fserv1 FOREIGN DATA WRAPPER alt_fdw1 |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_FOREIGN_SERVER_STMT | 8210e0d1d13b19f702a86121 | ALTER SERVER s3 OPTIONS ("tns name" 'orcl', port '1521') |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_USER_MAPPING_STMT | 826bb3c7a99ab1a60bf3c5d3 | ALTER USER MAPPING FOR "Public" SERVER sv8 OPTIONS (SET user '"Public"_alt') |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_RENAME_STMT | 82b80976ce3dd17a78d758a3 | -- ERROR ALTER FOREIGN TABLE foreign_schema.ft1 RENAME c1 TO foreign_column_1 |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FDW_STMT | 82f103758f0de46a99ddc0da | CREATE FOREIGN DATA WRAPPER foo OPTIONS (testing '1') |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | 8348e63982e44bc60f644b36 | CREATE FOREIGN TABLE batch_table_p0f PARTITION OF batch_table FOR VALUES WITH (MODULUS 3, REMAINDER 0) SERVER loopback OPTIONS (table_name 'batch_table_p0', batch_size '10') |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 8355f457b3a0799bedf3b9a6 | -- ERROR ALTER FOREIGN TABLE text_csv OPTIONS (SET format 'csv') |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_FOREIGN_SERVER_STMT | 83b2bd4b50989edc9e0e9241 | -- Error, invalid list syntax ALTER SERVER testserver1 OPTIONS (ADD extensions 'foo; bar') |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_POLICY_STMT | 83c0c96aadc1d1b017f8f7d0 | CREATE POLICY P ON tbl1 TO regress_rls_eve, regress_rls_frank USING (true) |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_POLICY_STMT | 8401937326fdfe7f6203395d | CREATE POLICY p3 ON r2 FOR UPDATE USING (false) |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | 8411e88dcaaaf7c390f1c481 | -- create statistics CREATE STATISTICS mcv_lists_stats (mcv) ON (mod(a,7)), (mod(b::int,11)), (mod(c,13)) FROM mcv_lists |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_FOREIGN_SERVER_STMT | 84153e80883e629d20fe1144 | -- ERROR ALTER SERVER s0 OPTIONS (a '1') |
+| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DROP_USER_MAPPING_STMT | 843c0931c223c0a24a2a9706 | DROP USER MAPPING IF EXISTS FOR SESSION_USER SERVER sv6 |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | 845bfa3cb1ce41a542c7381d | -- The ndistinct extended statistics on (x, y, z) provides more reliable value -- of bucket size. CREATE STATISTICS extstat_sb_2 (ndistinct) ON x, y, z FROM sb_2 |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_POLICY_STMT | 8499225bb8dbba2d6f00ea81 | CREATE POLICY p4 ON rls_tbl FOR DELETE USING (c1 <= 3) |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 84ef4d2dd76ecddc390f0570 | ALTER FOREIGN TABLE foreign_schema.foreign_table_1 ENABLE TRIGGER trigtest_before_stmt |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_USER_MAPPING_STMT | 8517904f7c8be0321f2cb9ab | ALTER USER MAPPING FOR "user" SERVER sv5 OPTIONS (SET user '"user"_alt') |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 8598e7e905c41ca19018720d | -- ERROR ALTER FOREIGN TABLE fd_pt2_1 ADD CONSTRAINT fd_pt2chk1 CHECK (c1 > 0) |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 85f57f1cc380614ac769562d | ALTER FOREIGN TABLE ft1 ALTER COLUMN xmin OPTIONS (ADD p1 'v1') |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_FOREIGN_SERVER_STMT | 86199166637c4039ec843f47 | ALTER SERVER batch10 OPTIONS( SET batch_size '20' ) |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | 863c06904bef6b3e5a910b4e | CREATE STATISTICS s12 (ndistinct) ON a, (b+1), (c * 10) FROM ndistinct |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_USER_MAPPING_STMT | 86795024e33b11143dc77bfb | ALTER USER MAPPING FOR nonexistent SERVER sv10 OPTIONS (SET user 'nonexistent_alt') |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | 868f15bd4e719cb2eeb42d90 | CREATE FOREIGN TABLE tststats.f (a int, b int, c text) SERVER extstats_dummy_srv |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | 86dadbfb759a9f7b745242f8 | -- ERROR CREATE FOREIGN TABLE tbl () SERVER file_server OPTIONS (on_error 'unsupported') |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | 870ddcc542c3ee6e2d0f6167 | CREATE FOREIGN TABLE async_p1 PARTITION OF async_pt FOR VALUES FROM (1000) TO (2000) SERVER loopback OPTIONS (table_name 'base_tbl1') |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | 87208f9c670ed829f84a55bf | CREATE STATISTICS tst ON a FROM (SELECT * FROM ext_stats_test) AS foo |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_FOREIGN_SERVER_STMT | 87881f30b0b1126d77326570 | alter server loopback options (drop fdw_tuple_cost) |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_FOREIGN_SERVER_STMT | 87c554f959503a51c96f9b03 | ALTER SERVER s9 VERSION '1.2' |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_POLICY_STMT | 87cf4a664c535fd6fd51e369 | -- and Dave isn't allowed to see manga documents CREATE POLICY p1r ON document AS RESTRICTIVE TO regress_rls_dave USING (cid <> 44) |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | 87df3bcb2f0c71c9f9453416 | CREATE STATISTICS tst ON (x \|\| 'x'), (x \|\| 'x'), y FROM ext_stats_test |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | 87e26fec37f20086dd05a981 | CREATE STATISTICS sts_sch2.pass2 ON a, b, c FROM sts_sch1.tbl |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FOREIGN_SERVER_STMT | 87ffdfb9c980fef6f1b68b32 | CREATE SERVER s9 FOREIGN DATA WRAPPER postgresql |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_FOREIGN_SERVER_STMT | 88059535310b4f6282503389 | -- Test %c (session ID) and %C (cluster name) escape sequences. ALTER SERVER loopback2 OPTIONS (SET application_name 'fdw_%C%c') |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FOREIGN_SERVER_STMT | 885a204958a8d0e1e122baf0 | -- =================================================================== -- test invalid server, foreign table and foreign data wrapper options -- ====================================================... |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | 8865741671ae7d2c6c7726a0 | CREATE STATISTICS t_b_c_stat (mcv) ON b, c FROM bitmap_split_or |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | 8887b6196333c5b3529fc08f | CREATE FOREIGN TABLE batch_cp_upd_test1_f PARTITION OF batch_cp_upd_test FOR VALUES IN (1) SERVER loopback OPTIONS (table_name 'batch_cp_upd_test1', batch_size '10') |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | 88a081f0ea332d1a3a0f351c | -- Disable batch insert CREATE FOREIGN TABLE ftable ( x int ) SERVER loopback OPTIONS ( table_name 'batch_table', batch_size '1' ) |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OWNER_STMT | 8a16296c4a104ae3a460eac9 | -- ERROR ALTER SERVER s1 OWNER TO regress_test_role |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 8a54ab1eff8af7717fccb67b | ALTER FOREIGN TABLE ft1 DROP CONSTRAINT no_const |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_FDW_STMT | 8a964076727a3b05d26aad12 | -- force_not_null is not allowed to be specified at any foreign object level: ALTER FOREIGN DATA WRAPPER file_fdw OPTIONS (ADD force_not_null '*') |
+| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DROP_USER_MAPPING_STMT | 8b97d383aa8c60c4e3169d30 | DROP USER MAPPING FOR "current_user" SERVER sv2 |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 8bdf701a63a18816852423a4 | ALTER FOREIGN TABLE foreign_schema.foreign_table_1 DISABLE TRIGGER trigtest_before_stmt |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_FOREIGN_SERVER_STMT | 8c1c50105424a0eafcce09b7 | ALTER SERVER testserver1 OPTIONS (DROP extensions) |
+| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_IMPORT_FOREIGN_SCHEMA_STMT | 8c998d9eecc20b3c99f223df | -- ERROR IMPORT FOREIGN SCHEMA s1 EXCEPT (t1, t2) FROM SERVER s9 INTO public OPTIONS (option1 'value1', option2 'value2') |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_FOREIGN_SERVER_STMT | 8cd6ba5ceb7d572889c25526 | -- =================================================================== -- test parallel commit and parallel abort -- =================================================================== ALTER SERVER... |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | 8d6d662db8e8f6aa1f459dd0 | CREATE FOREIGN TABLE ftprt2_p2 PARTITION OF fprt2 FOR VALUES FROM (250) TO (500) SERVER loopback OPTIONS (table_name 'fprt2_p2', use_remote_estimate 'true') |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 8d8eacf7211783b9da5feab4 | ALTER FOREIGN TABLE ft1 DROP CONSTRAINT ft1_c2negative |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 8da0b0db2c47b9d626ffb544 | ALTER FOREIGN TABLE ft1 ALTER COLUMN c1 SET STATISTICS 10000 |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | 8e0f82506edc544ad93624db | create foreign table remt2 (a int, b text) server loopback options (table_name 'loct2') |
+| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_IMPORT_FOREIGN_SCHEMA_STMT | 8e12afd49163a6ec7169125f | -- IMPORT FOREIGN SCHEMA IMPORT FOREIGN SCHEMA s1 FROM SERVER s9 INTO public |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | 8e48603565dacfd5686dcf6c | -- ERROR CREATE FOREIGN TABLE ft_part2 (a INT NOT NULL) SERVER s0 |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FDW_STMT | 8e6f8cdcbb721d34727ba00f | CREATE FOREIGN DATA WRAPPER file_fdw2 HANDLER file_fdw_handler VALIDATOR file_fdw_validator |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_POLICY_STMT | 8e8495fde3085df0f7f72f3c | CREATE POLICY p1 ON current_check FOR SELECT USING (currentid % 2 = 0) |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_POLICY_STMT | 8e8b689b38270262a74ae581 | -- be even number CREATE POLICY p2 ON t2 FOR ALL TO PUBLIC USING (a % 2 = 1) |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | 8e9ecc48953d67d2ef206768 | CREATE STATISTICS s12 (ndistinct) ON c, d, (c * 10), (d - 1) FROM ndistinct |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | 8ebb6f6505ed23cfea0d2959 | CREATE FOREIGN TABLE ftprt2_p1 (b int, c varchar, a int) SERVER loopback OPTIONS (table_name 'fprt2_p1', use_remote_estimate 'true') |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | 8f493088b8e82e2d87e192f3 | CREATE STATISTICS tst ON x, x, y, x, x, y, x, x, y FROM ext_stats_test |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_USER_MAPPING_STMT | 8f84bd311b0eb8719158627e | CREATE USER MAPPING FOR CURRENT_USER SERVER loopback |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_FDW_STMT | 8f8f2965f0049d9d7ebb117f | ALTER FOREIGN DATA WRAPPER foo OPTIONS (ADD d '5') |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_POLICY_STMT | 8faa40338e56c7efad02492f | CREATE POLICY d1 ON dependent FOR ALL TO PUBLIC USING (x = (SELECT d.x FROM dependee d WHERE d.y = y)) |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_FOREIGN_SERVER_STMT | 8fc2ac61c50c493f66d9dc61 | -- Now this will be pushed as sort operator is part of the extension. alter server loopback options (add fdw_tuple_cost '0.5') |
+| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DROP_USER_MAPPING_STMT | 90392f9589d9b38216abccbc | DROP USER MAPPING FOR "user" SERVER sv5 |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_USER_MAPPING_STMT | 907126cfa22f6d470f03ed3e | ALTER USER MAPPING FOR CURRENT_USER SERVER loopback_nopw OPTIONS (ADD sslkey 'foo.key') |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 9078431c64ab3cc61f0a9e73 | -- accepted ALTER FOREIGN TABLE tru_ftable OPTIONS (SET truncatable 'false') |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_USER_MAPPING_STMT | 91412ed6044c9c5e35824b9f | -- ERROR CREATE USER MAPPING IF NOT EXISTS FOR current_user SERVER s1 |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_FOREIGN_SERVER_STMT | 917ae882230ab58f56bfe22d | ALTER SERVER loopback OPTIONS (SET application_name 'fdw_conn_check') |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_USER_MAPPING_STMT | 91e390c339c10996241cda35 | -- ALTER USER MAPPING ALTER USER MAPPING FOR CURRENT_USER SERVER sv1 OPTIONS (SET user 'CURRENT_USER_alt') |
+| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DROP_USER_MAPPING_STMT | 9236f6b9c7df5ec89bb6d716 | DROP USER MAPPING FOR public SERVER s4 |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | 92f8a9989a0ab4e52d7baa00 | CREATE FOREIGN TABLE ft2 ( c1 integer NOT NULL, c2 text, c3 date ) SERVER s0 OPTIONS (delimiter ',', quote '"', "be quoted" 'value') |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_POLICY_STMT | 937f68e975cd15d7d65f444f | CREATE POLICY p3_with_default ON document FOR UPDATE USING (cid = (SELECT cid from category WHERE cname = 'novel')) |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FDW_STMT | 9392d109af40e0eac0580ee3 | CREATE FOREIGN DATA WRAPPER ext_cine_fdw |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_POLICY_STMT | 9442b52ffb74d0f104a4f4b8 | CREATE POLICY evtrg_nontemp_pol ON evtrg_nontemp_table USING (f2 > 0) |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_POLICY_STMT | 9461d16a6b3656b4131105dc | CREATE POLICY p1 ON rls_test_restrictive USING (true) |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | 9469d7512489ffe079097492 | CREATE STATISTICS tststats.s5 ON a, b FROM tststats.mv |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_USER_MAPPING_STMT | 9510cd8f3d88bf24b65ae6e6 | CREATE USER MAPPING FOR regress_file_fdw_superuser SERVER file_server |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FOREIGN_SERVER_STMT | 952ce25f5b81af27445a3048 | CREATE SERVER s0 FOREIGN DATA WRAPPER dummy |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 9599241bd11df4cc841d28cb | ALTER FOREIGN TABLE ft1 ADD COLUMN c8 integer DEFAULT 0 |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_POLICY_STMT | 95e0ffefeec5820b8d455bcb | CREATE POLICY p3 ON s1 FOR INSERT WITH CHECK (a = (SELECT a FROM s1)) |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | 963f1a5456a119c135ead668 | create statistics (ndistinct, dependencies, mcv) on a, b from stts_t1 |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_USER_MAPPING_STMT | 96e61cfe7b633cced4af3efa | ALTER USER MAPPING FOR CURRENT_ROLE SERVER sv3 OPTIONS (SET user 'CURRENT_ROLE_alt') |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_FOREIGN_SERVER_STMT | 9711163f05e9f2111b955c0f | ALTER SERVER loopback OPTIONS (SET analyze_sampling 'bernoulli') |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FOREIGN_SERVER_STMT | 971877c4063abd0bb2a8ec9d | CREATE SERVER sv6 FOREIGN DATA WRAPPER test_wrapper |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | 9783d33f122215ce49a26768 | CREATE FOREIGN TABLE ft1 (c1 integer NOT NULL) SERVER s0 |
+| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DROP_USER_MAPPING_STMT | 97b27353564026b69fdd5452 | -- Clean up DROP USER MAPPING FOR regress_multi_conn_user1 SERVER loopback |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | 982e52fd9afc379663633421 | CREATE STATISTICS tst (unrecognized) ON x, y FROM ext_stats_test |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_USER_MAPPING_STMT | 98904bb6cc4f2f148974e0de | ALTER USER MAPPING FOR CURRENT_USER SERVER loopback_nopw OPTIONS (ADD sslcert 'foo.crt') |
+| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DROP_USER_MAPPING_STMT | 98f0187f65447a9cb4081301 | DROP USER MAPPING FOR current_user SERVER t1 |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_POLICY_STMT | 991bfa809699d4e2cd006a40 | CREATE POLICY p2 ON current_check FOR DELETE USING (currentid = 4 AND rlsuser = current_user) |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | 991dfc7aef3a2a13f3934291 | create foreign table tab_batch_sharded_p1 partition of tab_batch_sharded for values with (modulus 2, remainder 1) server loopback options (table_name 'tab_batch_sharded_p1_remote') |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | 9984f36efc850f5b165e6c55 | CREATE FOREIGN TABLE fd_pt2_1 ( c1 integer NOT NULL, c2 text, c3 date, c4 char ) SERVER s0 OPTIONS (delimiter ',', quote '"', "be quoted" 'value') |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FDW_STMT | 99871cfdaa4cbe2cad6a2017 | -- ERROR CREATE FOREIGN DATA WRAPPER foo OPTIONS ("test wrapper" 'true') |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_POLICY_STMT | 9a221c14fc299c0479a60352 | -- one may only update documents in 'novel' category and new dlevel must be > 0 CREATE POLICY p3 ON document FOR UPDATE USING (cid = (SELECT cid from category WHERE cname = 'novel')) WITH CHECK (dl... |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | 9a34fd6be98059028b2cb015 | -- correct command CREATE STATISTICS s10 ON a, b, c FROM ndistinct |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 9a728d0ac07322c742766487 | ALTER FOREIGN TABLE IF EXISTS doesnt_exist_ft1 ADD COLUMN c8 integer |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_USER_MAPPING_STMT | 9bb50f4e25b2f3cfec568b79 | ALTER USER MAPPING FOR public SERVER testserver1 OPTIONS (ADD oauth_issuer 'https://example.com') |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FOREIGN_SERVER_STMT | 9bc4ce39c6371d2503fe79df | CREATE SERVER sv5 FOREIGN DATA WRAPPER test_wrapper |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_POLICY_STMT | 9c4773779c86706e0350a410 | CREATE POLICY p1 ON rls_tbl_force USING (c1 = 5) WITH CHECK (c1 < 5) |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 9cc6f3f77a7b002bfb35a886 | ALTER FOREIGN TABLE IF EXISTS doesnt_exist_ft1 DROP CONSTRAINT ft1_c1_check |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_POLICY_STMT | 9d693dbca4213a6141f7f79a | CREATE POLICY p3 ON current_check FOR UPDATE USING (currentid = 4) WITH CHECK (rlsuser = current_user) |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_POLICY_STMT | 9d80d036436e847e69b5bfbf | CREATE POLICY p2 ON z1 TO regress_rls_group2 USING (a % 2 = 1) |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FDW_STMT | 9e138856d204ca3733c8ded7 | -- ERROR CREATE FOREIGN DATA WRAPPER test_fdw HANDLER test_fdw_handler |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FOREIGN_SERVER_STMT | 9e914a4e799cf10bf91a97e9 | CREATE SERVER sv10 FOREIGN DATA WRAPPER test_wrapper |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | 9eaac9fd8e81402dc84ed4b3 | create statistics (mcv) ON (a+b), (a-b) FROM stts_t1 |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FDW_STMT | 9eb2ab796e48ef074343ab41 | -- ERROR CREATE FOREIGN DATA WRAPPER foo |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | 9ebba0036b636eb1dd18cf77 | CREATE STATISTICS s11 (ndistinct) ON a, b, (a*5), (b+1) FROM ndistinct |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 9f26cd63b255a8086f24eb14 | -- ERROR ALTER FOREIGN TABLE ft1 ADD CONSTRAINT ft1_c9_check CHECK (c9 < 0) NOT VALID |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 9f8ee0a181ad1b9034d172a8 | ALTER FOREIGN TABLE ft1 ADD COLUMN IF NOT EXISTS c6 integer |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 9f92de53016747ebdf9a854a | ALTER FOREIGN TABLE ft2 OPTIONS (use_remote_estimate 'true') |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_POLICY_STMT | 9fa1300f950204d0b06c00f0 | CREATE POLICY p1 ON r1 FOR SELECT USING (a < 20) |
+| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_IMPORT_FOREIGN_SCHEMA_STMT | 9fa9e38184d68db7b8ce4101 | --ERROR IMPORT FOREIGN SCHEMA s1 EXCEPT (t1) FROM SERVER s9 INTO public |
+| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DROP_USER_MAPPING_STMT | 9fd8f8c132f4d58a7709735f | DROP USER MAPPING IF EXISTS FOR CURRENT_USER SERVER sv3 |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | 9fdf3d3507abf9994fde86f5 | create foreign table remp1 (a int check (a in (1)), b text) server loopback options (table_name 'loct1') |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_FOREIGN_SERVER_STMT | a0238dc6693cfeb2d2b97dc5 | -- Connections are not closed at the end of the alter and drop statements. -- That's because the connections are in midst of this xact, -- they are just marked as invalid in pgfdw_inval_callback. A... |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_FOREIGN_SERVER_STMT | a07a86ec8ccde5f9dd3f73b5 | ALTER SERVER loopback OPTIONS (ADD extensions 'postgres_fdw') |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | a0a47f58a99119afa5f5f62f | CREATE STATISTICS regress_schema_2.ab1_a_b_stats ON a, b FROM ab1 |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | a120089d2b6dda8f7f421568 | CREATE FOREIGN TABLE insert_tbl (a int, b int, c text) SERVER loopback OPTIONS (table_name 'base_tbl4') |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | a1227c6e142d33389130cea4 | create statistics (ndistinct) on a, b from stts_t1 |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_USER_MAPPING_STMT | a123daa935477587a1646cb7 | CREATE USER MAPPING FOR CURRENT_USER SERVER sv1 OPTIONS (user 'CURRENT_USER') |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | a1463927f6d923f7e1339c8d | ALTER FOREIGN TABLE IF EXISTS doesnt_exist_ft1 ADD COLUMN c9 integer |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | a18785bf46ece092174cd026 | CREATE FOREIGN TABLE ft2 ( c1 int NOT NULL, c2 int NOT NULL, cx int, c3 text, c4 timestamptz, c5 timestamp, c6 varchar(10), c7 char(10) default 'ft2', c8 user_enum ) SERVER loopback |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | a1db74e132ba9172b07d0d7e | -- error ALTER FOREIGN TABLE tru_ftable OPTIONS (ADD truncatable 'true') |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | a23ff165cad15e55fbc7a163 | -- create statistics with expressions only (we create three separate stats, in order not to build more complex extended stats) CREATE STATISTICS mcv_lists_stats_1 ON (mod(a,20)) FROM mcv_lists |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | a2971e782e8bc986a55a338a | -- test compression with partition CREATE TABLE cmpart(f1 text COMPRESSION lz4) PARTITION BY HASH(f1) |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_FOREIGN_SERVER_STMT | a2d044c3d27135f0c2298acd | -- ERROR ALTER SERVER s4 VERSION '0.5' |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | a30982b22b3720a0ebb8843b | CREATE STATISTICS ctl_stats3_stat ON a, c FROM ctl_stats3_parent |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | a314f587ff74f46629ea34e7 | ALTER FOREIGN TABLE agg_csv ADD CHECK (a >= 0) |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | a4755bf80651138f2d82e03b | create statistics (ndistinct, dependencies) on a, b from stts_t1 |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_POLICY_STMT | a47d397429669e66e0bd3de8 | ALTER POLICY p2 ON s2 USING (x % 2 = 0) |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FDW_STMT | a48e98d6ba21b506f7669c83 | CREATE FOREIGN DATA WRAPPER dblink_fdw VALIDATOR dblink_fdw_validator |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | a49d4e8c8f70060f5842d96b | create foreign table ft3 (f1 text collate "C", f2 text, f3 varchar(10)) server loopback options (table_name 'loct3', use_remote_estimate 'true') |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | a4efd9ac3741b81c12459a26 | -- child must have parent's INHERIT constraints ALTER FOREIGN TABLE ft2 INHERIT fd_pt1 |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | a51ea86c4378a3c15d49b6cd | CREATE FOREIGN TABLE analyze_ftable (id int, a text, b bigint) SERVER loopback OPTIONS (table_name 'analyze_table') |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_FOREIGN_SERVER_STMT | a6a2e083484cb4c3d6500fe3 | alter server loopback options (set extensions 'postgres_fdw') |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | a6aa900da9dc8318deb1159f | -- create statistics CREATE STATISTICS mcv_lists_stats (mcv) ON a, b, c, ia FROM mcv_lists |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FDW_STMT | a6dc7fc71fadb4484aa7ee95 | CREATE FOREIGN DATA WRAPPER foo VALIDATOR postgresql_fdw_validator |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_POLICY_STMT | a6de3d1b738c181785804b54 | CREATE POLICY r1 ON rec1 USING (x = (SELECT r.x FROM rec1 r WHERE y = r.y)) |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_POLICY_STMT | a739c070c223e972990a3206 | ALTER POLICY r1 ON rec1 USING (x = (SELECT a FROM rec2 WHERE b = y)) |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_RENAME_STMT | a7654d51725f0ea86ce3fea5 | ALTER POLICY p1 ON t1 RENAME TO p1 |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_POLICY_STMT | a767b7f6c9214cfe61041f25 | CREATE POLICY policy_range_parted_subplan on range_parted AS RESTRICTIVE for UPDATE USING (true) WITH CHECK ((SELECT range_parted.c <= c1 FROM mintab)) |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FDW_STMT | a7f9b076b885cf2f0cc6847a | -- ERROR CREATE FOREIGN DATA WRAPPER foo OPTIONS (testing '1', another '2') |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | a8639bfe0e5cf66d0cd01e98 | -- ERROR CREATE FOREIGN TABLE tbl () SERVER file_server OPTIONS (format 'csv', delimiter '-', null '=-=') |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | a8d7516b5c02ab432b5e9e41 | -- error ALTER FOREIGN TABLE tru_ftable OPTIONS (SET truncatable 'true') |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_USER_MAPPING_STMT | a9298e5aa92ed1e99eb0f410 | CREATE USER MAPPING FOR current_user SERVER s5 |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_FOREIGN_SERVER_STMT | a9ce12e1d01d6e0cdb04c9a5 | ALTER SERVER s6 OPTIONS (DROP host, DROP dbname) |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_POLICY_STMT | aa7bc86c49f3720b5741bd5b | CREATE POLICY p1 ON document FOR SELECT USING (true) |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | aa860bc45cfa5266d9232013 | ALTER FOREIGN TABLE foreign_tbl NO INHERIT parent_tbl |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FOREIGN_SERVER_STMT | aac73a7ef55f10fb1fca4cec | CREATE SERVER "integer" FOREIGN DATA WRAPPER addr_fdw |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_USER_MAPPING_STMT | ab1ee8c7be20df9ffddf921c | CREATE USER MAPPING FOR CURRENT_ROLE SERVER sv3 OPTIONS (user 'CURRENT_ROLE') |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | abe33740abbda6a49ebf85d3 | -- ERROR CREATE FOREIGN TABLE tbl () SERVER file_server OPTIONS (format 'csv', delimiter ' ') |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_POLICY_STMT | ac21c5da4719cc8be52eaaef | CREATE POLICY priv_test_tbl_pol ON tststats.priv_test_tbl USING (2 * a < 0) |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | ac4852bd866e778462089355 | ALTER FOREIGN TABLE agg_csv NO INHERIT agg |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_POLICY_STMT | ac4d39808b76f0013c10bf16 | CREATE POLICY p1 ON r1 USING (false) |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | ac5a3c106e31bf1b6496a9cb | CREATE STATISTICS alt_stat2 ON a FROM tftest(1) |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_USER_MAPPING_STMT | ac742cf13781de79c6c7efe0 | -- unpriv user also cannot set sslcert / sslkey on the user mapping -- first set password_required so we see the right error messages ALTER USER MAPPING FOR CURRENT_USER SERVER loopback_nopw OPTION... |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | aca63db5df0e6c47e0ffcb77 | ALTER FOREIGN TABLE table30 OPTIONS ( SET batch_size '40') |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | acc5db5a96d85882421f5a28 | CREATE TABLE ctl_table(a int PRIMARY KEY, b varchar COMPRESSION pglz, c int GENERATED ALWAYS AS (a * 2) STORED, d bigint GENERATED ALWAYS AS IDENTITY, e int DEFAULT 1) |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_POLICY_STMT | adaa43bc4b018278dc62b1f0 | CREATE POLICY p1 ON copy_rel_to USING (a % 2 = 0) |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_POLICY_STMT | ae0318126291a7d8ed0a401b | CREATE POLICY p1 ON rls_test_permissive USING (data % 2 = 0) |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_FOREIGN_SERVER_STMT | ae59be629210c78344fd9e06 | ALTER SERVER s1 VERSION '1.1' |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_POLICY_STMT | ae9f1a47970a688fa143a0b1 | CREATE POLICY a_temp_pol ON a_temp_tbl USING (f2 > 0) |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_POLICY_STMT | aeb19ba56d79296102948e18 | CREATE POLICY pp3 ON part_document_satire AS RESTRICTIVE USING (cid < 55) |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | af7b687a7f4614997a10e38e | CREATE FOREIGN TABLE batch_table_p1f PARTITION OF batch_table FOR VALUES WITH (MODULUS 3, REMAINDER 1) SERVER loopback OPTIONS (table_name 'batch_table_p1', batch_size '1') |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | b00db4ca5108a4f768ec42f6 | ALTER FOREIGN TABLE IF EXISTS doesnt_exist_ft1 ADD COLUMN IF NOT EXISTS c6 integer |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_USER_MAPPING_STMT | b052557cc7b109e7e6de951e | ALTER USER MAPPING FOR "current_user" SERVER sv2 OPTIONS (SET user '"current_user"_alt') |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | b052c624c5a78dfcd5268338 | CREATE FOREIGN TABLE foreign_tbl (a int, b int) SERVER loopback OPTIONS (table_name 'child_tbl') |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | b0de162b620d91b1106c4377 | CREATE FOREIGN TABLE prem2 (f1 int, f2 text) SERVER loopback2 OPTIONS (table_name 'ploc2') |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FOREIGN_SERVER_STMT | b12129a637f48187eeb3f2ff | CREATE SERVER s7 TYPE 'oracle' VERSION '17.0' FOREIGN DATA WRAPPER foo OPTIONS (host 'a', dbname 'b') |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | b140c3a88f537cc27c8a1eda | alter foreign table rem2 drop constraint rem2_f1positive |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_POLICY_STMT | b1a0ca1fe9795cb94389d565 | CREATE POLICY p3 ON x1 FOR UPDATE USING (a % 2 = 0) |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_FOREIGN_SERVER_STMT | b1eda69f9b5706578db6985e | ALTER SERVER loopback OPTIONS (DROP async_capable) |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | b21c42e7b8fa77c408bf68fd | CREATE TABLE cmpart2(f1 text COMPRESSION pglz) |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | b30819a79dc8d350c14f64fb | ALTER FOREIGN TABLE ft1 OPTIONS (SET table_name 'T 1') |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_STATS_STMT | b34cb709a7bba7cc63818e8b | ALTER STATISTICS ab1_a_b_stats SET STATISTICS -1 |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | b37ac864fad4140a5566e6fd | CREATE FOREIGN TABLE ft_empty (c1 int NOT NULL, c2 text) SERVER loopback OPTIONS (table_name 'loct_empty') |
+| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DROP_USER_MAPPING_STMT | b37e0f2be32a8fd7631d5667 | DROP USER MAPPING FOR CURRENT_ROLE SERVER sv3 |
+| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_IMPORT_FOREIGN_SCHEMA_STMT | b3cfe4805b8d1012ad9e51af | IMPORT FOREIGN SCHEMA nonesuch FROM SERVER nowhere INTO notthere |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | b3fa472c2c98b702a54c19ee | ALTER FOREIGN TABLE table30000 OPTIONS ( SET fetch_size '60000') |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FOREIGN_SERVER_STMT | b41cddbb7dc74bd13111c78c | CREATE SERVER ctl_s0 FOREIGN DATA WRAPPER ctl_dummy |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_POLICY_STMT | b4310ff25544679e003dcd89 | CREATE POLICY p1 ON copy_t USING (a % 2 = 0) |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_USER_MAPPING_STMT | b469d0598b082bb00d1d51ff | -- ERROR ALTER USER MAPPING FOR public SERVER s5 OPTIONS (gotcha 'true') |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_FDW_STMT | b4929718d9af444681ecb408 | ALTER FOREIGN DATA WRAPPER foo OPTIONS (ADD e '6') |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_USER_MAPPING_STMT | b4f6ba68b4f446deaaed6efc | -- But the superuser can ALTER USER MAPPING FOR regress_nosuper SERVER loopback_nopw OPTIONS (ADD password_required 'false') |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | b5012349441c8dc0381b2e4c | CREATE STATISTICS tst ON x, x, y FROM ext_stats_test |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_POLICY_STMT | b51494a7a63a066b65d61827 | CREATE POLICY p1 ON rls_tbl USING (rls_tbl >= ROW(1,1,1)) |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_USER_MAPPING_STMT | b542b88eaa485fe5559aaa1b | CREATE USER MAPPING FOR USER SERVER sv4 OPTIONS (user 'USER') |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | b566f75e122a3b02d4e03231 | CREATE STATISTICS ctlt1_a_b_stat ON a,b FROM ctlt1 |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | b5b79595276e2a69db417239 | ALTER FOREIGN TABLE agg_bad OPTIONS (SET reject_limit '2') |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_POLICY_STMT | b60883b8353201f2bf52a6e8 | CREATE POLICY p1 ON rls_test_both USING (data % 2 = 0) |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | b7b1833ac9004a8c7a09c3bd | -- ERROR CREATE FOREIGN TABLE tbl () SERVER file_server OPTIONS (format 'text', delimiter '1') |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OWNER_STMT | b7d3730f1728dddea0bca4dc | ALTER SERVER t1 OWNER TO regress_test_indirect |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | b7ec58e2aa99697e9263ac2c | CREATE FOREIGN TABLE remote_backend_pid (pid int) SERVER loopback OPTIONS (table_name 'my_backend_pid') |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_USER_MAPPING_STMT | b80af2b93fd4e4a8301098ab | CREATE USER MAPPING FOR nonexistent SERVER sv10 OPTIONS (user 'nonexistent') |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | b814084e8a12a49a4284ea73 | create foreign table remp (a int check (a in (3)), b text) server loopback options (table_name 'loct') |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | b92fc3e48db77755154e0eb8 | ALTER FOREIGN TABLE ft1 ALTER COLUMN c1 SET (n_distinct = 100) |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | b969d34cd21584b2131a3045 | ALTER FOREIGN TABLE ft1 ADD COLUMN c7 integer NOT NULL |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | b98ce077fb5adc662273f61d | ALTER FOREIGN TABLE ft1 ALTER COLUMN c8 SET STATISTICS -1 |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_FOREIGN_SERVER_STMT | ba0b22316613d2a0b591a3be | -- =================================================================== -- reestablish new connection -- =================================================================== -- Change application_nam... |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_POLICY_STMT | ba4ad93e457893572fc6c239 | -- Create policies on r2 which prevent the -- owner from seeing any rows, but RI should -- still see them. CREATE POLICY p1 ON r2 USING (false) |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OBJECT_SCHEMA_STMT | ba61c828ba749fbb931cf3dc | ALTER FOREIGN TABLE IF EXISTS doesnt_exist_ft1 SET SCHEMA foreign_schema |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_POLICY_STMT | ba82d75aaeb46069513e3484 | -- one may only delete documents in 'manga' category CREATE POLICY p4 ON document FOR DELETE USING (cid = (SELECT cid from category WHERE cname = 'manga')) |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | ba84e30536370fe75d2af925 | CREATE FOREIGN TABLE ft1 ( c1 integer OPTIONS ("param 1" 'val1') REFERENCES ref_table (id), c2 text OPTIONS (param2 'val2', param3 'val3'), c3 date ) SERVER s0 OPTIONS (delimiter ',', quote '"', "b... |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_POLICY_STMT | bab4349bc4bde9a4ae78e81f | CREATE POLICY p1 ON rls_tbl USING (c1 > 5) |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_FOREIGN_SERVER_STMT | bacae19c6c43738cffa5d552 | -- =================================================================== -- Test foreign server level option keep_connections -- =================================================================== --... |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | baf2226de0950739f2e31766 | ALTER FOREIGN TABLE foreign_stats ADD CONSTRAINT b_nonzero CHECK (b <> 0) |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | bb245b2fe1a0144bca82eb9c | -- Extended statistics with an expression that cannot be analyzed. CREATE STATISTICS test_stats ON func_int_custom(data), (id) FROM test_table |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | bb3a18a28169c15eb463699e | CREATE STATISTICS s10 (ndistinct) ON (a+1), (b+100), (2*c) FROM ndistinct |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_FOREIGN_SERVER_STMT | bb51cb15c885910c427ab9c3 | -- error ALTER SERVER loopback OPTIONS (DROP truncatable) |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | bb6b2ac64a578b96619ffa72 | CREATE STATISTICS ab1_b_a_stats ON b, a FROM ab1 |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_POLICY_STMT | bb82d62a724c0852a69d3659 | ALTER POLICY p1 ON s1 USING (a in (select x from v2)) |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | bbd13119a5bf966c6e793b15 | ALTER FOREIGN TABLE ft1 DROP COLUMN no_column |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | bbf62ba71cc9ea34fbe547a0 | CREATE FOREIGN TABLE child_foreign (b text, c numeric, a int) SERVER loopback OPTIONS (table_name 'child_local') |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | bc695d63c1dad4208b195c9d | -- date_trunc on timestamptz is not immutable, but that should not matter CREATE STATISTICS ab1_exprstat_4 ON date_trunc('day', d) FROM ab1 |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | bca67aa86625d5a0a8e3a594 | CREATE FOREIGN TABLE ftprt1_p1 PARTITION OF fprt1 FOR VALUES FROM (0) TO (250) SERVER loopback OPTIONS (table_name 'fprt1_p1', use_remote_estimate 'true') |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FOREIGN_SERVER_STMT | bca6c90572f3b722a6a18fbf | -- ERROR CREATE SERVER file_server2 FOREIGN DATA WRAPPER file_fdw |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_USER_MAPPING_STMT | bd0939b71c9f3a79c0fe4595 | -- ERROR ALTER USER MAPPING FOR regress_test_role SERVER s6 OPTIONS (gotcha 'true') |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | bd4fa14b8c98c15556f531c2 | CREATE STATISTICS tst ON a FROM XMLTABLE('foo' PASSING 'bar' COLUMNS a text) |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | bd58c9db229a79584abb5e85 | CREATE STATISTICS group_tbl_stat (ndistinct) ON a, b FROM group_tbl |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | bddbd4467892d35f25fcb69f | create foreign table remp (a int check (a in (1)), b text) server loopback options (table_name 'loct') |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | be67c533aa51c2e91c5ff6c2 | ALTER FOREIGN TABLE ft1 DROP COLUMN c9 |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_POLICY_STMT | be9d1d75fabf1751405c6681 | ALTER POLICY p ON tbl1 TO regress_rls_frank USING (true) |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_USER_MAPPING_STMT | bf3a67c79fbd62a79b02f81b | -- But creation of user mappings for non-superusers should fail CREATE USER MAPPING FOR public SERVER loopback_nopw |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | bf542459d1b94311f5bd2c8f | CREATE FOREIGN TABLE test_foreign_table () SERVER dummy_server |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | bfbc1d1626b21a256758195d | ALTER FOREIGN TABLE IF EXISTS doesnt_exist_ft1 ALTER COLUMN c8 OPTIONS (SET p2 'V2', DROP p1) |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | c03cf294023cfc76c88bbde6 | ALTER FOREIGN TABLE ft1 ADD COLUMN c10 integer OPTIONS (p1 'v1') |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | c05852640f2b4a922d59d13b | ALTER FOREIGN TABLE ft1 OPTIONS (DROP delimiter, SET quote '~', ADD escape '@') |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_FOREIGN_SERVER_STMT | c10af4c10346e5a777ee7f0d | ALTER SERVER loopback OPTIONS (DROP parallel_commit) |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | c313c0883bc881cd4ed84820 | -- unsupported targets CREATE STATISTICS tst ON a FROM (VALUES (x)) AS foo |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | c3308bfe386fb737618f67b0 | CREATE STATISTICS t_a_b_stat (mcv) ON a, b FROM bitmap_split_or |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | c3f4effd7c9eaebc63c94821 | CREATE STATISTICS tststats.priv_test_stats (mcv) ON a, b FROM tststats.priv_test_tbl |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | c3fad855fc02f5516e03bf25 | ALTER FOREIGN TABLE async_p1 OPTIONS (DROP use_remote_estimate) |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_FOREIGN_SERVER_STMT | c51ca4987598db73ed930b75 | -- OAuth options are not allowed in either context ALTER SERVER testserver1 OPTIONS (ADD oauth_issuer 'https://example.com') |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | c52fd35329cdba847a9338f7 | CREATE FOREIGN TABLE pg_temp.ft1_nopw ( c1 int NOT NULL, c2 int NOT NULL, c3 text, c4 timestamptz, c5 timestamp, c6 varchar(10), c7 char(10) default 'ft1', c8 user_enum ) SERVER loopback_nopw OPTIO... |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | c5345c7412a4b26f17db2c71 | ALTER FOREIGN TABLE IF EXISTS doesnt_exist_ft1 OWNER TO regress_test_role |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | c5393c778b69474c5c6c8606 | create foreign table foo2 (f3 int) inherits (foo) server loopback options (table_name 'loct1') |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_POLICY_STMT | c5e3c68709ec19535c008b23 | CREATE POLICY p4 ON rls_child_tbl USING (a < 0) |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_USER_MAPPING_STMT | c6384ebbf8cda138a0b94360 | ALTER USER MAPPING FOR current_user SERVER s5 OPTIONS (ADD modified '1') |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_POLICY_STMT | c64b10dc1290421661d623fd | CREATE POLICY p1 ON z1 TO regress_rls_group1 USING (a % 2 = 0) |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | c6810c7248b7f45f13ef0aa2 | -- check STORAGE correctness create table test_storage_failed (a text, b int storage extended) |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | c69ba0712e2bf6eb981e2a0e | CREATE FOREIGN TABLE foreign_stats (a int) SERVER server_stats |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_POLICY_STMT | c6c92fafde9d9c288502e7de | CREATE POLICY p2 ON rls_tbl_force FOR SELECT USING (c1 = 8) |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | c7226a60473e584a4ef94bf4 | ALTER FOREIGN TABLE agg_text OWNER TO regress_file_fdw_user |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | c7a290cd373c039ab9374b70 | CREATE STATISTICS s10 (ndistinct) ON a, b, (2*c) FROM ndistinct |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_POLICY_STMT | c7b2e559682b0ee9eedcfb96 | -- but Dave isn't allowed to anything at cid 50 or above -- this is to make sure that we sort the policies by name first -- when applying WITH CHECK, a later INSERT by Dave should fail due -- to p1... |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | c8163bb7fb9843f48004845c | CREATE FOREIGN TABLE tru_ftable_child () INHERITS (tru_ftable_parent) SERVER loopback OPTIONS (table_name 'tru_rtable_child') |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_FOREIGN_SERVER_STMT | c85888be60aedf8ad2c1e4a4 | ALTER SERVER loopback OPTIONS (analyze_sampling 'auto') |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_USER_MAPPING_STMT | c91ad11beeaf5cbc439c7919 | -- ERROR ALTER USER MAPPING FOR user SERVER ss4 OPTIONS (gotcha 'true') |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | c922feb8aff4e9043c038343 | -- Create foreign partitions CREATE FOREIGN TABLE fpagg_tab_p1 PARTITION OF pagg_tab FOR VALUES FROM (0) TO (10) SERVER loopback OPTIONS (table_name 'pagg_tab_p1') |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_POLICY_STMT | c995e9920777b9e4de821e46 | CREATE POLICY pp3 ON part_document AS RESTRICTIVE USING ((SELECT dlevel <= seclv FROM uaccount WHERE pguser = current_user)) |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | ca5c103dcf847338213e459e | CREATE FOREIGN TABLE addr_nsp.genftable (a int) SERVER addr_fserv |
+| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DROP_USER_MAPPING_STMT | ca83e08df715f5b12e8adcf7 | DROP USER MAPPING FOR public SERVER s8 |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_USER_MAPPING_STMT | cb0f4a2cff8de0332a5434d4 | -- ERROR CREATE USER MAPPING FOR user SERVER s8 OPTIONS (user 'test', password 'secret') |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FOREIGN_SERVER_STMT | cb214c153aaa4748618afaf0 | CREATE SERVER s8 FOREIGN DATA WRAPPER postgresql OPTIONS (foo '1') |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_USER_MAPPING_STMT | cb9ffcf7ebb3f6504e2b122b | CREATE USER MAPPING FOR current_user SERVER s6 OPTIONS (username 'test') |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | cbe009732fa77af5a579448c | CREATE STATISTICS sts_sch2.pass1 ON a, b, c FROM sts_sch1.tbl |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FOREIGN_SERVER_STMT | cc507b04c5f07128dd3db127 | CREATE SERVER s6 VERSION '16.0' FOREIGN DATA WRAPPER foo OPTIONS (host 'a', dbname 'b') |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | cc7097265b3b87ee8878eb0e | CREATE STATISTICS tst on (tableoid) from ext_stats_test1 |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | cc70f024bbcef340288ec6e3 | -- pg_column_toast_chunk_id CREATE TABLE test_chunk_id (a TEXT, b TEXT STORAGE EXTERNAL) |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | cc8acf09ca7b8ffae772513d | CREATE FOREIGN TABLE table30 ( x int ) SERVER batch10 OPTIONS ( batch_size '30' ) |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | cc9e974131762290cfaba162 | create statistics stts_s1.stts_foo on col1, col2 from stts_t3 |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FDW_STMT | cca21d0cba291d57393faf4a | CREATE FOREIGN DATA WRAPPER extstats_dummy_fdw |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | ccf768dcfce1a239d1fd3597 | ALTER FOREIGN TABLE agg_bad OPTIONS (ADD reject_limit '1') |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | cd0f42e9701bbca7d69b0004 | create foreign table foo2child (f3 int) inherits (foo2) server loopback options (table_name 'loct4') |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | cd19c5b7e86eed53dc296e2d | ALTER FOREIGN TABLE ft1 DROP COLUMN c0 |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_FDW_STMT | ce54fdd920490c087084bf2a | -- ERROR -- force_null is not allowed to be specified at any foreign object level: ALTER FOREIGN DATA WRAPPER file_fdw OPTIONS (ADD force_null '*') |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | ce89dabfa39ee0ebf2f49cfd | ALTER FOREIGN TABLE ft1 ALTER COLUMN c5 DROP DEFAULT |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | cefc2840f69734dde6e81a2a | ALTER FOREIGN TABLE async_p2 OPTIONS (use_remote_estimate 'true') |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_POLICY_STMT | d09998138a1c8af1bc53f328 | CREATE POLICY p2 ON document FOR INSERT WITH CHECK (dauthor = current_user) |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_FOREIGN_SERVER_STMT | d0b4096e49dea979581b6e36 | ALTER SERVER s2 VERSION '1.1' |
+| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DROP_USER_MAPPING_STMT | d12c679dc0951a4c2a111ad9 | DROP USER MAPPING IF EXISTS FOR regress_testrolx SERVER sv9 |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | d14810fbbed6cb1a5296ed20 | create foreign table rem1 (f1 serial, f2 text) server loopback options(table_name 'loc1') |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_FOREIGN_SERVER_STMT | d17989310dc8e82d394ca49d | -- Test copy tuple routing with the batch_size option enabled alter server loopback options (add batch_size '2') |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | d197714b292424eb89900838 | ALTER FOREIGN TABLE ft1 OWNER TO regress_test_role |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FOREIGN_SERVER_STMT | d1d3c89e00aa24d504a69174 | -- No ERROR, just NOTICE CREATE SERVER s2 FOREIGN DATA WRAPPER foo OPTIONS (host 'a', dbname 'b') |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_USER_MAPPING_STMT | d23c3416fa0f4441fd9084bb | -- ERROR ALTER USER MAPPING FOR current_user SERVER s8 OPTIONS (DROP user, SET password 'public') |
+| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DROP_USER_MAPPING_STMT | d2c8d39d5a6f2bcb0cdd34cd | DROP USER MAPPING FOR PUBLIC SERVER sv7 |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | d330fcf15c745ab1c41784af | alter foreign table rem2 add constraint rem2_f1positive check (f1 >= 0) |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | d36eb3d07453e7018f5d31ce | CREATE STATISTICS tst on (z+1) from ext_stats_test1 |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | d397dc463298a3a7dc9082a6 | alter foreign table remt1 inherit parent |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_USER_MAPPING_STMT | d3a914600d7641ee5c697735 | CREATE USER MAPPING FOR public SERVER s10 OPTIONS (user 'secret') |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | d45a217fbb645604df160247 | CREATE STATISTICS mcv_lists_bool_stats (mcv) ON a, b, c FROM mcv_lists_bool |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | d4601e71c00f80e7aa69b73b | -- Test error handling, if accessing one of the foreign partitions errors out CREATE FOREIGN TABLE async_p_broken PARTITION OF async_pt FOR VALUES FROM (10000) TO (10001) SERVER loopback OPTIONS (t... |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_FOREIGN_SERVER_STMT | d4a7e772b6f3f810d61e6c5c | -- If we add a password to the connstr it'll fail, because we don't allow passwords -- in connstrs only in user mappings. ALTER SERVER loopback_nopw OPTIONS (ADD password 'dummypw') |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | d515d4fceef55ebd2a9a07fd | CREATE STATISTICS tst on z from ext_stats_test1 |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | d540df445daa158d160d87eb | create statistics on b, c from stts_t2 |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | d586593d61909fc3065ccd9c | ALTER FOREIGN TABLE ft2 OPTIONS (schema_name 'S 1', table_name 'T 1') |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | d58cb4e935869bd95db72aec | -- ERROR CREATE FOREIGN TABLE tbl () SERVER file_server |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | d5c6ce8a272e2bb6afe43d9b | CREATE STATISTICS ab1_a_b_c_stats ON a, b, c FROM ab1 |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_POLICY_STMT | d5e8206043907c4a8ee2e133 | CREATE POLICY p2 ON y1 FOR SELECT USING (a > 2) |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FOREIGN_SERVER_STMT | d6d9b5dacc7a3f8561da9e9c | CREATE SERVER batch10 FOREIGN DATA WRAPPER postgres_fdw OPTIONS( batch_size '10' ) |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | d6e8002e2d36473b1df13916 | ALTER FOREIGN TABLE agg_bad ADD CHECK (a >= 0) |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | d6ee8d6b4bdbc7ddb0756019 | ALTER FOREIGN TABLE IF EXISTS doesnt_exist_ft1 DROP COLUMN IF EXISTS no_column |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | d74ce7367c64fec8fcba09fb | CREATE STATISTICS gtest31_2_stat ON ((y).b is not null) FROM gtest31_2 |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | d77757fdca4d1eb265a8e7af | ALTER FOREIGN TABLE IF EXISTS doesnt_exist_ft1 ALTER COLUMN c8 SET DATA TYPE text |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_USER_MAPPING_STMT | d791c0c2d026371ccd483a46 | ALTER USER MAPPING FOR regress_testrolx SERVER sv9 OPTIONS (SET user 'regress_testrolx_alt') |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_FOREIGN_SERVER_STMT | d7c9be99b005d8a22ce3c590 | ALTER SERVER loopback OPTIONS (ADD parallel_abort 'true') |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | d7e30d025669ab0df92f55d9 | CREATE STATISTICS tststats.s4 ON a, b FROM tststats.v |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_USER_MAPPING_STMT | d7fc381d61c0e75b06be2321 | -- Ensure valid options we haven't used in a user mapping yet are -- permitted to check validation. ALTER USER MAPPING FOR public SERVER testserver1 OPTIONS (ADD sslkey 'value', ADD sslcert 'value') |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | d8317f5bc2e0f06ffe649e00 | CREATE FOREIGN TABLE ftable ( x int ) SERVER loopback OPTIONS ( table_name 'batch_table', batch_size '10' ) |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | d8449989e2c57f1ae8ef87ca | CREATE STATISTICS expr_stats_1 (mcv) ON a, b, (2*a), (3*b), (a+b), (a-b) FROM expr_stats |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_USER_MAPPING_STMT | d89191c631e6ae9ebfe90328 | CREATE USER MAPPING FOR public SERVER t1 |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_POLICY_STMT | da317849b48a858e09f8ab83 | CREATE POLICY p1 ON rls_test_restrictive USING (data % 2 = 0) |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | da3ca3dc97cd92e73b404f23 | alter foreign table foo2 options (use_remote_estimate 'true') |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_FDW_STMT | daaacbd3f36e0a91c80bc647 | -- ERROR ALTER FOREIGN DATA WRAPPER foo VALIDATOR bar |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_POLICY_STMT | daf7fe3cc75c28c95691e8b4 | create policy p1 on ec1 using (f1 < '5'::int8alias1) |
+| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DROP_USER_MAPPING_STMT | daf821a7400448c0b9143c2a | DROP USER MAPPING IF EXISTS FOR "current_user" SERVER sv2 |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_POLICY_STMT | db12b172e3afb20c78a82ac6 | ALTER POLICY p1 ON document USING (dauthor = current_user) |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_FDW_STMT | db7f212eebe83c919d6d2521 | -- HANDLER related checks ALTER FOREIGN DATA WRAPPER foo HANDLER invalid_fdw_handler |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_USER_MAPPING_STMT | dbaf51da04610270278ec4b2 | ALTER USER MAPPING FOR PUBLIC SERVER sv7 OPTIONS (SET user 'public_alt') |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | dc81ac18c67725bae1f3bb76 | CREATE FOREIGN TABLE ft4 ( c1 int NOT NULL, c2 int NOT NULL, c3 text ) SERVER loopback OPTIONS (schema_name 'S 1', table_name 'T 3') |
+| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DROP_USER_MAPPING_STMT | dcb160a04f8382d06894c6af | DROP USER MAPPING IF EXISTS FOR "Public" SERVER sv8 |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FOREIGN_SERVER_STMT | de419f5ac6f57041a4987ede | CREATE SERVER file_server FOREIGN DATA WRAPPER file_fdw |
+| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_IMPORT_FOREIGN_SCHEMA_STMT | dec9c9529ed5d856f1bcfa02 | IMPORT FOREIGN SCHEMA nonesuch FROM SERVER loopback INTO import_dest4 |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_STATS_STMT | df29e492735ebc0c47cbfab8 | ALTER STATISTICS IF EXISTS ab1_a_b_stats SET STATISTICS 0 |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_POLICY_STMT | df572189a9b03b1cfbd1c3a6 | CREATE POLICY p2 ON x1 FOR INSERT WITH CHECK (a % 2 = 1) |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | df829464d57afc7552b385ba | CREATE FOREIGN TABLE batch_table_p1f PARTITION OF batch_table FOR VALUES WITH (MODULUS 2, REMAINDER 1) SERVER loopback OPTIONS (table_name 'batch_table_p1') |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_FOREIGN_SERVER_STMT | dfb5ae36634a61bcdadbb034 | ALTER SERVER loopback OPTIONS (DROP extensions) |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_POLICY_STMT | e0340957b23d168c1a8d3e46 | --fail CREATE POLICY p1 ON y2 FOR ALL USING (a % 2 = 0) |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FOREIGN_SERVER_STMT | e09f763d8bb5df953e176feb | CREATE SERVER dummy_server FOREIGN DATA WRAPPER dummy |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | e0b4ea77afff141701b7766f | -- with a single expression, we only enable expression statistics CREATE STATISTICS ab1_exprstat_2 ON (a+b) FROM ab1 |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_FDW_STMT | e0d6876d0ceda5cdecfa79d6 | ALTER FOREIGN DATA WRAPPER foo VALIDATOR postgresql_fdw_validator |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | e0f6f4ac515236e94e89277b | CREATE FOREIGN TABLE ft6 ( c1 int NOT NULL, c2 int NOT NULL, c3 text ) SERVER loopback2 OPTIONS (schema_name 'S 1', table_name 'T 4') |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OWNER_STMT | e113052ee1882331d5450db7 | ALTER SERVER s1 OWNER TO regress_test_indirect |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | e12ecee1b8276ae0d6116dea | CREATE STATISTICS addr_nsp.gentable_stat ON a, b FROM addr_nsp.gentable |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | e1d819345898d2836a0c5939 | -- ERROR -- on_error, log_verbosity and reject_limit tests ALTER FOREIGN TABLE agg_bad OPTIONS (ADD on_error 'ignore') |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | e2381f114638b8e25aae1cd9 | CREATE STATISTICS tststats.s6 ON a, b FROM tststats.ty |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | e28644abb4b290a3c2ffaa44 | -- ERROR CREATE FOREIGN TABLE tbl () SERVER file_server OPTIONS (format 'binary', escape ':') |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_POLICY_STMT | e2af95052de99a5622698de5 | ALTER POLICY dep_p1 ON dep1 TO regress_rls_bob,regress_rls_carol |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | e45f509e069df41ae88a0bc4 | CREATE FOREIGN TABLE ftable PARTITION OF parent FOR VALUES IN ('AAA') SERVER loopback OPTIONS (table_name 'batch_table', batch_size '2') |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FOREIGN_SERVER_STMT | e4a37099f348a36c15715853 | CREATE SERVER ext_cine_srv FOREIGN DATA WRAPPER dummy |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | e4ae89c9d6c08bb4bff0bb1c | -- ERROR ALTER FOREIGN TABLE ft1 ALTER COLUMN c8 TYPE user_enum |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | e50b1b42df7a6c85c644e1a7 | -- ERROR CREATE FOREIGN TABLE tbl () SERVER file_server OPTIONS (format 'xml') |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | e543105c37d12e83c5be554a | CREATE FOREIGN TABLE async_p3 PARTITION OF async_pt FOR VALUES FROM (3000) TO (4000) SERVER loopback2 OPTIONS (table_name 'base_tbl3') |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_POLICY_STMT | e628f1bb14ac9f2e978a1709 | -- should succeed -- same cases with duplicate polroles entries CREATE POLICY p1 ON dob_t1 TO regress_rls_dob_role1,regress_rls_dob_role1 USING (true) |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_POLICY_STMT | e67bc021c935f2b01334f424 | -- policy must accept ctid = (InvalidBlockNumber,0) since updates check it -- before assigning a ctid to the new row CREATE POLICY p1 ON current_check_2 AS PERMISSIVE USING (ctid IN ('(0,1)', '(0,2... |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_POLICY_STMT | e69ddfe144263ac962565dae | -- user's security level must be higher than or equal to document's CREATE POLICY p1 ON document AS PERMISSIVE USING (dlevel <= (SELECT seclv FROM uaccount WHERE pguser = current_user)) |
+| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DROP_USER_MAPPING_STMT | e719fdd3735b6924f54d772a | DROP USER MAPPING IF EXISTS FOR nonexistent SERVER sv10 |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | e737fdbbb701d934ddbb360c | -- date_trunc on timestamp is immutable CREATE STATISTICS ab1_exprstat_5 ON date_trunc('day', c) FROM ab1 |
+| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DROP_USER_MAPPING_STMT | e757f28aa8fb2ab3fcc452cf | -- cleanup DROP USER MAPPING FOR public SERVER loopback_nopw |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_FOREIGN_SERVER_STMT | e76c7503313ce1de5a26dc1c | -- OK but gets a warning ALTER SERVER testserver1 OPTIONS (ADD extensions 'foo, bar') |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_POLICY_STMT | e7725bab38d550172b5b063f | CREATE POLICY p2 ON y2 USING (a % 3 = 0) |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_FOREIGN_SERVER_STMT | e79241986dfe12d7c4167bd6 | -- ERROR ALTER SERVER s1 VERSION '1.0' OPTIONS (servername 's1') |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | e7a609ea10f3e01d3c260e3c | CREATE STATISTICS tst on (tableoid::int+1) from ext_stats_test1 |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | e7b01eb6d3f2c8bc6118336b | CREATE FOREIGN TABLE ft3 ( c1 integer NOT NULL, c2 text, c3 date ) INHERITS(ft2) SERVER s0 |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_FOREIGN_SERVER_STMT | e7bc251753101dd4d0eeab14 | ALTER SERVER loopback OPTIONS (SET analyze_sampling 'off') |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | e7c11c955e6bc78d14a270b9 | create foreign table copytest_foreign_table (a int) server copytest_server |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | e886d9ebb52b782e4f2a5eca | CREATE STATISTICS mcv_lists_stats_3 ON (mod(c,5)) FROM mcv_lists |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | e8d2e8b01f2fcf896baf6fbd | -- But inconsistent check constraints provide inconsistent results ALTER FOREIGN TABLE ft1 ADD CONSTRAINT ft1_c2negative CHECK (c2 < 0) |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_POLICY_STMT | e90b89fb64a425248b6e2726 | -- should fail, already gone CREATE POLICY p1 ON dob_t1 TO regress_rls_dob_role1,regress_rls_dob_role1,regress_rls_dob_role2 USING (true) |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_POLICY_STMT | e9351c233689e14f8a66503d | CREATE POLICY p2 ON r1 AS RESTRICTIVE USING ((SELECT c) < 400) |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | e950bb12c385d81666b43f11 | CREATE STATISTICS ext_stat ON (a \|\| b) FROM test_like_6 |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FDW_STMT | e95974c753e1873670430ff5 | CREATE FOREIGN DATA WRAPPER foo OPTIONS (testing '1', testing '2') |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_POLICY_STMT | e9f0ff0edd25116d04f15c9b | CREATE POLICY p ON t USING (max(c)) |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_POLICY_STMT | ea8999bd093a36f991f82b94 | CREATE POLICY measurement_p ON measurement USING (peaktemp IS NOT NULL) |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_POLICY_STMT | eaaec03cc776907eda451582 | CREATE POLICY p1 ON rls_tbl USING (EXISTS (SELECT 1 FROM ref_tbl)) |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_FOREIGN_SERVER_STMT | eaca1428d3f6aebf008ff7d9 | -- ERROR ALTER SERVER file_server OPTIONS (ADD force_not_null '*') |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_RENAME_STMT | eadff4ace3c5ceefe25ceecc | ALTER FOREIGN TABLE foreign_schema.ft1 RENAME TO foreign_table_1 |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | eb9761ffb1ce7d32215fec21 | CREATE FOREIGN TABLE remt2 (c1 int, c2 text) SERVER loopback OPTIONS (table_name 'loct2') |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_RENAME_STMT | ec50b7ac60d399dfa5b3e0c4 | -- OK ALTER SERVER alt_fserv1 RENAME TO alt_fserv2 |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_USER_MAPPING_STMT | ec6c8862ba10d5e13eec90c7 | -- But we can add valid ones fine ALTER USER MAPPING FOR public SERVER testserver1 OPTIONS (ADD sslpassword 'dummy') |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_FOREIGN_SERVER_STMT | eca7fcb2fada3e5952a8b4bd | -- =================================================================== -- tests for validator -- =================================================================== -- requiressl and some other par... |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | ed78f1b5d2f5211d378fe309 | ALTER FOREIGN TABLE ft1 ALTER COLUMN c8 TYPE char(10) USING '0' |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | ed825a2e0e8166380caf3460 | -- Invalid fetch_size option CREATE FOREIGN TABLE inv_fsz (c1 int ) SERVER loopback OPTIONS (fetch_size '100$%$#$#') |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_FOREIGN_SERVER_STMT | ed8cf5f602a1f41d3a079c3d | ALTER SERVER loopback OPTIONS (DROP batch_size) |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_FDW_STMT | ee020bf22c2a4dbdfe9546b5 | -- should fail ALTER FOREIGN DATA WRAPPER dblink_fdw OPTIONS (nonexistent 'fdw') |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | ee0a5da5e13955dc942c3bac | -- ERROR CREATE FOREIGN TABLE tbl () SERVER file_server OPTIONS (on_error 'ignore', reject_limit '0') |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_POLICY_STMT | ee3b3b2a518b3cc9dc30ff03 | CREATE POLICY policy_range_parted ON range_parted for UPDATE USING (true) WITH CHECK (c % 2 = 0) |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | ee3fafd88a21d0ed9a3bc2bb | ALTER FOREIGN TABLE ft1 ADD COLUMN c4 integer |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | f03119bf55717787be22333b | CREATE FOREIGN TABLE ft_part_1_2 (a INT) SERVER s0 |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_STATS_STMT | f0c908229cdcebe45417e5ff | -- setting statistics target 0 skips the statistics, without printing any message, so check catalog ALTER STATISTICS ab1_a_b_stats SET STATISTICS 0 |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | f134981434233de84187162d | -- ERROR ALTER FOREIGN TABLE ft1 ALTER COLUMN c7 OPTIONS (ADD p1 'v1', ADD p2 'v2'), ALTER COLUMN c8 OPTIONS (ADD p1 'v1', ADD p2 'v2') |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | f1831a5617e10569fc01e8d1 | CREATE STATISTICS tst ON a, b FROM ext_stats_test |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_POLICY_STMT | f224dfd2d8590f99e5e1add1 | CREATE POLICY p3 ON z1 AS RESTRICTIVE USING (a NOT IN (SELECT a FROM z1_blacklist)) |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_RENAME_STMT | f2b3b07215b79357b496766c | ALTER FOREIGN DATA WRAPPER alt_fdw1 RENAME TO alt_fdw2 |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_POLICY_STMT | f3d756684e355e5950f12672 | CREATE POLICY p1 ON r1 USING (true) |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | f41f4b2abf50504c35d4eae0 | CREATE STATISTICS mcv_lists_stats_2 ON (mod(b::int,10)) FROM mcv_lists |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_FOREIGN_SERVER_STMT | f41fa8374ae236379a8943a7 | -- OAuth options are not allowed in either context ALTER SERVER fdtest OPTIONS (ADD oauth_issuer 'https://example.com') |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | f4808f78eea286ff0d71af88 | ALTER FOREIGN TABLE async_p2 OPTIONS (DROP use_remote_estimate) |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FDW_STMT | f516560de4cb734dde87eeba | -- -- CREATE FOREIGN TABLE LIKE -- CREATE FOREIGN DATA WRAPPER ctl_dummy |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | f549961b30bbbeea1d57783a | CREATE FOREIGN TABLE async_p2 PARTITION OF async_pt FOR VALUES FROM (2000) TO (3000) SERVER loopback2 OPTIONS (table_name 'base_tbl2') |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_POLICY_STMT | f54d5a92d65e1ac219c86175 | -- Dave is only allowed to see cid < 55 CREATE POLICY pp1r ON part_document AS RESTRICTIVE TO regress_rls_dave USING (cid < 55) |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | f551a7a1d37be9042e64dbd3 | CREATE FOREIGN TABLE ft_part1 PARTITION OF lt1 FOR VALUES FROM (0) TO (1000) SERVER s0 |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | f58f1efbdabef47d1eaa2d86 | -- ERROR ALTER FOREIGN TABLE ft1 DROP COLUMN IF EXISTS no_column |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | f593cbb36e4563c55556b628 | -- =================================================================== -- REINDEX -- =================================================================== -- remote table is not created here CREATE F... |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_POLICY_STMT | f5cae7f1ea415bf317178acb | CREATE POLICY dep_p1 ON dep1 TO regress_rls_bob USING (c1 > (select max(dep2.c1) from dep2)) |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_POLICY_STMT | f5dac76b1fa27357da7d7c9c | CREATE POLICY p3 ON rls_tbl_force FOR UPDATE USING (c1 = 8) WITH CHECK (c1 >= 5) |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_POLICY_STMT | f6535999802c43f87aff90d2 | CREATE POLICY p2 ON rls_ptbl USING (a < 0) |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_FOREIGN_SERVER_STMT | f680b2fc2fa7892b0b5e90b8 | -- Specify escape sequences in application_name option of a server -- object so as to test that they are replaced with status information -- expectedly. Note that we are also relying on ALTER SERVE... |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | f6d4c2a780ff818f5468272e | ALTER FOREIGN TABLE ft1 ALTER COLUMN c8 TYPE char(10) |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | f6f0bb07b18dee0f95c663ed | CREATE FOREIGN TABLE b (bb TEXT) INHERITS (a) SERVER loopback OPTIONS (table_name 'loct') |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FDW_STMT | f7e1e427545223852472de39 | CREATE FOREIGN DATA WRAPPER alt_fdw2 |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FOREIGN_SERVER_STMT | f7eaa5c6ce6a273a7d879f13 | CREATE SERVER alt_fserv2 FOREIGN DATA WRAPPER alt_fdw2 |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | f826908ed93a7299da1db989 | -- ERROR CREATE FOREIGN TABLE tbl () SERVER file_server OPTIONS (format 'binary', on_error 'ignore') |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FOREIGN_SERVER_STMT | f8374945c82f3b5e13e5dcec | -- ERROR CREATE SERVER s8 FOREIGN DATA WRAPPER postgresql OPTIONS (host 'localhost', dbname 's8db') |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | f87383fbb15e2a7dedad1292 | -- ERROR CREATE FOREIGN TABLE tbl () SERVER file_server OPTIONS (format 'text', delimiter '\\') |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | f8f377fbe73d7a214f3d9b4f | CREATE FOREIGN TABLE ft_part_1_1 PARTITION OF lt1_part1 FOR VALUES FROM (0) TO (100) SERVER s0 |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | f9046de9ac1ffc18337b640a | CREATE FOREIGN TABLE foreign_tbl (a text, b int) SERVER loopback OPTIONS (table_name 'local_tbl') |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_FOREIGN_SERVER_STMT | f94d1097754301568cbbffdd | ALTER SERVER fetch101 OPTIONS( SET fetch_size '202' ) |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FOREIGN_SERVER_STMT | f95ea631f3c33c86167be627 | -- ERROR CREATE SERVER s9 FOREIGN DATA WRAPPER foo |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | f96d72c2a0f3c5ff205893fa | create statistics stts_hoge on col1, col2, col3 from stts_t3 |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_USER_MAPPING_STMT | f9a46643cb73c83a3031250c | ALTER USER MAPPING FOR public SERVER fdtest OPTIONS (ADD oauth_issuer 'https://example.com') |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | f9e117ad4d66fbebd6ee5e3c | -- basic statistics on both attributes (no expressions) CREATE STATISTICS s11 (ndistinct) ON a, b FROM ndistinct |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | fa21cc79bb111c1b51686cd1 | -- ERROR CREATE FOREIGN TABLE foreign_part (a int) SERVER s0 |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_POLICY_STMT | fa5cca3e06c8ba8067b54ee5 | CREATE POLICY p2 ON category USING (CASE WHEN current_user = 'regress_rls_bob' THEN cid IN (11, 33) WHEN current_user = 'regress_rls_carol' THEN cid IN (22, 44) ELSE false END) |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FOREIGN_SERVER_STMT | fbac917cd1f321f3aefa50d4 | CREATE SERVER extstats_dummy_srv FOREIGN DATA WRAPPER extstats_dummy_fdw |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | fbd3dfcc733fd4c3ca32b7bb | -- ERROR CREATE FOREIGN TABLE tbl () SERVER file_server OPTIONS (format 'text', escape '-') |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | fbf7bc2b91087759bcf7f666 | -- ERROR CREATE FOREIGN TABLE ft1 () SERVER no_server |
+| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DROP_USER_MAPPING_STMT | fceee740e978075eb5da1f79 | DROP USER MAPPING IF EXISTS FOR "user" SERVER sv5 |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_FDW_STMT | fd6d2c34984c32f400ed0254 | ALTER FOREIGN DATA WRAPPER foo OPTIONS (SET c '4') |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | fdfb0519f3c084db54ff52b9 | CREATE STATISTICS functional_dependencies_multi_2 (dependencies) ON c, d FROM functional_dependencies_multi |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | fea6fbcbddae2b4ac7765d45 | -- ERROR CREATE FOREIGN TABLE tbl () SERVER file_server OPTIONS (format 'csv', escape '---') |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_USER_MAPPING_STMT | fea790c4d90b398699a3763e | CREATE USER MAPPING FOR regress_addr_user SERVER "integer" |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | fedca79e9ca6157ab47b2635 | CREATE FOREIGN TABLE tru_ftable__p1 PARTITION OF tru_ptable FOR VALUES WITH (MODULUS 2, REMAINDER 1) SERVER loopback OPTIONS (table_name 'tru_rtable1') |
+| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DROP_USER_MAPPING_STMT | fef22a552d6fa6ce1c337353 | DROP USER MAPPING FOR nonexistent SERVER sv10 |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_USER_MAPPING_STMT | fefd13fcbda75105870cfa8a | -- ERROR CREATE USER MAPPING FOR public SERVER s8 |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_POLICY_STMT | ff8239be28b9c91dd1f5e0fe | create policy p2 on rls_t for select to regress_rls_bob using (false) |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_POLICY_STMT | ff97d73a69ba6c1a286f3115 | CREATE POLICY p2 ON s2 USING (x in (select a from s1 where b like '%22%')) |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | ffc98c941ffd0934fec169cf | ALTER FOREIGN TABLE ft1 ADD COLUMN c8 integer |
 
 ## Regressed Baseline Transitions
 

@@ -52,11 +52,11 @@
 
 **Files:** Makefile, tools/pg_compat/statement_type_map.cpp and tests/pg_compat/statement_type_cases.cpp if needed, docs/postgresql-analysis-features.md, correctness snapshot files.
 
-- [ ] Register test files and add necessary accurate statement mappings. Review each task's diff independently and fix substantive findings.
-- [ ] Forced full build/test and corpus executable; ASan/UBSan for new suites; Python compatibility harness; full replay with zero unexplained regressions.
-- [ ] Verify raw-AST equivalence for every newly supported corpus statement; update native coverage docs and remaining examples.
-- [ ] Detailed implementation commit, refresh correctness snapshot, compare all refreshed results with reviewed replay, verify full corpus/CI cases, detailed snapshot commit.
-- [ ] Push existing branch and update PR #67. Preserve all benchmark-only local changes.
+- [x] Register test files and add necessary accurate statement mappings. Review each task's diff independently and fix substantive findings.
+- [x] Forced full build/test and corpus executable; ASan/UBSan for new suites; Python compatibility harness; full replay with zero unexplained regressions.
+- [x] Verify raw-AST equivalence for every newly supported corpus statement; update native coverage docs and remaining examples.
+- [x] Detailed implementation commit, refresh correctness snapshot, compare all refreshed results with reviewed replay, verify full corpus/CI cases, detailed snapshot commit.
+- [x] Push existing branch and update PR #67. Preserve all benchmark-only local changes.
 
 ## Verification results
 
@@ -66,4 +66,4 @@
 - Same PostgreSQL 18.4 source corpus: 49,120 / 51,415 deeply supported (95.5%), +807 with no previously supported cases lost.
 - Every newly supported statement reconstructs to the same PostgreSQL raw AST, excluding source-position fields only (807/807).
 - All 298 policy/statistics and 615 of 616 foreign-object original corpus statements roundtrip exactly; the remaining foreign case requires the shared ALTER CONSTRAINT production.
-- Independent review approved the five foreign-grammar fixes. Final full-corpus replay and all 807 new raw-AST comparisons pass; correctness snapshot publication follows.
+- Independent review approved all five foreign-grammar fixes. The refreshed snapshot matches every reviewed replay row; full pinned-corpus verification and all 5,615 generated CI cases pass. Implementation commit: `19d77ca`. Publish the verified snapshot with the implementation on PR #67.
