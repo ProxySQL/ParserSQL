@@ -28,7 +28,7 @@
 - [x] Definitions: pg_ddl_parser.h and tests/test_pg_definitions.cpp. Add failing fixtures, then CREATE AGGREGATE/OPERATOR, operator classes/families and matching ALTER/DROP identities. Use local gram.y and oracle to validate production boundaries and quoted names. Split focused helpers if useful without changing unrelated grammar. Root owns shared dispatch/enums/emitter.
 - [x] Session commands: new pg_session_parser.h and tests/test_pg_session_commands.cpp. Add failing fixtures for DECLARE/FETCH/MOVE/CLOSE, PostgreSQL PREPARE/EXECUTE/DEALLOCATE, and bounded LISTEN/NOTIFY/UNLISTEN/DISCARD/CHECKPOINT. Expose handles(first) and parse(first), preserve query bodies and complete-input state. Coordinate new statement enums with root; no edits to root-owned parser.cpp or shared AST files.
 - [x] Administration: root-owned pg_admin_parser.h and tests/test_pg_admin_commands.cpp. Add CREATE/ALTER/DROP ROLE/USER/GROUP with role options/settings, COMMENT/SECURITY LABEL object identities and literal/null values. Reuse existing AST structures, test malformed options and signatures, and oracle-check corpus variants.
-- [ ] Integration: root-owned shared dispatch, enum names/maps, emitter/guards, Makefile and docs. Independent review, forced full build/corpus executable, ASan/UBSan, full corpus replay and Python harness. Detailed implementation commit; regenerate and verify correctness snapshot; detailed snapshot commit; push and update PR #67.
+- [x] Integration: root-owned shared dispatch, enum names/maps, emitter/guards, Makefile and docs. Independent review, forced full build/corpus executable, ASan/UBSan, full corpus replay and Python harness. Detailed implementation commit; regenerate and verify correctness snapshot; detailed snapshot commit; push and update PR #67.
 
 ## Verified implementation results
 
@@ -38,4 +38,4 @@
 - Unchanged PostgreSQL 18.4 source corpus: 48,313 / 51,415 deeply parsed (94.0%), an increase of 2,503 with zero lost deep cases.
 - All 2,503 newly supported statements retain exactly equivalent PostgreSQL raw ASTs after SQL emission, excluding source-position fields only.
 - Independent review addressed identifier categories, integer bounds, qualified type names and ordered variadic aliases. Uncommon equivalent type spellings, definition-value `%TYPE` and modifying CTE cursor bodies remain documented limitations.
-- Snapshot refresh, verification and publication follow the implementation commit.
+- Refreshed snapshot matches every reviewed replay row; full pinned-corpus verification and all 6,353 generated CI cases pass. Implementation commit: `f7d8af4`. Publish this verified snapshot with the implementation on the existing PR.
