@@ -8,6 +8,7 @@
 #include "sql_parser/arena.h"
 #include "sql_parser/expression_parser.h"
 #include "sql_parser/table_ref_parser.h"
+#include "sql_parser/pg_query_clauses.h"
 
 namespace sql_parser {
 
@@ -60,6 +61,9 @@ public:
         // GROUP BY clause
         if (tok_.peek().type == TokenType::TK_GROUP) {
             tok_.skip();
+            if constexpr (D == Dialect::PostgreSQL) {
+                if (tok_.peek().type != TokenType::TK_BY) return expr_parser_.syntax_error();
+            }
             if (tok_.peek().type == TokenType::TK_BY) tok_.skip();
             AstNode* group_by = parse_group_by();
             if (group_by) root->add_child(group_by);
@@ -107,7 +111,9 @@ public:
             }
 
             // LIMIT clause
-            if (tok_.peek().type == TokenType::TK_LIMIT) {
+            if constexpr (D == Dialect::PostgreSQL) {
+                if (!PgQueryClauses<D>(tok_, arena_, expr_parser_).pagination(root)) return nullptr;
+            } else if (tok_.peek().type == TokenType::TK_LIMIT) {
                 tok_.skip();
                 AstNode* limit = parse_limit();
                 if (limit) root->add_child(limit);
@@ -195,6 +201,7 @@ private:
                 case TokenType::TK_FROM: case TokenType::TK_WHERE:
                 case TokenType::TK_GROUP: case TokenType::TK_HAVING:
                 case TokenType::TK_ORDER: case TokenType::TK_LIMIT:
+                case TokenType::TK_OFFSET: case TokenType::TK_FETCH:
                 case TokenType::TK_FOR: case TokenType::TK_RPAREN:
                 case TokenType::TK_EOF: case TokenType::TK_SEMICOLON:
                 case TokenType::TK_UNION: case TokenType::TK_INTERSECT:
@@ -294,9 +301,12 @@ private:
         if (next.type == TokenType::TK_AS) {
             tok_.skip();
             Token alias_name = tok_.next_token();
+            if constexpr (D == Dialect::PostgreSQL) {
+                if (!pg_column_label(alias_name)) return expr_parser_.syntax_error();
+            }
             AstNode* alias = make_node(arena_, NodeType::NODE_ALIAS, alias_name.source.empty() ? alias_name.text : alias_name.source);
             item->add_child(alias);
-        } else if (TableRefParser<D>::is_alias_token(next)) {
+        } else if (TableRefParser<D>::is_alias_token(next) && !TableRefParser<D>::starts_json_format(tok_)) {
             // Implicit alias (no AS keyword): SELECT expr alias_name
             tok_.skip();
             AstNode* alias = make_node(arena_, NodeType::NODE_ALIAS, next.source.empty() ? next.text : next.source);
@@ -320,16 +330,22 @@ private:
     AstNode* parse_group_by() {
         AstNode* group_by = make_node(arena_, NodeType::NODE_GROUP_BY_CLAUSE);
         if (!group_by) return nullptr;
-
+        if constexpr (D == Dialect::PostgreSQL) {
+            if (tok_.peek().type == TokenType::TK_DISTINCT || tok_.peek().type == TokenType::TK_ALL)
+                group_by->set_value(tok_.next_token().text);
+        }
         while (true) {
-            AstNode* expr = expr_parser_.parse();
-            if (!expr) break;
-            group_by->add_child(expr);
-            if (tok_.peek().type == TokenType::TK_COMMA) {
-                tok_.skip();
-            } else {
+            AstNode* expr;
+            if constexpr (D == Dialect::PostgreSQL)
+                expr = PgQueryClauses<D>(tok_, arena_, expr_parser_).grouping();
+            else expr = expr_parser_.parse();
+            if (!expr) {
+                if constexpr (D == Dialect::PostgreSQL) return expr_parser_.syntax_error();
                 break;
             }
+            group_by->add_child(expr);
+            if (tok_.peek().type != TokenType::TK_COMMA) break;
+            tok_.skip();
         }
         return group_by;
     }

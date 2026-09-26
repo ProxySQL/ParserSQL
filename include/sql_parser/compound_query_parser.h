@@ -2,6 +2,7 @@
 #define SQL_PARSER_COMPOUND_QUERY_PARSER_H
 
 #include "sql_parser/select_parser.h"
+#include "sql_parser/pg_query_clauses.h"
 
 namespace sql_parser {
 
@@ -42,7 +43,9 @@ public:
             if (!order || !order->first_child) return nullptr;
             result->add_child(order);
         }
-        if (tok_.peek().type == TokenType::TK_LIMIT) {
+        if constexpr (D == Dialect::PostgreSQL) {
+            if (!PgQueryClauses<D>(tok_, arena_, expr_parser_).pagination(result)) return nullptr;
+        } else if (tok_.peek().type == TokenType::TK_LIMIT) {
             tok_.skip();
             AstNode* limit = parse_limit(require_operands);
             if (!limit || !limit->first_child) return nullptr;
@@ -105,7 +108,12 @@ private:
     AstNode* parse_operand(TokenType first) {
         if (first == TokenType::TK_EOF) first = tok_.next_token().type;
         if (first == TokenType::TK_LPAREN) {
-            AstNode* inner = parse(TokenType::TK_EOF);
+            AstNode* inner = nullptr;
+            if constexpr (D == Dialect::PostgreSQL) {
+                if (tok_.peek().type == TokenType::TK_WITH && subquery_cb_)
+                    inner = subquery_cb_(tok_, arena_);
+                else inner = parse(TokenType::TK_EOF);
+            } else inner = parse(TokenType::TK_EOF);
             if (!inner || tok_.peek().type != TokenType::TK_RPAREN) return nullptr;
             tok_.skip();
             AstNode* group = make_node(arena_, NodeType::NODE_COMPOUND_QUERY,
@@ -143,6 +151,9 @@ private:
                     next == TokenType::TK_EOF) return nullptr;
                 AstNode* value = expressions.parse();
                 if (!value) return nullptr;
+                if constexpr (D == Dialect::PostgreSQL) {
+                    if (value->type == NodeType::NODE_ASTERISK) return expressions.syntax_error();
+                }
                 if (last_value) last_value->next_sibling = value;
                 else row->first_child = value;
                 last_value = value;

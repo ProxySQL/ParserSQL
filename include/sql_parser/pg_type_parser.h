@@ -9,7 +9,10 @@ namespace sql_parser {
 // modifiers, quoted names and array bounds never become bind parameters.
 class PgTypeParser {
 public:
-    explicit PgTypeParser(Tokenizer<Dialect::PostgreSQL>& tok) : tok_(tok) {}
+    using ModifierParser = bool (*)(Tokenizer<Dialect::PostgreSQL>&, void*);
+    explicit PgTypeParser(Tokenizer<Dialect::PostgreSQL>& tok,
+                          ModifierParser modifier_parser = nullptr, void* context = nullptr)
+        : tok_(tok), modifier_parser_(modifier_parser), context_(context) {}
 
     static bool word(const Token& token, const char* value) {
         return token.source.ptr == token.text.ptr &&
@@ -20,6 +23,24 @@ public:
         return token.type == TokenType::TK_IDENTIFIER ||
             token.type == TokenType::TK_CHARACTER || token.type == TokenType::TK_INTERVAL ||
             token.type == TokenType::TK_DATA || token.type == TokenType::TK_SCHEMA;
+    }
+
+    // Shared by interval type names and prefix literals; only SECOND permits precision.
+    bool interval_qualifier(StringRef& spelling) {
+        int begin = interval_field(tok_.peek());
+        if (begin < 0) return true;
+        StringRef first = tok_.peek().source;
+        take();
+        int end = begin;
+        if (tok_.peek().type == TokenType::TK_TO) {
+            take();
+            end = interval_field(tok_.peek());
+            if (!((begin == 0 && end == 1) || (begin >= 2 && end > begin))) return false;
+            take();
+        }
+        if (end == 5 && !modifiers(1, false)) return false;
+        spelling = {first.ptr, static_cast<uint32_t>(last_.ptr + last_.len - first.ptr)};
+        return true;
     }
 
     StringRef parse(bool arrays = true, bool constant = false, const Token* leading = nullptr) {
@@ -69,19 +90,9 @@ public:
             take();
         }
         if (interval) {
-            int begin = interval_field(tok_.peek());
-            if (begin >= 0) {
-                if (has_modifiers) return {};
-                take();
-                int end = begin;
-                if (tok_.peek().type == TokenType::TK_TO) {
-                    take();
-                    end = interval_field(tok_.peek());
-                    if (!((begin == 0 && end == 1) || (begin >= 2 && end > begin))) return {};
-                    take();
-                }
-                if (end == 5 && !modifiers(1, false)) return {};
-            }
+            if (has_modifiers && interval_field(tok_.peek()) >= 0) return {};
+            StringRef qualifier;
+            if (!interval_qualifier(qualifier)) return {};
         }
         if (arrays) {
             bool standard = tok_.peek().type == TokenType::TK_ARRAY;
@@ -106,6 +117,8 @@ public:
 
 private:
     Tokenizer<Dialect::PostgreSQL>& tok_;
+    ModifierParser modifier_parser_;
+    void* context_;
     StringRef last_;
     void take() { last_ = tok_.next_token().source; }
 
@@ -115,9 +128,13 @@ private:
         unsigned count = 0;
         do {
             if (maximum && ++count > maximum) return false;
-            if (signs && (tok_.peek().type == TokenType::TK_PLUS || tok_.peek().type == TokenType::TK_MINUS)) take();
-            if (tok_.peek().type != TokenType::TK_INTEGER) return false;
-            take();
+            if (!maximum && modifier_parser_) {
+                if (!modifier_parser_(tok_, context_)) return false;
+            } else {
+                if (signs && (tok_.peek().type == TokenType::TK_PLUS || tok_.peek().type == TokenType::TK_MINUS)) take();
+                if (tok_.peek().type != TokenType::TK_INTEGER) return false;
+                take();
+            }
             if (tok_.peek().type != TokenType::TK_COMMA) break;
             take();
         } while (true);

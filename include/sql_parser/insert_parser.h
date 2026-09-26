@@ -9,6 +9,7 @@
 #include "sql_parser/expression_parser.h"
 #include "sql_parser/table_ref_parser.h"
 #include "sql_parser/select_parser.h"
+#include "sql_parser/pg_merge_parser.h"
 
 namespace sql_parser {
 
@@ -23,8 +24,16 @@ public:
           table_ref_parser_(tokenizer, arena, expr_parser_),
           is_replace_(is_replace) {}
 
+    void set_subquery_callback(SubqueryParseCallback<D> cb) {
+        subquery_cb_ = cb;
+        expr_parser_.set_subquery_callback(cb);
+        table_ref_parser_.set_subquery_callback(cb);
+    }
+
     // Parse INSERT/REPLACE statement (INSERT/REPLACE keyword already consumed).
     AstNode* parse() {
+        if constexpr (D == Dialect::PostgreSQL)
+            return PgDmlParser(tok_, arena_, subquery_cb_).insert();
         AstNode* root = make_node(arena_, NodeType::NODE_INSERT_STMT, {},
                                   is_replace_ ? FLAG_REPLACE : uint16_t(0));
         if (!root) return nullptr;
@@ -128,6 +137,7 @@ private:
     ExpressionParser<D> expr_parser_;
     TableRefParser<D> table_ref_parser_;
     bool is_replace_;
+    SubqueryParseCallback<D> subquery_cb_ = nullptr;
 
     // Check if we're looking at a VALUES keyword (not a column list paren)
     bool is_values_next() {

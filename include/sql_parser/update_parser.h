@@ -8,6 +8,7 @@
 #include "sql_parser/arena.h"
 #include "sql_parser/expression_parser.h"
 #include "sql_parser/table_ref_parser.h"
+#include "sql_parser/pg_merge_parser.h"
 
 namespace sql_parser {
 
@@ -19,11 +20,15 @@ public:
           table_ref_parser_(tokenizer, arena, expr_parser_) {}
 
     void set_subquery_callback(SubqueryParseCallback<D> cb) {
+        subquery_cb_ = cb;
         expr_parser_.set_subquery_callback(cb);
+        table_ref_parser_.set_subquery_callback(cb);
     }
 
     // Parse UPDATE statement (UPDATE keyword already consumed).
     AstNode* parse() {
+        if constexpr (D == Dialect::PostgreSQL)
+            return PgDmlParser(tok_, arena_, subquery_cb_).update();
         AstNode* root = make_node(arena_, NodeType::NODE_UPDATE_STMT);
         if (!root) return nullptr;
 
@@ -46,6 +51,7 @@ private:
     Arena& arena_;
     ExpressionParser<D> expr_parser_;
     TableRefParser<D> table_ref_parser_;
+    SubqueryParseCallback<D> subquery_cb_ = nullptr;
 
     // ---- MySQL UPDATE ----
     // UPDATE [LOW_PRIORITY] [IGNORE] table_references SET col=expr [,...] [WHERE] [ORDER BY] [LIMIT]

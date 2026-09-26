@@ -72,8 +72,8 @@ class RunnerTest(unittest.TestCase):
             [row["result"] for row in rows],
             [
                 "DEEP_SUPPORTED",
-                "TRAILING_INPUT",
-                "TYPE_MISMATCH",
+                "DEEP_SUPPORTED",
+                "DEEP_SUPPORTED",
                 "DEEP_SUPPORTED",
                 "DEEP_SUPPORTED",
             ],
@@ -102,10 +102,9 @@ class RunnerTest(unittest.TestCase):
             "commit",
         }
         self.assertTrue(all(required_fields <= row.keys() for row in rows))
-        # DDL extraction stops after the relation name; it must not claim
-        # that the unparsed column definition was consumed.
+        # CREATE TABLE and VACUUM now have complete native grammar productions.
         self.assertEqual([row["remaining"].strip() for row in rows],
-                         ["", "(id integer)", "users", "", ""])
+                         ["", "", "", "", ""])
 
     def test_cli_no_arguments(self):
         result = self.run_runner()

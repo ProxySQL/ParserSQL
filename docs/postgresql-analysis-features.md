@@ -23,8 +23,7 @@ validation and other semantic checks.
 
 The new clauses remain bounded by the existing expression grammar. PostgreSQL
 subqueries now share compound-query parsing, including SELECT, TABLE, VALUES and
-WITH operands in derived tables and LATERAL. Interval-valued frame offsets remain
-outside the supported expression subset.
+WITH operands in derived tables and LATERAL. Interval-valued frame offsets are supported through structured interval literals.
 
 Window expressions previously disappeared from emitted SQL and digests because
 their AST nodes had no emitter handlers. They now appear correctly. Digest
@@ -66,11 +65,10 @@ names, operators or function overloads, and does not validate catalog semantics.
 Consumers must also handle the appended node/token kinds. `?` is a PostgreSQL
 operator; MySQL continues to tokenize it as an anonymous bind marker.
 
-This phase does not cover qualified `OPERATOR(schema.op)` syntax, arbitrary
-expression-valued type modifiers, every keyword in an unquoted type-name
-position, interval prefix-literal qualifiers, or the remaining full expression
-and DDL grammar. These additions improve the native ParserSQL implementation;
-there is no PostgreSQL runtime fallback or production library dependency.
+Qualified prefix and binary `OPERATOR(schema.op)` syntax, expression-valued
+type modifiers and interval prefix-literal qualifiers are also supported.
+These additions improve the native ParserSQL implementation; there is no
+PostgreSQL runtime fallback or production library dependency.
 
 ## Qualified calls, aggregates and CTEs
 
@@ -99,11 +97,56 @@ recursive/nested CTEs, CTE output-column lists, materialization hints and
 VALUES/TABLE query bodies before CTE materialization. These additions do not extend CTE parameterization, which
 continues to return an unsupported-context error.
 
-Remaining gaps include data-modifying CTEs and main statements, SEARCH/CYCLE,
-special EXTRACT/SUBSTRING forms, AT TIME ZONE, advanced grouping, and broader
-SQL/JSON, XML and DDL grammar. See PostgreSQL's
+See PostgreSQL's
 [aggregate syntax](https://www.postgresql.org/docs/18/sql-expressions.html#SYNTAX-AGGREGATES)
 and [WITH queries](https://www.postgresql.org/docs/18/queries-with.html).
+
+## Further native grammar coverage
+
+Common PostgreSQL expressions now include `EXTRACT`, SQL `SUBSTRING`, `TRIM`,
+`AT TIME ZONE`, `AT LOCAL`, interval literal precision/field qualifiers,
+`IS [NOT] DISTINCT FROM`, `ARRAY(query)`, quantified comparison operands
+(`ANY`/`ALL`/`SOME`) and Unicode `NORMALIZE`. Operands remain AST children.
+Qualified operators and syntax modifiers retain their spelling during emission.
+
+Queries support `GROUPING SETS`, `ROLLUP`, `CUBE`, grouping `ALL`/`DISTINCT`,
+`LIMIT ALL`, either LIMIT/OFFSET order, offset-only pagination and
+`FETCH FIRST/NEXT ... ROWS ONLY/WITH TIES`. Table functions support
+`WITH ORDINALITY` and typed output-column definitions. `ONLY` relation sources
+and parenthesized WITH operands are retained. New constructs that the local
+engine cannot execute are rejected by its planner.
+
+`MERGE` has structured target/source, join condition, match branches, optional
+conditions, UPDATE/DELETE/INSERT/DO NOTHING actions and RETURNING. CTE bodies
+and main statements may use supported INSERT/UPDATE/DELETE/MERGE forms.
+Recursive `SEARCH` and `CYCLE` clauses, INSERT `OVERRIDING`, compound query
+sources, assignment indirection and RETURNING options retain their structure.
+The local DML planner rejects these new semantics before execution.
+
+Common DDL now has validated productions for CREATE TABLE (including CTAS and
+partition bounds), basic CREATE SCHEMA/DATABASE, ALTER TABLE actions, DROP
+families, indexes,
+views/materialized views, functions/procedures, triggers, privileges, role
+membership, TRUNCATE, VACUUM and ANALYZE. Names, expressions, lists and clauses
+are traversable; type names and fixed syntax are validated leaves. Quoted
+function bodies remain string literals. This is syntax parsing, not catalog
+validation or execution, and unsupported options must leave an error or
+incomplete input rather than being accepted as an arbitrary tail.
+
+SQL/JSON and XML productions retain constructors, JSON_ARRAYAGG/JSON_OBJECTAGG,
+query/value/exists calls,
+RETURNING and behavior options, table columns, serialization and default
+expressions. Their new node kinds support traversal and SQL reconstruction;
+parameterization remains conservative about unsupported contexts.
+
+Coverage is still a subset of PostgreSQL. Remaining examples include CREATE
+TYPE/DOMAIN/SEQUENCE, embedded CREATE SCHEMA elements, CREATE DATABASE options,
+most non-table ALTER commands, unquoted SQL function bodies, exclusion
+constraints, less common DDL options, assignment slices,
+full ON CONFLICT index-inference options, and `IS JSON` predicates. PostgreSQL remains responsible
+for name resolution, types, privileges and semantic checks. Corpus acceptance
+alone does not establish grammar parity or round-trip equivalence for every
+accepted statement.
 
 ## Multiple statements
 

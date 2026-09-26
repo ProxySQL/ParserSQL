@@ -119,6 +119,9 @@ enum class StmtType : uint8_t {
     DO_STMT,
     COPY,
     RELEASE_SAVEPOINT,
+    VACUUM,
+    ANALYZE,
+    MERGE,
 };
 
 // -- AST node types --
@@ -276,6 +279,37 @@ enum class NodeType : uint16_t {
     NODE_NAMED_ARGUMENT,       // value=argument name; one expression child
     NODE_AGGREGATE_ORDER_BY,   // ORDER_BY_ITEM children; constants are not ordinals
     NODE_CTE_COLUMNS,          // identifier children; follows body in CTE_DEFINITION
+    // PG_GAPS_EXPRESSION_NODES
+    NODE_PG_EXTRACT,
+    NODE_PG_SUBSTRING,
+    NODE_PG_TIME_ZONE,
+    NODE_PG_INTERVAL,
+    NODE_PG_TRIM,
+    NODE_PG_ARRAY_QUERY,
+    NODE_PG_QUANTIFIED_OPERAND,
+    NODE_PG_NORMALIZE,
+    // PG_GAPS_DML_NODES
+    NODE_MERGE_STMT,            // target, USING source, ON expression, WHEN actions, RETURNING
+    NODE_MERGE_WHEN,            // match spelling; optional AND expression, THEN action
+    NODE_PG_DML_CLAUSE,         // validated fixed syntax; structured children separated by spaces
+    NODE_CTE_SEARCH,            // value=DEPTH/BREADTH; columns then sequence column
+    NODE_CTE_CYCLE,             // columns, mark column, optional values, path column
+    NODE_PG_RETURNING_OPTIONS,  // OLD/NEW AS alias options
+    NODE_PG_ASSIGNMENT_FIELD,   // target.field, without expression parentheses
+    // PG_GAPS_DDL_NODES
+    NODE_PG_DDL_STMT,           // command value; structured clause children
+    NODE_PG_DDL_CLAUSE,         // grammar production, optional keyword prefix
+    NODE_PG_DDL_LIST,           // comma-separated children; flag 1 = no parentheses
+    NODE_PG_DDL_SYNTAX,         // validated syntax keyword or option, never an expression
+    // PG_GAPS_QUERY_NODES
+    NODE_GROUPING_SET,
+    NODE_OFFSET_CLAUSE,
+    NODE_FETCH_CLAUSE,
+    NODE_ORDINALITY,
+    NODE_FUNCTION_COLUMN,
+    // PG_GAPS_JSON_XML_NODES
+    NODE_PG_JSON_XML,
+    NODE_PG_JSON_XML_SYNTAX,
 };
 
 } // namespace sql_parser

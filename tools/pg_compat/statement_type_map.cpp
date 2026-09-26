@@ -93,8 +93,8 @@ namespace pg_compat {
     SIMPLE(PG_QUERY__NODE__NODE_REASSIGN_OWNED_STMT, Equivalent, ALTER) \
     SIMPLE(PG_QUERY__NODE__NODE_CONSTRAINTS_SET_STMT, Equivalent, SET) \
     SIMPLE(PG_QUERY__NODE__NODE_COPY_STMT, Equivalent, COPY) \
-    SIMPLE(PG_QUERY__NODE__NODE_MERGE_STMT, NoEquivalent, UNKNOWN) \
-    SIMPLE(PG_QUERY__NODE__NODE_VACUUM_STMT, NoEquivalent, UNKNOWN) \
+    SIMPLE(PG_QUERY__NODE__NODE_MERGE_STMT, Equivalent, MERGE) \
+    PAYLOAD(PG_QUERY__NODE__NODE_VACUUM_STMT, map_vacuum_stmt) \
     SIMPLE(PG_QUERY__NODE__NODE_NOTIFY_STMT, NoEquivalent, UNKNOWN) \
     SIMPLE(PG_QUERY__NODE__NODE_LISTEN_STMT, NoEquivalent, UNKNOWN) \
     SIMPLE(PG_QUERY__NODE__NODE_UNLISTEN_STMT, NoEquivalent, UNKNOWN) \
@@ -116,6 +116,12 @@ namespace pg_compat {
     PAYLOAD(PG_QUERY__NODE__NODE_GRANT_ROLE_STMT, map_grant_role_stmt)
 
 namespace {
+
+StatementTypeMapping map_vacuum_stmt(const PgQuery__Node& node) {
+    if (!node.vacuum_stmt) return {};
+    return {MappingKind::Equivalent, node.vacuum_stmt->is_vacuumcmd
+        ? sql_parser::StmtType::VACUUM : sql_parser::StmtType::ANALYZE};
+}
 
 StatementTypeMapping map_transaction_stmt(const PgQuery__Node& node) {
     using sql_parser::StmtType;
@@ -229,6 +235,9 @@ const char* stmt_type_name(sql_parser::StmtType type) {
 #pragma GCC diagnostic error "-Wswitch"
 #endif
     switch (type) {
+    case StmtType::MERGE: return "MERGE";
+    case StmtType::VACUUM: return "VACUUM";
+    case StmtType::ANALYZE: return "ANALYZE";
     case StmtType::UNKNOWN:
         return "UNKNOWN";
     case StmtType::SELECT:

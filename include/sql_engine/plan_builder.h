@@ -56,13 +56,64 @@ public:
         return ast && !has_unsupported_query_feature(ast);
     }
 
+    // DML owns its VALUES rows; all expression/query restrictions still apply.
+    static bool supports_dml_features(const sql_parser::AstNode* ast) {
+        return ast && !has_unsupported_query_feature(ast, true, true);
+    }
+
 private:
     const Catalog& catalog_;
     sql_parser::Arena& arena_;
 
-    static bool has_unsupported_query_feature(const sql_parser::AstNode* node, bool root = true) {
+    static bool has_unsupported_query_feature(const sql_parser::AstNode* node, bool root = true,
+                                               bool dml_values = false) {
         using sql_parser::NodeType;
         switch (node->type) {
+            // PG_GAPS_EXPRESSION_GUARD
+            case NodeType::NODE_PG_EXTRACT:
+            case NodeType::NODE_PG_SUBSTRING:
+            case NodeType::NODE_PG_TIME_ZONE:
+            case NodeType::NODE_PG_INTERVAL:
+            case NodeType::NODE_PG_TRIM:
+            case NodeType::NODE_PG_ARRAY_QUERY:
+            case NodeType::NODE_PG_QUANTIFIED_OPERAND:
+            case NodeType::NODE_PG_NORMALIZE:
+                return true;
+            // PG_GAPS_DML_GUARD
+            case NodeType::NODE_MERGE_STMT:
+            case NodeType::NODE_CTE_SEARCH:
+            case NodeType::NODE_CTE_CYCLE:
+            case NodeType::NODE_PG_DML_CLAUSE:
+            case NodeType::NODE_PG_RETURNING_OPTIONS:
+                return true;
+            case NodeType::NODE_INSERT_STMT:
+            case NodeType::NODE_UPDATE_STMT:
+            case NodeType::NODE_DELETE_STMT:
+                if (!root) return true; // A modifying CTE must never be materialized as a query.
+                break;
+            // PG_GAPS_DDL_GUARD
+            case NodeType::NODE_PG_DDL_STMT:
+            case NodeType::NODE_PG_DDL_CLAUSE:
+            case NodeType::NODE_PG_DDL_LIST:
+            case NodeType::NODE_PG_DDL_SYNTAX:
+                return true;
+            // PG_GAPS_QUERY_GUARD
+            case NodeType::NODE_TABLE_REF:
+                if (node->flags & (sql_parser::FLAG_TABLE_ONLY | sql_parser::FLAG_TABLE_INHERIT)) return true;
+                break;
+            case NodeType::NODE_GROUPING_SET:
+            case NodeType::NODE_OFFSET_CLAUSE:
+            case NodeType::NODE_FETCH_CLAUSE:
+            case NodeType::NODE_ORDINALITY:
+            case NodeType::NODE_FUNCTION_COLUMN:
+                return true;
+            case NodeType::NODE_GROUP_BY_CLAUSE:
+                if (!node->value().empty()) return true;
+                break;
+            // PG_GAPS_JSON_XML_GUARD
+            case NodeType::NODE_PG_JSON_XML:
+            case NodeType::NODE_PG_JSON_XML_SYNTAX:
+                return true;
             case NodeType::NODE_CTE:
                 // Nested WITH requires its own materialization scope, which
                 // neither build_cte nor the subquery executor implements.
@@ -74,8 +125,10 @@ private:
                 break;
             case NodeType::NODE_CTE_COLUMNS:
             case NodeType::NODE_TABLE_QUERY:
-            case NodeType::NODE_VALUES_CLAUSE:
                 return true;
+            case NodeType::NODE_VALUES_CLAUSE:
+                if (!dml_values) return true;
+                break;
             case NodeType::NODE_BINARY_OP:
             case NodeType::NODE_UNARY_OP:
                 if (node->flags & sql_parser::FLAG_PG_OPERATOR) return true;
@@ -101,7 +154,7 @@ private:
             default: break;
         }
         for (const auto* child = node->first_child; child; child = child->next_sibling)
-            if (has_unsupported_query_feature(child, false)) return true;
+            if (has_unsupported_query_feature(child, false, dml_values)) return true;
         return false;
     }
 

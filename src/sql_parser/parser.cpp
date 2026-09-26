@@ -8,6 +8,7 @@
 #include "sql_parser/update_parser.h"
 #include "sql_parser/delete_parser.h"
 #include "sql_parser/pg_utility_parser.h"
+#include "sql_parser/pg_ddl_parser.h"
 
 namespace sql_parser {
 
@@ -98,6 +99,13 @@ ParseResult Parser<D>::classify_and_dispatch() {
     }
 
     if constexpr (D == Dialect::PostgreSQL) {
+        if (PgUtilityParser::word(first, "MERGE")) return parse_merge();
+        if (PgDdlParser::handles(first)) {
+            PgDdlParser ddl(tokenizer_, arena_, &parse_subquery_select<D>);
+            ParseResult r = ddl.parse(first);
+            scan_to_end(r);
+            return r;
+        }
         if (first.type == TokenType::TK_IDENTIFIER && PgUtilityParser::word(first, "COPY")) {
             PgUtilityParser utility(tokenizer_, arena_);
             ParseResult r = utility.copy();
@@ -241,6 +249,7 @@ ParseResult Parser<D>::parse_insert(bool is_replace) {
     r.stmt_type = is_replace ? StmtType::REPLACE : StmtType::INSERT;
 
     InsertParser<D> insert_parser(tokenizer_, arena_, is_replace);
+    insert_parser.set_subquery_callback(&parse_subquery_select<D>);
     AstNode* ast = insert_parser.parse();
 
     if (ast) {
@@ -340,6 +349,18 @@ ParseResult Parser<D>::parse_delete() {
     }
 
     scan_to_end(r);
+    return r;
+}
+
+template <Dialect D>
+ParseResult Parser<D>::parse_merge() {
+    ParseResult r;
+    r.stmt_type = StmtType::MERGE;
+    if constexpr (D == Dialect::PostgreSQL) {
+        r.ast = PgDmlParser(tokenizer_, arena_, &parse_subquery_select<D>).merge();
+        r.status = r.ast ? ParseResult::OK : ParseResult::ERROR;
+        scan_to_end(r);
+    }
     return r;
 }
 
@@ -1174,8 +1195,21 @@ ParseResult Parser<D>::parse_with() {
 
     // WITH keyword already consumed by classifier.
     if constexpr (D == Dialect::PostgreSQL) {
-        r.ast = parse_pg_with(tokenizer_, arena_);
+        r.ast = parse_pg_with(tokenizer_, arena_, true);
         r.status = r.ast ? ParseResult::OK : ParseResult::ERROR;
+        if (r.ast) {
+            const AstNode* main = r.ast->first_child;
+            while (main && main->type == NodeType::NODE_CTE_DEFINITION) main = main->next_sibling;
+            if (main) {
+                switch (main->type) {
+                    case NodeType::NODE_INSERT_STMT: r.stmt_type = StmtType::INSERT; break;
+                    case NodeType::NODE_UPDATE_STMT: r.stmt_type = StmtType::UPDATE; break;
+                    case NodeType::NODE_DELETE_STMT: r.stmt_type = StmtType::DELETE_STMT; break;
+                    case NodeType::NODE_MERGE_STMT: r.stmt_type = StmtType::MERGE; break;
+                    default: break;
+                }
+            }
+        }
         scan_to_end(r);
         return r;
     }

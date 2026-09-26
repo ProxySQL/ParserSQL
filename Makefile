@@ -53,6 +53,11 @@ TEST_SRCS = $(TEST_DIR)/test_main.cpp \
             $(TEST_DIR)/test_compound.cpp \
             $(TEST_DIR)/test_pg_query_features.cpp \
             $(TEST_DIR)/test_pg_expressions.cpp \
+            $(TEST_DIR)/test_pg_special_expressions.cpp \
+            $(TEST_DIR)/test_pg_query_gaps.cpp \
+            $(TEST_DIR)/test_pg_dml_extensions.cpp \
+            $(TEST_DIR)/test_pg_ddl.cpp \
+            $(TEST_DIR)/test_pg_json_xml.cpp \
             $(TEST_DIR)/test_pg_utilities.cpp \
             $(TEST_DIR)/test_parse_all.cpp \
             $(TEST_DIR)/test_ast_utilities.cpp \

@@ -155,8 +155,7 @@ void test_default_and_simple_mappings() {
         {PG_QUERY__NODE__NODE_REASSIGN_OWNED_STMT, MappingKind::Equivalent, StmtType::ALTER},
         {PG_QUERY__NODE__NODE_CONSTRAINTS_SET_STMT, MappingKind::Equivalent, StmtType::SET},
         {PG_QUERY__NODE__NODE_COPY_STMT, MappingKind::Equivalent, StmtType::COPY},
-        {PG_QUERY__NODE__NODE_MERGE_STMT, MappingKind::NoEquivalent, StmtType::UNKNOWN},
-        {PG_QUERY__NODE__NODE_VACUUM_STMT, MappingKind::NoEquivalent, StmtType::UNKNOWN},
+        {PG_QUERY__NODE__NODE_MERGE_STMT, MappingKind::Equivalent, StmtType::MERGE},
         {PG_QUERY__NODE__NODE_NOTIFY_STMT, MappingKind::NoEquivalent, StmtType::UNKNOWN},
         {PG_QUERY__NODE__NODE_LISTEN_STMT, MappingKind::NoEquivalent, StmtType::UNKNOWN},
         {PG_QUERY__NODE__NODE_UNLISTEN_STMT, MappingKind::NoEquivalent, StmtType::UNKNOWN},
@@ -416,6 +415,17 @@ void test_oracle_node_names() {
         "UNMAPPED_NODE_CASE") == 0);
 }
 
+void test_vacuum_mapping() {
+    PgQuery__Node node{};
+    node.node_case = PG_QUERY__NODE__NODE_VACUUM_STMT;
+    PgQuery__VacuumStmt vacuum{};
+    node.vacuum_stmt = &vacuum;
+    vacuum.is_vacuumcmd = true;
+    assert_mapping(pg_compat::expected_stmt_type(node), MappingKind::Equivalent, StmtType::VACUUM);
+    vacuum.is_vacuumcmd = false;
+    assert_mapping(pg_compat::expected_stmt_type(node), MappingKind::Equivalent, StmtType::ANALYZE);
+}
+
 void test_stmt_type_names() {
     const StmtTypeNameCase cases[] = {
         {StmtType::UNKNOWN, "UNKNOWN"},
@@ -449,6 +459,9 @@ void test_stmt_type_names() {
         {StmtType::DESCRIBE, "DESCRIBE"},
         {StmtType::CALL, "CALL"},
         {StmtType::DO_STMT, "DO"},
+        {StmtType::MERGE, "MERGE"},
+        {StmtType::VACUUM, "VACUUM"},
+        {StmtType::ANALYZE, "ANALYZE"},
     };
 
     for (const auto& test_case : cases) {
@@ -471,5 +484,6 @@ int main() {
     test_grant_and_revoke_mappings();
     test_oracle_node_names();
     test_stmt_type_names();
+    test_vacuum_mapping();
     return 0;
 }
