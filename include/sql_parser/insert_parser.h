@@ -9,6 +9,7 @@
 #include "sql_parser/expression_parser.h"
 #include "sql_parser/table_ref_parser.h"
 #include "sql_parser/select_parser.h"
+#include "sql_parser/pg_merge_parser.h"
 
 namespace sql_parser {
 
@@ -23,8 +24,16 @@ public:
           table_ref_parser_(tokenizer, arena, expr_parser_),
           is_replace_(is_replace) {}
 
+    void set_subquery_callback(SubqueryParseCallback<D> cb) {
+        subquery_cb_ = cb;
+        expr_parser_.set_subquery_callback(cb);
+        table_ref_parser_.set_subquery_callback(cb);
+    }
+
     // Parse INSERT/REPLACE statement (INSERT/REPLACE keyword already consumed).
     AstNode* parse() {
+        if constexpr (D == Dialect::PostgreSQL)
+            return PgDmlParser(tok_, arena_, subquery_cb_).insert();
         AstNode* root = make_node(arena_, NodeType::NODE_INSERT_STMT, {},
                                   is_replace_ ? FLAG_REPLACE : uint16_t(0));
         if (!root) return nullptr;
@@ -116,11 +125,19 @@ public:
     }
 
 private:
+    AstNode* make_identifier(const Token& token, NodeType type = NodeType::NODE_IDENTIFIER) {
+        AstNode* node = make_node_from_token(arena_, type, token);
+        if (node && token.type == TokenType::TK_IDENTIFIER && token.source.ptr != token.text.ptr)
+            node->flags |= FLAG_IDENT_DELIMITED;
+        return node;
+    }
+
     Tokenizer<D>& tok_;
     Arena& arena_;
     ExpressionParser<D> expr_parser_;
     TableRefParser<D> table_ref_parser_;
     bool is_replace_;
+    SubqueryParseCallback<D> subquery_cb_ = nullptr;
 
     // Check if we're looking at a VALUES keyword (not a column list paren)
     bool is_values_next() {
@@ -161,7 +178,7 @@ private:
             tok_.skip();  // consume (
             while (true) {
                 Token col = tok_.next_token();
-                cols->add_child(make_node(arena_, NodeType::NODE_IDENTIFIER, col.text));
+                cols->add_child(make_identifier(col));
                 if (tok_.peek().type == TokenType::TK_COMMA) {
                     tok_.skip();
                 } else {
@@ -243,11 +260,11 @@ private:
             tok_.skip();
             Token actual_col = tok_.next_token();
             AstNode* qname = make_node(arena_, NodeType::NODE_QUALIFIED_NAME);
-            qname->add_child(make_node(arena_, NodeType::NODE_IDENTIFIER, col.text));
-            qname->add_child(make_node(arena_, NodeType::NODE_IDENTIFIER, actual_col.text));
+            qname->add_child(make_identifier(col));
+            qname->add_child(make_identifier(actual_col));
             item->add_child(qname);
         } else {
-            item->add_child(make_node(arena_, NodeType::NODE_COLUMN_REF, col.text));
+            item->add_child(make_identifier(col, NodeType::NODE_COLUMN_REF));
         }
 
         // = sign
@@ -333,7 +350,7 @@ private:
         tok_.skip();  // consume (
         while (true) {
             Token col = tok_.next_token();
-            target->add_child(make_node(arena_, NodeType::NODE_IDENTIFIER, col.text));
+            target->add_child(make_identifier(col));
             if (tok_.peek().type == TokenType::TK_COMMA) {
                 tok_.skip();
             } else {
@@ -356,7 +373,7 @@ private:
             tok_.skip();  // CONSTRAINT
         }
         Token name = tok_.next_token();
-        target->add_child(make_node(arena_, NodeType::NODE_IDENTIFIER, name.text));
+        target->add_child(make_identifier(name));
 
         return target;
     }
@@ -422,7 +439,8 @@ private:
             if (next.type == TokenType::TK_AS) {
                 tok_.skip();
                 Token alias_name = tok_.next_token();
-                ret->add_child(make_node(arena_, NodeType::NODE_ALIAS, alias_name.text));
+                ret->add_child(make_node(arena_, NodeType::NODE_ALIAS,
+                    alias_name.source.empty() ? alias_name.text : alias_name.source));
             }
 
             if (tok_.peek().type == TokenType::TK_COMMA) {

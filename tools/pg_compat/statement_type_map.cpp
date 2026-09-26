@@ -92,30 +92,41 @@ namespace pg_compat {
     SIMPLE(PG_QUERY__NODE__NODE_DROP_USER_MAPPING_STMT, Equivalent, DROP) \
     SIMPLE(PG_QUERY__NODE__NODE_REASSIGN_OWNED_STMT, Equivalent, ALTER) \
     SIMPLE(PG_QUERY__NODE__NODE_CONSTRAINTS_SET_STMT, Equivalent, SET) \
-    SIMPLE(PG_QUERY__NODE__NODE_COPY_STMT, NoEquivalent, UNKNOWN) \
-    SIMPLE(PG_QUERY__NODE__NODE_MERGE_STMT, NoEquivalent, UNKNOWN) \
-    SIMPLE(PG_QUERY__NODE__NODE_VACUUM_STMT, NoEquivalent, UNKNOWN) \
-    SIMPLE(PG_QUERY__NODE__NODE_NOTIFY_STMT, NoEquivalent, UNKNOWN) \
-    SIMPLE(PG_QUERY__NODE__NODE_LISTEN_STMT, NoEquivalent, UNKNOWN) \
-    SIMPLE(PG_QUERY__NODE__NODE_UNLISTEN_STMT, NoEquivalent, UNKNOWN) \
-    SIMPLE(PG_QUERY__NODE__NODE_CHECK_POINT_STMT, NoEquivalent, UNKNOWN) \
-    SIMPLE(PG_QUERY__NODE__NODE_CLUSTER_STMT, NoEquivalent, UNKNOWN) \
-    SIMPLE(PG_QUERY__NODE__NODE_CLOSE_PORTAL_STMT, NoEquivalent, UNKNOWN) \
-    SIMPLE(PG_QUERY__NODE__NODE_COMMENT_STMT, NoEquivalent, UNKNOWN) \
-    SIMPLE(PG_QUERY__NODE__NODE_DECLARE_CURSOR_STMT, NoEquivalent, UNKNOWN) \
-    SIMPLE(PG_QUERY__NODE__NODE_DEFINE_STMT, NoEquivalent, UNKNOWN) \
-    SIMPLE(PG_QUERY__NODE__NODE_DISCARD_STMT, NoEquivalent, UNKNOWN) \
-    SIMPLE(PG_QUERY__NODE__NODE_FETCH_STMT, NoEquivalent, UNKNOWN) \
-    SIMPLE(PG_QUERY__NODE__NODE_IMPORT_FOREIGN_SCHEMA_STMT, NoEquivalent, UNKNOWN) \
+    SIMPLE(PG_QUERY__NODE__NODE_COPY_STMT, Equivalent, COPY) \
+    SIMPLE(PG_QUERY__NODE__NODE_MERGE_STMT, Equivalent, MERGE) \
+    PAYLOAD(PG_QUERY__NODE__NODE_VACUUM_STMT, map_vacuum_stmt) \
+    SIMPLE(PG_QUERY__NODE__NODE_NOTIFY_STMT, Equivalent, NOTIFY) \
+    SIMPLE(PG_QUERY__NODE__NODE_LISTEN_STMT, Equivalent, LISTEN) \
+    SIMPLE(PG_QUERY__NODE__NODE_UNLISTEN_STMT, Equivalent, UNLISTEN) \
+    SIMPLE(PG_QUERY__NODE__NODE_CHECK_POINT_STMT, Equivalent, CHECKPOINT) \
+    SIMPLE(PG_QUERY__NODE__NODE_CLUSTER_STMT, Equivalent, CLUSTER) \
+    SIMPLE(PG_QUERY__NODE__NODE_CLOSE_PORTAL_STMT, Equivalent, CLOSE) \
+    SIMPLE(PG_QUERY__NODE__NODE_COMMENT_STMT, Equivalent, COMMENT) \
+    SIMPLE(PG_QUERY__NODE__NODE_DECLARE_CURSOR_STMT, Equivalent, DECLARE_CURSOR) \
+    SIMPLE(PG_QUERY__NODE__NODE_DEFINE_STMT, Equivalent, CREATE) \
+    SIMPLE(PG_QUERY__NODE__NODE_DISCARD_STMT, Equivalent, DISCARD) \
+    PAYLOAD(PG_QUERY__NODE__NODE_FETCH_STMT, map_fetch_stmt) \
+    SIMPLE(PG_QUERY__NODE__NODE_IMPORT_FOREIGN_SCHEMA_STMT, Equivalent, IMPORT_FOREIGN_SCHEMA) \
     SIMPLE(PG_QUERY__NODE__NODE_LOAD_STMT, NoEquivalent, UNKNOWN) \
-    SIMPLE(PG_QUERY__NODE__NODE_REFRESH_MAT_VIEW_STMT, NoEquivalent, UNKNOWN) \
-    SIMPLE(PG_QUERY__NODE__NODE_REINDEX_STMT, NoEquivalent, UNKNOWN) \
-    SIMPLE(PG_QUERY__NODE__NODE_SEC_LABEL_STMT, NoEquivalent, UNKNOWN) \
+    SIMPLE(PG_QUERY__NODE__NODE_REFRESH_MAT_VIEW_STMT, Equivalent, REFRESH_MATERIALIZED_VIEW) \
+    SIMPLE(PG_QUERY__NODE__NODE_REINDEX_STMT, Equivalent, REINDEX) \
+    SIMPLE(PG_QUERY__NODE__NODE_SEC_LABEL_STMT, Equivalent, SECURITY_LABEL) \
     PAYLOAD(PG_QUERY__NODE__NODE_TRANSACTION_STMT, map_transaction_stmt) \
     PAYLOAD(PG_QUERY__NODE__NODE_GRANT_STMT, map_grant_stmt) \
     PAYLOAD(PG_QUERY__NODE__NODE_GRANT_ROLE_STMT, map_grant_role_stmt)
 
 namespace {
+
+StatementTypeMapping map_fetch_stmt(const PgQuery__Node& node) {
+    if (!node.fetch_stmt) return {};
+    return {MappingKind::Equivalent, node.fetch_stmt->ismove ? sql_parser::StmtType::MOVE : sql_parser::StmtType::FETCH};
+}
+
+StatementTypeMapping map_vacuum_stmt(const PgQuery__Node& node) {
+    if (!node.vacuum_stmt) return {};
+    return {MappingKind::Equivalent, node.vacuum_stmt->is_vacuumcmd
+        ? sql_parser::StmtType::VACUUM : sql_parser::StmtType::ANALYZE};
+}
 
 StatementTypeMapping map_transaction_stmt(const PgQuery__Node& node) {
     using sql_parser::StmtType;
@@ -136,8 +147,9 @@ StatementTypeMapping map_transaction_stmt(const PgQuery__Node& node) {
     case PG_QUERY__TRANSACTION_STMT_KIND__TRANS_STMT_ROLLBACK_PREPARED:
         return {MappingKind::Equivalent, StmtType::ROLLBACK};
     case PG_QUERY__TRANSACTION_STMT_KIND__TRANS_STMT_SAVEPOINT:
-    case PG_QUERY__TRANSACTION_STMT_KIND__TRANS_STMT_RELEASE:
         return {MappingKind::Equivalent, StmtType::SAVEPOINT};
+    case PG_QUERY__TRANSACTION_STMT_KIND__TRANS_STMT_RELEASE:
+        return {MappingKind::Equivalent, StmtType::RELEASE_SAVEPOINT};
     case PG_QUERY__TRANSACTION_STMT_KIND__TRANS_STMT_PREPARE:
         return {MappingKind::Equivalent, StmtType::PREPARE};
     default:
@@ -228,6 +240,9 @@ const char* stmt_type_name(sql_parser::StmtType type) {
 #pragma GCC diagnostic error "-Wswitch"
 #endif
     switch (type) {
+    case StmtType::MERGE: return "MERGE";
+    case StmtType::VACUUM: return "VACUUM";
+    case StmtType::ANALYZE: return "ANALYZE";
     case StmtType::UNKNOWN:
         return "UNKNOWN";
     case StmtType::SELECT:
@@ -290,6 +305,25 @@ const char* stmt_type_name(sql_parser::StmtType type) {
         return "CALL";
     case StmtType::DO_STMT:
         return "DO";
+    case StmtType::COPY:
+        return "COPY";
+    case StmtType::COMMENT: return "COMMENT";
+    case StmtType::SECURITY_LABEL: return "SECURITY_LABEL";
+    case StmtType::DECLARE_CURSOR: return "DECLARE_CURSOR";
+    case StmtType::CLOSE: return "CLOSE";
+    case StmtType::LISTEN: return "LISTEN";
+    case StmtType::NOTIFY: return "NOTIFY";
+    case StmtType::UNLISTEN: return "UNLISTEN";
+    case StmtType::DISCARD: return "DISCARD";
+    case StmtType::CHECKPOINT: return "CHECKPOINT";
+    case StmtType::IMPORT_FOREIGN_SCHEMA: return "IMPORT_FOREIGN_SCHEMA";
+    case StmtType::REINDEX: return "REINDEX";
+    case StmtType::CLUSTER: return "CLUSTER";
+    case StmtType::REFRESH_MATERIALIZED_VIEW: return "REFRESH_MATERIALIZED_VIEW";
+    case StmtType::FETCH: return "FETCH";
+    case StmtType::MOVE: return "MOVE";
+    case StmtType::RELEASE_SAVEPOINT:
+        return "RELEASE_SAVEPOINT";
     }
 #if defined(__clang__) || defined(__GNUC__)
 #pragma GCC diagnostic pop

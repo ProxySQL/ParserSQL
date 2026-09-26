@@ -51,6 +51,26 @@ TEST_SRCS = $(TEST_DIR)/test_main.cpp \
             $(TEST_DIR)/test_update.cpp \
             $(TEST_DIR)/test_delete.cpp \
             $(TEST_DIR)/test_compound.cpp \
+            $(TEST_DIR)/test_pg_query_features.cpp \
+            $(TEST_DIR)/test_pg_expressions.cpp \
+            $(TEST_DIR)/test_pg_special_expressions.cpp \
+            $(TEST_DIR)/test_pg_query_gaps.cpp \
+            $(TEST_DIR)/test_pg_query_continuation.cpp \
+            $(TEST_DIR)/test_pg_expression_continuation.cpp \
+            $(TEST_DIR)/test_pg_object_ddl.cpp \
+            $(TEST_DIR)/test_pg_definitions.cpp \
+            $(TEST_DIR)/test_pg_policy_statistics.cpp \
+            $(TEST_DIR)/test_pg_foreign_ddl.cpp \
+            $(TEST_DIR)/test_pg_table_constraints.cpp \
+            $(TEST_DIR)/test_pg_maintenance.cpp \
+            $(TEST_DIR)/test_pg_admin_commands.cpp \
+            $(TEST_DIR)/test_pg_session_commands.cpp \
+            $(TEST_DIR)/test_pg_dml_extensions.cpp \
+            $(TEST_DIR)/test_pg_ddl.cpp \
+            $(TEST_DIR)/test_pg_json_xml.cpp \
+            $(TEST_DIR)/test_pg_utilities.cpp \
+            $(TEST_DIR)/test_parse_all.cpp \
+            $(TEST_DIR)/test_ast_utilities.cpp \
             $(TEST_DIR)/test_digest.cpp \
             $(TEST_DIR)/test_misc_stmts.cpp \
             $(TEST_DIR)/test_value.cpp \

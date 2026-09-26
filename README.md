@@ -52,6 +52,10 @@ Dialect selection is compile-time (`Parser<Dialect::MySQL>` / `Parser<Dialect::P
 
 See [`docs/benchmarks/latest.md`](docs/benchmarks/latest.md) for the full report, and [`REPRODUCING.md`](docs/benchmarks/REPRODUCING.md) for reproduction instructions.
 
+The acceptance figures above are historical and include classification-only
+results; use the PostgreSQL compatibility report below for complete-input AST
+coverage and remaining syntax gaps.
+
 ## Quick Start
 
 ### Build
@@ -322,13 +326,18 @@ auto report = recovery.recover();
 
 - **Arena allocator** — 64 KB bump allocator per parser, O(1) reset. All AST nodes and plan nodes live in the arena. No per-node new/delete.
 - **Zero-copy `StringRef`** — tokens point into the original input buffer.
-- **32-byte `AstNode`** — half a cache line; intrusive linked list (first_child + next_sibling).
+- **48-byte `AstNode`** — intrusive linked list (first_child + next_sibling), with value and source spans.
 - **Compile-time dialect dispatch** — `if constexpr` for MySQL vs PostgreSQL differences. Zero runtime overhead.
 - **Header-only parsers & operators** — maximum inlining. Only `arena.cpp`, `parser.cpp`, a few engine `.cpp` files compile separately.
 
 ## Features
 
 ### Parser
+
+See [PostgreSQL analysis features](docs/postgresql-analysis-features.md) for
+DISTINCT ON, FILTER, LATERAL, named windows/frames, transaction/COPY ASTs and
+`parse_all()`. [AST utility APIs](docs/ast-utilities.md) document traversal,
+owning copies, subtree replacement and context-aware parameterization.
 
 - **Tier 1 deep parse:** SELECT, INSERT, UPDATE, DELETE, SET, REPLACE, EXPLAIN, CALL, DO, LOAD DATA
 - **Compound queries:** UNION / INTERSECT / EXCEPT with SQL-standard precedence and parenthesized nesting

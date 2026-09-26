@@ -58,6 +58,23 @@ inline int ci_cmp(const char* a, uint32_t alen, const char* b, uint8_t blen) {
 
 // -- Flags for NODE_SET_OPERATION --
 static constexpr uint16_t FLAG_SET_OP_ALL = 0x01;
+// Parenthesized query expressions retain grouping during SQL emission.
+static constexpr uint16_t FLAG_QUERY_PARENTHESIZED = 0x01;
+static constexpr uint16_t FLAG_TABLE_ONLY = 0x01;
+static constexpr uint16_t FLAG_TABLE_INHERIT = 0x02;
+static constexpr uint16_t FLAG_FUNCTION_TABLE = 0x01;
+static constexpr uint16_t FLAG_FUNCTION_DISTINCT = 0x02;
+static constexpr uint16_t FLAG_FUNCTION_ALL = 0x04;
+static constexpr uint16_t FLAG_FUNCTION_QUALIFIED = 0x08;
+static constexpr uint16_t FLAG_FUNCTION_WITHIN_GROUP = 0x10;
+// On binary/unary expressions: PostgreSQL operation without local engine support.
+static constexpr uint16_t FLAG_PG_OPERATOR = 0x01;
+static constexpr uint16_t FLAG_WINDOW_BETWEEN = 0x01;
+static constexpr uint16_t FLAG_ORDER_NULLS = 0x01;
+static constexpr uint16_t FLAG_LIMIT_COMMA = 0x01;
+static constexpr uint16_t FLAG_CTE_RECURSIVE = 0x01;
+static constexpr uint16_t FLAG_CTE_MATERIALIZED = 0x02;
+static constexpr uint16_t FLAG_CTE_NOT_MATERIALIZED = 0x04;
 
 // -- Flags for NODE_IDENTIFIER / NODE_COLUMN_REF --
 // Set when the identifier was source-delimited (backtick `name` for MySQL,
@@ -100,6 +117,26 @@ enum class StmtType : uint8_t {
     DESCRIBE,
     CALL,
     DO_STMT,
+    COPY,
+    RELEASE_SAVEPOINT,
+    VACUUM,
+    ANALYZE,
+    MERGE,
+    COMMENT,
+    SECURITY_LABEL,
+    DECLARE_CURSOR,
+    FETCH,
+    MOVE,
+    CLOSE,
+    LISTEN,
+    NOTIFY,
+    UNLISTEN,
+    DISCARD,
+    CHECKPOINT,
+    IMPORT_FOREIGN_SCHEMA,
+    REINDEX,
+    CLUSTER,
+    REFRESH_MATERIALIZED_VIEW,
 };
 
 // -- AST node types --
@@ -237,6 +274,76 @@ enum class NodeType : uint16_t {
     NODE_USER_VARIABLE,
     NODE_LITERAL_HEX,
     NODE_LITERAL_BIT,
+    NODE_TABLE_QUERY,           // PostgreSQL TABLE [ONLY] relation [*]
+    NODE_TRANSACTION_STMT,
+    NODE_TRANSACTION_OPTION,
+    NODE_COPY_STMT,
+    NODE_COPY_OPTION,
+    NODE_COPY_ENDPOINT,
+    NODE_DISTINCT_ON,           // expression children, inside SELECT_OPTIONS
+    NODE_AGGREGATE_FILTER,      // function, predicate
+    NODE_LATERAL,               // child TABLE_REF
+    NODE_WINDOW_CLAUSE,        // WINDOW_DEFINITION children
+    NODE_WINDOW_DEFINITION,    // value=name, child WINDOW_SPEC
+    NODE_WINDOW_REFERENCE,     // value=name, standalone OVER or inside spec
+    NODE_WINDOW_FRAME,         // value=ROWS/RANGE/GROUPS; bounds then exclusion
+    NODE_WINDOW_BOUND,         // value=PRECEDING/FOLLOWING/CURRENT ROW/...; offset child
+    NODE_WINDOW_EXCLUSION,     // value=CURRENT ROW/GROUP/TIES/NO OTHERS
+    NODE_TYPE_CAST,            // expression, NODE_TYPE_NAME; canonical CAST emission
+    NODE_TYPE_NAME,            // validated type syntax, including modifiers/bounds
+    NODE_NAMED_ARGUMENT,       // value=argument name; one expression child
+    NODE_AGGREGATE_ORDER_BY,   // ORDER_BY_ITEM children; constants are not ordinals
+    NODE_CTE_COLUMNS,          // identifier children; follows body in CTE_DEFINITION
+    // PG_GAPS_EXPRESSION_NODES
+    NODE_PG_EXTRACT,
+    NODE_PG_SUBSTRING,
+    NODE_PG_TIME_ZONE,
+    NODE_PG_INTERVAL,
+    NODE_PG_TRIM,
+    NODE_PG_ARRAY_QUERY,
+    NODE_PG_QUANTIFIED_OPERAND,
+    NODE_PG_NORMALIZE,
+    // PG_GAPS_DML_NODES
+    NODE_MERGE_STMT,            // target, USING source, ON expression, WHEN actions, RETURNING
+    NODE_MERGE_WHEN,            // match spelling; optional AND expression, THEN action
+    NODE_PG_DML_CLAUSE,         // validated fixed syntax; structured children separated by spaces
+    NODE_CTE_SEARCH,            // value=DEPTH/BREADTH; columns then sequence column
+    NODE_CTE_CYCLE,             // columns, mark column, optional values, path column
+    NODE_PG_RETURNING_OPTIONS,  // OLD/NEW AS alias options
+    NODE_PG_ASSIGNMENT_FIELD,   // target.field, without expression parentheses
+    // PG_GAPS_DDL_NODES
+    NODE_PG_DDL_STMT,           // command value; structured clause children
+    NODE_PG_DDL_CLAUSE,         // grammar production, optional keyword prefix
+    NODE_PG_DDL_LIST,           // comma-separated children; flag 1 = no parentheses
+    NODE_PG_DDL_SYNTAX,         // validated syntax keyword or option, never an expression
+    // PG_GAPS_QUERY_NODES
+    NODE_GROUPING_SET,
+    NODE_OFFSET_CLAUSE,
+    NODE_FETCH_CLAUSE,
+    NODE_ORDINALITY,
+    NODE_FUNCTION_COLUMN,
+    // PG_GAPS_JSON_XML_NODES
+    NODE_PG_JSON_XML,
+    NODE_PG_JSON_XML_SYNTAX,
+    // PG_CONT_EXPRESSION_NODES
+    NODE_PG_VARIADIC_ARGUMENT, // one value or named-argument child; final call argument
+    NODE_PG_ARRAY_SLICE,       // base, optional lower/upper; flags 1/2 mark bounds
+    NODE_PG_PATTERN_PREDICATE, // value=operator; subject, pattern, optional escape
+    NODE_PG_POSITION,          // needle, haystack
+    NODE_PG_OVERLAY,           // source, replacement, start, optional length; flag 1=plain call
+    NODE_PG_JSON_PREDICATE,    // validated IS [NOT] JSON suffix; one expression child
+    // PG_CONT_QUERY_NODES
+    NODE_PG_EXPLAIN_OPTION,
+    NODE_PG_JOIN_TREE,
+    NODE_PG_TABLE_GROUP,
+    NODE_PG_JOIN_USING,
+    NODE_PG_TABLESAMPLE,
+    NODE_PG_ROWS_FROM,
+    NODE_PG_SORT_USING,
+    NODE_PG_SELECT_INTO,
+    NODE_PG_ROW_LOCK,
+    NODE_PG_COMMAND_STMT, // validated command with structural operands/clauses
+
 };
 
 } // namespace sql_parser

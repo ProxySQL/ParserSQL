@@ -1,82 +1,64 @@
 #ifndef SQL_PARSER_COMPOUND_QUERY_PARSER_H
 #define SQL_PARSER_COMPOUND_QUERY_PARSER_H
 
-#include "sql_parser/common.h"
-#include "sql_parser/token.h"
-#include "sql_parser/tokenizer.h"
-#include "sql_parser/ast.h"
-#include "sql_parser/arena.h"
 #include "sql_parser/select_parser.h"
-#include "sql_parser/expression_parser.h"
+#include "sql_parser/pg_query_clauses.h"
 
 namespace sql_parser {
 
 template <Dialect D>
 class CompoundQueryParser {
 public:
-    CompoundQueryParser(Tokenizer<D>& tokenizer, Arena& arena)
-        : tok_(tokenizer), arena_(arena), expr_parser_(tokenizer, arena) {}
+    CompoundQueryParser(Tokenizer<D>& tokenizer, Arena& arena,
+                        bool require_complete_operands = false)
+        : tok_(tokenizer), arena_(arena), expr_parser_(tokenizer, arena, require_complete_operands),
+          require_complete_operands_(require_complete_operands) {}
 
     void set_subquery_callback(SubqueryParseCallback<D> cb) {
         subquery_cb_ = cb;
         expr_parser_.set_subquery_callback(cb);
     }
 
-    // Parse a compound query (or a plain SELECT if no set operator follows).
-    // Returns NODE_SELECT_STMT for plain selects, NODE_COMPOUND_QUERY for compounds.
-    AstNode* parse() {
-        AstNode* result = parse_compound_expr(0, true);
+    // The classifier normally consumes SELECT. Pass the consumed keyword for
+    // TABLE/VALUES/'(', or TK_EOF to start at an unconsumed query operand.
+    AstNode* parse(TokenType first = TokenType::TK_SELECT) {
+        const bool require_operands = require_complete_operands_ ||
+            first == TokenType::TK_VALUES || first == TokenType::TK_TABLE;
+        AstNode* result = parse_compound_expr(0, first);
         if (!result) return nullptr;
-
-        // If the result is a set operation, wrap in COMPOUND_QUERY and parse trailing clauses
-        if (result->type == NodeType::NODE_SET_OPERATION) {
-            AstNode* compound = make_node(arena_, NodeType::NODE_COMPOUND_QUERY);
-            if (!compound) return nullptr;
-            compound->add_child(result);
-
-            // Parse trailing ORDER BY (applies to whole compound)
-            if (tok_.peek().type == TokenType::TK_ORDER) {
-                tok_.skip();
-                if (tok_.peek().type == TokenType::TK_BY) tok_.skip();
-                AstNode* order_by = parse_order_by();
-                if (order_by) compound->add_child(order_by);
-            }
-
-            // Parse trailing LIMIT (applies to whole compound)
-            if (tok_.peek().type == TokenType::TK_LIMIT) {
-                tok_.skip();
-                AstNode* limit = parse_limit();
-                if (limit) compound->add_child(limit);
-            }
-
-            return compound;
+        if (result->type == NodeType::NODE_SET_OPERATION ||
+            result->type == NodeType::NODE_VALUES_CLAUSE ||
+            (result->type == NodeType::NODE_COMPOUND_QUERY &&
+             (result->flags & FLAG_QUERY_PARENTHESIZED))) {
+            AstNode* wrapper = make_node(arena_, NodeType::NODE_COMPOUND_QUERY);
+            if (!wrapper) return nullptr;
+            wrapper->add_child(result);
+            result = wrapper;
         }
-
-        // No set operator found -- return the bare SELECT as-is.
-        // Since we used compound_mode, ORDER BY/LIMIT/FOR weren't consumed.
-        // Parse them now and attach to the SELECT node.
-        if (result->type == NodeType::NODE_SELECT_STMT) {
-            if (tok_.peek().type == TokenType::TK_ORDER) {
-                tok_.skip();
-                if (tok_.peek().type == TokenType::TK_BY) tok_.skip();
-                AstNode* order_by = parse_order_by();
-                if (order_by) result->add_child(order_by);
-            }
-            if (tok_.peek().type == TokenType::TK_LIMIT) {
-                tok_.skip();
-                AstNode* limit = parse_limit();
-                if (limit) result->add_child(limit);
-            }
-            // FOR UPDATE / FOR SHARE
-            if (tok_.peek().type == TokenType::TK_FOR) {
-                tok_.skip();
-                AstNode* lock = make_node(arena_, NodeType::NODE_LOCKING_CLAUSE);
-                if (lock) {
-                    Token strength = tok_.next_token();
-                    lock->add_child(make_node(arena_, NodeType::NODE_IDENTIFIER, strength.text));
-                    result->add_child(lock);
-                }
-            }
+        if (tok_.peek().type == TokenType::TK_ORDER) {
+            tok_.skip();
+            if (tok_.peek().type != TokenType::TK_BY) return nullptr;
+            tok_.skip();
+            AstNode* order = parse_order_by(require_operands);
+            if (!order || !order->first_child) return nullptr;
+            result->add_child(order);
+        }
+        if constexpr (D == Dialect::PostgreSQL) {
+            if (!PgQueryClauses<D>(tok_, arena_, expr_parser_).tail(result)) return nullptr;
+        } else if (tok_.peek().type == TokenType::TK_LIMIT) {
+            tok_.skip();
+            AstNode* limit = parse_limit(require_operands);
+            if (!limit || !limit->first_child) return nullptr;
+            result->add_child(limit);
+        }
+        if (D == Dialect::MySQL && result->type == NodeType::NODE_SELECT_STMT &&
+            tok_.peek().type == TokenType::TK_FOR) {
+            tok_.skip();
+            AstNode* lock = make_node(arena_, NodeType::NODE_LOCKING_CLAUSE);
+            if (!lock) return nullptr;
+            Token strength = tok_.next_token();
+            lock->add_child(make_node(arena_, NodeType::NODE_IDENTIFIER, strength.text));
+            result->add_child(lock);
         }
         return result;
     }
@@ -86,192 +68,150 @@ private:
     Arena& arena_;
     ExpressionParser<D> expr_parser_;
     SubqueryParseCallback<D> subquery_cb_ = nullptr;
+    bool require_complete_operands_;
 
-    // Precedence levels
-    static constexpr int PREC_UNION_EXCEPT = 1;
-    static constexpr int PREC_INTERSECT = 2;
-
-    // Get the precedence of a set operator token, or 0 if not a set operator
     static int get_set_op_precedence(TokenType type) {
         switch (type) {
-            case TokenType::TK_UNION:     return PREC_UNION_EXCEPT;
-            case TokenType::TK_EXCEPT:    return PREC_UNION_EXCEPT;
-            case TokenType::TK_INTERSECT: return PREC_INTERSECT;
+            case TokenType::TK_UNION:
+            case TokenType::TK_EXCEPT: return 1;
+            case TokenType::TK_INTERSECT: return 2;
             default: return 0;
         }
     }
 
-    // Check if a token is a set operator
-    static bool is_set_operator(TokenType type) {
-        return type == TokenType::TK_UNION ||
-               type == TokenType::TK_INTERSECT ||
-               type == TokenType::TK_EXCEPT;
-    }
-
-    // Parse a compound expression with minimum precedence (Pratt-style)
-    // first_call: true when this is the initial call from parse() where
-    // the SELECT keyword has already been consumed by the classifier.
-    // In that case, we should NOT enter the LPAREN branch in parse_operand
-    // because (SELECT ...) could be a subquery expression in the select list.
-    AstNode* parse_compound_expr(int min_prec, bool first_call = false) {
-        AstNode* left = parse_operand(first_call);
+    AstNode* parse_compound_expr(int min_prec, TokenType first = TokenType::TK_EOF) {
+        AstNode* left = parse_operand(first);
         if (!left) return nullptr;
-
         while (true) {
-            Token t = tok_.peek();
-            int prec = get_set_op_precedence(t.type);
-            if (prec == 0 || prec <= min_prec) break;
-
-            // Consume the set operator
+            Token op = tok_.peek();
+            int prec = get_set_op_precedence(op.type);
+            if (prec <= min_prec) break;
             tok_.skip();
-            StringRef op_text = t.text;
-
-            // Check for optional ALL
             uint16_t flags = 0;
             if (tok_.peek().type == TokenType::TK_ALL) {
                 tok_.skip();
                 flags = FLAG_SET_OP_ALL;
+            } else if (tok_.peek().type == TokenType::TK_DISTINCT) {
+                tok_.skip(); // DISTINCT is the default for set operations.
             }
-
-            // Parse right operand with current precedence as min (left-associative)
             AstNode* right = parse_compound_expr(prec);
             if (!right) return nullptr;
-
-            // Build NODE_SET_OPERATION with left and right as children
-            AstNode* setop = make_node(arena_, NodeType::NODE_SET_OPERATION, op_text);
-            if (!setop) return nullptr;
-            setop->flags = flags;
-            setop->add_child(left);
-            setop->add_child(right);
-
-            left = setop;
+            AstNode* node = make_node(arena_, NodeType::NODE_SET_OPERATION, op.text, flags);
+            if (!node) return nullptr;
+            node->add_child(left);
+            node->add_child(right);
+            left = node;
         }
-
         return left;
     }
 
-    // Parse a single operand: parenthesized compound or plain SELECT
-    // When first_call=true, skip the LPAREN branch because the outer SELECT
-    // was already consumed and (SELECT ...) should be parsed as a subquery
-    // expression within the select item list.
-    AstNode* parse_operand(bool first_call = false) {
-        if (!first_call && tok_.peek().type == TokenType::TK_LPAREN) {
-            tok_.skip(); // consume '('
-
-            // Could be a parenthesized compound query or a parenthesized SELECT
+    AstNode* parse_operand(TokenType first) {
+        if (first == TokenType::TK_EOF) first = tok_.next_token().type;
+        if (first == TokenType::TK_LPAREN) {
             AstNode* inner = nullptr;
-            if (tok_.peek().type == TokenType::TK_SELECT ||
-                tok_.peek().type == TokenType::TK_LPAREN) {
-                // Parse the inner compound expression recursively
-                // Need to consume SELECT keyword first if present
-                if (tok_.peek().type == TokenType::TK_SELECT) {
-                    tok_.skip(); // consume SELECT
-                    // Create a SelectParser that will parse from after SELECT
-                    SelectParser<D> sp(tok_, arena_, true);
-                    if (subquery_cb_) sp.set_subquery_callback(subquery_cb_);
-                    AstNode* select = sp.parse();
-
-                    // Check if a set operator follows inside the parens
-                    if (is_set_operator(tok_.peek().type)) {
-                        // There's a compound inside the parens
-                        inner = continue_compound_from(select, 0);
-                    } else {
-                        // Single SELECT inside parens -- parse ORDER BY/LIMIT
-                        if (tok_.peek().type == TokenType::TK_ORDER) {
-                            tok_.skip();
-                            if (tok_.peek().type == TokenType::TK_BY) tok_.skip();
-                            AstNode* ob = parse_order_by();
-                            if (ob) select->add_child(ob);
-                        }
-                        if (tok_.peek().type == TokenType::TK_LIMIT) {
-                            tok_.skip();
-                            AstNode* lim = parse_limit();
-                            if (lim) select->add_child(lim);
-                        }
-                        inner = select;
-                    }
-                } else {
-                    // Nested parenthesized: ((SELECT ...))
-                    inner = parse_compound_expr(0);
-                }
-            }
-
-            // Expect closing ')'
-            if (tok_.peek().type == TokenType::TK_RPAREN) {
-                tok_.skip();
-            }
-
-            return inner;
-        }
-
-        // Not parenthesized -- must be a plain SELECT
-        // Consume SELECT keyword if present (already consumed by classifier
-        // for the first call, but present for subsequent SELECTs in compound)
-        if (tok_.peek().type == TokenType::TK_SELECT) {
+            if constexpr (D == Dialect::PostgreSQL) {
+                if (tok_.peek().type == TokenType::TK_WITH && subquery_cb_)
+                    inner = subquery_cb_(tok_, arena_);
+                else inner = parse(TokenType::TK_EOF);
+            } else inner = parse(TokenType::TK_EOF);
+            if (!inner || tok_.peek().type != TokenType::TK_RPAREN) return nullptr;
             tok_.skip();
+            AstNode* group = make_node(arena_, NodeType::NODE_COMPOUND_QUERY,
+                                       {}, FLAG_QUERY_PARENTHESIZED);
+            if (!group) return nullptr;
+            group->add_child(inner);
+            return group;
         }
-        // Use compound_mode=true so ORDER BY/LIMIT aren't consumed
-        SelectParser<D> sp(tok_, arena_, true);
-        if (subquery_cb_) sp.set_subquery_callback(subquery_cb_);
-        return sp.parse();
+        if (first == TokenType::TK_SELECT) {
+            SelectParser<D> select(tok_, arena_, true, require_complete_operands_);
+            select.set_subquery_callback(subquery_cb_);
+            return select.parse();
+        }
+        if constexpr (D == Dialect::PostgreSQL) {
+            if (first == TokenType::TK_VALUES) return parse_values();
+            if (first == TokenType::TK_TABLE) return parse_table();
+        }
+        return nullptr;
     }
 
-    // Continue parsing compound from an already-parsed left operand
-    AstNode* continue_compound_from(AstNode* left, int min_prec) {
-        if (!left) return nullptr;
-
-        while (true) {
-            Token t = tok_.peek();
-            int prec = get_set_op_precedence(t.type);
-            if (prec == 0 || prec <= min_prec) break;
-
+    AstNode* parse_values() {
+        ExpressionParser<D> expressions(tok_, arena_, true);
+        expressions.set_subquery_callback(subquery_cb_);
+        AstNode* values = make_node(arena_, NodeType::NODE_VALUES_CLAUSE);
+        if (!values) return nullptr;
+        AstNode* last_row = nullptr;
+        do {
+            if (tok_.next_token().type != TokenType::TK_LPAREN) return nullptr;
+            AstNode* row = make_node(arena_, NodeType::NODE_VALUES_ROW);
+            if (!row) return nullptr;
+            AstNode* last_value = nullptr;
+            do {
+                TokenType next = tok_.peek().type;
+                if (next == TokenType::TK_RPAREN || next == TokenType::TK_COMMA ||
+                    next == TokenType::TK_EOF) return nullptr;
+                AstNode* value = expressions.parse();
+                if (!value) return nullptr;
+                if constexpr (D == Dialect::PostgreSQL) {
+                    if (value->type == NodeType::NODE_ASTERISK) return expressions.syntax_error();
+                }
+                if (last_value) last_value->next_sibling = value;
+                else row->first_child = value;
+                last_value = value;
+                if (tok_.peek().type != TokenType::TK_COMMA) break;
+                tok_.skip();
+            } while (true);
+            if (tok_.next_token().type != TokenType::TK_RPAREN) return nullptr;
+            if (last_row) last_row->next_sibling = row;
+            else values->first_child = row;
+            last_row = row;
+            if (tok_.peek().type != TokenType::TK_COMMA) break;
             tok_.skip();
-            StringRef op_text = t.text;
+        } while (true);
+        return values;
+    }
 
-            uint16_t flags = 0;
-            if (tok_.peek().type == TokenType::TK_ALL) {
-                tok_.skip();
-                flags = FLAG_SET_OP_ALL;
-            }
-
-            // Inside parens, operand must start with SELECT or (
-            AstNode* right = nullptr;
-            if (tok_.peek().type == TokenType::TK_SELECT) {
-                tok_.skip();
-                SelectParser<D> sp(tok_, arena_, true);
-                if (subquery_cb_) sp.set_subquery_callback(subquery_cb_);
-                AstNode* rsel = sp.parse();
-                // Check for more operators at higher precedence
-                right = continue_compound_from(rsel, prec);
-            } else if (tok_.peek().type == TokenType::TK_LPAREN) {
-                right = parse_operand(); // handles nested parens
-                right = continue_compound_from(right, prec);
-            }
-
-            if (!right) return nullptr;
-
-            AstNode* setop = make_node(arena_, NodeType::NODE_SET_OPERATION, op_text);
-            if (!setop) return nullptr;
-            setop->flags = flags;
-            setop->add_child(left);
-            setop->add_child(right);
-
-            left = setop;
+    AstNode* parse_table() {
+        AstNode* table = make_node(arena_, NodeType::NODE_TABLE_QUERY);
+        if (!table) return nullptr;
+        if (tok_.peek().type == TokenType::TK_ONLY) {
+            tok_.skip();
+            table->flags |= FLAG_TABLE_ONLY;
         }
-
-        return left;
+        AstNode* name = make_node(arena_, NodeType::NODE_QUALIFIED_NAME);
+        if (!name) return nullptr;
+        do {
+            Token part = tok_.next_token();
+            if (part.type != TokenType::TK_IDENTIFIER) return nullptr;
+            // Keep source delimiters: quoted PostgreSQL identifiers are case sensitive.
+            StringRef spelling = part.source.empty() ? part.text : part.source;
+            AstNode* ident = make_node(arena_, NodeType::NODE_IDENTIFIER, spelling);
+            if (!ident) return nullptr;
+            name->add_child(ident);
+            if (tok_.peek().type != TokenType::TK_DOT) break;
+            tok_.skip();
+        } while (true);
+        table->add_child(name);
+        if (!(table->flags & FLAG_TABLE_ONLY) &&
+            tok_.peek().type == TokenType::TK_ASTERISK) {
+            tok_.skip();
+            table->flags |= FLAG_TABLE_INHERIT;
+        }
+        return table;
     }
 
     // Parse trailing ORDER BY for compound result
-    AstNode* parse_order_by() {
+    AstNode* parse_order_by(bool require_operands) {
+        ExpressionParser<D> expressions(tok_, arena_, require_operands);
+        expressions.set_subquery_callback(subquery_cb_);
         AstNode* order_by = make_node(arena_, NodeType::NODE_ORDER_BY_CLAUSE);
         if (!order_by) return nullptr;
 
         while (true) {
-            AstNode* expr = expr_parser_.parse();
-            if (!expr) break;
+            AstNode* expr = expressions.parse();
+            if (!expr) return nullptr;
 
             AstNode* item = make_node(arena_, NodeType::NODE_ORDER_BY_ITEM);
+            if (!item) return nullptr;
             item->add_child(expr);
 
             // Optional ASC/DESC
@@ -281,6 +221,25 @@ private:
                 item->add_child(make_node(arena_, NodeType::NODE_IDENTIFIER, dir.text));
             }
 
+            if constexpr (D == Dialect::PostgreSQL) {
+                if (dir.type == TokenType::TK_USING) {
+                    auto* op = expressions.parse_sort_operator();
+                    if (!op) return nullptr;
+                    item->add_child(op);
+                }
+                if (ExpressionParser<D>::keyword(tok_.peek(), "NULLS")) {
+                    tok_.skip();
+                    Token placement = tok_.peek();
+                    bool first = ExpressionParser<D>::keyword(placement, "FIRST");
+                    if (!first && !ExpressionParser<D>::keyword(placement, "LAST")) return nullptr;
+                    tok_.skip();
+                    item->flags |= FLAG_ORDER_NULLS;
+                    auto* nulls = make_node(arena_, NodeType::NODE_IDENTIFIER,
+                        first ? StringRef{"NULLS FIRST", 11} : StringRef{"NULLS LAST", 10});
+                    if (!nulls) return nullptr;
+                    item->add_child(nulls);
+                }
+            }
             order_by->add_child(item);
 
             if (tok_.peek().type == TokenType::TK_COMMA) {
@@ -293,22 +252,30 @@ private:
     }
 
     // Parse trailing LIMIT for compound result
-    AstNode* parse_limit() {
+    AstNode* parse_limit(bool require_operands) {
+        ExpressionParser<D> expressions(tok_, arena_, require_operands);
+        expressions.set_subquery_callback(subquery_cb_);
         AstNode* limit = make_node(arena_, NodeType::NODE_LIMIT_CLAUSE);
         if (!limit) return nullptr;
 
-        AstNode* first = expr_parser_.parse();
-        if (first) limit->add_child(first);
+        AstNode* first = expressions.parse();
+        if (!first) return nullptr;
+        limit->add_child(first);
 
         if (tok_.peek().type == TokenType::TK_OFFSET) {
             tok_.skip();
-            AstNode* offset = expr_parser_.parse();
-            if (offset) limit->add_child(offset);
+            AstNode* offset = expressions.parse();
+            if (!offset) return nullptr;
+            limit->add_child(offset);
         } else if (tok_.peek().type == TokenType::TK_COMMA) {
+            if constexpr (D == Dialect::PostgreSQL) return nullptr;
             // MySQL: LIMIT offset, count
             tok_.skip();
-            AstNode* count = expr_parser_.parse();
-            if (count) limit->add_child(count);
+            AstNode* count = expressions.parse();
+            if (!count) return nullptr;
+            limit->flags |= FLAG_LIMIT_COMMA;
+            limit->first_child = count;
+            count->next_sibling = first;
         }
 
         return limit;

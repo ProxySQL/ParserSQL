@@ -8,6 +8,7 @@
 
 #include "sql_engine/plan_node.h"
 #include "sql_engine/catalog.h"
+#include "sql_engine/plan_builder.h"
 #include "sql_parser/ast.h"
 #include "sql_parser/common.h"
 #include "sql_parser/arena.h"
@@ -23,7 +24,7 @@ public:
         : catalog_(catalog), arena_(arena) {}
 
     PlanNode* build(const sql_parser::AstNode* stmt_ast) {
-        if (!stmt_ast) return nullptr;
+        if (!supported(stmt_ast)) return nullptr;
         switch (stmt_ast->type) {
             case sql_parser::NodeType::NODE_INSERT_STMT:
                 return build_insert(stmt_ast);
@@ -37,7 +38,7 @@ public:
     }
 
     PlanNode* build_insert(const sql_parser::AstNode* insert_ast) {
-        if (!insert_ast) return nullptr;
+        if (!supported(insert_ast)) return nullptr;
 
         PlanNode* node = make_plan_node(arena_, PlanNodeType::INSERT_PLAN);
         if (!node) return nullptr;
@@ -104,7 +105,7 @@ public:
     }
 
     PlanNode* build_update(const sql_parser::AstNode* update_ast) {
-        if (!update_ast) return nullptr;
+        if (!supported(update_ast)) return nullptr;
 
         PlanNode* node = make_plan_node(arena_, PlanNodeType::UPDATE_PLAN);
         if (!node) return nullptr;
@@ -161,7 +162,7 @@ public:
     }
 
     PlanNode* build_delete(const sql_parser::AstNode* delete_ast) {
-        if (!delete_ast) return nullptr;
+        if (!supported(delete_ast)) return nullptr;
 
         PlanNode* node = make_plan_node(arena_, PlanNodeType::DELETE_PLAN);
         if (!node) return nullptr;
@@ -201,6 +202,32 @@ public:
     }
 
 private:
+    static bool supported(const sql_parser::AstNode* ast) {
+        if (!ast) return false;
+        if constexpr (D == sql_parser::Dialect::PostgreSQL) {
+            if (!PlanBuilder<D>::supports_dml_features(ast) || unsupported_dml(ast)) return false;
+        }
+        return true;
+    }
+
+    static bool unsupported_dml(const sql_parser::AstNode* ast) {
+        using sql_parser::NodeType;
+        if (ast->type == NodeType::NODE_CTE || ast->type == NodeType::NODE_COMPOUND_QUERY ||
+            ast->type == NodeType::NODE_ON_CONFLICT ||
+            (ast->type == NodeType::NODE_IDENTIFIER && !(ast->flags & sql_parser::FLAG_IDENT_DELIMITED) &&
+             ast->value().equals_ci("DEFAULT", 7))) return true;
+        if (ast->type == NodeType::NODE_UPDATE_SET_ITEM && ast->first_child &&
+            ast->first_child->type != NodeType::NODE_IDENTIFIER &&
+            ast->first_child->type != NodeType::NODE_COLUMN_REF) return true;
+        if (ast->type == NodeType::NODE_INSERT_COLUMNS) {
+            for (const auto* col = ast->first_child; col; col = col->next_sibling)
+                if (col->type != NodeType::NODE_IDENTIFIER) return true;
+        }
+        for (const auto* child = ast->first_child; child; child = child->next_sibling)
+            if (unsupported_dml(child)) return true;
+        return false;
+    }
+
     const Catalog& catalog_;
     sql_parser::Arena& arena_;
 

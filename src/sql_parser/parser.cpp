@@ -7,6 +7,10 @@
 #include "sql_parser/insert_parser.h"
 #include "sql_parser/update_parser.h"
 #include "sql_parser/delete_parser.h"
+#include "sql_parser/pg_utility_parser.h"
+#include "sql_parser/pg_ddl_parser.h"
+#include "sql_parser/pg_admin_parser.h"
+#include "sql_parser/pg_session_parser.h"
 
 namespace sql_parser {
 
@@ -37,6 +41,55 @@ ParseResult Parser<D>::parse(const char* sql, size_t len) {
 }
 
 template <Dialect D>
+BatchParseResult Parser<D>::parse_all(const char* sql, size_t len) {
+    arena_.reset();
+    BatchParseResult batch;
+    size_t cursor = 0;
+    while (cursor < len) {
+        Tokenizer<D> scanner;
+        scanner.reset(sql + cursor, len - cursor);
+        Token first = scanner.next_token();
+        if (first.type == TokenType::TK_SEMICOLON) {
+            cursor = static_cast<size_t>(first.source.ptr - sql) + first.source.len;
+            continue;
+        }
+        if (first.type == TokenType::TK_EOF && !scanner.has_error()) break;
+
+        const char* start = first.type == TokenType::TK_EOF && scanner.has_error()
+            ? scanner.error_source().ptr : first.source.ptr;
+        if (!start) start = sql + cursor;
+        Token last = first;
+        while (last.type != TokenType::TK_EOF && last.type != TokenType::TK_SEMICOLON)
+            last = scanner.next_token();
+        const char* end = last.type == TokenType::TK_SEMICOLON
+            ? last.source.ptr + last.source.len : sql + len;
+        ParsedStatement statement;
+        statement.offset = static_cast<uint32_t>(start - sql);
+        statement.source = StringRef{start, static_cast<uint32_t>(end - start)};
+        if (scanner.has_error()) {
+            statement.result.status = ParseResult::ERROR;
+            statement.result.remaining = scanner.error_source();
+            statement.result.error.message = StringRef{"Invalid SQL token", 17};
+            statement.result.error.offset = scanner.error_source().ptr
+                ? static_cast<uint32_t>(scanner.error_source().ptr - sql) : statement.offset;
+        } else {
+            tokenizer_.reset(start, static_cast<size_t>(end - start));
+            statement.result = classify_and_dispatch();
+            statement.result.has_user_variables = scanner.has_user_variables();
+            if (!statement.result.ok() || !statement.result.full_input) {
+                StringRef error = tokenizer_.error_source();
+                const char* at = error.ptr ? error.ptr : statement.result.remaining.ptr;
+                statement.result.error.offset = at
+                    ? static_cast<uint32_t>(at - sql) : statement.offset;
+            }
+        }
+        batch.statements.push_back(statement);
+        cursor = static_cast<size_t>(end - sql);
+    }
+    return batch;
+}
+
+template <Dialect D>
 ParseResult Parser<D>::classify_and_dispatch() {
     Token first = tokenizer_.next_token();
 
@@ -47,14 +100,59 @@ ParseResult Parser<D>::classify_and_dispatch() {
         return r;
     }
 
+    if constexpr (D == Dialect::PostgreSQL) {
+        if (PgUtilityParser::word(first, "MERGE")) return parse_merge();
+        if (PgAdminParser::handles(first, tokenizer_)) {
+            ParseResult r = PgAdminParser(tokenizer_, arena_).parse(first);
+            scan_to_end(r); return r;
+        }
+        auto session_look = tokenizer_;
+        const bool prepare_transaction = first.type == TokenType::TK_PREPARE &&
+            session_look.next_token().type == TokenType::TK_TRANSACTION &&
+            session_look.peek().type != TokenType::TK_AS && session_look.peek().type != TokenType::TK_LPAREN;
+        if (PgSessionParser::handles(first) && !prepare_transaction) {
+            ParseResult r = PgSessionParser(tokenizer_, arena_).parse(first);
+            scan_to_end(r); return r;
+        }
+        if (PgDdlParser::handles(first)) {
+            PgDdlParser ddl(tokenizer_, arena_, &parse_subquery_select<D>);
+            ParseResult r = ddl.parse(first);
+            scan_to_end(r);
+            return r;
+        }
+        if (first.type == TokenType::TK_IDENTIFIER && PgUtilityParser::word(first, "COPY")) {
+            PgUtilityParser utility(tokenizer_, arena_);
+            ParseResult r = utility.copy();
+            scan_to_end(r);
+            return r;
+        }
+        if (((first.type == TokenType::TK_IDENTIFIER || first.type == TokenType::TK_END) &&
+            (PgUtilityParser::word(first, "RELEASE") || PgUtilityParser::word(first, "END") ||
+             PgUtilityParser::word(first, "ABORT"))) ||
+            (first.type == TokenType::TK_PREPARE && tokenizer_.peek().type == TokenType::TK_TRANSACTION)) {
+            PgUtilityParser utility(tokenizer_, arena_);
+            ParseResult r = utility.transaction(first);
+            scan_to_end(r);
+            return r;
+        }
+    }
+
     switch (first.type) {
         case TokenType::TK_SELECT:   return parse_select();
         case TokenType::TK_WITH:     return parse_with();
+        case TokenType::TK_TABLE:
+        case TokenType::TK_VALUES:
+            if constexpr (D == Dialect::PostgreSQL) {
+                return parse_query_expression(first.type);
+            }
+            return extract_unknown(first);
         case TokenType::TK_LPAREN: {
             // Parenthesized SELECT / compound query: (SELECT ...) UNION ...
             Token next = tokenizer_.peek();
-            if (next.type == TokenType::TK_SELECT || next.type == TokenType::TK_LPAREN) {
-                return parse_select_from_lparen();
+            if (next.type == TokenType::TK_SELECT || next.type == TokenType::TK_LPAREN ||
+                (D == Dialect::PostgreSQL && (next.type == TokenType::TK_VALUES ||
+                                            next.type == TokenType::TK_TABLE))) {
+                return parse_query_expression(TokenType::TK_LPAREN);
             }
             return extract_unknown(first);
         }
@@ -115,183 +213,13 @@ ParseResult Parser<D>::parse_select() {
 }
 
 template <Dialect D>
-ParseResult Parser<D>::parse_select_from_lparen() {
-    // Called when classifier consumed '(' and peeked SELECT or '('
-    // We need to parse the inner compound query, then check for set operators
-    // after the closing ')'.
-    //
-    // Strategy: parse inner as a fresh compound expression, expect ')',
-    // then check if a set operator follows (making this a compound query).
-
+ParseResult Parser<D>::parse_query_expression(TokenType first) {
     ParseResult r;
     r.stmt_type = StmtType::SELECT;
-
-    // We're inside '(' already consumed.
-    // Parse inner: could be SELECT or another '('
-    AstNode* inner = nullptr;
-    if (tokenizer_.peek().type == TokenType::TK_SELECT) {
-        tokenizer_.skip(); // consume SELECT
-        SelectParser<D> sp(tokenizer_, arena_, true);
-        sp.set_subquery_callback(&parse_subquery_select<D>);
-        inner = sp.parse();
-
-        // Check for set operators inside the parens
-        Token t = tokenizer_.peek();
-        while (t.type == TokenType::TK_UNION ||
-               t.type == TokenType::TK_INTERSECT ||
-               t.type == TokenType::TK_EXCEPT) {
-            tokenizer_.skip();
-            StringRef op_text = t.text;
-            uint16_t flags = 0;
-            if (tokenizer_.peek().type == TokenType::TK_ALL) {
-                tokenizer_.skip();
-                flags = FLAG_SET_OP_ALL;
-            }
-            // Next SELECT
-            if (tokenizer_.peek().type == TokenType::TK_SELECT) {
-                tokenizer_.skip();
-            }
-            SelectParser<D> sp2(tokenizer_, arena_, true);
-            sp2.set_subquery_callback(&parse_subquery_select<D>);
-            AstNode* right = sp2.parse();
-
-            AstNode* setop = make_node(arena_, NodeType::NODE_SET_OPERATION, op_text);
-            if (setop) {
-                setop->flags = flags;
-                setop->add_child(inner);
-                if (right) setop->add_child(right);
-                inner = setop;
-            }
-            t = tokenizer_.peek();
-        }
-    } else {
-        // Nested parenthesized -- recursively handle
-        // This is an edge case; for now parse as compound
-        CompoundQueryParser<D> cp(tokenizer_, arena_);
-        cp.set_subquery_callback(&parse_subquery_select<D>);
-        inner = cp.parse();
-    }
-
-    // Expect closing ')'
-    if (tokenizer_.peek().type == TokenType::TK_RPAREN) {
-        tokenizer_.skip();
-    }
-
-    // Now check if a set operator follows after the ')'
-    Token t = tokenizer_.peek();
-    if (t.type == TokenType::TK_UNION ||
-        t.type == TokenType::TK_INTERSECT ||
-        t.type == TokenType::TK_EXCEPT) {
-        // This is a compound query starting with a parenthesized operand.
-        // Use CompoundQueryParser to continue, but we already have the left operand.
-        // We'll build the compound manually.
-        AstNode* left = inner;
-        while (true) {
-            t = tokenizer_.peek();
-            if (t.type != TokenType::TK_UNION &&
-                t.type != TokenType::TK_INTERSECT &&
-                t.type != TokenType::TK_EXCEPT) break;
-
-            tokenizer_.skip();
-            StringRef op_text = t.text;
-            uint16_t flags = 0;
-            if (tokenizer_.peek().type == TokenType::TK_ALL) {
-                tokenizer_.skip();
-                flags = FLAG_SET_OP_ALL;
-            }
-
-            AstNode* right = nullptr;
-            if (tokenizer_.peek().type == TokenType::TK_LPAREN) {
-                // Parenthesized right operand
-                tokenizer_.skip();
-                if (tokenizer_.peek().type == TokenType::TK_SELECT) {
-                    tokenizer_.skip();
-                }
-                SelectParser<D> sp3(tokenizer_, arena_, true);
-                sp3.set_subquery_callback(&parse_subquery_select<D>);
-                right = sp3.parse();
-                if (tokenizer_.peek().type == TokenType::TK_RPAREN) {
-                    tokenizer_.skip();
-                }
-            } else if (tokenizer_.peek().type == TokenType::TK_SELECT) {
-                tokenizer_.skip();
-                SelectParser<D> sp3(tokenizer_, arena_, true);
-                sp3.set_subquery_callback(&parse_subquery_select<D>);
-                right = sp3.parse();
-            }
-
-            AstNode* setop = make_node(arena_, NodeType::NODE_SET_OPERATION, op_text);
-            if (setop) {
-                setop->flags = flags;
-                setop->add_child(left);
-                if (right) setop->add_child(right);
-                left = setop;
-            }
-        }
-
-        // Wrap in COMPOUND_QUERY
-        AstNode* compound = make_node(arena_, NodeType::NODE_COMPOUND_QUERY);
-        if (compound) {
-            compound->add_child(left);
-
-            // Trailing ORDER BY
-            if (tokenizer_.peek().type == TokenType::TK_ORDER) {
-                tokenizer_.skip();
-                if (tokenizer_.peek().type == TokenType::TK_BY) tokenizer_.skip();
-                ExpressionParser<D> ep(tokenizer_, arena_);
-                AstNode* order_by = make_node(arena_, NodeType::NODE_ORDER_BY_CLAUSE);
-                if (order_by) {
-                    while (true) {
-                        AstNode* expr = ep.parse();
-                        if (!expr) break;
-                        AstNode* item = make_node(arena_, NodeType::NODE_ORDER_BY_ITEM);
-                        item->add_child(expr);
-                        Token dir = tokenizer_.peek();
-                        if (dir.type == TokenType::TK_ASC || dir.type == TokenType::TK_DESC) {
-                            tokenizer_.skip();
-                            item->add_child(make_node(arena_, NodeType::NODE_IDENTIFIER, dir.text));
-                        }
-                        order_by->add_child(item);
-                        if (tokenizer_.peek().type == TokenType::TK_COMMA) {
-                            tokenizer_.skip();
-                        } else {
-                            break;
-                        }
-                    }
-                    compound->add_child(order_by);
-                }
-            }
-
-            // Trailing LIMIT
-            if (tokenizer_.peek().type == TokenType::TK_LIMIT) {
-                tokenizer_.skip();
-                ExpressionParser<D> ep(tokenizer_, arena_);
-                AstNode* limit = make_node(arena_, NodeType::NODE_LIMIT_CLAUSE);
-                if (limit) {
-                    AstNode* val = ep.parse();
-                    if (val) limit->add_child(val);
-                    if (tokenizer_.peek().type == TokenType::TK_OFFSET) {
-                        tokenizer_.skip();
-                        AstNode* off = ep.parse();
-                        if (off) limit->add_child(off);
-                    }
-                    compound->add_child(limit);
-                }
-            }
-
-            r.status = ParseResult::OK;
-            r.ast = compound;
-        }
-    } else {
-        // Just a parenthesized SELECT, no compound
-        if (inner) {
-            r.status = ParseResult::OK;
-            r.ast = inner;
-        } else {
-            r.status = ParseResult::PARTIAL;
-        }
-    }
-
+    CompoundQueryParser<D> parser(tokenizer_, arena_);
+    parser.set_subquery_callback(&parse_subquery_select<D>);
+    r.ast = parser.parse(first);
+    r.status = r.ast ? ParseResult::OK : ParseResult::PARTIAL;
     scan_to_end(r);
     return r;
 }
@@ -335,6 +263,7 @@ ParseResult Parser<D>::parse_insert(bool is_replace) {
     r.stmt_type = is_replace ? StmtType::REPLACE : StmtType::INSERT;
 
     InsertParser<D> insert_parser(tokenizer_, arena_, is_replace);
+    insert_parser.set_subquery_callback(&parse_subquery_select<D>);
     AstNode* ast = insert_parser.parse();
 
     if (ast) {
@@ -437,6 +366,18 @@ ParseResult Parser<D>::parse_delete() {
     return r;
 }
 
+template <Dialect D>
+ParseResult Parser<D>::parse_merge() {
+    ParseResult r;
+    r.stmt_type = StmtType::MERGE;
+    if constexpr (D == Dialect::PostgreSQL) {
+        r.ast = PgDmlParser(tokenizer_, arena_, &parse_subquery_select<D>).merge();
+        r.status = r.ast ? ParseResult::OK : ParseResult::ERROR;
+        scan_to_end(r);
+    }
+    return r;
+}
+
 // ---- EXPLAIN / DESCRIBE ----
 
 template <Dialect D>
@@ -484,6 +425,38 @@ ParseResult Parser<D>::parse_explain(bool is_describe) {
         r.status = ParseResult::OK;
         r.ast = root;
         scan_to_end(r);
+        return r;
+    }
+
+    if constexpr (D == Dialect::PostgreSQL) {
+        ExpressionParser<D> expr(tokenizer_, arena_, true);
+        auto* options = PgQueryClauses<D>(tokenizer_, arena_, expr).explain_options();
+        if (!options) { r.status = ParseResult::ERROR; scan_to_end(r); return r; }
+        if (options->first_child) root->add_child(options);
+        auto first = tokenizer_.peek().type;
+        if (!ExpressionParser<D>::starts_query(first) && first != TokenType::TK_LPAREN &&
+            first != TokenType::TK_INSERT && first != TokenType::TK_UPDATE &&
+            first != TokenType::TK_DELETE && !ExpressionParser<D>::keyword(tokenizer_.peek(), "MERGE") &&
+            !ExpressionParser<D>::keyword(tokenizer_.peek(), "DECLARE") &&
+            first != TokenType::TK_CREATE && first != TokenType::TK_EXECUTE) {
+            r.status = ParseResult::ERROR; scan_to_end(r); return r;
+        }
+        ParseResult inner = classify_and_dispatch();
+        if (first == TokenType::TK_CREATE && inner.ast) {
+            bool table = false, materialized = false, query = false;
+            for (const auto* child = inner.ast->first_child; child; child = child->next_sibling) {
+                if (child->type == NodeType::NODE_PG_DDL_SYNTAX) {
+                    table |= child->value().equals_ci("TABLE", 5);
+                    materialized |= child->value().equals_ci("MATERIALIZED", 12);
+                }
+                query |= child->type == NodeType::NODE_SELECT_STMT || child->type == NodeType::NODE_COMPOUND_QUERY ||
+                    child->type == NodeType::NODE_CTE || child->type == NodeType::NODE_TABLE_QUERY;
+            }
+            if ((!table && !materialized) || !query) inner.status = ParseResult::ERROR;
+        }
+        root->add_child(inner.ast);
+        r.status = inner.status; r.ast = root;
+        r.full_input = inner.full_input; r.remaining = inner.remaining;
         return r;
     }
 
@@ -582,9 +555,10 @@ ParseResult Parser<D>::parse_explain(bool is_describe) {
         if (inner.ast) {
             root->add_child(inner.ast);
         }
-        r.status = ParseResult::OK;
+        r.status = inner.status;
         r.ast = root;
-        // remaining is already handled by inner parse
+        r.full_input = inner.full_input;
+        // Preserve the inner statement's completion and error state.
         r.remaining = inner.remaining;
         return r;
     }
@@ -655,7 +629,10 @@ ParseResult Parser<D>::parse_call() {
         ExpressionParser<D> expr_parser(tokenizer_, arena_);
         if (tokenizer_.peek().type != TokenType::TK_RPAREN) {
             while (true) {
-                AstNode* arg = expr_parser.parse();
+                AstNode* arg = expr_parser.parse_argument();
+                if constexpr (D == Dialect::PostgreSQL) {
+                    if (!arg) { expr_parser.syntax_error(); break; }
+                }
                 if (arg) root->add_child(arg);
                 if (tokenizer_.peek().type == TokenType::TK_COMMA) {
                     tokenizer_.skip();
@@ -1056,6 +1033,12 @@ ParseResult Parser<D>::extract_replace(const Token& /* first */) {
 
 template <Dialect D>
 ParseResult Parser<D>::extract_transaction(const Token& first) {
+    if constexpr (D == Dialect::PostgreSQL) {
+        PgUtilityParser utility(tokenizer_, arena_);
+        ParseResult result = utility.transaction(first);
+        scan_to_end(result);
+        return result;
+    }
     ParseResult r;
     r.status = ParseResult::OK;
 
@@ -1257,7 +1240,26 @@ ParseResult Parser<D>::parse_with() {
     ParseResult r;
     r.stmt_type = StmtType::SELECT;
 
-    // WITH keyword already consumed by classifier
+    // WITH keyword already consumed by classifier.
+    if constexpr (D == Dialect::PostgreSQL) {
+        r.ast = parse_pg_with(tokenizer_, arena_, true);
+        r.status = r.ast ? ParseResult::OK : ParseResult::ERROR;
+        if (r.ast) {
+            const AstNode* main = r.ast->first_child;
+            while (main && main->type == NodeType::NODE_CTE_DEFINITION) main = main->next_sibling;
+            if (main) {
+                switch (main->type) {
+                    case NodeType::NODE_INSERT_STMT: r.stmt_type = StmtType::INSERT; break;
+                    case NodeType::NODE_UPDATE_STMT: r.stmt_type = StmtType::UPDATE; break;
+                    case NodeType::NODE_DELETE_STMT: r.stmt_type = StmtType::DELETE_STMT; break;
+                    case NodeType::NODE_MERGE_STMT: r.stmt_type = StmtType::MERGE; break;
+                    default: break;
+                }
+            }
+        }
+        scan_to_end(r);
+        return r;
+    }
     AstNode* cte = make_node(arena_, NodeType::NODE_CTE);
     if (!cte) { r.status = ParseResult::ERROR; return r; }
 

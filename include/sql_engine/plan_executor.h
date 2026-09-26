@@ -115,6 +115,9 @@ public:
             return execute(plan);
         }
 
+        // Reject unsupported CTE semantics before any materialization occurs.
+        if (!PlanBuilder<D>::supports_query_features(ast)) return {};
+
         // Materialize each CTE definition
         std::vector<std::unique_ptr<InMemoryDataSource>> cte_sources;
         for (const sql_parser::AstNode* child = ast->first_child; child; child = child->next_sibling) {

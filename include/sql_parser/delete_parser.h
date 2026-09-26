@@ -8,6 +8,7 @@
 #include "sql_parser/arena.h"
 #include "sql_parser/expression_parser.h"
 #include "sql_parser/table_ref_parser.h"
+#include "sql_parser/pg_merge_parser.h"
 
 namespace sql_parser {
 
@@ -23,11 +24,15 @@ public:
           table_ref_parser_(tokenizer, arena, expr_parser_) {}
 
     void set_subquery_callback(SubqueryParseCallback<D> cb) {
+        subquery_cb_ = cb;
         expr_parser_.set_subquery_callback(cb);
+        table_ref_parser_.set_subquery_callback(cb);
     }
 
     // Parse DELETE statement (DELETE keyword already consumed).
     AstNode* parse() {
+        if constexpr (D == Dialect::PostgreSQL)
+            return PgDmlParser(tok_, arena_, subquery_cb_).remove();
         AstNode* root = make_node(arena_, NodeType::NODE_DELETE_STMT);
         if (!root) return nullptr;
 
@@ -39,10 +44,18 @@ public:
     }
 
 private:
+    AstNode* make_identifier(const Token& token, NodeType type = NodeType::NODE_IDENTIFIER) {
+        AstNode* node = make_node_from_token(arena_, type, token);
+        if (node && token.type == TokenType::TK_IDENTIFIER && token.source.ptr != token.text.ptr)
+            node->flags |= FLAG_IDENT_DELIMITED;
+        return node;
+    }
+
     Tokenizer<D>& tok_;
     Arena& arena_;
     ExpressionParser<D> expr_parser_;
     TableRefParser<D> table_ref_parser_;
+    SubqueryParseCallback<D> subquery_cb_ = nullptr;
 
     // ---- MySQL DELETE ----
     // Single-table: DELETE [LOW_PRIORITY] [QUICK] [IGNORE] FROM table [WHERE] [ORDER BY] [LIMIT]
@@ -241,11 +254,11 @@ private:
             tok_.skip();
             Token table_name = tok_.next_token();
             AstNode* qname = make_node(arena_, NodeType::NODE_QUALIFIED_NAME);
-            qname->add_child(make_node(arena_, NodeType::NODE_IDENTIFIER, name.text));
-            qname->add_child(make_node(arena_, NodeType::NODE_IDENTIFIER, table_name.text));
+            qname->add_child(make_identifier(name));
+            qname->add_child(make_identifier(table_name));
             ref->add_child(qname);
         } else {
-            ref->add_child(make_node(arena_, NodeType::NODE_IDENTIFIER, name.text));
+            ref->add_child(make_identifier(name));
         }
 
         return ref;
@@ -337,7 +350,8 @@ private:
             if (next.type == TokenType::TK_AS) {
                 tok_.skip();
                 Token alias_name = tok_.next_token();
-                ret->add_child(make_node(arena_, NodeType::NODE_ALIAS, alias_name.text));
+                ret->add_child(make_node(arena_, NodeType::NODE_ALIAS,
+                    alias_name.source.empty() ? alias_name.text : alias_name.source));
             }
 
             if (tok_.peek().type == TokenType::TK_COMMA) {

@@ -72,8 +72,8 @@ class RunnerTest(unittest.TestCase):
             [row["result"] for row in rows],
             [
                 "DEEP_SUPPORTED",
-                "CLASSIFIED_ONLY",
-                "TYPE_MISMATCH",
+                "DEEP_SUPPORTED",
+                "DEEP_SUPPORTED",
                 "DEEP_SUPPORTED",
                 "DEEP_SUPPORTED",
             ],
@@ -102,9 +102,9 @@ class RunnerTest(unittest.TestCase):
             "commit",
         }
         self.assertTrue(all(required_fields <= row.keys() for row in rows))
-        self.assertTrue(
-            all(not row["remaining"].strip(" \t\r\n\f\v;") for row in rows)
-        )
+        # CREATE TABLE and VACUUM now have complete native grammar productions.
+        self.assertEqual([row["remaining"].strip() for row in rows],
+                         ["", "", "", "", ""])
 
     def test_cli_no_arguments(self):
         result = self.run_runner()
