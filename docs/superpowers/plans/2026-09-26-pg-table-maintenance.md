@@ -39,8 +39,8 @@ Own include/sql_parser/pg_session_parser.h and new tests/test_pg_maintenance.cpp
 - [x] Register tests and append/map new statement types with regression fixtures.
 - [x] Independently review complete batch and fix substantive findings with regression tests.
 - [x] Forced full build/test and corpus executable; ASan/UBSan new suites; Python harness; full corpus replay and raw-AST equivalence for every newly supported statement.
-- [ ] Update coverage docs; detailed implementation commit; refresh correctness snapshot; compare every row with reviewed replay and verify full corpus/CI cases; detailed snapshot commit.
-- [ ] Push same branch and update PR #67. Leave benchmark changes uncommitted.
+- [x] Update coverage docs; detailed implementation commit; refresh correctness snapshot; compare every row with reviewed replay and verify full corpus/CI cases; detailed snapshot commit.
+- Publication: push the two verified commits on the same branch and update PR #67; leave benchmark changes uncommitted.
 
 ## Verified implementation outcome
 
@@ -65,3 +65,7 @@ Remaining selected table gaps include legacy OIDS syntax, flag-only CREATE TABLE
 options, repeated column-level enforcement attributes and Unicode identifiers.
 Broader remaining families include rules, publications, extensions, function
 bodies and other object options. This corpus result is not full grammar parity.
+
+Snapshot validation: all 51,415 refreshed rows match the reviewed replay, and the
+full pinned compatibility workflow passed, including all 5,125 generated CI
+cases. The implementation commit is 1381df1; the snapshot is committed separately.

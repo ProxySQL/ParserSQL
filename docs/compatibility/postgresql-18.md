@@ -1,7 +1,7 @@
 # PostgreSQL 18 Compatibility
 
-Generated: 2026-09-26T19:39:11Z
-ParserSQL commit: `19d77ca74da02966c9112df41ae008bfca6246f1`
+Generated: 2026-09-26T20:06:24Z
+ParserSQL commit: `1381df180e66262de28b4f9819c25d26f11898af`
 libpg_query previous: `17-latest` `815abf77660ca3c38511e3f5af7777b31764c1d5` (PostgreSQL 17.7)
 libpg_query target: `18-latest` `9ab9951b7021adcc6d25d261d5016ca0b83726b8` (PostgreSQL 18.4)
 
@@ -9,12 +9,12 @@ libpg_query target: `18-latest` `9ab9951b7021adcc6d25d261d5016ca0b83726b8` (Post
 
 | Result | Count |
 | --- | --- |
-| DEEP_SUPPORTED | 49120 |
+| DEEP_SUPPORTED | 49845 |
 | CLASSIFIED_ONLY | 0 |
 | PARTIAL | 52 |
-| ERROR | 1542 |
-| TRAILING_INPUT | 423 |
-| TYPE_MISMATCH | 278 |
+| ERROR | 1044 |
+| TRAILING_INPUT | 377 |
+| TYPE_MISMATCH | 97 |
 
 ## PG18 Backlog
 
@@ -346,356 +346,7 @@ libpg_query target: `18-latest` `9ab9951b7021adcc6d25d261d5016ca0b83726b8` (Post
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_SPACE_OPTIONS_STMT | 2cc871266faaeed83d7e392d | -- fail ALTER TABLESPACE regress_tblspace RESET (random_page_cost = 2.0) |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_SPACE_OPTIONS_STMT | 484b0befa4381d7278350c45 | ALTER TABLESPACE regress_tblspace SET (some_nonexistent_parameter = true) |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_SPACE_OPTIONS_STMT | 8c8443fb9ba797eb4b95a3e4 | -- try setting and resetting some properties for the new tablespace ALTER TABLESPACE regress_tblspace SET (random_page_cost = 1.0, seq_page_cost = 1.1) |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 003a575a0731d3a287e8f2e8 | -- DROP CONSTRAINT recurses correctly on invalid constraints ALTER TABLE notnull_tbl1 ALTER CONSTRAINT nntbl1_a INHERIT |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 03056f3240a1bcbd1cc1e86a | ALTER INDEX dummy_test_idx SET (option_enum = 'three') |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 030bd70cb513b576e70a0b59 | ALTER TABLE temporal_rng2 ADD CONSTRAINT temporal_rng_pk PRIMARY KEY (id, valid_at WITHOUT OVERLAPS) |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 0319aaf73edefc9839eadbe1 | -- try additional syntax ALTER TABLE fktable ALTER CONSTRAINT fktable_fk_fkey NOT DEFERRABLE |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 0349daccc7588273fad7efc9 | ALTER TABLE fktable ALTER CONSTRAINT fktable_fk_fkey NOT ENFORCED |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 035553052559b33df7a2c470 | ALTER TABLE s.x ADD CONSTRAINT e2rows EXCLUDE USING btree ((s.index_this_expr(y, s.const())) COLLATE s.coll WITH s.=) USING INDEX TABLESPACE regress_create_idx_tblspace WHERE (s.index_row_if(y)) |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 0465f263fbc5c71c4cc191b1 | ALTER INDEX dummy_test_idx SET (option_int = 'val3') |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 05ce1f60f52d76a3418a26be | ALTER INDEX dummy_test_idx SET (option_real = true) |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 0665a6ffe05ba12fe90fd07f | ALTER TABLE gtest25 ADD COLUMN b int GENERATED ALWAYS AS (a * 2) STORED, ALTER COLUMN b SET EXPRESSION AS (a * 3) |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 069b31f81beae46ed1099297 | ALTER TABLE testpub_rf_tbl7 ALTER COLUMN y SET EXPRESSION AS (x * testpub_rf_func2()) |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 06a795d72f238f0ff7865c54 | ALTER TABLE itest7 ALTER COLUMN a RESTART |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 06bd3678b382603235c9e44f | ALTER INDEX dummy_test_idx SET (option_bool = 1) |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 08757c9475ac905c106f96cb | ALTER TABLE testpub_tbl5 REPLICA IDENTITY USING INDEX testpub_tbl5_b_key |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 0ace9654c03b8100ab39dd55 | -- This triggers an update of pg_index.indisreplident for parted_replica_idx. alter table only parted_replica_tab_1 replica identity using index parted_replica_idx_1 |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 0b3c37c46e6e9c13a11150f0 | -- fail alter index idxpart_1_idx attach partition idxpart1_1_idx |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 0b4aefd4db98b920439661fc | ALTER INDEX dummy_test_idx SET (option_bool = 'val4') |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 0c2663543b3769fe421f75ec | ALTER TABLE s.x ADD CONSTRAINT e0rows EXCLUDE USING btree ((s.index_this_expr(y, s.const())) COLLATE s.coll WITH s.=) USING INDEX TABLESPACE regress_create_idx_tblspace WHERE (s.index_row_if(y)) |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 0c5cdbbe9eb95111d32fcb3a | ALTER INDEX t_b_idx ATTACH PARTITION tp_b_a_key |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 0d9e74318aa68e56115fd5c5 | ALTER TABLE notnull_parent_upg ADD CONSTRAINT nn NOT NULL a NOT VALID |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 0f83b762b156411811f52210 | alter index idxpart_a_b_idx attach partition idxpart1_tst2 |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 0faf4e6f50f7a922f49fc859 | ALTER INDEX dummy_test_idx RESET (option_string_null) |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 0fd4b4c077c846e33ccc2a40 | -- fail, deferrable ALTER TABLE test_replica_identity REPLICA IDENTITY USING INDEX test_replica_identity_unique_defer |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 1191cafd519af7db68bf0971 | ALTER TABLE ONLY test_replica_identity4 REPLICA IDENTITY USING INDEX test_replica_identity4_pkey |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 11f79a612de175e577292649 | -- Create table for check on foreign key dependence switch with indexes swapped ALTER TABLE concur_reindex_tab ADD PRIMARY KEY USING INDEX concur_reindex_ind1 |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 1242f64d6b26cc9690ce100d | ALTER INDEX dummy_test_idx RESET (option_enum) |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 1265c8cb31abf1b59dce0bf9 | ALTER INDEX concur_exprs_index_expr ALTER COLUMN 1 SET STATISTICS 100 |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 1267c943e8f43cabf31bc3cb | ALTER TABLE itest8 ADD COLUMN f3 int NOT NULL, ALTER COLUMN f3 ADD GENERATED ALWAYS AS IDENTITY, ALTER COLUMN f3 SET GENERATED BY DEFAULT SET INCREMENT 10 |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 1351701d61985049b0b12566 | ALTER TABLE rf_tbl_abcd_nopk REPLICA IDENTITY NOTHING |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 13691398dbd9feaad050eea9 | ALTER VIEW regtest_view SET (security_barrier) |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 151788c79a9bce5fb0088cb1 | ALTER TABLE fktable ALTER CONSTRAINT fktable_fk_fkey DEFERRABLE INITIALLY IMMEDIATE |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 151b92a104e5ca9634402719 | ALTER INDEX concur_reindex_part_index ATTACH PARTITION concur_reindex_part_index_0 |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 168fb72c9698b507a682c424 | ALTER TABLE ATACC1 ADD NOT NULL a NO INHERIT |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 1738948d41fb7ffef83c3557 | alter index idxpart2_a_idx attach partition idxpart22_a_idx |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 17a3ce0e126e8ae06da9af79 | ALTER TABLE rf_tbl_abcd_nopk REPLICA IDENTITY USING INDEX idx_abcd_nopk_c |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 17bc016b7d6ce4d64092b763 | ALTER TABLE ataddindex ADD PRIMARY KEY USING INDEX ataddindexi0, ALTER f1 TYPE BIGINT |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 17e665fbdd654a91cc03a9b4 | -- succeeds ALTER TABLE attmp3 ADD CONSTRAINT b_greater_than_ten_not_enforced CHECK (b > 10) NOT ENFORCED |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 181145abe757874c0086aac5 | ---- -- Make sure non index cases work ---- ALTER TABLE test_replica_identity REPLICA IDENTITY DEFAULT |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 189157cdfc9f8b69e9e12b75 | ALTER TABLE tt2 OF tt_t0 |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 19890b32624319e47b21fd3a | -- Check ALTER ALTER INDEX reloptions_test_idx SET (fillfactor=40) |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 1acc9c73fb38144fe61d5818 | ALTER VIEW rw_view1 ALTER COLUMN bb SET DEFAULT 'View default' |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 1b8fa7452fdc598e02a0e11f | ALTER TABLE temporal_fk_rng2rng ADD CONSTRAINT temporal_fk_rng2rng_fk FOREIGN KEY (parent_id, PERIOD valid_at) REFERENCES temporal_rng ON UPDATE RESTRICT |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 1d633ae3accc43b33a5ac790 | alter table test_storage alter a set storage default |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 1dae06b0c6e78b2547c804cc | ALTER TABLE fk_notpartitioned_fk ADD CONSTRAINT fk_notpartitioned_fk_a_b_fkey2 FOREIGN KEY (a, b) REFERENCES fk_partitioned_pk NOT ENFORCED |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 1dc2f9c7583bb8d6714fa287 | alter table idxpart add exclude USING GIST (a with =, b with &&) |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 1dd2407f1d4df35c929f289a | ALTER TABLE FKTABLE ALTER CONSTRAINT fkdd2 DEFERRABLE INITIALLY DEFERRED |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 1fdbc5bbdc459ac9f7986afd | alter table inh_nn2 alter constraint inh_nn1_f2_not_null no inherit |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 202ad492828b44839cedb398 | ALTER TABLE temporal_fk2_mltrng2mltrng ADD CONSTRAINT temporal_fk2_mltrng2mltrng_fk FOREIGN KEY (parent_id1, parent_id2, PERIOD valid_at) REFERENCES temporal_mltrng2 (id1, id2, PERIOD valid_at) |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 20c74e53c04b349d2426218f | ALTER INDEX dummy_test_idx RESET (option_int) |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 20f462d4397d8c3ac7cb3c25 | ALTER TABLE testpub_tbl8_0 REPLICA IDENTITY USING INDEX testpub_tbl8_0_pkey |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 21279d0aebb5c3cdf193a2a1 | ALTER TABLE cwi_test ADD primary key USING INDEX cwi_uniq_idx |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 21603ae21f34e70a7fc73ae7 | alter table inh_nn3 alter constraint nn3_f1 inherit |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 221c64a8c019b9fae859888c | ALTER INDEX dummy_test_idx SET (option_bool = 3.4) |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 22acbcba76880e47a1a456f2 | -- attach the indexes; parents stay invalid alter index idxpart1_expr_idx attach partition idxpart11_expr_idx |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 23afcbd3bd2d6307a114b395 | ALTER INDEX concur_reindex_part_index ATTACH PARTITION concur_reindex_part_index_10 |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 23be1e20f2c1221081970a08 | ALTER TABLE temporal_fk_mltrng2mltrng ADD CONSTRAINT temporal_fk_mltrng2mltrng_fk FOREIGN KEY (parent_id, PERIOD valid_at) REFERENCES temporal_mltrng (id, PERIOD valid_at) |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 25a8b9978ecac7fcd072d495 | ALTER INDEX dummy_test_idx SET (option_string_null = NULL) |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 273b221d3011d17cc4b09d6e | -- constraints other than not-null are not supported alter table inh_nn1 alter constraint inh_nn1_f1_check inherit |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 2813717510a2f146d7ddb8df | ALTER INDEX dummy_test_idx RESET (option_real) |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 28221787bd8889a6ad488a94 | -- -- partitioned FK referenced updates CASCADE -- ALTER TABLE temporal_partitioned_fk_mltrng2mltrng DROP CONSTRAINT temporal_partitioned_fk_mltrng2mltrng_fk, ADD CONSTRAINT temporal_partitioned_fk... |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 28fbe3af4b65e6c1df83eabb | alter table cwi_test add primary key using index cwi_test_a_idx |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 29737b96fe94f04b1e9a17bf | ALTER TABLE notnull_tbl1 ADD NOT NULL a NOT VALID, ADD NOT NULL b NOT VALID |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 2a0ec8383b0fdbee7b4cc843 | ALTER TABLE fk_notpartitioned_fk ALTER CONSTRAINT fk_notpartitioned_fk_a_b_fkey2 ENFORCED |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 2a292f5bf6ad80f9acb80a69 | ALTER TABLE temporal_fk_rng2rng ADD CONSTRAINT temporal_fk_rng2rng_fk FOREIGN KEY (parent_id, PERIOD valid_at) REFERENCES temporal_rng ON UPDATE NO ACTION |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 2b3d45cd9f4dc790e92819c1 | ALTER TABLE testpub_tbl_both_filters REPLICA IDENTITY USING INDEX testpub_tbl_both_filters_pkey |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 2bf309323b734a0722eae7cb | ALTER TABLE notnull_chld0 ADD CONSTRAINT nn_chld0 NOT NULL a not valid |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 2c0c30c66898ef857fa58d76 | ALTER TABLE reloptions_test RESET (toast.autovacuum_vacuum_cost_delay) |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 2d4b53a2d0f828b8a721b499 | -- Rebuild the index using a different fillfactor ALTER INDEX hash_split_index SET (fillfactor = 10) |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 2dea23fa2eb1840be13c743e | ALTER TABLE cnn_pk ADD CONSTRAINT cnn_primarykey PRIMARY KEY USING INDEX cnn_uq |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 2e1fd11fc3349d7da11984fe | ALTER TABLE ref ALTER CONSTRAINT ref_f1_f2_fkey DEFERRABLE INITIALLY DEFERRED |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 2e7eb0fd5f2866514ab2ed81 | ALTER TABLE temporal_fk_mltrng2mltrng ALTER CONSTRAINT temporal_fk_mltrng2mltrng_fk DEFERRABLE INITIALLY DEFERRED |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 2ed3f98adc8bb0bd4983b090 | alter index idxpart_pkey attach partition idxpart0_pkey |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 2fba96be4d610afefe1288b5 | ALTER VIEW view_stats ALTER COLUMN a SET DEFAULT 2 |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 2fd825652cc330b0595ae8b0 | -- invalid ALTER VIEW rw_view1 SET (check_option=local) |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 305bfd07992f3bb65b0233d0 | alter index idxpart_expr_idx attach partition idxpart2_expr_idx |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 31387fef237b77474e2b5e52 | alter table constr_parent2 add not null a not valid |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 31e15803d78d7790a8652903 | ALTER TABLE unique_tbl ALTER CONSTRAINT unique_tbl_i_key ENFORCED |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 32ded5bad682b81ad572c4f5 | ALTER INDEX t_a_idx ATTACH PARTITION tp_pkey |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 33bbf41994e7e314d39b61ee | -- OK ALTER TABLE tt0 OF tt_t0 |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 349cffa52aad76c053bda75b | alter view base_tab_def_view alter d set default 'View default' |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 34ecbccfdf12debb9356a48b | ALTER TABLE atnotnull1 ADD COLUMN b INT, ADD NOT NULL b |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 35e4bfbf168786d2934c6a4e | ALTER INDEX dummy_test_idx SET (option_real = 'val5') |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 373e6905cea0507392528973 | alter index idxpart_a_b_idx attach partition idxpart1_tst1 |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 38a84bf0bbe153096af5b183 | -- fail, partial index ALTER TABLE test_replica_identity REPLICA IDENTITY USING INDEX test_replica_identity_partial |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 38b2992740998c2df3e555a8 | alter table attbl replica identity using index pk_attbl |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 3a50269694d17736264df285 | -- Case 2. REPLICA IDENTITY FULL ALTER TABLE rf_tbl_abcd_pk REPLICA IDENTITY FULL |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 3a9cd422a95a76e7303fea33 | -- error ALTER TABLE notnull_tbl1 ADD CONSTRAINT nn NOT NULL a NOT VALID |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 3b476cbee2da81c62f57099c | ALTER TABLE temporal3 ADD COLUMN valid_at daterange, ADD CONSTRAINT temporal3_uq UNIQUE (id, valid_at WITHOUT OVERLAPS) |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 3bae0176f727d20f9d58eae4 | ALTER INDEX dummy_test_idx SET (option_real = 3.2) |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 3c0240f62e94b2be99910336 | ALTER TABLE temporal_fk2_rng2rng ADD CONSTRAINT temporal_fk2_rng2rng_fk FOREIGN KEY (parent_id1, parent_id2, PERIOD valid_at) REFERENCES temporal_rng2 (id1, id2, PERIOD valid_at) |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 3d0334c33cf9a80f2769a439 | ALTER TABLE testpub_gencol REPLICA IDENTITY USING index testpub_gencol_idx |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 3d3f5b7ed3b7d9730369ede2 | -- Changing it back to ENFORCED will recreate the necessary FK triggers -- that are deferrable and initially deferred ALTER TABLE FKTABLE ALTER CONSTRAINT fktable_fk_fkey ENFORCED |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 3da0e1c87fb3b79f6f52ebb0 | ALTER TABLE temporal_fk_rng2rng ALTER CONSTRAINT temporal_fk_rng2rng_fk DEFERRABLE INITIALLY DEFERRED |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 3e7ce882156ad7f860eeec81 | -- OK alter index idxpart_a_b_idx attach partition idxpart1_a_b_idx |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 4043f2b990ebae6281af1a5d | -- notice -- Change the expression ALTER TABLE gtest29 ALTER COLUMN b SET EXPRESSION AS (a * 3) |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 40f18bff081db6c09819e941 | -- fails ALTER TABLE pitest2_p1 ALTER COLUMN f3 SET INCREMENT BY 2 |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 41ea983a45ad6b4088060d07 | alter table cnn_uq add unique using index cnn_uq_idx |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 440adcfb9c12250ac10a400b | ALTER FOREIGN TABLE ft1 ALTER CONSTRAINT ft1_c9_check DEFERRABLE |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 445b6b6a01b1d5c9326aff5c | ALTER TABLE tt5 OF tt_t0 |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 4467932c160bcc5986e7e4ec | -- should fail ALTER VIEW rw_view2 RESET (check_option) |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 45322ba755f91c5ad855d2a9 | ALTER INDEX reloptions_test_idx3 SET (fillfactor=40) |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 45da35a6830e8b8957210dbe | ---- -- Make sure index cases succeed ---- -- succeed, primary key ALTER TABLE test_replica_identity REPLICA IDENTITY USING INDEX test_replica_identity_pkey |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 46a982518ccd66967b37e940 | ALTER INDEX dummy_test_idx SET (option_int = true) |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 46fd34b7102168a05e929540 | -- fail, hash indexes cannot do uniqueness ALTER TABLE test_replica_identity REPLICA IDENTITY USING INDEX test_replica_identity_hash |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 470314a22f9b97f45a7817ca | ALTER INDEX dummy_test_idx RESET (option_bool) |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 480ef2e4c12db09f08c10ad6 | -- alter generation expression of parent and all its children altogether ALTER TABLE gtest_parent ALTER COLUMN f3 SET EXPRESSION AS (f2 * 2) |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 482046f94766e5fc7cfb1496 | ALTER INDEX dummy_test_idx SET (option_real = 4) |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 48bc18cac9074a38e81f606b | -- alter only parent's and one child's generation expression ALTER TABLE ONLY gtest_parent ALTER COLUMN f3 SET EXPRESSION AS (f2 * 4) |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 4a0b8780eea2c3fdb804d7ae | -- fails ALTER TABLE ONLY pitest2 ALTER COLUMN f3 SET GENERATED BY DEFAULT SET INCREMENT BY 2 SET START WITH 1000 RESTART |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 4b9c855bccee740d11dd9a0a | ALTER TABLE atnnpart1 ADD CONSTRAINT another_constr NOT NULL id |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 4c47da03120b8f09128dd2fa | -- should log old key ALTER TABLE table_with_unique_not_null REPLICA IDENTITY USING INDEX table_with_unique_not_null_id_key |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 4cae1aa9d5af98658396f8b0 | -- -- partitioned FK referenced updates CASCADE -- ALTER TABLE temporal_partitioned_fk_rng2rng DROP CONSTRAINT temporal_partitioned_fk_rng2rng_fk, ADD CONSTRAINT temporal_partitioned_fk_rng2rng_fk ... |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 4ddf10837c75191ee6c10ff8 | ALTER INDEX tbspace_reindex_part_index_0 ATTACH PARTITION tbspace_reindex_part_index_0_2 |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 4e1ebbcc3c2057c4522a5d76 | -- check that we log nothing despite having a pkey ALTER TABLE table_without_key REPLICA IDENTITY NOTHING |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 4e435ac6f2c8d6791aafb932 | -- error - generated column "b" must be published explicitly as it is -- part of the REPLICA IDENTITY. ALTER TABLE testpub_gencol REPLICA IDENTITY FULL |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 4f4719ae43febaffb27a5b88 | ALTER TABLE tt1 OF tt_t0 |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 4f69883f67d23884cbd5f07b | ALTER INDEX tbl_idx ALTER COLUMN 4 SET STATISTICS 1000 |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 4ff540b9bb2e8f00587f1957 | ALTER TABLE cwi_test ADD UNIQUE USING INDEX cwi_uniq4_idx |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 509bf9b50c7d75d9d1021ae4 | ALTER VIEW rw_view1 SET (check_option=here) |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 54c60c3313e338b386bb18f1 | alter table idxpart add exclude USING GIST (a with -\|-) |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 56f197f10887e18a3f784881 | ALTER TABLE tbl_include_box add PRIMARY KEY USING INDEX tbl_include_box_idx_unique |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 57c9f7e9719fa481e391b8eb | ALTER TABLE FKTABLE ALTER CONSTRAINT fknd2 NOT DEFERRABLE |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 588f950f22fe3f69c0506480 | -- reassign an already-typed table ALTER TABLE tt7 NOT OF |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 59853e55001f6bb556970c2e | -- error ALTER TABLE gtest23b ALTER COLUMN b SET EXPRESSION AS (a * 1) |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 599246087178766f185858c2 | ALTER TABLE itest6 ALTER COLUMN a SET GENERATED BY DEFAULT SET INCREMENT BY 2 SET START WITH 100 RESTART |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 5adfdadf32183a27b03db135 | ALTER INDEX testschema.part_a_idx SET TABLESPACE pg_default |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 5b61e13592b0abf64c0e4405 | ALTER TABLE temporal3 ADD CONSTRAINT temporal3_uq UNIQUE USING INDEX idx_temporal3_uq |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 5c44d98009cf0811fac98f1f | -- change child constraint ALTER TABLE fk_partitioned_fk_2 ALTER CONSTRAINT fk_part_con ENFORCED |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 5d48d42f5ecce8a027a19cdb | ALTER TABLE test_replica_identity3 REPLICA IDENTITY USING INDEX test_replica_identity3_id_key |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 5de2dd77b9156f239859e7ce | ALTER TABLE toasted_several REPLICA IDENTITY FULL |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 5e021a1f5ec7c6f533dfccee | ALTER TABLE notnull_tbl1 ALTER CONSTRAINT nntbl1_a NO INHERIT |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 5ec5a8ade3e334012738af1f | ALTER VIEW rw_view1 SET (security_invoker = true) |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 5fba5852e4407d8a1f7088c8 | ALTER INDEX dummy_test_idx SET (option_string_val = 4) |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 61b3d703548c0d83e58b3002 | -- but it's OK when the identity is FULL ALTER TABLE test_replica_identity3 REPLICA IDENTITY FULL |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 628755a57fb2b482506b47cd | ALTER INDEX tbspace_reindex_part_index ATTACH PARTITION tbspace_reindex_part_index_10 |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 62cfcae22a774909b029c48b | ALTER INDEX dummy_test_idx SET (option_enum = true) |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 633d32e11c011b4f4fd46a6c | alter table p1_c1 add constraint inh_check_constraint8 check (f1 < 10) not enforced |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 64ebfca5dc6dcb2c0237fad7 | -- Changing the constraint to NOT ENFORCED drops the associated FK triggers ALTER TABLE FKTABLE ALTER CONSTRAINT fktable_fk_fkey NOT ENFORCED |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 6566d55b288701a0f650b81e | -- RESET fails if a value is specified ALTER TABLE reloptions_test RESET (fillfactor=12) |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 65a517469acc311df3d1b0ce | ALTER MATERIALIZED VIEW testschema.amv SET TABLESPACE regress_tblspace |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 675b3e52d837ce78688fed33 | alter table p1 add constraint inh_check_constraint9 check (f1 < 10) not enforced |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 6797b15cf11e947077afb486 | ALTER TABLE tt7 OF tt_t0 |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 6833861b3b2f9536980afb45 | ALTER INDEX ptif_test_index ATTACH PARTITION ptif_test3_index |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 68798cff8169d795b17914a4 | ALTER TABLE gtest31_1 ALTER COLUMN b SET EXPRESSION AS ('hello3') |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 69de8d99a19ba5b589efd60c | -- Set boolean option to true without specifying value ALTER TABLE reloptions_test SET (autovacuum_enabled, fillfactor=32) |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 6b23cebafeea626cbb55b618 | alter index gist_pointidx SET (fillfactor = 40) |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 6c03824af775e5f45e023075 | ALTER TABLE temporal3 ADD CONSTRAINT temporal3_pk PRIMARY KEY USING INDEX idx_temporal3_uq |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 6c39a181f10b873faea75592 | -- fail, deferrable ALTER TABLE test_replica_identity_t3 REPLICA IDENTITY USING INDEX pk |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 6cbe0baa18d631459637fe7c | -- parted_replica_idx becomes valid here. alter index parted_replica_idx_1 ATTACH PARTITION parted_replica_idx_11 |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 6cd86a703d9802eab5c53a86 | ALTER TABLE tt3 OF tt_t0 |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 6f6215e9058d26314bc730e7 | -- parted_replica_idx is not valid yet here, because parted_replica_idx_1 -- is not valid. alter index parted_replica_idx ATTACH PARTITION parted_replica_idx_1 |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 6f801183163cf42ea740de96 | -- try removing an oid column, should succeed (as it's nonexistent) alter table atacc1 SET WITHOUT OIDS |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 6f89d5897f725689748a04de | ALTER TABLE temporal_fk_rng2rng ADD CONSTRAINT temporal_fk_rng2rng_fk FOREIGN KEY (parent_id, PERIOD valid_at) REFERENCES temporal_rng ON DELETE RESTRICT |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 7036bb12df4b14afe53184b0 | ALTER TABLE inh_nn_parent ADD CONSTRAINT nna NOT NULL a |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 72fc8736d6467824f7cbb7e9 | alter table p1_c1 add constraint inh_check_constraint4 check (f1 < 10) not enforced |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 7494b4ba1edbd5fe02ba23b1 | ALTER INDEX concur_reindex_part_index_0 ATTACH PARTITION concur_reindex_part_index_0_2 |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 74a16a00b52cd468b396c7c2 | alter table inh_nn1 alter constraint inh_nn1_pkey inherit |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 75a42968131b438a7c7a97e2 | ALTER INDEX testschema.anindex SET TABLESPACE regress_tblspace |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 75b1dfef4cef4bb3189ddc75 | ALTER TABLE gtest22c ALTER COLUMN b SET EXPRESSION AS (a * 4) |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 75f1b88336ecb9a8a661587f | alter index idxpart2_a_idx attach partition idxpart21_a_idx |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 76a36171974bf87233464333 | ALTER TABLE ataddindex ALTER f1 SET DATA TYPE TEXT, ADD EXCLUDE ((f1 LIKE 'a') WITH =) |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 7720da8143796aa8f3260f23 | ALTER TABLE gtest_child ALTER COLUMN f3 SET EXPRESSION AS (f2 * 10) |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 7738e5af004ed1b33767c46d | -- failure: one of the partitions has REPLICA IDENTITY FULL ALTER TABLE testpub_tbl8_1 REPLICA IDENTITY FULL |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 7790ffe0d97c082407041f95 | alter table p1 add constraint inh_check_constraint4 check (f1 < 10) not enforced |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 7820bf4ddcc5f39ad94fe5fe | -- SET identity column ALTER TABLE pitest2_p1 ALTER COLUMN f3 SET GENERATED BY DEFAULT |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 7ab4f452cad8f71754195955 | ALTER INDEX ptif_test1_index ATTACH PARTITION ptif_test11_index |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 7b1247df07f05b13ad231a2f | ALTER TABLE notnull_inhchild ADD CONSTRAINT nn1 NOT NULL i |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 7bfe29bf8187e9a98aee745c | ALTER TABLE FKTABLE ALTER CONSTRAINT fkdi2 DEFERRABLE INITIALLY IMMEDIATE |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 7da1dcaeb8ae31d6ba46e3cd | ALTER INDEX concur_reindex_part_index_0 ATTACH PARTITION concur_reindex_part_index_0_1 |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 7e1c21f256174417da960638 | ALTER TABLE regtest_table_4 ADD CONSTRAINT regtest_tbl4_con EXCLUDE USING btree (z WITH =) |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 7e204974964ab35af6b8c5ba | -- should fail on existing data without the WHERE clause ALTER TABLE circles ADD EXCLUDE USING gist (c1 WITH &&, (c2::circle) WITH &&) |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 7e8ef9066d0620c524107103 | -- the not-valid state of the child constraint will be ignored here. alter table p1 add constraint inh_check_constraint10 check (f1 < 10) not enforced |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 81fec91e6288b91b4ef2ba41 | ALTER TABLE gtest21ax ADD CONSTRAINT cc NOT NULL b |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 83268d8a5f1a325ba72f9de5 | ALTER INDEX ptif_test_index ATTACH PARTITION ptif_test2_index |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 834842fbc1f0ab9bc59476a9 | alter table idxpart add exclude USING GIST (a with =, b with =, c with &&) |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 83d905100c7541b2ca8410ac | ALTER TABLE atnnparted ADD CONSTRAINT dummy_constr NOT NULL id NOT VALID |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 84ee526e1835ce6efadb2c47 | ALTER TABLE testpub_tbl8_1 REPLICA IDENTITY USING INDEX testpub_tbl8_1_pkey |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 85686aebd2a65a8762100aee | alter index parted_conflict_a_idx attach partition parted_conflict_1_a_idx |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 867f04984ec59e3e9ff4f959 | alter table idxpart add exclude USING GIST (a with =, b with =) |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 86c9a75bb873bf9cd933ab18 | ALTER TABLE pp_nn_1 ADD CONSTRAINT nn NOT NULL a NO INHERIT |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 87d49b1d8fee2fc8000b7f01 | ALTER TABLE fk_partitioned_fk ADD CONSTRAINT fk_partitioned_fk_a_b_fkey FOREIGN KEY (a, b) REFERENCES fk_notpartitioned_pk NOT ENFORCED |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 89c8c719aa7035d76973b0a3 | ALTER INDEX pt_stats_index ATTACH PARTITION pt_stats2_index |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 8a155d07c30955f9e7ac31d0 | ALTER INDEX tbspace_reindex_part_index ATTACH PARTITION tbspace_reindex_part_index_0 |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 8a2b5b6a35cb6d0c5e471337 | ALTER TABLE temporal_fk_mltrng2mltrng ADD CONSTRAINT temporal_fk_mltrng2mltrng_fk FOREIGN KEY (parent_id, PERIOD valid_at) REFERENCES temporal_mltrng (id, PERIOD valid_at) ON UPDATE NO ACTION |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 8ade8c3f13ea097754bc35b9 | -- -- partitioned FK referenced deletes SET NULL -- -- -- partitioned FK referenced updates SET DEFAULT -- ALTER TABLE temporal_partitioned_fk_rng2rng ALTER COLUMN parent_id SET DEFAULT '[-1,-1]', ... |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 8b3062f171ea3aa0506bd286 | ALTER TABLE notnull_child_upg ADD CONSTRAINT nn NOT NULL a |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 8c3974950654511172eb3f87 | ALTER TABLE gtest31_1 ALTER COLUMN b SET EXPRESSION AS ('hello2') |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 8d915d158baf2ba6280b7287 | ALTER TABLE temporal_fk_mltrng2mltrng ADD CONSTRAINT temporal_fk_mltrng2mltrng_fk FOREIGN KEY (parent_id, PERIOD valid_at) REFERENCES temporal_mltrng (id, PERIOD valid_at) ON UPDATE RESTRICT |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 8e44e58511ebadd8a4ff9a99 | ALTER TABLE test_replica_identity REPLICA IDENTITY FULL |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 8e985becced7945466d6d6ee | -- These ALTER TABLE variants will not recurse. ALTER TABLE itest7 ALTER COLUMN a SET GENERATED BY DEFAULT |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 903ef34fc2b1323e7a36448f | -- nope ALTER TABLE notnull_tbl1_child2 ADD NOT NULL a NOT VALID |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 90a2364b84c0cc341427c032 | alter index idxpart_a_b_idx attach partition idxpart_a_b_idx |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 914703b53eb8e2996ea25b92 | ALTER TABLE temporal_fk_rng2rng ADD CONSTRAINT temporal_fk_rng2rng_fk FOREIGN KEY (parent_id, PERIOD valid_at) REFERENCES temporal_rng (id, PERIOD valid_at) |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 92a3840564f8afe3bcf34c1a | -- Check option won't cascade down to base view with INSTEAD OF triggers ALTER VIEW rw_view2 SET (check_option=cascaded) |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 9377e59a84775a9e3862a287 | alter table inh_nn1 alter constraint inh_nn1_f1_fkey inherit |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 9428e339009ae398f5faff14 | ALTER TABLE test_replica_identity2 REPLICA IDENTITY USING INDEX test_replica_identity2_id_key |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 9496de36a39b4a3993eb1571 | ALTER TABLE fk_partitioned_fk ALTER CONSTRAINT fk_partitioned_fk_a_b_fkey ENFORCED |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 94bafb8c5482cbbf46002d73 | ALTER TABLE notnull_tbl1 ADD CONSTRAINT nn_parent NOT NULL a not valid |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 956a6f1973ac2c1de6111650 | ALTER TABLE notnull_tbl1 ADD CONSTRAINT notnull_con NOT NULL a NOT VALID |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 956f2796dc320d9047112da3 | -- Move back to the default tablespace. ALTER INDEX regress_tblspace_test_tbl_idx SET TABLESPACE pg_default |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 9579aa03f89dfd8242b5303e | -- -- partitioned FK referenced deletes CASCADE -- -- -- partitioned FK referenced updates SET NULL -- ALTER TABLE temporal_partitioned_fk_mltrng2mltrng DROP CONSTRAINT temporal_partitioned_fk_mltr... |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 9644b3bb6481aa12ad3bfc2b | -- fails ALTER TABLE pitest2 ALTER COLUMN f3 SET GENERATED BY DEFAULT SET INCREMENT BY 2 SET START WITH 1000 RESTART |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 9645928d0c7bf3447c1e87bd | alter index idxpart_a_b_idx attach partition idxpart1_b_idx |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 96a90eaade087d86f8f80d78 | ALTER INDEX dummy_test_idx SET (option_string_val = true) |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 9779564eb810faa551c5b3bf | alter table anothertab add exclude using btree (f3 with =) |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 981aea3a7d4dce87e2576179 | ALTER TABLE FKTABLE ALTER CONSTRAINT fk_con NOT ENFORCED |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 995aa90580818a6948278a59 | -- must reject alter index idxpart_a_idx attach partition idxpart2_a_idx |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 99c29c7f48328ec96cc4e03e | ALTER TABLE notnull_tbl1_upg ADD CONSTRAINT nn NOT NULL a NOT VALID |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 99db06da6e1da34c7e38a462 | ALTER VIEW my_property_normal SET (security_barrier=true) |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 9a91cfff45a93c1c81c7e4de | -- fail, not a candidate key, nullable column ALTER TABLE test_replica_identity REPLICA IDENTITY USING INDEX test_replica_identity_nonkey |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 9c6dc2187c477e01e9720ede | ALTER TABLE sts_sch1.tbl ALTER COLUMN c SET EXPRESSION AS (a * 3) |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 9e04b79998c033cdd582994b | ALTER TABLE fk_partitioned_fk ALTER CONSTRAINT fk_partitioned_fk_a_b_fkey NOT ENFORCED |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 9e073e4dd9811fbdaf4fbd38 | alter table p1 add constraint inh_check_constraint3 check (f1 > 0) not enforced |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 9ef243a111a050cd6595e9c1 | ALTER INDEX attmp_idx ALTER COLUMN 2 SET STATISTICS -1 |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 9f3068c210245936aba14375 | alter table anothertab add exclude using btree (f4 with =) where (f4 is not null) |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 9f3118d053ae0d6160071e77 | alter table idxpart add exclude USING GIST (a with =) |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | a0062d2a7f36a7a023d3c40d | ALTER TABLE test_replica_identity5 REPLICA IDENTITY USING INDEX test_replica_identity5_a_b_key |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | a13e9afd64533a9d463b5ae3 | -- should log the full old row now ALTER TABLE table_without_key REPLICA IDENTITY FULL |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | a2db0b60d64b1173f39a41b1 | -- but using a different constraint name is not allowed ALTER TABLE notnull_tbl1 ADD CONSTRAINT nn NOT NULL a |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | a33e215bef80733a3acd4501 | alter table inh_nn1 alter constraint inh_nn1_f1_not_null inherit |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | a364b125a34dc530de348acf | ALTER TABLE temporal_mltrng ADD CONSTRAINT temporal_mltrng_pk PRIMARY KEY (id, valid_at WITHOUT OVERLAPS) |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | a3d664d7c7b089095bb0bd4e | -- idxpart1_a_idx is not valid, so idxpart_a_idx should not become valid: alter index idxpart_a_idx attach partition idxpart1_a_idx |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | a3e7883d6e6350cd1f9c5d73 | ALTER TABLE table_dropped_index_no_pk REPLICA IDENTITY USING INDEX table_dropped_index_no_pk_idx |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | a5abfa948ed4768b88a7d600 | ALTER TABLE table_dropped_index_with_pk REPLICA IDENTITY USING INDEX table_dropped_index_with_pk_idx |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | a5b060ba7d52833ada649383 | ALTER INDEX dummy_test_idx SET (option_int = 10) |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | a5de2099c00140cd96fd737e | ALTER TABLE cwi_test ADD UNIQUE USING INDEX cwi_uniq3_idx |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | a5f683312b0f50a57c83f053 | alter table idxpart add exclude USING GIST (b with =, c with &&) |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | a6701960c9ef6cd1bc8d80e2 | ALTER INDEX dummy_test_idx SET (option_enum = 0) |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | a69099b84ff982af55026c30 | ALTER INDEX tbspace_reindex_part_index_0 ATTACH PARTITION tbspace_reindex_part_index_0_1 |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | a69b666b3a412e963944c033 | -- fail, not our index ALTER TABLE test_replica_identity REPLICA IDENTITY USING INDEX test_replica_identity_othertable_pkey |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | a885724c326d6eb4952d11d8 | ALTER TABLE itest6 ALTER COLUMN b SET INCREMENT BY 2 |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | a895f9c65cf387d6b5145d17 | ALTER TABLE tt6 OF tt_t0 |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | ac4e3c442800b1f45ad9ae5e | ALTER INDEX dummy_test_idx RESET (option_string_val) |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | ac90b987fb42dbbac4748c69 | ALTER TABLE notnull_tbl1 ADD CONSTRAINT nntbl1_a NOT NULL a NOT VALID |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | ad22cba290238275ce7cc4f6 | -- should fail because of duplicate referenced columns: ALTER TABLE temporal_fk_rng2rng ADD CONSTRAINT temporal_fk_rng2rng_fk2 FOREIGN KEY (parent_id, PERIOD parent_id) REFERENCES temporal_rng (id,... |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | af0487dd5044bcf8994da260 | ALTER TABLE parent ALTER COLUMN a SET GENERATED BY DEFAULT |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | af20e671373e7cb267fef038 | ALTER INDEX testschema.part_a_idx SET TABLESPACE pg_global |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | afcb4b2f9c2a83f3c57de0b3 | ALTER TABLE pp_nn_1 ADD CONSTRAINT nn NOT NULL a NOT VALID |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | afe5ec110611fb9b962bda15 | -- fail alter index idxpart_2_idx attach partition idxpart1_2c_idx |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | b00a731098108bcfc499d9e3 | -- ALTER CONSTRAINT NO INHERIT should work on top-level constraints alter table inh_nn1 alter constraint inh_nn1_f1_not_null no inherit |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | b023832199e29669a483d567 | ALTER TABLE temporal_fk_rng2rng ADD CONSTRAINT temporal_fk_rng2rng_fk FOREIGN KEY (parent_id, PERIOD valid_at) REFERENCES temporal_rng ON DELETE SET NULL ON UPDATE SET NULL |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | b0ee61eb81babc1523275056 | ALTER VIEW rw_view1 SET (security_barrier = true) |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | b1b94501b997bea3300eec22 | ALTER TABLE fk_partitioned_fk_2 ADD CONSTRAINT fk_partitioned_fk_a_b_fkey FOREIGN KEY (a, b) REFERENCES fk_notpartitioned_pk NOT ENFORCED |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | b1f696c028769cd88a097e22 | ALTER TABLE tt7 OF tt_t1 |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | b3355931d7524216733e7bdd | ALTER TABLE temporal_fk_rng2rng ADD CONSTRAINT temporal_fk_rng2rng_fk FOREIGN KEY (parent_id, PERIOD valid_at) REFERENCES temporal_rng |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | b379dcd9bcd856fc89df761a | alter view base_tab_def_view alter b set default 'View default' |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | b3c13fbaf6c796cd149403f5 | alter table inh_nn_parent add not null a no inherit |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | b474c154cb01b958a79379bd | --ok -- SET EXPRESSION supports not null constraint ALTER TABLE gtest21ax ALTER COLUMN b SET EXPRESSION AS (nullif(a, 1)) |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | b582178a1247aadc2e2c8601 | alter index idxpart attach partition idxpart1 |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | b6fc881973005565e6d39132 | alter index idxpart_c attach partition idxpart1_c |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | b704e4f7404ea84c227e2bb6 | ALTER TABLE temporal_fk_rng2rng ALTER COLUMN parent_id SET DEFAULT '[-1,-1]', ADD CONSTRAINT temporal_fk_rng2rng_fk FOREIGN KEY (parent_id, PERIOD valid_at) REFERENCES temporal_rng ON DELETE SET DE... |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | b7831adc966f966c3e12a309 | -- Enforceability also changes the validate state, as data validation will be -- performed during this transformation. ALTER TABLE FKTABLE ALTER CONSTRAINT fk_con ENFORCED |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | b8a8efdcc16c8706b5e55114 | alter table inh_parent add constraint inh_parent_excl exclude ((1) with =) |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | b9a1be2a15ef9f02472f2d5f | ALTER TABLE regtest_ptable_4_ones ADD CONSTRAINT regtest_ptbl4_con EXCLUDE USING btree (z WITH =) |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | bc845f94c5cf4831ce511459 | -- change NO INHERIT status of inherited constraint: no dice, it's inherited alter table cc2 add not null a2 no inherit |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | bca6bf4385beeb641639812b | ALTER INDEX gin_check_idx SET (fastupdate = false) |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | be928748aae7b3d425c0c462 | ALTER MATERIALIZED VIEW heapmv SET ACCESS METHOD heap2 |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | beac01c79c98d677cf79c884 | ALTER TABLE fktable ALTER CONSTRAINT fktable_fk_fkey NO INHERIT |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | bfd419b079cb66153749b64b | ALTER TABLE cwi_test ADD PRIMARY KEY USING INDEX cwi_a_nnd |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | c06ad3a56e27ae102f36e8a6 | ALTER TABLE cwi_test DROP CONSTRAINT cwi_uniq_idx, ADD CONSTRAINT cwi_replaced_pkey PRIMARY KEY USING INDEX cwi_uniq2_idx |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | c0c62652e477ae7e3aea53fe | ALTER INDEX bloomidx SET (length=80) |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | c3120532d2a3a679c82db4fa | ALTER INDEX tbl_idx ALTER COLUMN 3 SET STATISTICS 1000 |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | c3a876e00f10cbed6d02cd5e | ---- -- Make sure we detect ineligible indexes ---- -- fail, not unique ALTER TABLE test_replica_identity REPLICA IDENTITY USING INDEX test_replica_identity_keyab |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | c4058bb7449ca41162ce33ec | -- can't override ALTER TABLE ATACC1 ADD CONSTRAINT ditto NOT NULL a |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | c48f41dd88f6642ad81a242c | ALTER INDEX attmp_idx ALTER COLUMN 4 SET STATISTICS 1000 |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | c4cefb91a77fa605e88b03cc | ALTER INDEX attmp_idx ALTER COLUMN 2 SET STATISTICS 1000 |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | c6bec0baea71c10efacf52a8 | -- now it works alter index idxpart_pkey attach partition idxpart0_a_key |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | c704cc1cd5437ea97f0f0ecb | alter view uv_iocu_view alter column bb set default 'view default' |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | c8622a537ce1a8ccdfed3e4d | -- Reverting it back to ENFORCED will result in failure because constraint validation will be triggered, -- as it was previously in a valid state. ALTER TABLE FKTABLE ALTER CONSTRAINT fktable_ftest... |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | caec240e30f6e298188000ec | alter table p1 add constraint inh_check_constraint6 check (f1 < 10) not enforced |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | ccc685a68ba1ad0cf92a2f4d | ALTER INDEX ptif_test_index ATTACH PARTITION ptif_test1_index |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | cd5e3bdf111057ed424641a6 | ALTER TABLE ref ALTER CONSTRAINT ref_f1_f2_fkey_1 DEFERRABLE INITIALLY DEFERRED |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | ce85fa45dc82b3a3373657c6 | alter index idxpart_1_idx attach partition idxpart1_1b_idx |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | cee9ae5e30f5dd198771f24a | ALTER VIEW rw_view15 ALTER COLUMN upper SET DEFAULT 'NOT SET' |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | d0dd19985745a1f4178242dd | alter view my_locks set (security_barrier=off) |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | d10ca0a4a049615be8ae6c47 | -- failure: changing replica identity to FULL for partition fails, because -- of the column list on the parent ALTER TABLE testpub_tbl8_0 REPLICA IDENTITY FULL |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | d2251e1184bb31cc108a6e1e | ALTER TABLE pp_nn_1 ADD CONSTRAINT nn1 NOT NULL a NOT VALID |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | d277c80127b0711fe83054fc | ALTER TABLE rf_tbl_abcd_pk REPLICA IDENTITY USING INDEX idx_abcd_pk_c |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | d2f7c5fc9ffadccbceb7e5e1 | ALTER TABLE deferred_excl ADD EXCLUDE (f1 WITH =) |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | d4c97fa6d07665dd11df1ee0 | -- Case 3. REPLICA IDENTITY NOTHING ALTER TABLE rf_tbl_abcd_pk REPLICA IDENTITY NOTHING |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | d5296fbf49f916c984a67134 | -- but reverse is not allowed alter table p1_c1 add constraint inh_check_constraint7 check (f1 < 10) not enforced |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | d586b00f9204fda83e76246c | ALTER TABLE temporal3 ADD COLUMN valid_at daterange, ADD CONSTRAINT temporal3_pk PRIMARY KEY (id, valid_at WITHOUT OVERLAPS) |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | d593733eb6c6037e217f8682 | ALTER INDEX attmp_idx ALTER COLUMN 1 SET STATISTICS 1000 |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | d5b03cbff2f78f01b85e338f | alter view my_locks reset (security_barrier) |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | d64bec5a84483a4ac576deaf | ALTER TABLE temporal_rng3 ADD CONSTRAINT temporal_rng3_uq UNIQUE (id, valid_at WITHOUT OVERLAPS) |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | d66625128edae2e59da71496 | -- violates constraint ALTER TABLE gtest20 ALTER COLUMN b SET EXPRESSION AS (a * 100) |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | d6ca0e2201607ceccdfd5a7b | ALTER INDEX dummy_test_idx SET (option_string_val = 3.5) |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | d6f25e593fb67c2079f8a727 | ALTER TABLE FKTABLE ALTER CONSTRAINT fk_con DEFERRABLE INITIALLY DEFERRED |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | d9c7b16053dba1fc38424edb | alter table anothertab add exclude using btree (f4 with =) where (f5 > 0) |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | dabddb74f2623bf417ca75b8 | -- -- partitioned FK referenced deletes CASCADE -- -- -- partitioned FK referenced updates SET NULL -- ALTER TABLE temporal_partitioned_fk_rng2rng DROP CONSTRAINT temporal_partitioned_fk_rng2rng_fk... |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | dabe0703c57b59cc33690da1 | alter index idxpart_a_b_idx attach partition idxpart1_tst3 |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | db1230cc378331913785b456 | ALTER TABLE rf_tbl_abcd_nopk REPLICA IDENTITY FULL |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | db51a878ca8ad36a29c7f453 | alter index idxpart_a_b_idx attach partition idxpart1_2_a_b |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | db57a3c9547c83b375d50c47 | ALTER INDEX btree_part_idx ALTER COLUMN id SET (n_distinct=100) |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | db64ec2334f6dbb67fab04ad | -- -- partitioned FK referenced deletes SET NULL -- -- -- partitioned FK referenced updates SET DEFAULT -- ALTER TABLE temporal_partitioned_fk_mltrng2mltrng ALTER COLUMN parent_id SET DEFAULT '[0,1... |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | db6f46967a5bca7b287621bf | alter index idxpart_2_idx attach partition idxpart1_2b_idx |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | dbba17f1866801cd77b4f892 | ALTER TABLE notnull_part1_3_upg add CONSTRAINT nn3 NOT NULL a NOT VALID |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | dbbae83ff739842cbf00653c | -- try to drop a nonexistant constraint alter table inh_nn1 alter constraint foo inherit |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | dccac0246aaa8fcf541744b7 | ALTER TABLE notnull_tbl1_3 add CONSTRAINT nn3 NOT NULL a NOT VALID |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | ddc65e2ca1e53d86a1184f68 | alter index spgist_point_idx set (fillfactor = 90) |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | de72c48f86fb38ac15adc2ca | ALTER TABLE pg_namespace ADD CONSTRAINT foo UNIQUE USING INDEX pg_namespace_nspname_index |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | dfaf51924c8ab5a6617f6bd3 | ALTER TABLE temporal_rng ADD CONSTRAINT temporal_rng_pk PRIMARY KEY (id, valid_at WITHOUT OVERLAPS) |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | dfc5e36ec9a1ebd3690f86fd | alter index idxpart_pkey attach partition idxpart1_a_idx |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | e1c61e5c7258fd8c4945aa6e | ALTER TABLE notnull_tbl1 ADD CONSTRAINT foobar NOT NULL a |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | e255b6aa0359586dc1629730 | alter view my_locks set (autovacuum_enabled = false) |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | e38858f92e613c81a4f982f1 | ALTER INDEX dummy_test_idx SET (option_enum = 'one') |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | e485801b24502aa963fd3dd1 | -- fail alter index idxpart_2_idx attach partition idxpart1_2_idx |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | e5acb0edd3483f321c1e1a39 | -- error ALTER TABLE gtest23b ALTER COLUMN b SET EXPRESSION AS (a * 5) |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | e612e81e944038f6a85d2bd1 | ALTER INDEX dummy_test_idx SET (option_string_val = 'val2') |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | e6a2182ffdd766603232eabd | ALTER TABLE concur_replident REPLICA IDENTITY USING INDEX concur_replident_i_idx |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | e6a31992f581f66d1c213c2f | /* but works fine with FULL replica identity */ ALTER TABLE testpub_tbl5d REPLICA IDENTITY FULL |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | e7fda49144b0bd2b12f930a8 | ALTER TABLE notnull_inhparent ADD CONSTRAINT nn NOT NULL i NOT VALID |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | e83b8ecaa00c8915fd3a33c5 | ALTER INDEX dummy_test_idx SET (option_bool = true) |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | e887911d735bb9cc81946bc3 | alter table p1_c1 add constraint inh_check_constraint3 check (f1 > 0) not enforced |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | e88ed6946937b3c0f66d6d89 | -- fail, expression index ALTER TABLE test_replica_identity REPLICA IDENTITY USING INDEX test_replica_identity_expr |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | e8f40404ebbd63a7d7a5f43c | ALTER TABLE testpub_tbl6 REPLICA IDENTITY FULL |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | ea04f7b86fd3cb9784e6e2d0 | alter table constr_parent add not null a not valid |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | ea6248c73b6620229dc60839 | alter index idxpart1_a_idx attach partition idxpart11_a_idx |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | eb733060851afb500025855d | -- violates constraint ALTER TABLE gtest20 ALTER COLUMN b SET EXPRESSION AS (a * 3) |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | ebe6968349b5dbc1768287de | ALTER TABLE tbl_include_unique1 add UNIQUE USING INDEX tbl_include_unique1_idx_unique |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | ec819a211650e2b2a45ae15f | ALTER TABLE pub_test.testpub_addpk ADD PRIMARY KEY USING INDEX testpub_addpk_id_idx |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | ed1b1e14666e7cc4b720945e | ALTER TABLE attmp ALTER COLUMN i RESET (n_distinct_inherited) |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | eded3053553be030fb44c969 | -- ok ALTER VIEW gtest1v ALTER COLUMN b SET DEFAULT 100 |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | ef181a9c0e0f7ea5d400e442 | alter index idxpart_expr_idx attach partition idxpart1_expr_idx |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | efec3493910630d8a78d1c30 | ALTER TABLE temporal_fk_rng2rng ADD CONSTRAINT temporal_fk_rng2rng_fk FOREIGN KEY (parent_id, PERIOD valid_at) REFERENCES temporal_rng ON DELETE CASCADE ON UPDATE CASCADE |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | f09cdeda341541d6056ea3ce | alter index idxpart_a_b_idx attach partition idxpart1 |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | f09ffbab58297e346fe281d0 | ALTER INDEX ptif_test0_index ATTACH PARTITION ptif_test01_index |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | f14fa241bb60e6d2a8324868 | ALTER TABLE tt4 OF tt_t0 |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | f1c5bd0ed2bd9569fc2c671d | ALTER TABLE temporal_mltrng3 ADD CONSTRAINT temporal_mltrng3_uq UNIQUE (id, valid_at WITHOUT OVERLAPS) |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | f318db23984d00fd50b675df | -- Can change enforceability and deferrability together ALTER TABLE FKTABLE ALTER CONSTRAINT fk_con NOT ENFORCED NOT DEFERRABLE |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | f33ab2c90b229a8152a48165 | ALTER VIEW my_property_secure SET (security_barrier=false) |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | f3d147a774a673417530660e | ALTER INDEX dummy_test_idx SET (option_int = 3.3) |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | f476bb3135c960d69443c279 | ALTER INDEX tbl_idx ALTER COLUMN 1 SET STATISTICS 1000 |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | f528f1bae131d62b4a0738ac | ALTER TABLE gtest25 ADD COLUMN b int GENERATED ALWAYS AS (a * 2) VIRTUAL, ALTER COLUMN b SET EXPRESSION AS (a * 3) |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | f627bff050abaa0ceb85ca40 | -- succeed unique index over nonnullable cols ALTER TABLE test_replica_identity REPLICA IDENTITY USING INDEX test_replica_identity_keyab_key |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | f635ebcc747c6c85b3333c9a | -- error ALTER TABLE gtestnn_parent ALTER COLUMN f3 SET EXPRESSION AS (nullif(f1, 2) + nullif(f2, 11)) |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | f64203351c54f46ab7f4bb27 | ALTER TABLE unique_tbl ALTER CONSTRAINT unique_tbl_i_key NOT ENFORCED |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | f66cc71e6dc8e1056b5369bf | ALTER INDEX tbl_idx ALTER COLUMN 2 SET STATISTICS 1000 |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | f6cc57072a1aa6bb4d5451d4 | alter index gin_test_idx set (fastupdate = off) |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | f950d97b5bd831ed0917f5f8 | alter table p1 add constraint inh_check_constraint5 check (f1 < 10) not enforced |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | f9b760051fb47632c37ebd59 | ALTER TABLE ref22 ALTER CONSTRAINT ref_f1_f2_fkey DEFERRABLE INITIALLY IMMEDIATE |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | f9b7a0df44cac8d5d47af8f2 | ALTER INDEX dummy_test_idx SET (option_bool = 4) |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | fa00612ff20ea7a2cbfc4e38 | alter view my_locks reset (autovacuum_enabled) |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | fb6093628d03b0d9e0d31126 | alter table inh_nn1 -- test multicommand alter table while at it alter constraint inh_nn1_f1_not_null inherit, alter constraint inh_nn1_f1_not_null no inherit |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | fbd89346bbd340e555f5f58f | ALTER INDEX testschema.part_a_idx SET TABLESPACE regress_tblspace |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | fbe1c51df54b59822b831481 | ALTER TABLE gtest31_1 ALTER COLUMN b SET EXPRESSION AS ('hello1') |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | fbe75289877ee56f78c7737b | -- Try to use existing covering index as primary key ALTER TABLE covering_index_heap ADD CONSTRAINT covering_pkey PRIMARY KEY USING INDEX covering_pkey |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | fbf96ef5f7aaba0c1455742b | ALTER INDEX btree_tall_idx2 ALTER COLUMN id SET (n_distinct=100) |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | fc4852ad077ca0b3b857fe8e | ALTER INDEX ptif_test_index ATTACH PARTITION ptif_test0_index |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | fc9e733f289135904bf23d98 | ALTER TABLE notnull_part1_upg ADD CONSTRAINT notnull_con NOT NULL a NOT VALID |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | fe2473ec586eaebcd216a17d | alter view base_tab_view alter column c set default 'View default' |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TSCONFIGURATION_STMT | 00b8e077303276c06f56d685 | ALTER TEXT SEARCH CONFIGURATION dummy_tst DROP MAPPING IF EXISTS FOR not_a_token, not_a_token |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TSCONFIGURATION_STMT | 030a3b95da02bcb8eb2e1f35 | ALTER TEXT SEARCH CONFIGURATION dummy_tst ADD MAPPING FOR not_a_token WITH ispell |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TSCONFIGURATION_STMT | 085aadd36d04726127b18e4b | ALTER TEXT SEARCH CONFIGURATION hunspell_tst ALTER MAPPING REPLACE hunspell_long WITH hunspell_num |
@@ -1055,159 +706,10 @@ libpg_query target: `18-latest` `9ab9951b7021adcc6d25d261d5016ca0b83726b8` (Post
 | ERROR | PG_QUERY__NODE__NODE_CREATE_PUBLICATION_STMT | f22ecfe8ddb8e0e775128929 | -- check create publication on a system schema CREATE PUBLICATION testpub_forschema FOR TABLES IN SCHEMA pg_catalog |
 | ERROR | PG_QUERY__NODE__NODE_CREATE_PUBLICATION_STMT | f3552df4f4679386ebece8fe | CREATE PUBLICATION testpub4 FOR TABLE ONLY testpub_tbl3 |
 | ERROR | PG_QUERY__NODE__NODE_CREATE_PUBLICATION_STMT | fdbd82862a3f0a4b6962d85a | -- Firstly, test using the option publish='insert' because the row filter -- validation of referenced columns is less strict than for delete/update. CREATE PUBLICATION testpub5 FOR TABLE testpub_rf... |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STMT | 02f7e9a73462b5a1bcb5e9c2 | -- partitioned table have not-null, then the partitions can not be NOT NULL NOT VALID. CREATE TABLE pp_nn (a int, b int, NOT NULL a) PARTITION BY LIST (a) |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STMT | 0373dac26c5f4f3a3bee1365 | -- (parent_id, valid_at) REFERENCES [implicit] -- FOREIGN KEY part should specify PERIOD CREATE TABLE temporal_fk_mltrng2mltrng ( id int4range, valid_at datemultirange, parent_id int4range, CONSTRA... |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STMT | 052446778ffd0dc01156e4b4 | -- PK with a non-range column: CREATE TABLE temporal_rng ( id int4range, valid_at TEXT, CONSTRAINT temporal_rng_pk PRIMARY KEY (id, valid_at WITHOUT OVERLAPS) ) |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STMT | 052d707aab1b7244371458ad | CREATE TABLE zoo ( cage INTEGER, animal TEXT, EXCLUDE USING gist (cage WITH =, animal WITH <>) ) |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STMT | 083072c01339908c963b3de5 | -- -- FK between partitioned tables: ranges -- CREATE TABLE temporal_partitioned_rng ( id int4range, valid_at daterange, name text, CONSTRAINT temporal_paritioned_rng_pk PRIMARY KEY (id, valid_at W... |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STMT | 0c7b2b01453fc253a109d51f | -- Not OK with just -\|- create table idxpart (a int4range, exclude USING GIST (a with -\|- )) partition by range (a) |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STMT | 0eddf1d21f4d3e10ecdb9e6a | CREATE TABLE gtest_child PARTITION OF gtest_parent ( f3 WITH OPTIONS GENERATED ALWAYS AS (f2 * 2) STORED ) FOR VALUES FROM ('2016-07-01') TO ('2016-08-01') |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STMT | 0f308b99b0fdf0518de433e5 | -- -- test a range with both a PK and a UNIQUE constraint -- CREATE TABLE temporal3 ( id int4range, valid_at daterange, id2 int8range, name TEXT, CONSTRAINT temporal3_pk PRIMARY KEY (id, valid_at W... |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STMT | 0f8a31b0d34897a09f0360dc | -- inherits gen expr CREATE TABLE gtest_child2 PARTITION OF gtest_parent ( f3 WITH OPTIONS GENERATED ALWAYS AS (f2 * 22) STORED -- overrides gen expr ) FOR VALUES FROM ('2016-08-01') TO ('2016-09-01') |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STMT | 1332a561e4517f4b8b01bf3b | -- works: PERIOD for both referenced and referencing CREATE TABLE temporal_fk_rng2rng ( id int4range, valid_at daterange, parent_id int4range, CONSTRAINT temporal_fk_rng2rng_pk PRIMARY KEY (id, val... |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STMT | 137e8cc51661164506e89e57 | -- with a UNIQUE constraint: CREATE TABLE temporal3 ( id int4range, valid_at daterange, CONSTRAINT temporal3_uq UNIQUE (id, valid_at WITHOUT OVERLAPS) ) |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STMT | 14cd86df22620c26c23bb2a5 | -- OK with equals and &&, and equals is the partition key create table idxpart (a int4range, b int4range, exclude USING GIST (a with =, b with &&)) partition by range (a) |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STMT | 16001e99d52f0dc0a521aee2 | create table notnull_tbl_fail (like notnull_tbl1, constraint foo2 not null a) |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STMT | 16c4cda0453f54ab75bc1764 | create table notnull_tbl_fail (a serial constraint foo not null, constraint bar not null a) |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STMT | 1901e722050be4fece30c49a | -- Core must test WITHOUT OVERLAPS -- with an int4range + daterange, -- so here we do some simple tests -- to make sure int + daterange works too, -- since that is the expected use-case. CREATE TAB... |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STMT | 19bf5f89125e5a6213ff7a63 | create table parttmp (id int, valid_at daterange, exclude using gist (id with <>, valid_at with &&)) partition by range (id) |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STMT | 1ac101cc2bb38517a5cb63f9 | CREATE TABLE inh_nn3 (a int not null, b int, not null a no inherit) |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STMT | 1bdf5923ce4e0bacd614f73e | create table rewritemetoo1 of rewritetype |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STMT | 1d399ebbc1f1f331e66bf21f | CREATE TABLE INSERT_TBL (x INT DEFAULT nextval('insert_seq'), y TEXT DEFAULT '-NULL-', z INT DEFAULT -1 * currval('insert_seq'), CONSTRAINT INSERT_TBL_CON CHECK (x >= 3 AND y <> 'check failed' AND ... |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STMT | 1e45375992223036a8b79d9c | -- error CREATE TABLE persons2 OF person_type ( id WITH OPTIONS PRIMARY KEY, UNIQUE (name) ) |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STMT | 1f03ffd6eab51f49b0cc234d | create table notnull_tbl_fail (a serial, constraint foo not null a, constraint bar not null a) |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STMT | 1f0be52ded51a12f8e9f533a | -- with mismatched PERIOD columns: -- (parent_id, PERIOD valid_at) REFERENCES (id, valid_at) -- REFERENCES part should specify PERIOD CREATE TABLE temporal_fk_mltrng2mltrng ( id int4range, valid_at... |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STMT | 202d0390549e77243e776b68 | CREATE TABLE gtest_child PARTITION OF gtest_parent ( f3 WITH OPTIONS GENERATED ALWAYS AS (f2 * 2) VIRTUAL ) FOR VALUES FROM ('2016-07-01') TO ('2016-08-01') |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STMT | 2194160e0257f3b7fc98d949 | -- NOT NULL NO INHERIT CREATE TABLE ATACC1 (a int, NOT NULL a NO INHERIT) |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STMT | 21ab5f0e2c6fe5814515315a | CREATE TABLE test6a OF priv_testtype1 |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STMT | 22855f1069d95232e3362327 | -- with inferred PK on the referenced table: -- (parent_id, PERIOD valid_at) REFERENCES [implicit] CREATE TABLE temporal_fk_mltrng2mltrng ( id int4range, valid_at datemultirange, parent_id int4rang... |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STMT | 22fd61558cce9a0f71a63bdc | -- (parent_id, valid_at) REFERENCES (id, PERIOD valid_at) -- FOREIGN KEY part should specify PERIOD CREATE TABLE temporal_fk_mltrng2mltrng ( id int4range, valid_at datemultirange, parent_id int4ran... |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STMT | 25c164d58ea1e8fd593eff6f | create table test_range_excl( room int4range, speaker int4range, during tsrange, exclude using gist (room with =, during with &&), exclude using gist (speaker with =, during with &&) ) |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STMT | 26a07b17ab324b96d2100c04 | CREATE TABLE gtest_child3 PARTITION OF gtest_parent ( f3 WITH OPTIONS GENERATED ALWAYS AS IDENTITY -- error ) FOR VALUES FROM ('2016-09-01') TO ('2016-10-01') |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STMT | 27a098077b6c1502e6627071 | -- OK more than one equal column and a && column create table idxpart (a int4range, b int4range, c int4range, exclude USING GIST (a with =, b with =, c with &&)) partition by range (a, b) |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STMT | 287485e0e18c0407aa63c0ab | CREATE TABLE evttrig.part_10_20 PARTITION OF evttrig.parted (id) FOR VALUES FROM (10) TO (20) PARTITION BY RANGE (id) |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STMT | 2920a3de69e53dc900458fa4 | create table idxpart1pk partition of idxpart (a primary key) for values from (0) to (100) |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STMT | 2e642fae9f3ad006f51a0e8f | -- Can't create a FK with a mismatched range type CREATE TABLE temporal_fk_rng2rng ( id int4range, valid_at int4range, parent_id int4range, CONSTRAINT temporal_fk_rng2rng_pk2 PRIMARY KEY (id, valid... |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STMT | 30518955ebb8946981e6e9a0 | -- UNIQUE with no columns just WITHOUT OVERLAPS: CREATE TABLE temporal_rng3 ( valid_at daterange, CONSTRAINT temporal_rng3_uq UNIQUE (valid_at WITHOUT OVERLAPS) ) |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STMT | 346df8ed7b7344878b9e94ea | create table notnull_tbl_fail (a int primary key, not null a no inherit) |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STMT | 34cb78453aa5e95389f8bdb5 | -- (parent_id, valid_at) REFERENCES (id, valid_at) -- both should specify PERIOD: CREATE TABLE temporal_fk_mltrng2mltrng ( id int4range, valid_at datemultirange, parent_id int4range, CONSTRAINT tem... |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STMT | 36a48f183333de6dfa1698b8 | -- violates constraint -- also check with table constraint syntax CREATE TABLE gtest21ax (a int PRIMARY KEY, b int GENERATED ALWAYS AS (nullif(a, 0)) VIRTUAL, CONSTRAINT cc NOT NULL b) |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STMT | 39bc12329f1fc8a58d99dcfa | -- (parent_id, valid_at) REFERENCES (id, PERIOD valid_at) -- FOREIGN KEY part should specify PERIOD CREATE TABLE temporal_fk_rng2rng ( id int4range, valid_at daterange, parent_id int4range, CONSTRA... |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STMT | 39c5ea39f79875df7ec21748 | -- on another column create table parted_collate_must_match2 partition of parted_collate_must_match (b collate "POSIX") for values from ('m') to ('z') |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STMT | 3bfc1c638ece59a5343e830d | -- -- test PARTITION BY for ranges -- -- temporal PRIMARY KEY: CREATE TABLE temporal_partitioned ( id int4range, valid_at daterange, name text, CONSTRAINT temporal_paritioned_pk PRIMARY KEY (id, va... |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STMT | 3d848c5e0cccf824ad30c6a8 | CREATE TABLE gtest_child3 PARTITION OF gtest_parent ( f3 DEFAULT 42 -- error ) FOR VALUES FROM ('2016-09-01') TO ('2016-10-01') |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STMT | 3e8dd9b821a04fe553198705 | -- UNIQUE with two columns plus a range: CREATE TABLE temporal_rng3 ( id1 int4range, id2 int4range, valid_at daterange, CONSTRAINT temporal_rng3_uq UNIQUE (id1, id2, valid_at WITHOUT OVERLAPS) ) |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STMT | 40590822637c196ca7821c37 | create table twoconstraints (f1 int unique, f2 box, exclude using gist(f2 with &&)) |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STMT | 4234aee93fa75719f45878e4 | CREATE TABLE quuux_default1 PARTITION OF quuux_default ( CONSTRAINT check_1 CHECK (a IS NOT NULL AND a = 1) ) FOR VALUES IN ('b') |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STMT | 42742e2389f76d5ee8743480 | -- PK with one column plus a range: CREATE TABLE temporal_rng ( -- Since we can't depend on having btree_gist here, -- use an int4range instead of an int. -- (The rangetypes regression test uses th... |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STMT | 43aa6cfc077691a3afa8cfe4 | -- Two scalar columns: CREATE TABLE temporal_fk2_rng2rng ( id int4range, valid_at daterange, parent_id1 int4range, parent_id2 int4range, CONSTRAINT temporal_fk2_rng2rng_pk PRIMARY KEY (id, valid_at... |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STMT | 458875b3c7eaf8b9d01b33b6 | -- (parent_id, PERIOD valid_at) REFERENCES (id) CREATE TABLE temporal_fk_mltrng2mltrng ( id int4range, valid_at datemultirange, parent_id int4range, CONSTRAINT temporal_fk_mltrng2mltrng_pk PRIMARY ... |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STMT | 468e2928e7348622939e7647 | CREATE TABLE inh_nn4 (a int not null no inherit, b int, not null a) |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STMT | 471defae079fa9bd21722fd9 | -- (parent_id, valid_at) REFERENCES (id, valid_at) -- both should specify PERIOD: CREATE TABLE temporal_fk_rng2rng ( id int4range, valid_at daterange, parent_id int4range, CONSTRAINT temporal_fk_rn... |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STMT | 47939518464a7a0705c5f13c | -- (parent_id) REFERENCES (id, PERIOD valid_at) CREATE TABLE temporal_fk_mltrng2mltrng ( id int4range, valid_at datemultirange, parent_id int4range, CONSTRAINT temporal_fk_mltrng2mltrng_pk PRIMARY ... |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STMT | 48ae818ed664c518903c7a11 | -- (parent_id) REFERENCES (id, PERIOD valid_at) CREATE TABLE temporal_fk_rng2rng ( id int4range, valid_at daterange, parent_id int4range, CONSTRAINT temporal_fk_rng2rng_pk PRIMARY KEY (id, valid_at... |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STMT | 49d7257d75ee6c18e240397d | CREATE TABLE temporal_fk2_mltrng2mltrng ( id int4range, valid_at datemultirange, parent_id1 int4range, parent_id2 int4range, CONSTRAINT temporal_fk2_mltrng2mltrng_pk PRIMARY KEY (id, valid_at WITHO... |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STMT | 4a44d3d51e502142496ad392 | CREATE TABLE notnull_tbl4_cld3 (PRIMARY KEY (a) DEFERRABLE, CONSTRAINT a_nn NOT NULL a) INHERITS (notnull_tbl4) |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STMT | 4ce4e71e7f9fd35d528d65c3 | create table idxpart1 partition of idxpart (i) for values with (modulus 2, remainder 1) |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STMT | 4dbf418a32b6b3eeda4b9bbd | -- (parent_id) REFERENCES [implicit] CREATE TABLE temporal_fk_rng2rng ( id int4range, valid_at daterange, parent_id int4range, CONSTRAINT temporal_fk_rng2rng_pk PRIMARY KEY (id, valid_at WITHOUT OV... |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STMT | 5098bc9eefcb5e76be5b71bc | CREATE TABLE temporal_fk2_rng2rng ( id int4range, valid_at daterange, parent_id1 int4range, parent_id2 int4range, CONSTRAINT temporal_fk2_rng2rng_pk PRIMARY KEY (id, valid_at WITHOUT OVERLAPS), CON... |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STMT | 55cddc8ce8054ae32327709d | -- PK with two columns plus a multirange: CREATE TABLE temporal_mltrng2 ( id1 int4range, id2 int4range, valid_at datemultirange, CONSTRAINT temporal_mltrng2_pk PRIMARY KEY (id1, id2, valid_at WITHO... |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STMT | 55e5b2a4bc9d170cc7ae396d | -- Not OK with equals and &&, and equals is not the partition key create table idxpart (a int4range, b int4range, c int4range, exclude USING GIST (b with =, c with &&)) partition by range (a) |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STMT | 5d872dc225d65e0a9943d3f7 | CREATE TABLE evttrig.part_1_10 PARTITION OF evttrig.parted (id) FOR VALUES FROM (1) TO (10) |
 | ERROR | PG_QUERY__NODE__NODE_CREATE_STMT | 5f4d1d0616ac091ef967f76f | CREATE TABLE withoid() WITH (oids) |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STMT | 64345c1fbe01b1deea447c1f | -- Check deferred exclusion constraint CREATE TABLE deferred_excl ( f1 int, f2 int, CONSTRAINT deferred_excl_con EXCLUDE (f1 WITH =) INITIALLY DEFERRED ) |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STMT | 659bf230c44fa1d51240adfe | -- Foreign key CREATE TABLE temporal_fk_rng2rng ( id integer, valid_at daterange, parent_id integer, CONSTRAINT temporal_fk_rng2rng_pk PRIMARY KEY (id, valid_at WITHOUT OVERLAPS), CONSTRAINT tempor... |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STMT | 65c363e3d01f4041b04f8e91 | CREATE TABLE temporal_partitioned_fk_rng2rng ( id int4range, valid_at daterange, parent_id int4range, CONSTRAINT temporal_partitioned_fk_rng2rng_pk PRIMARY KEY (id, valid_at WITHOUT OVERLAPS), CONS... |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STMT | 6875a7ce24d8079f5aa42e1e | CREATE TABLE temporal_rng3 ( id int4range, valid_at textrange2, CONSTRAINT temporal_rng3_pk PRIMARY KEY (id, valid_at WITHOUT OVERLAPS) ) |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STMT | 68e191de21fe4f7dbf051d0b | CREATE TABLE test6b OF priv_testtype1 |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STMT | 6b6d622e39fc8a3ce018119e | -- Not OK more than one equal column: partition keys are a proper superset of constraint create table idxpart (a int4range, b int4range, exclude USING GIST (a with = )) partition by range (a, b) |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STMT | 6ba6d816e6d359f28c97cc5d | -- Can't create a FK with a mismatched multirange type CREATE TABLE temporal_fk_mltrng2mltrng ( id int4range, valid_at int4multirange, parent_id int4range, CONSTRAINT temporal_fk_mltrng2mltrng_pk2 ... |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STMT | 6feee5604a6ed57ad15e47a8 | CREATE TABLE pitest_pfail PARTITION OF pitest3 ( f3 WITH OPTIONS GENERATED ALWAYS AS IDENTITY ) FOR VALUES FROM ('2016-07-01') TO ('2016-08-01') |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STMT | 71e9101f7b0ba15930c56028 | CREATE TABLE notnull_tbl1_2(a int, CONSTRAINT nn2 NOT NULL a, b int) |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STMT | 7679840521e89df74d3c0f13 | -- OK with more than one equal column: constraint is a proper superset of partition key create table idxpart (a int4range, b int4range, exclude USING GIST (a with =, b with =)) partition by range (a) |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STMT | 76e651025b1f0e66722b0d2e | -- (parent_id) REFERENCES [implicit] CREATE TABLE temporal_fk_mltrng2mltrng ( id int4range, valid_at datemultirange, parent_id int4range, CONSTRAINT temporal_fk_mltrng2mltrng_pk PRIMARY KEY (id, va... |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STMT | 7a38ad345b9f616861b5631e | CREATE TABLE temporal_fk_mltrng2mltrng ( id int4range, valid_at datemultirange, parent_id int4range, CONSTRAINT temporal_fk_mltrng2mltrng_pk PRIMARY KEY (id, valid_at WITHOUT OVERLAPS), CONSTRAINT ... |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STMT | 7aa4070f22bbfb763e3554d2 | CREATE TABLE fail_part OF mytype |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STMT | 7b2e04f5a66d61fb0023d054 | create table parted_conflict_test_1 partition of parted_conflict_test (b unique) for values in (1, 2) |
 | ERROR | PG_QUERY__NODE__NODE_CREATE_STMT | 7bfbc8c3dfe3165c0366e675 | -- Specifying name only for a non-Boolean option should fail CREATE TABLE reloptions_test2(i INT) WITH (fillfactor) |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STMT | 7d478c091aa66ac3ae9865fb | CREATE TABLE IF NOT EXISTS fkey_table ( id INT NOT NULL DEFAULT nextval('fkey_table_seq'::REGCLASS), datatype_id INT NOT NULL REFERENCES datatype_table(id), big_id BIGINT NOT NULL, sometext TEXT CO... |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STMT | 7fbb65ae718d0f3596e3d8d7 | CREATE TABLE temporal_partitioned_fk_mltrng2mltrng ( id int4range, valid_at datemultirange, parent_id int4range, CONSTRAINT temporal_partitioned_fk_mltrng2mltrng_pk PRIMARY KEY (id, valid_at WITHOU... |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STMT | 81500b98978b84ab972f7eea | -- (parent_id, valid_at) REFERENCES [implicit] -- FOREIGN KEY part should specify PERIOD CREATE TABLE temporal_fk_rng2rng ( id int4range, valid_at daterange, parent_id int4range, CONSTRAINT tempora... |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STMT | 84218c4bef457c7e169dde74 | CREATE TABLE employees OF employee_type ( PRIMARY KEY (name), salary WITH OPTIONS DEFAULT 1000 ) |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STMT | 85f173318ba7d3831e91f522 | CREATE TABLE fk_partitioned_fk_2 (b int, a int, CONSTRAINT fk_part_con FOREIGN KEY (a, b) REFERENCES fk_notpartitioned_pk ON UPDATE CASCADE ON DELETE CASCADE NOT ENFORCED) |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STMT | 8776a8f1668f7d1a5607897e | -- inherits gen expr CREATE TABLE gtest_child2 PARTITION OF gtest_parent ( f3 WITH OPTIONS GENERATED ALWAYS AS (f2 * 22) VIRTUAL -- overrides gen expr ) FOR VALUES FROM ('2016-08-01') TO ('2016-09-... |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STMT | 88e5f6d05b9670864cc5bff4 | create table notnull_tbl_fail (a int, primary key(a), not null a no inherit) |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STMT | 8b9e0571e2230b12956036cd | create table parted_notnull_inh_test1 partition of parted_notnull_inh_test (a not null, b default 1) for values in (1) |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STMT | 8d9ed8586bff1603fda00207 | CREATE TABLE itest12 OF itest_type (f1 WITH OPTIONS GENERATED ALWAYS AS IDENTITY) |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STMT | 908f59091ffe87e16c6ad471 | CREATE TABLE tbl (c1 int,c2 int, c3 int, c4 box, EXCLUDE USING btree (c1 WITH =) INCLUDE(c3,c4)) |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STMT | 90c5b39eae82ddb9edfdab27 | /* * 6. EXCLUDE constraint. */ CREATE TABLE tbl_gist (c1 int, c2 int, c3 int, c4 box, EXCLUDE USING gist (c4 WITH &&) INCLUDE (c1, c2, c3)) |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STMT | 95626d956689562cc3c3bb71 | create table notnull_tbl_fail (a int generated by default as identity, constraint foo not null a no inherit) |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STMT | 99bab07b6372501100870c99 | CREATE TABLE temporal_rng4 ( id int4range, valid_at int4_d_range, CONSTRAINT temporal_rng4_pk PRIMARY KEY(id, valid_at WITHOUT OVERLAPS) ) |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STMT | 99e8f4d0eb0f8b4814fc3a2a | -- temporal UNIQUE: CREATE TABLE temporal_partitioned ( id int4range, valid_at daterange, name text, CONSTRAINT temporal_paritioned_uq UNIQUE (id, valid_at WITHOUT OVERLAPS) ) PARTITION BY LIST (id) |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STMT | 9b8cd0c503af545be26a1f7b | CREATE TABLE test_tbl2 OF test_type2 |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STMT | 9c3fb667aafdb9a40b638b1c | -- -- FK between partitioned tables: multiranges -- CREATE TABLE temporal_partitioned_mltrng ( id int4range, valid_at datemultirange, name text, CONSTRAINT temporal_paritioned_mltrng_pk PRIMARY KEY... |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STMT | 9c4f79c6961dab888d7518a1 | -- it's not possible to override a no-inherit constraint with an inheritable one CREATE TABLE ATACC2 (a int, CONSTRAINT a_is_not_null NOT NULL a NO INHERIT) |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STMT | a05a4b354f24fdae31edc338 | CREATE TABLE ATACC1 (a int, NOT NULL a NO INHERIT) PARTITION BY LIST (a) |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STMT | a1d87f477ba2589ed1113849 | -- -- EXCLUDE constraints -- CREATE TABLE circles ( c1 CIRCLE, c2 TEXT, EXCLUDE USING gist (c1 WITH &&, (c2::circle) WITH &&) WHERE (circle_center(c1) <> '(0,0)') ) |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STMT | a29d6d2d7333881cef5c6445 | -- OK to add an exclusion constraint if partitioning by its equal column create table idxpart (a int4range, exclude USING GIST (a with = )) partition by range (a) |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STMT | a2f66fb5fa2ae207e5f2826f | -- UNIQUE with a non-range column: CREATE TABLE temporal_rng3 ( id int4range, valid_at TEXT, CONSTRAINT temporal_rng3_uq UNIQUE (id, valid_at WITHOUT OVERLAPS) ) |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STMT | a36a7e443939b334f313e4ae | CREATE TABLE test_ex_constraints ( c circle, EXCLUDE USING gist (c WITH &&) ) |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STMT | a8f6fdf68309bdb9892b2a1a | create table notnull_tbl_fail (a serial, constraint foo not null a no inherit) |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STMT | ab17b28dd8793eac34b7f772 | CREATE TABLE inh_nn_parent (a int, NOT NULL a NO INHERIT) |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STMT | b1d14b184e2108fe1fe61ff5 | CREATE TABLE of_tt_enum_type OF tt_enum_type |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STMT | b360580603369b7efe5db60a | -- OK more than one equal column create table idxpart (a int4range, b int4range, exclude USING GIST (a with =, b with =)) partition by range (a, b) |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STMT | b3685ad731412214ab9ef263 | -- PK with a range column/PERIOD that isn't there: CREATE TABLE temporal_rng ( id INTEGER, CONSTRAINT temporal_rng_pk PRIMARY KEY (id, valid_at WITHOUT OVERLAPS) ) |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STMT | b43015e3f33f0f884d04874d | CREATE TABLE personsx OF person_type (myname WITH OPTIONS NOT NULL) |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STMT | b46382a334c458a9e5ba92c6 | CREATE TABLE evttrig.part_10_15 PARTITION OF evttrig.part_10_20 (id) FOR VALUES FROM (10) TO (15) |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STMT | b59ac750c94e7d6011e698ea | CREATE TABLE gtest_child3 PARTITION OF gtest_parent ( f3 GENERATED ALWAYS AS (f2 * 2) VIRTUAL -- error ) FOR VALUES FROM ('2016-09-01') TO ('2016-10-01') |
 | ERROR | PG_QUERY__NODE__NODE_CREATE_STMT | b61f8504e316d3b54e162ab7 | create table 計算機用語 (用語 text, 分類コード varchar, 備考1Aだよ char(16)) |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STMT | ba59e3969ce8c337671b0f56 | -- able to specify column default, column constraint, and table constraint -- first check the "column specified more than once" error CREATE TABLE part_b PARTITION OF parted ( b NOT NULL, b DEFAULT... |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STMT | bb2b5cb69145dd247c4b54bb | CREATE TABLE temporal_rng2 ( CONSTRAINT temporal_rng_pk PRIMARY KEY (id, valid_at WITHOUT OVERLAPS) ) INHERITS (temporal_rng) |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STMT | bfb59dd8831a5aec6f3a962b | CREATE TABLE persons OF person_type |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STMT | c194637bdbeb411841ce85f0 | -- with mismatched PERIOD columns: -- (parent_id, PERIOD valid_at) REFERENCES (id, valid_at) -- REFERENCES part should specify PERIOD CREATE TABLE temporal_fk_rng2rng ( id int4range, valid_at dater... |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STMT | c1d3f869b2fa36a724587dcc | -- PK with two columns plus a range: CREATE TABLE temporal_rng2 ( id1 int4range, id2 int4range, valid_at daterange, CONSTRAINT temporal_rng2_pk PRIMARY KEY (id1, id2, valid_at WITHOUT OVERLAPS) ) |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STMT | c2d1fc08b20ae31d7973f93d | -- with a UNIQUE constraint: CREATE TABLE temporal_mltrng3 ( id int4range, valid_at datemultirange, CONSTRAINT temporal_mltrng3_uq UNIQUE (id, valid_at WITHOUT OVERLAPS) ) |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STMT | c49d95cd3bd9dc547ed9919b | CREATE TABLE part_b PARTITION OF parted ( b NOT NULL DEFAULT 1, CONSTRAINT check_a CHECK (length(a) > 0), CONSTRAINT check_b CHECK (b >= 0) ) FOR VALUES IN ('b') |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STMT | c4ea21032686d6dbbf7d44c0 | -- should fail because of duplicate referenced columns: CREATE TABLE temporal_fk_mltrng2mltrng ( id int4range, valid_at datemultirange, parent_id int4range, CONSTRAINT temporal_fk_mltrng2mltrng_pk ... |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STMT | c6a0d6b7b02a590422933b0d | CREATE TABLE IF NOT EXISTS persons OF person_type |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STMT | cbd1e51b3e3f8005e41c761c | create table notnull_tbl_fail (a int constraint foo not null, constraint foo not null a no inherit) |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STMT | cc50f50895a77cdbd4fded3b | -- UNIQUE with a range column/PERIOD that isn't there: CREATE TABLE temporal_rng3 ( id INTEGER, CONSTRAINT temporal_rng3_uq UNIQUE (id, valid_at WITHOUT OVERLAPS) ) |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STMT | cec1585fdd4198bb6e1cf24c | CREATE TABLE inh_nn_lvl3 (CONSTRAINT foo NOT NULL a NO INHERIT) INHERITS (inh_nn_lvl2) |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STMT | cf50d100af26e4abf89c9370 | CREATE TABLE gtest28 OF gtest_type (f1 WITH OPTIONS GENERATED ALWAYS AS (f2 *2) STORED) |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STMT | d03b40c04944ed9f9dddae4a | CREATE TABLE notnull_tbl4_lk3 (LIKE notnull_tbl4 INCLUDING INDEXES, NOT NULL a) |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STMT | d0e47bd33d589447415db8df | create table nv_parent (d date, check (false) no inherit not valid) |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STMT | d64fe0afd4dacb310e0214af | CREATE TABLE ttable1 OF nothing |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STMT | d6a242414c90307ab7be0aa4 | CREATE TABLE evttrig.part_15_20 PARTITION OF evttrig.part_10_20 (id) FOR VALUES FROM (15) TO (20) |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STMT | d78a2491b3709a00754e216e | -- -- test ALTER TABLE ADD CONSTRAINT -- CREATE TABLE temporal_fk_mltrng2mltrng ( id int4range, valid_at datemultirange, parent_id int4range, CONSTRAINT temporal_fk_mltrng2mltrng_pk PRIMARY KEY (id... |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STMT | dd85529a4aae2ec5dd24f6a3 | -- Disallow specifying conflicting NO INHERIT flags for the same constraint CREATE TABLE inh_nn1 (a int primary key, b int, not null a no inherit) |
 | ERROR | PG_QUERY__NODE__NODE_CREATE_STMT | e06e6ec92a7d3f86807488e6 | CREATE TEMP TABLE fktable2 (fk int references pktable ENFORCED NOT ENFORCED) |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STMT | e074329dc758bf903a03af66 | CREATE TABLE NE_CHECK_TBL (x int, CONSTRAINT CHECK_CON CHECK (x > 3) NOT ENFORCED) |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STMT | e182309d7401dc09eda3dad3 | -- PK with one column plus a multirange: CREATE TABLE temporal_mltrng ( id int4range, valid_at datemultirange, CONSTRAINT temporal_mltrng_pk PRIMARY KEY (id, valid_at WITHOUT OVERLAPS) ) |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STMT | e1cc04d4f7d8b3ef01b7f63e | -- UNIQUE with one column plus a range: CREATE TABLE temporal_rng3 ( id int4range, valid_at daterange, CONSTRAINT temporal_rng3_uq UNIQUE (id, valid_at WITHOUT OVERLAPS) ) |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STMT | e1f15d40c842c36f816285ab | -- with inferred PK on the referenced table: -- (parent_id, PERIOD valid_at) REFERENCES [implicit] CREATE TABLE temporal_fk_rng2rng ( id int4range, valid_at daterange, parent_id int4range, CONSTRAI... |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STMT | e1fe3b8df79ea8347a2e9346 | -- -- test input parser -- -- PK with no columns just WITHOUT OVERLAPS: CREATE TABLE temporal_rng ( valid_at daterange, CONSTRAINT temporal_rng_pk PRIMARY KEY (valid_at WITHOUT OVERLAPS) ) |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STMT | e335af3e818f66cb412474e2 | -- -- test ALTER TABLE ADD CONSTRAINT -- CREATE TABLE temporal_fk_rng2rng ( id int4range, valid_at daterange, parent_id int4range, CONSTRAINT temporal_fk_rng2rng_pk PRIMARY KEY (id, valid_at WITHOU... |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STMT | e35accb396808359e6c2f539 | create table rewritemetoo2 of rewritetype |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STMT | e3cdc32ffc30539b8e56ceb6 | -- on the partition key create table parted_collate_must_match1 partition of parted_collate_must_match (a collate "POSIX") for values from ('a') to ('m') |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STMT | e406695eedf682f7c9a1b217 | -- (parent_id, PERIOD valid_at) REFERENCES (id) CREATE TABLE temporal_fk_rng2rng ( id int4range, valid_at daterange, parent_id int4range, CONSTRAINT temporal_fk_rng2rng_pk PRIMARY KEY (id, valid_at... |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STMT | e47ae50454ece6ee7ab06543 | -- Check that comments on constraints and indexes are not lost at ALTER TABLE. CREATE TABLE comment_test ( id int, constraint id_notnull_constraint not null id, positive_col int CHECK (positive_col... |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STMT | e4f3b8c4bc2fbe436aa37ba7 | create table idxpart0 partition of idxpart (i) for values with (modulus 2, remainder 0) |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STMT | e9d87e03e0053ce88d471bf1 | CREATE TABLE persons5 OF stuff |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STMT | edb266c4f21efffdbb03aba7 | CREATE TABLE notnull_chld0 (a int, CONSTRAINT nn_chld0 NOT NULL a) |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STMT | f285d892b81cb0c3e3ce61bb | CREATE TABLE temporal_fk_rng2rng ( id int4range, valid_at daterange, parent_id int4range, CONSTRAINT temporal_fk_rng2rng_pk PRIMARY KEY (id, valid_at WITHOUT OVERLAPS), CONSTRAINT temporal_fk_rng2r... |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STMT | f2c288f64205dc4ac53f00ac | -- partitions with their own identity columns are not allowed, even if the -- partitioned table does not have an identity column. CREATE TABLE pitest1_pfail PARTITION OF pitest1 ( f3 WITH OPTIONS G... |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STMT | f2e1f7873987c237d4235341 | CREATE TABLE temporal_rng4 ( id int4range, valid_at int4range_d, CONSTRAINT temporal_rng4_pk UNIQUE (id, valid_at WITHOUT OVERLAPS) ) |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STMT | f3056ff557d6ae7bcdfc4081 | -- Reindex concurrently of exclusion constraint currently not supported CREATE TABLE concur_reindex_tab3 (c1 int, c2 int4range, EXCLUDE USING gist (c2 WITH &&)) |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STMT | f453cc1eadeb42899a050cf8 | CREATE TABLE temporal_rng3 ( id int4range, valid_at textrange2, CONSTRAINT temporal_rng3_uq UNIQUE (id, valid_at WITHOUT OVERLAPS) ) |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STMT | f903d1068b9888f00ecc4a67 | create table inh_nn3 (f4 float, constraint nn3_f1 not null f1 no inherit) inherits (inh_nn1, inh_nn2) |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STMT | fa3389a3b0dce9d2e2ec43cf | CREATE TABLE part_c PARTITION OF parted (b WITH OPTIONS NOT NULL DEFAULT 0) FOR VALUES IN ('c') PARTITION BY RANGE ((b)) |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STMT | fb88c0ad676e02e37f040f22 | -- should fail because of duplicate referenced columns: CREATE TABLE temporal_fk_rng2rng ( id int4range, valid_at daterange, parent_id int4range, CONSTRAINT temporal_fk_rng2rng_pk PRIMARY KEY (id, ... |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STMT | fccaf1e428bd91f7506a7faa | CREATE TABLE gtest_child3 PARTITION OF gtest_parent ( f3 GENERATED ALWAYS AS (f2 * 2) STORED -- error ) FOR VALUES FROM ('2016-09-01') TO ('2016-10-01') |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STMT | fdedcc6dbb6b49a2749c07b9 | CREATE TABLE notnull_part1_2_upg (a int, CONSTRAINT nn2 NOT NULL a, b int) |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STMT | fdf983696a9f77268b467920 | -- -- test changing the PK's dependencies -- CREATE TABLE temporal3 ( id int4range, valid_at daterange, CONSTRAINT temporal3_pk PRIMARY KEY (id, valid_at WITHOUT OVERLAPS) ) |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STMT | fe59ae761dafbe095a06825e | create table parttmp ( id int, valid_at daterange, exclude using gist (id with =, valid_at with &&) ) partition by range (id) |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STMT | fe8853e630eb99534adadcb4 | -- Two scalar columns: CREATE TABLE temporal_fk2_mltrng2mltrng ( id int4range, valid_at datemultirange, parent_id1 int4range, parent_id2 int4range, CONSTRAINT temporal_fk2_mltrng2mltrng_pk PRIMARY ... |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STMT | fea3d9d59a64f137f2e64e25 | CREATE TABLE gtest28 OF gtest_type (f1 WITH OPTIONS GENERATED ALWAYS AS (f2 *2) VIRTUAL) |
 | ERROR | PG_QUERY__NODE__NODE_CREATE_SUBSCRIPTION_STMT | 07ebaa7b064e4b49306c6429 | -- fail - origin must be either none or any CREATE SUBSCRIPTION regress_testsub4 CONNECTION 'dbname=regress_doesnotexist' PUBLICATION testpub WITH (slot_name = NONE, connect = false, origin = foo) |
 | ERROR | PG_QUERY__NODE__NODE_CREATE_SUBSCRIPTION_STMT | 121e216e1ced684bb6b5e787 | CREATE SUBSCRIPTION regress_testsub CONNECTION 'dbname=regress_doesnotexist' PUBLICATION mypub WITH (connect = false, create_slot = false, copy_data = false) |
 | ERROR | PG_QUERY__NODE__NODE_CREATE_SUBSCRIPTION_STMT | 12439c3e6f6262a49f4bba63 | CREATE SUBSCRIPTION regress_testsub2 CONNECTION 'dbname=regress_doesnotexist' PUBLICATION foo WITH (connect = false) |
@@ -1614,14 +1116,7 @@ libpg_query target: `18-latest` `9ab9951b7021adcc6d25d261d5016ca0b83726b8` (Post
 | PARTIAL | PG_QUERY__NODE__NODE_UPDATE_STMT | c4ff20edd867c998a0fa1d7f | UPDATE arrtest SET c[2:2] = '{"new_word"}' WHERE array_dims(c) is not null |
 | PARTIAL | PG_QUERY__NODE__NODE_UPDATE_STMT | fba60cf5cbd0923fb8ae55f6 | update arrtest1 set i[-7:-6] = array[-17,null], t[-7:-6] = array['m17',null] |
 | PARTIAL | PG_QUERY__NODE__NODE_VARIABLE_SET_STMT | 8ed641a0957afcf61da235ec | SET ROLE TO regress_display_role |
-| TRAILING_INPUT | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 1663440ac0cf84dcf19f2e99 | alter table p1_c1 add constraint inh_check_constraint9 check (f1 < 10) not valid enforced |
-| TRAILING_INPUT | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 4a05fb3c4e0e639be729567b | -- allowed to merge enforced constraint with parent's not enforced constraint alter table p1_c1 add constraint inh_check_constraint5 check (f1 < 10) enforced |
-| TRAILING_INPUT | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 4f801b6f5d679c7169d23b23 | alter table p1 add constraint inh_check_constraint7 check (f1 < 10) enforced |
-| TRAILING_INPUT | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 519e0ea0701176ec67557ccd | alter table p1 add constraint inh_check_constraint8 check (f1 < 10) enforced |
-| TRAILING_INPUT | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 93eff720b27b163eb9f4e8f3 | alter table p1_c1 add constraint inh_check_constraint6 check (f1 < 10) enforced |
 | TRAILING_INPUT | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 9561b52e5be5e680ed62a2fe | -- this should fail alter table renameColumn add column y int check (x > 0) not enforced enforced |
-| TRAILING_INPUT | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 99952a2e70945905f935b1da | -- Modifying other attributes of a constraint should not affect its enforceability, and vice versa ALTER TABLE FKTABLE ADD CONSTRAINT fk_con FOREIGN KEY(ftest1, ftest2) REFERENCES PKTABLE NOT VALID... |
-| TRAILING_INPUT | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | fe7f771bbb15028584cf3eb5 | alter table p1_c1 add constraint inh_check_constraint10 check (f1 < 10) not valid enforced |
 | TRAILING_INPUT | PG_QUERY__NODE__NODE_COPY_STMT | 2981235bcd8c51c0865fbfab | COPY bool_test FROM STDIN NULL 'null' |
 | TRAILING_INPUT | PG_QUERY__NODE__NODE_COPY_STMT | 43a2e4956c78b4a9cc61485b | -- -- Test headers, CSV and quotes -- copy (select t from test1 where id = 1) to stdout csv header force quote t |
 | TRAILING_INPUT | PG_QUERY__NODE__NODE_COPY_STMT | 91179538d562de426d2bacb7 | copy copyfreeze from stdin freeze |
@@ -1858,45 +1353,6 @@ libpg_query target: `18-latest` `9ab9951b7021adcc6d25d261d5016ca0b83726b8` (Post
 | TRAILING_INPUT | PG_QUERY__NODE__NODE_EXPLAIN_STMT | fda60997bc467070fd8ed800 | EXPLAIN (VERBOSE, COSTS OFF) SELECT * FROM ((SELECT * FROM async_p1 WHERE b < 10) UNION ALL (SELECT * FROM async_p2 WHERE b < 10)) s WHERE CURRENT_USER = SESSION_USER |
 | TRAILING_INPUT | PG_QUERY__NODE__NODE_INSERT_STMT | 3e97fad4c86f8610ecd5ec00 | INSERT INTO zerocol SELECT RETURNING old.*, new.*, * |
 | TRAILING_INPUT | PG_QUERY__NODE__NODE_INSERT_STMT | b269e341f499d75cf1d8cf66 | INSERT INTO zerocol SELECT RETURNING old.tableoid::regclass, old.ctid, new.tableoid::regclass, new.ctid, ctid, * |
-| TRAILING_INPUT | PG_QUERY__NODE__NODE_LOCK_STMT | 049674c1a1b19018652ea441 | LOCK TABLE lock_tbl1 IN SHARE ROW EXCLUSIVE MODE NOWAIT |
-| TRAILING_INPUT | PG_QUERY__NODE__NODE_LOCK_STMT | 068d318815cabcbf9e8f331c | LOCK TABLE lock_tbl1 IN EXCLUSIVE MODE |
-| TRAILING_INPUT | PG_QUERY__NODE__NODE_LOCK_STMT | 13e141d865dc1f47c3cf6ade | LOCK TABLE lock_view1 IN ACCESS EXCLUSIVE MODE |
-| TRAILING_INPUT | PG_QUERY__NODE__NODE_LOCK_STMT | 1f214339396140bc0669f0cc | lock table pxtest3 in access share mode nowait |
-| TRAILING_INPUT | PG_QUERY__NODE__NODE_LOCK_STMT | 25350561171c69c9add0fc50 | LOCK TABLE lock_view1 |
-| TRAILING_INPUT | PG_QUERY__NODE__NODE_LOCK_STMT | 33bfe24bc3f1b55f1b9bde8d | LOCK lock_tbl1 IN ROW SHARE MODE |
-| TRAILING_INPUT | PG_QUERY__NODE__NODE_LOCK_STMT | 3d07927f9d23358865413ec5 | LOCK TABLE lock_tbl1 IN ROW EXCLUSIVE MODE NOWAIT |
-| TRAILING_INPUT | PG_QUERY__NODE__NODE_LOCK_STMT | 3ddebc9b6ffaf2b484f31f09 | LOCK TABLE lock_tbl1 IN SHARE MODE |
-| TRAILING_INPUT | PG_QUERY__NODE__NODE_LOCK_STMT | 41c9d480e337a1a98b968a50 | LOCK TABLE lock_view1 IN EXCLUSIVE MODE |
-| TRAILING_INPUT | PG_QUERY__NODE__NODE_LOCK_STMT | 4343e0e4e05896d6341108d7 | LOCK TABLE lock_tbl1 IN ROW EXCLUSIVE MODE |
-| TRAILING_INPUT | PG_QUERY__NODE__NODE_LOCK_STMT | 497c463ac82ba5f00889f6ab | LOCK TABLE lock_tbl1 IN ACCESS EXCLUSIVE MODE NOWAIT |
-| TRAILING_INPUT | PG_QUERY__NODE__NODE_LOCK_STMT | 5ecd1d381750a192fc151b88 | LOCK TABLE lock_tbl2 |
-| TRAILING_INPUT | PG_QUERY__NODE__NODE_LOCK_STMT | 5f0ff1bfd04842751ec7883a | LOCK TABLE lock_view5 IN EXCLUSIVE MODE |
-| TRAILING_INPUT | PG_QUERY__NODE__NODE_LOCK_STMT | 702671cebde35ee354263b07 | LOCK atest1 IN ACCESS EXCLUSIVE MODE |
-| TRAILING_INPUT | PG_QUERY__NODE__NODE_LOCK_STMT | 744faa48144e035d57d67b6c | LOCK TABLE lock_view8 |
-| TRAILING_INPUT | PG_QUERY__NODE__NODE_LOCK_STMT | 7859afda8959fdfd2259c235 | LOCK TABLE lock_view7 IN EXCLUSIVE MODE |
-| TRAILING_INPUT | PG_QUERY__NODE__NODE_LOCK_STMT | 830ab9f4ce1c2b7090c15000 | LOCK TABLE lock_tbl1 IN SHARE UPDATE EXCLUSIVE MODE |
-| TRAILING_INPUT | PG_QUERY__NODE__NODE_LOCK_STMT | 847075522690f3699bec1a96 | lock twophase_tab in access exclusive mode |
-| TRAILING_INPUT | PG_QUERY__NODE__NODE_LOCK_STMT | 8b212f2dc76ebe630df5b030 | LOCK TABLE lock_tbl1 IN ROW SHARE MODE NOWAIT |
-| TRAILING_INPUT | PG_QUERY__NODE__NODE_LOCK_STMT | 8d347e192192a4cfdedee5e9 | LOCK TABLE lock_view3 IN EXCLUSIVE MODE |
-| TRAILING_INPUT | PG_QUERY__NODE__NODE_LOCK_STMT | 93f69945eca04d2a54bfa571 | LOCK TABLE lock_tbl1 IN SHARE MODE NOWAIT |
-| TRAILING_INPUT | PG_QUERY__NODE__NODE_LOCK_STMT | 9b658fec253d2b542f25d8be | LOCK TABLE ONLY lock_tbl1 |
-| TRAILING_INPUT | PG_QUERY__NODE__NODE_LOCK_STMT | 9e0b18761a81625d504cec26 | LOCK TABLE lock_tbl1 IN ACCESS SHARE MODE |
-| TRAILING_INPUT | PG_QUERY__NODE__NODE_LOCK_STMT | aa9cc98da879c61760febb43 | LOCK TABLE lock_tbl1 IN EXCLUSIVE MODE NOWAIT |
-| TRAILING_INPUT | PG_QUERY__NODE__NODE_LOCK_STMT | ba3a569679d9158980d006fa | LOCK TABLE lock_tbl1 * IN ACCESS EXCLUSIVE MODE |
-| TRAILING_INPUT | PG_QUERY__NODE__NODE_LOCK_STMT | bbfe632ab4f1e6bcf77ea93f | LOCK atestp1 |
-| TRAILING_INPUT | PG_QUERY__NODE__NODE_LOCK_STMT | bc05f0847c2b2997d3aa56b9 | LOCK lock_tbl1 IN SHARE ROW EXCLUSIVE MODE |
-| TRAILING_INPUT | PG_QUERY__NODE__NODE_LOCK_STMT | c1e83ae7c6dd3b10c6ba955c | LOCK atestc |
-| TRAILING_INPUT | PG_QUERY__NODE__NODE_LOCK_STMT | cad70b902798f013f1b7a606 | LOCK atest2 IN ACCESS EXCLUSIVE MODE |
-| TRAILING_INPUT | PG_QUERY__NODE__NODE_LOCK_STMT | d5224ab1080411c18da5e13f | LOCK TABLE lock_tbl1 IN ACCESS SHARE MODE NOWAIT |
-| TRAILING_INPUT | PG_QUERY__NODE__NODE_LOCK_STMT | d65b3e98d17ef4f2de8076a6 | LOCK TABLE lock_view8 IN ACCESS EXCLUSIVE MODE |
-| TRAILING_INPUT | PG_QUERY__NODE__NODE_LOCK_STMT | e17f902e6f1cdf5a98d69b2a | LOCK TABLE lock_table IN ACCESS EXCLUSIVE MODE |
-| TRAILING_INPUT | PG_QUERY__NODE__NODE_LOCK_STMT | e5ddaa90c3a3be69ce54eac4 | LOCK TABLE lock_tbl1 IN SHARE UPDATE EXCLUSIVE MODE NOWAIT |
-| TRAILING_INPUT | PG_QUERY__NODE__NODE_LOCK_STMT | e7bc0ef67c9a8a92ca32a583 | LOCK TABLE lock_table IN ROW EXCLUSIVE MODE |
-| TRAILING_INPUT | PG_QUERY__NODE__NODE_LOCK_STMT | e8f3daf44d21e4cc82981e93 | LOCK TABLE lock_view6 IN EXCLUSIVE MODE |
-| TRAILING_INPUT | PG_QUERY__NODE__NODE_LOCK_STMT | ec92408edff8d6c8882eb4c3 | LOCK TABLE lock_table IN ACCESS SHARE MODE |
-| TRAILING_INPUT | PG_QUERY__NODE__NODE_LOCK_STMT | ef248309b7e9bdc1ef625ae5 | LOCK TABLE lock_view2 IN EXCLUSIVE MODE |
-| TRAILING_INPUT | PG_QUERY__NODE__NODE_LOCK_STMT | f748664f41c53fce900fc629 | LOCK TABLE lock_view4 IN EXCLUSIVE MODE |
-| TRAILING_INPUT | PG_QUERY__NODE__NODE_LOCK_STMT | fd909b903de5bfb68e5eaff8 | LOCK TABLE lock_tbl1 IN ACCESS EXCLUSIVE MODE |
 | TRAILING_INPUT | PG_QUERY__NODE__NODE_SELECT_STMT | 0051480c29e88fa31491a3b5 | SELECT (((SELECT 2)) UNION SELECT 2) |
 | TRAILING_INPUT | PG_QUERY__NODE__NODE_SELECT_STMT | 0e76c8bd28dac6d76713e84b | -- run-time error SELECT U&'\\00E4\\24D1c' IS NORMALIZED AS test_default |
 | TRAILING_INPUT | PG_QUERY__NODE__NODE_SELECT_STMT | 104eea45322ba7f108a0aa9d | SELECT d, b IS TRUE AS istrue, b IS NOT TRUE AS isnottrue, b IS FALSE AS isfalse, b IS NOT FALSE AS isnotfalse, b IS UNKNOWN AS isunknown, b IS NOT UNKNOWN AS isnotunknown FROM booltbl3 ORDER BY o |
@@ -2037,34 +1493,6 @@ libpg_query target: `18-latest` `9ab9951b7021adcc6d25d261d5016ca0b83726b8` (Post
 | TRAILING_INPUT | PG_QUERY__NODE__NODE_VARIABLE_SHOW_STMT | e964eccb7d846c0cb6040a30 | -- -- Verify correct calculation of checksums -- -- Postgres' checksum algorithm produces different answers on little-endian -- and big-endian machines. The results of this test also vary depending... |
 | TRAILING_INPUT | PG_QUERY__NODE__NODE_VARIABLE_SHOW_STMT | fe9c493278ec4c922fcda8f5 | -- -- Commit Timestamp -- SHOW track_commit_timestamp |
 | TRAILING_INPUT | PG_QUERY__NODE__NODE_VIEW_STMT | a0ca2fbcf42f7d0309ef3f51 | -- reverse-listing of various special function syntaxes required by SQL create view tt201v as select ('2022-12-01'::date + '1 day'::interval) at time zone 'UTC' as atz, extract(day from now()) as e... |
-| TYPE_MISMATCH | PG_QUERY__NODE__NODE_CLUSTER_STMT | 01469a6249baf8b1cca68e78 | CLUSTER clstr_1_pkey ON clstr_1 |
-| TYPE_MISMATCH | PG_QUERY__NODE__NODE_CLUSTER_STMT | 117076b0af965a65440a8fa6 | -- and after clustering on clstr_expression_upper_b CLUSTER clstr_expression USING clstr_expression_upper_b |
-| TYPE_MISMATCH | PG_QUERY__NODE__NODE_CLUSTER_STMT | 1a56669c617ed7d908d271ab | CLUSTER clstrpart USING clstrpart_idx |
-| TYPE_MISMATCH | PG_QUERY__NODE__NODE_CLUSTER_STMT | 1b3361facaf338439851fa2a | CLUSTER sro_tab USING sro_cluster_idx |
-| TYPE_MISMATCH | PG_QUERY__NODE__NODE_CLUSTER_STMT | 288630a0103f63c51018bf84 | CLUSTER clstrpart USING clstrpart_only_idx |
-| TYPE_MISMATCH | PG_QUERY__NODE__NODE_CLUSTER_STMT | 2ff2db8acf4e15ba03c8a848 | -- Verify that toast tables are clusterable CLUSTER pg_toast.pg_toast_826 USING pg_toast_826_index |
-| TYPE_MISMATCH | PG_QUERY__NODE__NODE_CLUSTER_STMT | 3c704818421e41a69b3f2c79 | CLUSTER ptnowner USING ptnowner_i_idx |
-| TYPE_MISMATCH | PG_QUERY__NODE__NODE_CLUSTER_STMT | 4c4920f1b94d3128bdf0142e | CLUSTER clustertest_pkey ON clustertest |
-| TYPE_MISMATCH | PG_QUERY__NODE__NODE_CLUSTER_STMT | 5c256cc0731e520aef2d0cc6 | CLUSTER abbrev_abort_uuids USING abbrev_abort_uuids__abort_decreasing_idx |
-| TYPE_MISMATCH | PG_QUERY__NODE__NODE_CLUSTER_STMT | 5e71e8531f4b3795c2c80f3c | CLUSTER clustertest |
-| TYPE_MISMATCH | PG_QUERY__NODE__NODE_CLUSTER_STMT | 5eca00af6a926f8db24686d0 | CLUSTER abbrev_abort_uuids USING abbrev_abort_uuids__abort_increasing_idx |
-| TYPE_MISMATCH | PG_QUERY__NODE__NODE_CLUSTER_STMT | 60320c539220e69682bf9bf9 | cluster clstr_4 using cluster_sort |
-| TYPE_MISMATCH | PG_QUERY__NODE__NODE_CLUSTER_STMT | 61e662c21b7b84edca2fb855 | CLUSTER test_prepared1 USING test_prepared1_pkey |
-| TYPE_MISMATCH | PG_QUERY__NODE__NODE_CLUSTER_STMT | 6482de564a1c74e1af8399ba | CLUSTER clstr_1 |
-| TYPE_MISMATCH | PG_QUERY__NODE__NODE_CLUSTER_STMT | 6a92974ab7164793e1803e5c | CLUSTER clstr_2 USING clstr_2_pkey |
-| TYPE_MISMATCH | PG_QUERY__NODE__NODE_CLUSTER_STMT | 6aa837ee8ed103338f3592ce | CLUSTER pg_class USING pg_class_oid_index |
-| TYPE_MISMATCH | PG_QUERY__NODE__NODE_CLUSTER_STMT | 8a81204d948e08648deb6ddb | cluster clstr_temp using clstr_temp_pkey |
-| TYPE_MISMATCH | PG_QUERY__NODE__NODE_CLUSTER_STMT | a6f16ff188b65e5909c527b9 | CLUSTER clstr_tst_c ON clstr_tst |
-| TYPE_MISMATCH | PG_QUERY__NODE__NODE_CLUSTER_STMT | a9a6b946978d7a05989b64ca | CLUSTER vaccluster |
-| TYPE_MISMATCH | PG_QUERY__NODE__NODE_CLUSTER_STMT | b06298dd21b83ea8793a8b4e | CLUSTER maintain_test USING maintain_test_a_idx |
-| TYPE_MISMATCH | PG_QUERY__NODE__NODE_CLUSTER_STMT | b6bf4887aa199fc30f9a965d | CLUSTER clustertest USING clustertest_pkey |
-| TYPE_MISMATCH | PG_QUERY__NODE__NODE_CLUSTER_STMT | c1b09a78b8f489d770f1c20f | -- "CLUSTER <tablename>" on a table that hasn't been clustered CLUSTER clstr_2 |
-| TYPE_MISMATCH | PG_QUERY__NODE__NODE_CLUSTER_STMT | c6fd08b04b952cf0447540d7 | cluster attbl using pk_attbl |
-| TYPE_MISMATCH | PG_QUERY__NODE__NODE_CLUSTER_STMT | d0a5824c1427795ed5e8321d | CLUSTER test_maint_search_path.test_maint USING test_maint_idx |
-| TYPE_MISMATCH | PG_QUERY__NODE__NODE_CLUSTER_STMT | d6d50075a629c75242df8fa7 | CLUSTER abbrev_abort_uuids USING abbrev_abort_uuids__noabort_decreasing_idx |
-| TYPE_MISMATCH | PG_QUERY__NODE__NODE_CLUSTER_STMT | e12a490c485acbe4349b6280 | -- and after clustering on clstr_expression_minus_a CLUSTER clstr_expression USING clstr_expression_minus_a |
-| TYPE_MISMATCH | PG_QUERY__NODE__NODE_CLUSTER_STMT | e9b329b14dfa6b310588578a | -- order of "skipping" warnings may vary CLUSTER |
-| TYPE_MISMATCH | PG_QUERY__NODE__NODE_CLUSTER_STMT | eaa7f0421c57651e60409022 | CLUSTER abbrev_abort_uuids USING abbrev_abort_uuids__noabort_increasing_idx |
 | TYPE_MISMATCH | PG_QUERY__NODE__NODE_REASSIGN_OWNED_STMT | 2e1439bc6ee75ff24beee170 | REASSIGN OWNED BY regress_dep_user1 TO regress_dep_user2 |
 | TYPE_MISMATCH | PG_QUERY__NODE__NODE_REASSIGN_OWNED_STMT | 314472a8d2397328b1a2a17a | REASSIGN OWNED BY regress_dump_test_super TO CURRENT_ROLE |
 | TYPE_MISMATCH | PG_QUERY__NODE__NODE_REASSIGN_OWNED_STMT | 6878a6bb5db6e8b9788c34c5 | REASSIGN OWNED BY regress_host_resource_admin TO regress_host_resource_newadmin |
@@ -2074,159 +1502,6 @@ libpg_query target: `18-latest` `9ab9951b7021adcc6d25d261d5016ca0b83726b8` (Post
 | TYPE_MISMATCH | PG_QUERY__NODE__NODE_REASSIGN_OWNED_STMT | e5ef64141b8c947e09cf828f | -- fail, dependency REASSIGN OWNED BY regress_priv_user2 TO regress_priv_user4 |
 | TYPE_MISMATCH | PG_QUERY__NODE__NODE_REASSIGN_OWNED_STMT | e78fddd70f71fa3c97ac9160 | -- REASSIGN OWNED/DROP OWNED of foreign objects REASSIGN OWNED BY regress_test_role TO regress_test_role2 |
 | TYPE_MISMATCH | PG_QUERY__NODE__NODE_REASSIGN_OWNED_STMT | ec74245840740384ddfe0f35 | REASSIGN OWNED BY regress_tenant TO regress_createrole |
-| TYPE_MISMATCH | PG_QUERY__NODE__NODE_REFRESH_MAT_VIEW_STMT | 0174a31b0b44b463acb25b26 | refresh materialized view parallel_mat_view |
-| TYPE_MISMATCH | PG_QUERY__NODE__NODE_REFRESH_MAT_VIEW_STMT | 09369ecee80433d189c80050 | refresh materialized view mvtest_error |
-| TYPE_MISMATCH | PG_QUERY__NODE__NODE_REFRESH_MAT_VIEW_STMT | 0e2e84584de77098e90e435c | REFRESH MATERIALIZED VIEW mvtest_tm |
-| TYPE_MISMATCH | PG_QUERY__NODE__NODE_REFRESH_MAT_VIEW_STMT | 16a88b1dff24048596713f8c | REFRESH MATERIALIZED VIEW sro_index_mv |
-| TYPE_MISMATCH | PG_QUERY__NODE__NODE_REFRESH_MAT_VIEW_STMT | 20cde6dc55851548a9fb0622 | REFRESH MATERIALIZED VIEW CONCURRENTLY mvtest_tm |
-| TYPE_MISMATCH | PG_QUERY__NODE__NODE_REFRESH_MAT_VIEW_STMT | 29f3778467eb0d9045c514d3 | REFRESH MATERIALIZED VIEW mvtest_mv_foo |
-| TYPE_MISMATCH | PG_QUERY__NODE__NODE_REFRESH_MAT_VIEW_STMT | 30a86cdcd1826ba0b6302ddf | refresh materialized view concurrently parallel_mat_view |
-| TYPE_MISMATCH | PG_QUERY__NODE__NODE_REFRESH_MAT_VIEW_STMT | 3a909cb37ebb258695830891 | REFRESH MATERIALIZED VIEW CONCURRENTLY mvtest_boxmv |
-| TYPE_MISMATCH | PG_QUERY__NODE__NODE_REFRESH_MAT_VIEW_STMT | 3b85ad17a7dbc7655138ff29 | REFRESH MATERIALIZED VIEW mvtest_tvm |
-| TYPE_MISMATCH | PG_QUERY__NODE__NODE_REFRESH_MAT_VIEW_STMT | 4cccaca9c7f9a999575bfd04 | REFRESH MATERIALIZED VIEW CONCURRENTLY citext_matview |
-| TYPE_MISMATCH | PG_QUERY__NODE__NODE_REFRESH_MAT_VIEW_STMT | 4f6a8b91f0995d2bf204eb56 | REFRESH MATERIALIZED VIEW CONCURRENTLY mvtest_tvmm |
-| TYPE_MISMATCH | PG_QUERY__NODE__NODE_REFRESH_MAT_VIEW_STMT | 57d61693210ca9a198909017 | REFRESH MATERIALIZED VIEW mvtest_mv_v_4 |
-| TYPE_MISMATCH | PG_QUERY__NODE__NODE_REFRESH_MAT_VIEW_STMT | 6740aa51c939a2169832ca06 | REFRESH MATERIALIZED VIEW pgss_materialized_view |
-| TYPE_MISMATCH | PG_QUERY__NODE__NODE_REFRESH_MAT_VIEW_STMT | 6c16791d9ae7b764daa612b9 | REFRESH MATERIALIZED VIEW sro_mv |
-| TYPE_MISMATCH | PG_QUERY__NODE__NODE_REFRESH_MAT_VIEW_STMT | 79fa2133874d0e7ad8599a4a | REFRESH MATERIALIZED VIEW ddl_deparse_mv |
-| TYPE_MISMATCH | PG_QUERY__NODE__NODE_REFRESH_MAT_VIEW_STMT | 801a882450a72d5178ae45b8 | REFRESH MATERIALIZED VIEW matview_schema.mv_withdata2 |
-| TYPE_MISMATCH | PG_QUERY__NODE__NODE_REFRESH_MAT_VIEW_STMT | 83661512259c9ec83334773e | REFRESH MATERIALIZED VIEW mvtest_mv |
-| TYPE_MISMATCH | PG_QUERY__NODE__NODE_REFRESH_MAT_VIEW_STMT | 86dda09bff45fa5d2c8d9202 | REFRESH MATERIALIZED VIEW CONCURRENTLY mvtest_mv_foo |
-| TYPE_MISMATCH | PG_QUERY__NODE__NODE_REFRESH_MAT_VIEW_STMT | 8e935bbdfebfa4022ca7641c | REFRESH MATERIALIZED VIEW copytest_mv |
-| TYPE_MISMATCH | PG_QUERY__NODE__NODE_REFRESH_MAT_VIEW_STMT | 91fde729bcdff2a92988e98f | REFRESH MATERIALIZED VIEW mvtest_tvvm |
-| TYPE_MISMATCH | PG_QUERY__NODE__NODE_REFRESH_MAT_VIEW_STMT | a2ca7cd1362277f518050a5a | REFRESH MATERIALIZED VIEW mvtest_mv_v_2 |
-| TYPE_MISMATCH | PG_QUERY__NODE__NODE_REFRESH_MAT_VIEW_STMT | a71834a064412c4b8c37edbc | REFRESH MATERIALIZED VIEW CONCURRENTLY mvtest_mv |
-| TYPE_MISMATCH | PG_QUERY__NODE__NODE_REFRESH_MAT_VIEW_STMT | b0f4ed7ffb113e9460cf9ebc | REFRESH MATERIALIZED VIEW tid_matview |
-| TYPE_MISMATCH | PG_QUERY__NODE__NODE_REFRESH_MAT_VIEW_STMT | b832d0988f55f10b569f09ee | REFRESH MATERIALIZED VIEW pgss_matv |
-| TYPE_MISMATCH | PG_QUERY__NODE__NODE_REFRESH_MAT_VIEW_STMT | b9a75e934bb2fd92b24808e8 | refresh materialized view matview_visibility_test |
-| TYPE_MISMATCH | PG_QUERY__NODE__NODE_REFRESH_MAT_VIEW_STMT | bca09156ec4054df7c808113 | REFRESH MATERIALIZED VIEW CONCURRENTLY mvtest_mv_v |
-| TYPE_MISMATCH | PG_QUERY__NODE__NODE_REFRESH_MAT_VIEW_STMT | c20f4c206ab978a525d67b6c | REFRESH MATERIALIZED VIEW testschema.amv |
-| TYPE_MISMATCH | PG_QUERY__NODE__NODE_REFRESH_MAT_VIEW_STMT | c49af97a10b894ad2514323a | REFRESH MATERIALIZED VIEW matview_schema.mv_nodata2 |
-| TYPE_MISMATCH | PG_QUERY__NODE__NODE_REFRESH_MAT_VIEW_STMT | cb9f717ce865bf3539ab8247 | REFRESH MATERIALIZED VIEW CONCURRENTLY drop_idx_matview |
-| TYPE_MISMATCH | PG_QUERY__NODE__NODE_REFRESH_MAT_VIEW_STMT | deaa275a129292a3ab18ebdd | REFRESH MATERIALIZED VIEW mvtest_mv_v |
-| TYPE_MISMATCH | PG_QUERY__NODE__NODE_REFRESH_MAT_VIEW_STMT | dfb56e0d61cdccd5ad1fc339 | REFRESH MATERIALIZED VIEW mvtest_tvmm |
-| TYPE_MISMATCH | PG_QUERY__NODE__NODE_REFRESH_MAT_VIEW_STMT | e2acd58afe832a7d495bdb36 | REFRESH MATERIALIZED VIEW mvtest_tmm |
-| TYPE_MISMATCH | PG_QUERY__NODE__NODE_REFRESH_MAT_VIEW_STMT | ec5ef4c59b466d60c1684eb2 | REFRESH MATERIALIZED VIEW mvtest_mv_v_3 |
-| TYPE_MISMATCH | PG_QUERY__NODE__NODE_REFRESH_MAT_VIEW_STMT | f2b5fec76f00fb0c920bfc4c | -- make sure invalid combination of options is prohibited REFRESH MATERIALIZED VIEW CONCURRENTLY mvtest_tvmm WITH NO DATA |
-| TYPE_MISMATCH | PG_QUERY__NODE__NODE_REFRESH_MAT_VIEW_STMT | fa3a84d8429ec6fed6a9827e | REFRESH MATERIALIZED VIEW refresh_test |
-| TYPE_MISMATCH | PG_QUERY__NODE__NODE_REFRESH_MAT_VIEW_STMT | fe95e40c921a196e72887327 | REFRESH MATERIALIZED VIEW test_maint_search_path.test_maint_mv |
-| TYPE_MISMATCH | PG_QUERY__NODE__NODE_REINDEX_STMT | 005f0964ebc0c9120dea0645 | REINDEX TABLE pg_class |
-| TYPE_MISMATCH | PG_QUERY__NODE__NODE_REINDEX_STMT | 00758d606da22280d92d52ab | REINDEX INDEX sro_idx |
-| TYPE_MISMATCH | PG_QUERY__NODE__NODE_REINDEX_STMT | 034c9c0e9d9f0f6ef13e6476 | REINDEX TABLE pg_toast.pg_toast_1262 |
-| TYPE_MISMATCH | PG_QUERY__NODE__NODE_REINDEX_STMT | 0479a3ff034b2961fe8b6edd | REINDEX SCHEMA reindex_test |
-| TYPE_MISMATCH | PG_QUERY__NODE__NODE_REINDEX_STMT | 05f20638396e136f1e31e37f | reindex index gist_pointidx |
-| TYPE_MISMATCH | PG_QUERY__NODE__NODE_REINDEX_STMT | 09b1c5d008e5f99080b1bfb4 | reindex index spgist_point_idx |
-| TYPE_MISMATCH | PG_QUERY__NODE__NODE_REINDEX_STMT | 0b172e04558f1a14bf730759 | reindex index concurrently test_pg_index_toast_index |
-| TYPE_MISMATCH | PG_QUERY__NODE__NODE_REINDEX_STMT | 0ba75fc19a30cff0925cd094 | -- ok REINDEX TABLE CONCURRENTLY reind_fdw_parent |
-| TYPE_MISMATCH | PG_QUERY__NODE__NODE_REINDEX_STMT | 0be595dbb31362337cdbd53f | -- notice REINDEX (CONCURRENTLY) TABLE concur_reindex_tab |
-| TYPE_MISMATCH | PG_QUERY__NODE__NODE_REINDEX_STMT | 11d6b463738acd9530b5caee | -- error REINDEX TABLE CONCURRENTLY concur_reindex_part_index_10 |
-| TYPE_MISMATCH | PG_QUERY__NODE__NODE_REINDEX_STMT | 12c5f8cc3e371c1cfddbb7cc | REINDEX TABLE concur_heap |
-| TYPE_MISMATCH | PG_QUERY__NODE__NODE_REINDEX_STMT | 1493e834094fc56286079879 | REINDEX TABLE CONCURRENTLY concur_reindex_matview |
-| TYPE_MISMATCH | PG_QUERY__NODE__NODE_REINDEX_STMT | 14f0dca0594416f7a1db8d0d | REINDEX TABLE CONCURRENTLY concur_reindex_part_0_1 |
-| TYPE_MISMATCH | PG_QUERY__NODE__NODE_REINDEX_STMT | 1746e95eab67a0f84dff64f8 | REINDEX INDEX CONCURRENTLY reindex_inj.ind_simple |
-| TYPE_MISMATCH | PG_QUERY__NODE__NODE_REINDEX_STMT | 212df679bc56531b67b43de0 | -- error -- Partitioned with no leaves REINDEX INDEX concur_reindex_part_10 |
-| TYPE_MISMATCH | PG_QUERY__NODE__NODE_REINDEX_STMT | 234e46ca7764f5a7beeb3496 | REINDEX TABLE CONCURRENTLY concur_reindex_tab |
-| TYPE_MISMATCH | PG_QUERY__NODE__NODE_REINDEX_STMT | 25a86d1652bdba4a32e880ee | REINDEX INDEX CONCURRENTLY reindex_inj.ind_expr_pred |
-| TYPE_MISMATCH | PG_QUERY__NODE__NODE_REINDEX_STMT | 267ec04535d6378ded491e1d | -- error REINDEX TABLE CONCURRENTLY concur_reindex_tab3 |
-| TYPE_MISMATCH | PG_QUERY__NODE__NODE_REINDEX_STMT | 298eb3bf722f2fcf6ba7ef84 | REINDEX (TABLESPACE regress_tblspace, CONCURRENTLY) TABLE regress_tblspace_test_tbl |
-| TYPE_MISMATCH | PG_QUERY__NODE__NODE_REINDEX_STMT | 2a65d4dcd78b3002d7206411 | -- no catalog index -- These are the toast table and index of pg_database. REINDEX TABLE CONCURRENTLY pg_toast.pg_toast_1262 |
-| TYPE_MISMATCH | PG_QUERY__NODE__NODE_REINDEX_STMT | 2bc91b10a822231e74db35a2 | REINDEX INDEX hash_split_index |
-| TYPE_MISMATCH | PG_QUERY__NODE__NODE_REINDEX_STMT | 2d645d7e5d2206b024880de2 | REINDEX INDEX maintain_test_a_idx |
-| TYPE_MISMATCH | PG_QUERY__NODE__NODE_REINDEX_STMT | 3324964e229954b4276a3a6e | REINDEX (TABLESPACE regress_tblspace) TABLE CONCURRENTLY pg_toast.pg_toast_1262 |
-| TYPE_MISMATCH | PG_QUERY__NODE__NODE_REINDEX_STMT | 33c479b9dcdd73a63f8c1788 | REINDEX TABLE CONCURRENTLY testcomment |
-| TYPE_MISMATCH | PG_QUERY__NODE__NODE_REINDEX_STMT | 3408794077f941ef43d28b35 | -- error REINDEX TABLE CONCURRENTLY reindex_foreign |
-| TYPE_MISMATCH | PG_QUERY__NODE__NODE_REINDEX_STMT | 37a208e3c5042f9d0a26423e | REINDEX index CONCURRENTLY stats_test_idx1 |
-| TYPE_MISMATCH | PG_QUERY__NODE__NODE_REINDEX_STMT | 383d62debafae47f0cf781a8 | reindex index concurrently idxpart11_expr_idx |
-| TYPE_MISMATCH | PG_QUERY__NODE__NODE_REINDEX_STMT | 385158fcaf4b836a1656c348 | REINDEX INDEX pg_index_indrelid_index |
-| TYPE_MISMATCH | PG_QUERY__NODE__NODE_REINDEX_STMT | 3aa9583c57ecf3239942c7b2 | REINDEX INDEX CONCURRENTLY concur_reindex_part_index_0_1 |
-| TYPE_MISMATCH | PG_QUERY__NODE__NODE_REINDEX_STMT | 3ab607890a5fe3defcf5d857 | -- The invalid index is not processed when running REINDEX TABLE. REINDEX TABLE CONCURRENTLY concur_reindex_tab4 |
-| TYPE_MISMATCH | PG_QUERY__NODE__NODE_REINDEX_STMT | 3d9942adce2594e1baa45992 | REINDEX (TABLESPACE regress_tblspace) INDEX CONCURRENTLY pg_toast.pg_toast_1262_index |
-| TYPE_MISMATCH | PG_QUERY__NODE__NODE_REINDEX_STMT | 42117f2e96c9432586c81ae0 | -- Fails when running in a transaction REINDEX INDEX CONCURRENTLY concur_temp_ind_3 |
-| TYPE_MISMATCH | PG_QUERY__NODE__NODE_REINDEX_STMT | 43c8a5a2a7c14f0fe8ca33e4 | REINDEX (TABLESPACE regress_tblspace) TABLE tablespace_table |
-| TYPE_MISMATCH | PG_QUERY__NODE__NODE_REINDEX_STMT | 48662c800d895cabda0285a1 | -- no catalog toast table REINDEX INDEX CONCURRENTLY pg_toast.pg_toast_1262_index |
-| TYPE_MISMATCH | PG_QUERY__NODE__NODE_REINDEX_STMT | 4d30e805e027a52432d2955a | REINDEX TABLE CONCURRENTLY pg_class |
-| TYPE_MISMATCH | PG_QUERY__NODE__NODE_REINDEX_STMT | 4ebc64044946fa1a3938247b | REINDEX INDEX unlogged1_pkey |
-| TYPE_MISMATCH | PG_QUERY__NODE__NODE_REINDEX_STMT | 4f1904c6e892f5008a21d67b | REINDEX INDEX pg_class_relname_nsp_index |
-| TYPE_MISMATCH | PG_QUERY__NODE__NODE_REINDEX_STMT | 52c4c32290dda741f84d3bdd | REINDEX (TABLESPACE regress_tblspace, CONCURRENTLY) TABLE tbspace_reindex_part |
-| TYPE_MISMATCH | PG_QUERY__NODE__NODE_REINDEX_STMT | 556876b8d58400b10cf677f8 | -- fail REINDEX (TABLESPACE regress_tblspace, CONCURRENTLY) TABLE tablespace_table |
-| TYPE_MISMATCH | PG_QUERY__NODE__NODE_REINDEX_STMT | 5692546346f1edfd20584978 | REINDEX INDEX CONCURRENTLY concur_temp_ind_2 |
-| TYPE_MISMATCH | PG_QUERY__NODE__NODE_REINDEX_STMT | 6253edee8055ae8fda09dcc0 | REINDEX INDEX tbl_gist_idx |
-| TYPE_MISMATCH | PG_QUERY__NODE__NODE_REINDEX_STMT | 647300b373c196697c5d485a | -- system catalog, fail REINDEX (TABLESPACE pg_global) TABLE pg_authid |
-| TYPE_MISMATCH | PG_QUERY__NODE__NODE_REINDEX_STMT | 65846a09d61ec91d1407dbd1 | REINDEX SCHEMA CONCURRENTLY concur_reindex_schema |
-| TYPE_MISMATCH | PG_QUERY__NODE__NODE_REINDEX_STMT | 6ace57c4fd51917ad4ac99fe | -- Not the current database REINDEX DATABASE not_current_database |
-| TYPE_MISMATCH | PG_QUERY__NODE__NODE_REINDEX_STMT | 6b0970af1e9f79c0af267fae | REINDEX INDEX CONCURRENTLY concur_reindex_partidx |
-| TYPE_MISMATCH | PG_QUERY__NODE__NODE_REINDEX_STMT | 6c17cc1f2e44314713084549 | REINDEX INDEX CONCURRENTLY concur_reindex_ind |
-| TYPE_MISMATCH | PG_QUERY__NODE__NODE_REINDEX_STMT | 701dbdd550b01b372c74298f | REINDEX TABLE reindex_foreign |
-| TYPE_MISMATCH | PG_QUERY__NODE__NODE_REINDEX_STMT | 707aed5a27526320819d4f26 | REINDEX (TABLESPACE regress_tblspace) INDEX regress_tblspace_test_tbl_idx |
-| TYPE_MISMATCH | PG_QUERY__NODE__NODE_REINDEX_STMT | 73b0949fad12186a89be0546 | reindex index concurrently idxpart1_expr_idx |
-| TYPE_MISMATCH | PG_QUERY__NODE__NODE_REINDEX_STMT | 74d4f4531eb349cf347f1bae | -- error -- Partitioned index with no leaves REINDEX TABLE concur_reindex_part_index_10 |
-| TYPE_MISMATCH | PG_QUERY__NODE__NODE_REINDEX_STMT | 76898acfab5aac5145792db4 | -- error REINDEX INDEX CONCURRENTLY concur_reindex_part |
-| TYPE_MISMATCH | PG_QUERY__NODE__NODE_REINDEX_STMT | 7b8890320e825a8e36df28ac | REINDEX INDEX concur_reindex_part_index |
-| TYPE_MISMATCH | PG_QUERY__NODE__NODE_REINDEX_STMT | 7e5d9ea896e961eb39d865e5 | reindex index test_pg_index_toast_index |
-| TYPE_MISMATCH | PG_QUERY__NODE__NODE_REINDEX_STMT | 80182387e00af488902247a1 | REINDEX INDEX CONCURRENTLY concur_temp_ind_1 |
-| TYPE_MISMATCH | PG_QUERY__NODE__NODE_REINDEX_STMT | 8245589af6f6fc3976950c7b | -- toast relations, fail REINDEX (TABLESPACE regress_tblspace) INDEX pg_toast.pg_toast_1262_index |
-| TYPE_MISMATCH | PG_QUERY__NODE__NODE_REINDEX_STMT | 839029dd1527a7cce7c9ffad | REINDEX TABLE testcomment |
-| TYPE_MISMATCH | PG_QUERY__NODE__NODE_REINDEX_STMT | 854429a1d47a370c7e7316cb | REINDEX INDEX CONCURRENTLY sro_pidx |
-| TYPE_MISMATCH | PG_QUERY__NODE__NODE_REINDEX_STMT | 88a1e8cc4a852c121cc7c17a | REINDEX TABLE CONCURRENTLY concur_reindex_part_0_2 |
-| TYPE_MISMATCH | PG_QUERY__NODE__NODE_REINDEX_STMT | 8acbf9ac8725f52691d331e2 | REINDEX INDEX pg_database_oid_index |
-| TYPE_MISMATCH | PG_QUERY__NODE__NODE_REINDEX_STMT | 8d3f1968ef3859fcc1947f34 | REINDEX (TABLESPACE pg_global) INDEX CONCURRENTLY regress_tblspace_test_tbl_idx |
-| TYPE_MISMATCH | PG_QUERY__NODE__NODE_REINDEX_STMT | 9154bff388931a3ecedc8b07 | -- REINDEX for partitioned tables -- REINDEX INDEX fails for partitioned tables -- Top-most parent REINDEX INDEX concur_reindex_part |
-| TYPE_MISMATCH | PG_QUERY__NODE__NODE_REINDEX_STMT | 917af7b670dd99dafb823d67 | REINDEX TABLE sro_ptab |
-| TYPE_MISMATCH | PG_QUERY__NODE__NODE_REINDEX_STMT | 91d24419e692249055095c79 | -- ditto REINDEX (CONCURRENTLY) SYSTEM |
-| TYPE_MISMATCH | PG_QUERY__NODE__NODE_REINDEX_STMT | 94b8f0dd5a9a1e53a1bdfe4a | -- REINDEX REINDEX TABLE concur_reindex_tab |
-| TYPE_MISMATCH | PG_QUERY__NODE__NODE_REINDEX_STMT | 96206b12ba2440a3a5e6f0dc | -- error REINDEX INDEX CONCURRENTLY concur_reindex_part_10 |
-| TYPE_MISMATCH | PG_QUERY__NODE__NODE_REINDEX_STMT | 977688b7223088fbaa099686 | REINDEX INDEX CONCURRENTLY brin_insert_optimization_idx |
-| TYPE_MISMATCH | PG_QUERY__NODE__NODE_REINDEX_STMT | 97a9ad1acaaab32cfce38bc8 | REINDEX (TABLESPACE regress_tblspace) TABLE pg_toast.pg_toast_1262 |
-| TYPE_MISMATCH | PG_QUERY__NODE__NODE_REINDEX_STMT | 988a0d65c2377b7503027d4e | REINDEX INDEX CONCURRENTLY concur_reindex_tab3_c2_excl |
-| TYPE_MISMATCH | PG_QUERY__NODE__NODE_REINDEX_STMT | 9b8ba83a49dd79883f5a11af | REINDEX TABLE maintain_test |
-| TYPE_MISMATCH | PG_QUERY__NODE__NODE_REINDEX_STMT | 9daf00b1b36d84daf6fdbb97 | REINDEX TABLE pg_operator |
-| TYPE_MISMATCH | PG_QUERY__NODE__NODE_REINDEX_STMT | a04c42c8a535543a5caae495 | REINDEX TABLE pg_shdescription |
-| TYPE_MISMATCH | PG_QUERY__NODE__NODE_REINDEX_STMT | a0a2a81c346b899d29e70493 | REINDEX (TABLESPACE regress_tblspace) TABLE regress_tblspace_test_tbl |
-| TYPE_MISMATCH | PG_QUERY__NODE__NODE_REINDEX_STMT | a3655194df1866b5c7fa1056 | REINDEX TABLE CONCURRENTLY concur_appclass_tab |
-| TYPE_MISMATCH | PG_QUERY__NODE__NODE_REINDEX_STMT | a7f65af12d8977f0dcba51e1 | REINDEX TABLE concur_reindex_part |
-| TYPE_MISMATCH | PG_QUERY__NODE__NODE_REINDEX_STMT | a9d25d6d9d35418fff8762a3 | REINDEX TABLE test_maint_search_path.test_maint |
-| TYPE_MISMATCH | PG_QUERY__NODE__NODE_REINDEX_STMT | ae26804df6e25020612d03af | -- shared catalog, fail REINDEX (TABLESPACE regress_tblspace) TABLE pg_authid |
-| TYPE_MISMATCH | PG_QUERY__NODE__NODE_REINDEX_STMT | aee4fc2df6597837d7a0470d | REINDEX INDEX CONCURRENTLY concur_reindex_ind1 |
-| TYPE_MISMATCH | PG_QUERY__NODE__NODE_REINDEX_STMT | b266d312960a59cc42ac657a | -- no catalog relation REINDEX INDEX CONCURRENTLY pg_class_oid_index |
-| TYPE_MISMATCH | PG_QUERY__NODE__NODE_REINDEX_STMT | b68d6ef908fd66a509fcae23 | -- not allowed for SYSTEM REINDEX (CONCURRENTLY) SYSTEM postgres |
-| TYPE_MISMATCH | PG_QUERY__NODE__NODE_REINDEX_STMT | b818369e08eda6dd428446c3 | -- REINDEX for partitioned indexes -- REINDEX TABLE fails for partitioned indexes -- Top-most parent index REINDEX TABLE concur_reindex_part_index |
-| TYPE_MISMATCH | PG_QUERY__NODE__NODE_REINDEX_STMT | ba9b21fa20f3710c3a8e3b13 | REINDEX TABLE CONCURRENTLY concur_exprs_tab |
-| TYPE_MISMATCH | PG_QUERY__NODE__NODE_REINDEX_STMT | bd0200cc25893fb2a1da6ae4 | -- No indexes REINDEX SCHEMA concur_reindex_schema |
-| TYPE_MISMATCH | PG_QUERY__NODE__NODE_REINDEX_STMT | c2b74f4efd4e4c6fac48ea5a | REINDEX TABLE CONCURRENTLY concur_temp_tab_1 |
-| TYPE_MISMATCH | PG_QUERY__NODE__NODE_REINDEX_STMT | c37c0c5fce8f776f50d4930f | REINDEX TABLE CONCURRENTLY concur_clustered |
-| TYPE_MISMATCH | PG_QUERY__NODE__NODE_REINDEX_STMT | c88b1571224d1b9528e779f7 | REINDEX INDEX tbl_c1_c2_c3_c4_key |
-| TYPE_MISMATCH | PG_QUERY__NODE__NODE_REINDEX_STMT | ca433be3d219f7c357d9259d | REINDEX INDEX pg_class_oid_index |
-| TYPE_MISMATCH | PG_QUERY__NODE__NODE_REINDEX_STMT | cab13a3b0dcb36d547bf1534 | REINDEX (TABLESPACE pg_global) TABLE CONCURRENTLY pg_authid |
-| TYPE_MISMATCH | PG_QUERY__NODE__NODE_REINDEX_STMT | ccd6178d19046dd5c1afabfe | REINDEX TABLE CONCURRENTLY sro_tab |
-| TYPE_MISMATCH | PG_QUERY__NODE__NODE_REINDEX_STMT | cecfb7e52603b1d42c232cde | -- move to global tablespace, fail REINDEX (TABLESPACE pg_global) INDEX regress_tblspace_test_tbl_idx |
-| TYPE_MISMATCH | PG_QUERY__NODE__NODE_REINDEX_STMT | cfb5f9507196642309b0a55f | REINDEX INDEX CONCURRENTLY concur_reindex_part_index |
-| TYPE_MISMATCH | PG_QUERY__NODE__NODE_REINDEX_STMT | d626a1c2792929ace2658320 | REINDEX INDEX pg_class_tblspc_relfilenode_index |
-| TYPE_MISMATCH | PG_QUERY__NODE__NODE_REINDEX_STMT | d6b02f99b14e1a1853118037 | REINDEX TABLE pg_database |
-| TYPE_MISMATCH | PG_QUERY__NODE__NODE_REINDEX_STMT | daabb90b5ce2ce47b07d4879 | -- try reindexing an existing constraint REINDEX INDEX circles_c1_c2_excl |
-| TYPE_MISMATCH | PG_QUERY__NODE__NODE_REINDEX_STMT | dc95762ace0b828d736094b8 | -- Reindexing concurrently this index fails with the same failure. -- The extra index created is itself invalid, and can be dropped. REINDEX INDEX CONCURRENTLY concur_reindex_ind5 |
-| TYPE_MISMATCH | PG_QUERY__NODE__NODE_REINDEX_STMT | dd30277f49ae5d04218e1547 | REINDEX INDEX pg_toast.pg_toast_1262_index |
-| TYPE_MISMATCH | PG_QUERY__NODE__NODE_REINDEX_STMT | de38935ba41e0c66cb500799 | -- ditto -- Warns about catalog relations REINDEX SCHEMA CONCURRENTLY pg_catalog |
-| TYPE_MISMATCH | PG_QUERY__NODE__NODE_REINDEX_STMT | de480098b94fa59af11a082a | REINDEX INDEX concur_reindex_partidx |
-| TYPE_MISMATCH | PG_QUERY__NODE__NODE_REINDEX_STMT | e3be1838d2fc098c5f889fcc | REINDEX TABLE CONCURRENTLY concur_temp_tab_2 |
-| TYPE_MISMATCH | PG_QUERY__NODE__NODE_REINDEX_STMT | e626cc12633c441c391bb699 | REINDEX INDEX CONCURRENTLY reindex_inj.ind_expr |
-| TYPE_MISMATCH | PG_QUERY__NODE__NODE_REINDEX_STMT | e6686b2aafbce4e5c438da52 | -- -- REINDEX SCHEMA -- REINDEX SCHEMA schema_to_reindex |
-| TYPE_MISMATCH | PG_QUERY__NODE__NODE_REINDEX_STMT | e8c26eecb06aa320f918a46f | REINDEX INDEX CONCURRENTLY concur_reindex_part_index_0_2 |
-| TYPE_MISMATCH | PG_QUERY__NODE__NODE_REINDEX_STMT | e96a8f714db0cb1024151f5f | REINDEX TABLE CONCURRENTLY concur_reindex_part |
-| TYPE_MISMATCH | PG_QUERY__NODE__NODE_REINDEX_STMT | ea847ba261dacfee4033b489 | REINDEX INDEX unlogged2_pkey |
-| TYPE_MISMATCH | PG_QUERY__NODE__NODE_REINDEX_STMT | ea997d03e0583d5478369777 | REINDEX (TABLESPACE regress_tblspace) TABLE CONCURRENTLY pg_am |
-| TYPE_MISMATCH | PG_QUERY__NODE__NODE_REINDEX_STMT | efe75a9a9bb1b48afd479bcf | REINDEX TABLE CONCURRENTLY concur_replident |
-| TYPE_MISMATCH | PG_QUERY__NODE__NODE_REINDEX_STMT | f2039db675b87eec1c24525f | REINDEX (TABLESPACE regress_tblspace) TABLE CONCURRENTLY pg_authid |
-| TYPE_MISMATCH | PG_QUERY__NODE__NODE_REINDEX_STMT | f50975608d1b97eaa8bbe432 | -- error REINDEX TABLE CONCURRENTLY concur_reindex_part_index |
-| TYPE_MISMATCH | PG_QUERY__NODE__NODE_REINDEX_STMT | f66f9498f0c992e249762cf0 | -- no catalog toast index REINDEX SYSTEM CONCURRENTLY postgres |
-| TYPE_MISMATCH | PG_QUERY__NODE__NODE_REINDEX_STMT | f6f9fce38b8680dbb40a1e5e | -- Both start and end triggers enabled. REINDEX INDEX concur_reindex_ind |
-| TYPE_MISMATCH | PG_QUERY__NODE__NODE_REINDEX_STMT | f7e4b7dd4e6e30bf5e73bc5d | -- ok -- REINDEX (TABLESPACE) -- catalogs and system tablespaces -- system catalog, fail REINDEX (TABLESPACE regress_tblspace) TABLE pg_am |
-| TYPE_MISMATCH | PG_QUERY__NODE__NODE_REINDEX_STMT | fa78e492534264ed20b04c72 | REINDEX TABLE pg_index |
-| TYPE_MISMATCH | PG_QUERY__NODE__NODE_REINDEX_STMT | fb1d22e5bd3ea8186a45f269 | REINDEX TABLE reind_fdw_parent |
-| TYPE_MISMATCH | PG_QUERY__NODE__NODE_REINDEX_STMT | fc4d9e2e5b40e09e521ebb28 | -- REINDEX REINDEX TABLE sro_tab |
-| TYPE_MISMATCH | PG_QUERY__NODE__NODE_REINDEX_STMT | fcb84b404e86ab9505872bab | REINDEX INDEX pg_index_indexrelid_index |
-| TYPE_MISMATCH | PG_QUERY__NODE__NODE_REINDEX_STMT | fd60e10b60f4f21a67ea5dcd | REINDEX INDEX pg_shdescription_o_c_index |
-| TYPE_MISMATCH | PG_QUERY__NODE__NODE_REINDEX_STMT | fdda325845e12f709b670c14 | -- concurrently REINDEX SCHEMA CONCURRENTLY schema_to_reindex |
-| TYPE_MISMATCH | PG_QUERY__NODE__NODE_REINDEX_STMT | ff6ac5ad2de81b978ff4648a | REINDEX INDEX CONCURRENTLY reindex_inj.ind_pred |
 | TYPE_MISMATCH | PG_QUERY__NODE__NODE_VARIABLE_SET_STMT | 0709c5161b218601dd93c954 | RESET extra_float_digits |
 | TYPE_MISMATCH | PG_QUERY__NODE__NODE_VARIABLE_SET_STMT | 07aa6704c4eafd9ade6588e6 | RESET hash_mem_multiplier |
 | TYPE_MISMATCH | PG_QUERY__NODE__NODE_VARIABLE_SET_STMT | 096f4b0b73310691abeadfe7 | reset rls_test.blah |
@@ -2399,63 +1674,103 @@ libpg_query target: `18-latest` `9ab9951b7021adcc6d25d261d5016ca0b83726b8` (Post
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_ROLE_STMT | 3e52aa4163f4f270744ecce7 | ALTER USER regress_passwordcheck_user1 PASSWORD 'v_shrt' |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_ROLE_STMT | 8200526bb371229e9cb6a49f | ALTER ROLE regress_passwd9 PASSWORD 'SCRAM-SHA-256$00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000... |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 001c761105d114480ef6dbc2 | alter table inh_parent add constraint inh_parent_uq unique (a) |
+| DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 003a575a0731d3a287e8f2e8 | -- DROP CONSTRAINT recurses correctly on invalid constraints ALTER TABLE notnull_tbl1 ALTER CONSTRAINT nntbl1_a INHERIT |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 003c9d80f24662a3e7b805ee | ALTER TABLE inh_nn_parent ALTER a SET NOT NULL |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 0047571bb40ca5fc74d89767 | alter table cnn2_parted add primary key (a) |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 006f40fdef07f488f8d0db37 | ALTER TABLE test_add_column DROP c6 |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 00b7669988e4a3fd169335df | --error, notnull_tbl1_3 have null values ALTER TABLE notnull_tbl1_3 VALIDATE CONSTRAINT nn3 |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 012112ea98f38b1dc0e6c15b | ALTER TABLE atnnparted ATTACH PARTITION atnnpart1 FOR VALUES IN ('1') |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 01fc15c066805cd13de0ee08 | ALTER TABLE sl ADD COLUMN bool_col boolean |
+| DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 030bd70cb513b576e70a0b59 | ALTER TABLE temporal_rng2 ADD CONSTRAINT temporal_rng_pk PRIMARY KEY (id, valid_at WITHOUT OVERLAPS) |
+| DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 0349daccc7588273fad7efc9 | ALTER TABLE fktable ALTER CONSTRAINT fktable_fk_fkey NOT ENFORCED |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 04aabb8698b9ec9373781fe7 | alter table inh_cc2 no inherit inh_pp1 |
+| DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 069b31f81beae46ed1099297 | ALTER TABLE testpub_rf_tbl7 ALTER COLUMN y SET EXPRESSION AS (x * testpub_rf_func2()) |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 06cb619bb32ed7c029c9a792 | ALTER FOREIGN TABLE ft1 DROP c11 |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 08f2a4c4b84a4b17d71f146a | ALTER TABLE temporal_fk_rng2rng DROP CONSTRAINT temporal_fk_rng2rng_fk |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 0b32908227962a456b8afc4a | -- add NOT NULL constraint recursively alter table inh_parent alter column f1 set not null |
+| DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 0d9e74318aa68e56115fd5c5 | ALTER TABLE notnull_parent_upg ADD CONSTRAINT nn NOT NULL a NOT VALID |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 0ea20d1fa311f7c124484b11 | alter table cc3 no inherit cc1 |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 1158087923d90edd4ca31b4d | -- should succeed -- Test wholerow & dropped column handling ALTER TABLE foo DROP COLUMN f3 CASCADE |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 11fbab52e2eca12742343db6 | ALTER TABLE regular_table DETACH PARTITION any_name CONCURRENTLY |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 125b2a0a03f65b4a3a2663d6 | ALTER TABLE notnull_part1_upg ATTACH PARTITION notnull_part1_3_upg FOR VALUES IN (NULL,5) |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 1568447ed48a289d2e5b1c48 | -- Some error cases. ALTER TABLE comment_test ALTER COLUMN xmin SET DATA TYPE x |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 160d94806197d6ff03052385 | alter table inh_child3 inherit inh_parent |
+| DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 1663440ac0cf84dcf19f2e99 | alter table p1_c1 add constraint inh_check_constraint9 check (f1 < 10) not valid enforced |
+| DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 168fb72c9698b507a682c424 | ALTER TABLE ATACC1 ADD NOT NULL a NO INHERIT |
+| DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 17e665fbdd654a91cc03a9b4 | -- succeeds ALTER TABLE attmp3 ADD CONSTRAINT b_greater_than_ten_not_enforced CHECK (b > 10) NOT ENFORCED |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 1a52cb168bb3198c9ff23da3 | ALTER TABLE fk_partitioned_pk VALIDATE CONSTRAINT selffk |
+| DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 1b8fa7452fdc598e02a0e11f | ALTER TABLE temporal_fk_rng2rng ADD CONSTRAINT temporal_fk_rng2rng_fk FOREIGN KEY (parent_id, PERIOD valid_at) REFERENCES temporal_rng ON UPDATE RESTRICT |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 1ba992de42b44a0bdf22136e | ALTER TABLE temporal_mltrng3 DROP CONSTRAINT temporal_mltrng3_uq |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 1d33d1bad9908ce1095c5a83 | ALTER TABLE itest4 ALTER COLUMN c ADD GENERATED ALWAYS AS IDENTITY |
+| DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 1dae06b0c6e78b2547c804cc | ALTER TABLE fk_notpartitioned_fk ADD CONSTRAINT fk_notpartitioned_fk_a_b_fkey2 FOREIGN KEY (a, b) REFERENCES fk_partitioned_pk NOT ENFORCED |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 1db01dc36b838b59bf139fed | ALTER TABLE inh_parent ADD COLUMN i int NOT NULL |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 1f39a148e4a9a6b8e50a1dc7 | alter table part_abc attach partition part_abc_2 for values in (2) |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 1f4ecfd3847947969fe4bb2d | ALTER TABLE fk_partitioned_fk_6 DETACH PARTITION fk_partitioned_fk_6_1 |
+| DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 1fdbc5bbdc459ac9f7986afd | alter table inh_nn2 alter constraint inh_nn1_f2_not_null no inherit |
+| DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 202ad492828b44839cedb398 | ALTER TABLE temporal_fk2_mltrng2mltrng ADD CONSTRAINT temporal_fk2_mltrng2mltrng_fk FOREIGN KEY (parent_id1, parent_id2, PERIOD valid_at) REFERENCES temporal_mltrng2 (id1, id2, PERIOD valid_at) |
+| DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 21603ae21f34e70a7fc73ae7 | alter table inh_nn3 alter constraint nn3_f1 inherit |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 22536f17dd741f0b56e120d4 | ALTER TABLE has_volatile ALTER COLUMN col5 TYPE float8 |
+| DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 22acbcba76880e47a1a456f2 | -- attach the indexes; parents stay invalid alter index idxpart1_expr_idx attach partition idxpart11_expr_idx |
+| DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 23be1e20f2c1221081970a08 | ALTER TABLE temporal_fk_mltrng2mltrng ADD CONSTRAINT temporal_fk_mltrng2mltrng_fk FOREIGN KEY (parent_id, PERIOD valid_at) REFERENCES temporal_mltrng (id, PERIOD valid_at) |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 240d5230d4b20080d78546b0 | alter table inh_pp1 alter column f1 set not null |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 24b47074060cb4aa1b6508fd | -- test ALTER TABLE ADD COLUMN ALTER TABLE gtestnn_parent ADD COLUMN c int NOT NULL GENERATED ALWAYS AS (nullif(f1, 14) + nullif(f2, 10)) VIRTUAL |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 24c59f6dc91cf4b1bd0ee16b | ALTER TABLE gtest27 DROP COLUMN x, ALTER COLUMN a TYPE bigint, ALTER COLUMN b TYPE bigint, ADD COLUMN x bigint GENERATED ALWAYS AS ((a + b) * 2) VIRTUAL NOT NULL |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 26133be347c7f8a8deaa82bf | ALTER TABLE notnull_tbl1 ALTER COLUMN a SET NOT NULL |
+| DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 273b221d3011d17cc4b09d6e | -- constraints other than not-null are not supported alter table inh_nn1 alter constraint inh_nn1_f1_check inherit |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 278a4248af1547f87f258264 | ALTER TABLE r1 ADD c int GENERATED ALWAYS AS (a * 100) VIRTUAL |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 2790268378dc16ad5e95a2ab | ALTER TABLE ONLY list_parted3 DROP CONSTRAINT list_parted3_a_not_null |
+| DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 28221787bd8889a6ad488a94 | -- -- partitioned FK referenced updates CASCADE -- ALTER TABLE temporal_partitioned_fk_mltrng2mltrng DROP CONSTRAINT temporal_partitioned_fk_mltrng2mltrng_fk, ADD CONSTRAINT temporal_partitioned_fk... |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 2895a4c47f606e97d3c4ec01 | -- error ALTER TABLE gtest25 ADD COLUMN x int GENERATED ALWAYS AS (z * 4) VIRTUAL |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 28e6bed1a0505cff09d482d0 | -- error ALTER TABLE gtestnn_parent ADD COLUMN c int NOT NULL GENERATED ALWAYS AS (nullif(f1, 13) + nullif(f2, 5)) VIRTUAL |
+| DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 29737b96fe94f04b1e9a17bf | ALTER TABLE notnull_tbl1 ADD NOT NULL a NOT VALID, ADD NOT NULL b NOT VALID |
+| DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 2a0ec8383b0fdbee7b4cc843 | ALTER TABLE fk_notpartitioned_fk ALTER CONSTRAINT fk_notpartitioned_fk_a_b_fkey2 ENFORCED |
+| DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 2a292f5bf6ad80f9acb80a69 | ALTER TABLE temporal_fk_rng2rng ADD CONSTRAINT temporal_fk_rng2rng_fk FOREIGN KEY (parent_id, PERIOD valid_at) REFERENCES temporal_rng ON UPDATE NO ACTION |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 2a693129b2595e497062a5c0 | alter table inh_cc2 no inherit inh_cc1 |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 2acbae57e289b99748160eab | ALTER TABLE ctl_table ALTER COLUMN b SET STORAGE MAIN |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 2b7dac41b1e039ffc7ee83d0 | -- omit COLUMN ALTER TABLE test_add_column DROP IF EXISTS c6 |
+| DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 2bf309323b734a0722eae7cb | ALTER TABLE notnull_chld0 ADD CONSTRAINT nn_chld0 NOT NULL a not valid |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 2d31ecbd6f8bb8b0f57a14e4 | ALTER TABLE temporal3 DROP COLUMN valid_at |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 2d6a551690fe66999082ec47 | alter table inh_pp1 alter column f1 drop not null |
+| DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 2dea23fa2eb1840be13c743e | ALTER TABLE cnn_pk ADD CONSTRAINT cnn_primarykey PRIMARY KEY USING INDEX cnn_uq |
+| DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 2e7eb0fd5f2866514ab2ed81 | ALTER TABLE temporal_fk_mltrng2mltrng ALTER CONSTRAINT temporal_fk_mltrng2mltrng_fk DEFERRABLE INITIALLY DEFERRED |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 2e9cab523d73531ae65571b5 | ALTER FOREIGN TABLE IF EXISTS doesnt_exist_ft1 ADD c11 integer |
+| DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 305bfd07992f3bb65b0233d0 | alter index idxpart_expr_idx attach partition idxpart2_expr_idx |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 30eae89d36c4b02d6d6a8b46 | ALTER TABLE vac_truncate_test RESET (vacuum_truncate) |
+| DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 31387fef237b77474e2b5e52 | alter table constr_parent2 add not null a not valid |
+| DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 31e15803d78d7790a8652903 | ALTER TABLE unique_tbl ALTER CONSTRAINT unique_tbl_i_key ENFORCED |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 340eeb212108e3950ce43916 | ALTER TABLE ctl_stats3_parent DROP COLUMN b |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 34641e008d4c18d2ab84d98a | ALTER TABLE fk_partitioned_fk_3 ATTACH PARTITION fk_partitioned_fk_3_1 FOR VALUES FROM (2000,2000) TO (3000,3000) |
+| DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 34ecbccfdf12debb9356a48b | ALTER TABLE atnotnull1 ADD COLUMN b INT, ADD NOT NULL b |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 363a64a468e34341856e530a | -- -- range PK: test with existing rows -- ALTER TABLE temporal_rng DROP CONSTRAINT temporal_rng_pk |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 372472c8d4df55f5cdd7d9b4 | ALTER TABLE atnnparted VALIDATE CONSTRAINT dummy_constr |
+| DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 3a9cd422a95a76e7303fea33 | -- error ALTER TABLE notnull_tbl1 ADD CONSTRAINT nn NOT NULL a NOT VALID |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 3b0cd93132b9f821fab2903c | ALTER TABLE test_replica_identity3 ALTER COLUMN id DROP NOT NULL |
+| DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 3b476cbee2da81c62f57099c | ALTER TABLE temporal3 ADD COLUMN valid_at daterange, ADD CONSTRAINT temporal3_uq UNIQUE (id, valid_at WITHOUT OVERLAPS) |
+| DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 3c0240f62e94b2be99910336 | ALTER TABLE temporal_fk2_rng2rng ADD CONSTRAINT temporal_fk2_rng2rng_fk FOREIGN KEY (parent_id1, parent_id2, PERIOD valid_at) REFERENCES temporal_rng2 (id1, id2, PERIOD valid_at) |
+| DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 3d0334c33cf9a80f2769a439 | ALTER TABLE testpub_gencol REPLICA IDENTITY USING index testpub_gencol_idx |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 3d199242bdd35eafde4ec8c6 | alter table part_abc attach partition part_abc_1 for values in (1) |
+| DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 3d3f5b7ed3b7d9730369ede2 | -- Changing it back to ENFORCED will recreate the necessary FK triggers -- that are deferrable and initially deferred ALTER TABLE FKTABLE ALTER CONSTRAINT fktable_fk_fkey ENFORCED |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 3d666f721930c97f41776b3b | -- test a self-referential FK ALTER TABLE fk_partitioned_pk ADD CONSTRAINT selffk FOREIGN KEY (a, b) REFERENCES fk_partitioned_pk NOT VALID |
+| DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 3da0e1c87fb3b79f6f52ebb0 | ALTER TABLE temporal_fk_rng2rng ALTER CONSTRAINT temporal_fk_rng2rng_fk DEFERRABLE INITIALLY DEFERRED |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 3dcc0a7e98b81d54bd97469a | ALTER TABLE fk_partitioned_pk_2 VALIDATE CONSTRAINT selffk |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 40171ad8ce4d016811e27563 | ALTER TABLE ctl_stats4_parent DROP COLUMN b |
+| DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 41ea983a45ad6b4088060d07 | alter table cnn_uq add unique using index cnn_uq_idx |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 43291babf079b179bf8db2bc | -- cannot set column as generated-as-identity if it has an invalid not-null ALTER TABLE notnull_tbl1 ALTER COLUMN a ADD GENERATED ALWAYS AS IDENTITY |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 451d0194dbc823e5ef602865 | -- -- multirange PK: test with existing rows -- ALTER TABLE temporal_mltrng DROP CONSTRAINT temporal_mltrng_pk |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 48f95258ac52a76138a58e62 | ALTER TABLE ONLY notnull_tbl6 ALTER b DROP NOT NULL |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 49f11d482196f20ddb785daa | -- DROP NOT NULL gets rid of both the attnotnull flag and the constraint itself ALTER TABLE notnull_tbl1 ALTER a DROP NOT NULL |
+| DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 4a05fb3c4e0e639be729567b | -- allowed to merge enforced constraint with parent's not enforced constraint alter table p1_c1 add constraint inh_check_constraint5 check (f1 < 10) enforced |
+| DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 4b9c855bccee740d11dd9a0a | ALTER TABLE atnnpart1 ADD CONSTRAINT another_constr NOT NULL id |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 4bfa29fd196ccdc0a721217f | ALTER FOREIGN TABLE agg_bad OPTIONS (ADD log_verbosity 'silent') |
+| DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 4cae1aa9d5af98658396f8b0 | -- -- partitioned FK referenced updates CASCADE -- ALTER TABLE temporal_partitioned_fk_rng2rng DROP CONSTRAINT temporal_partitioned_fk_rng2rng_fk, ADD CONSTRAINT temporal_partitioned_fk_rng2rng_fk ... |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 4d7f053da45acdc6ae93fd4f | -- fails on existing row ALTER TABLE gtest20a ADD COLUMN c float8 DEFAULT random() CHECK (b < 61) |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 4dac7d086116478a17cd72c5 | -- omit COLUMN ALTER TABLE test_add_column ADD IF NOT EXISTS c6 integer |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 4dbef5b2e9f2e3df42dbe157 | -- cannot add primary key on a column with an invalid not-null ALTER TABLE notnull_tbl1 ADD PRIMARY KEY (a) |
+| DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 4e435ac6f2c8d6791aafb932 | -- error - generated column "b" must be published explicitly as it is -- part of the REPLICA IDENTITY. ALTER TABLE testpub_gencol REPLICA IDENTITY FULL |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 4f402d401a31c18493ad2246 | ALTER TABLE gtest24at ADD COLUMN b gtestdomain1 GENERATED ALWAYS AS (a * 2) VIRTUAL |
+| DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 4f801b6f5d679c7169d23b23 | alter table p1 add constraint inh_check_constraint7 check (f1 < 10) enforced |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 519d6ffae284162848387e28 | ALTER TABLE has_volatile ADD col7 int GENERATED ALWAYS AS (55) stored |
+| DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 519e0ea0701176ec67557ccd | alter table p1 add constraint inh_check_constraint8 check (f1 < 10) enforced |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 5258e224a534d54d52c307ad | ALTER TABLE ONLY list_parted3 ADD PRIMARY KEY (a) |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 5321baeb76416f00d64749a1 | ALTER TABLE ctlt1 ADD CONSTRAINT cc CHECK (length(b) > 100) NOT VALID |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 54b23e4ee4ac98229489cc1f | ALTER TABLE fk_r DROP CONSTRAINT fk_r_p_id_p_jd_fkey_1 |
@@ -2465,52 +1780,92 @@ libpg_query target: `18-latest` `9ab9951b7021adcc6d25d261d5016ca0b83726b8` (Post
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 5943bfa4e1c4c6e45eaa6780 | -- Ensure that the virtual generated columns in ALTER COLUMN TYPE USING expression are expanded alter table gtest32 alter column e type bigint using b |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 5a9c025c018f95e89b6357a4 | ALTER TABLE temporal_rng3 DROP CONSTRAINT temporal_rng3_pk |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 5aade7a14ebbc423376e3a4c | -- dropping the NO INHERIT constraint allows this to work ALTER TABLE ATACC2 DROP CONSTRAINT a_is_not_null |
+| DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 5b61e13592b0abf64c0e4405 | ALTER TABLE temporal3 ADD CONSTRAINT temporal3_uq UNIQUE USING INDEX idx_temporal3_uq |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 5b7064b650193f8b57bfe25c | ALTER TABLE inh_nn_lvl1 ADD PRIMARY KEY (a) |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 5c0c4cd11f45706503d398e7 | ALTER TABLE comment_test ALTER COLUMN id SET DATA TYPE x |
+| DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 5c44d98009cf0811fac98f1f | -- change child constraint ALTER TABLE fk_partitioned_fk_2 ALTER CONSTRAINT fk_part_con ENFORCED |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 5d1ddaaa547310ff0f60d507 | -- remove constraint from cc2: no dice, it's inherited alter table cc2 alter column a2 drop not null |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 5de1ec9196b8e15757722adf | ALTER TABLE notnull_tbl3 ALTER A DROP NOT NULL |
+| DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 5e021a1f5ec7c6f533dfccee | ALTER TABLE notnull_tbl1 ALTER CONSTRAINT nntbl1_a NO INHERIT |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 6033ec9ee0d5ec1cb578da09 | ALTER FOREIGN TABLE ft1 ADD c11 integer |
+| DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 61b3d703548c0d83e58b3002 | -- but it's OK when the identity is FULL ALTER TABLE test_replica_identity3 REPLICA IDENTITY FULL |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 61c80e86413f9f387952f6fc | -- error ALTER TABLE gtest25 ADD COLUMN c int DEFAULT 42, ADD COLUMN x int GENERATED ALWAYS AS (c * 4) VIRTUAL |
+| DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 633d32e11c011b4f4fd46a6c | alter table p1_c1 add constraint inh_check_constraint8 check (f1 < 10) not enforced |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 63ea10d1160017d03e0b5fed | -- this must be rejected to avoid self-inclusion issues: alter type two_ints add attribute c two_ints_multirange |
+| DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 64ebfca5dc6dcb2c0237fad7 | -- Changing the constraint to NOT ENFORCED drops the associated FK triggers ALTER TABLE FKTABLE ALTER CONSTRAINT fktable_fk_fkey NOT ENFORCED |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 653564a7c1420347e430acb4 | alter table inh_child no inherit inh_parent |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 661b245b78484ccf768feb76 | ALTER TABLE gtest25 ALTER COLUMN d SET DATA TYPE float8, ADD COLUMN y float8 GENERATED ALWAYS AS (d * 4) VIRTUAL |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 661e1b42cf7d559167c93144 | -- ALTER column SET NOT NULL validates an invalid constraint (but this fails -- because of rows with null values) ALTER TABLE notnull_tbl1 ALTER a SET NOT NULL |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 663512011f79791a856b1372 | ALTER TABLE notnull_tbl2 ALTER a DROP NOT NULL |
+| DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 675b3e52d837ce78688fed33 | alter table p1 add constraint inh_check_constraint9 check (f1 < 10) not enforced |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 67b41ec7ebd0ce811dd64324 | ALTER TABLE ONLY notnull_tbl5 DROP CONSTRAINT ann |
+| DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 6c03824af775e5f45e023075 | ALTER TABLE temporal3 ADD CONSTRAINT temporal3_pk PRIMARY KEY USING INDEX idx_temporal3_uq |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 6dcd4929513a1b071f812d81 | -- It's possible to alter the column types this way: ALTER TABLE gtest27 DROP COLUMN x, ALTER COLUMN a TYPE bigint, ALTER COLUMN b TYPE bigint, ADD COLUMN x bigint GENERATED ALWAYS AS ((a + b) * 2)... |
+| DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 6f89d5897f725689748a04de | ALTER TABLE temporal_fk_rng2rng ADD CONSTRAINT temporal_fk_rng2rng_fk FOREIGN KEY (parent_id, PERIOD valid_at) REFERENCES temporal_rng ON DELETE RESTRICT |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 702a068bc4d403a5e941d1c3 | ALTER TABLE temporal3 DROP COLUMN valid_thru |
+| DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 7036bb12df4b14afe53184b0 | ALTER TABLE inh_nn_parent ADD CONSTRAINT nna NOT NULL a |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 7049801cfc1e21e3a268b641 | ALTER TABLE notnull_tbl1_child2 INHERIT notnull_tbl1 |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 704c4a1d8df86926b27fc69c | ALTER FOREIGN TABLE IF EXISTS doesnt_exist_ft1 DROP c11 |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 704d905358d9d5501f0c7197 | ALTER TABLE notnull_tbl1 DROP CONSTRAINT notnull_tbl1_b_not_null |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 70a126bddb1db507a2591b92 | ALTER TABLE notnull_tbl1 DROP CONSTRAINT nntbl1_a |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 71249aa70fcd6673c87dd74b | alter table inh_child inherit inh_parent |
+| DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 72fc8736d6467824f7cbb7e9 | alter table p1_c1 add constraint inh_check_constraint4 check (f1 < 10) not enforced |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 746a19b9bce6b5b62ee2ab0c | ALTER TABLE test_replica_identity5 ALTER b SET NOT NULL |
+| DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 74a16a00b52cd468b396c7c2 | alter table inh_nn1 alter constraint inh_nn1_pkey inherit |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 753b2c3fc2d93cb476cd5c11 | ALTER TABLE notnull_tbl1 ATTACH PARTITION notnull_tbl1_2 FOR VALUES IN (3,4) |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 75a0e73616b311ed96d038f2 | ALTER TABLE temporal3 ALTER COLUMN valid_at DROP NOT NULL |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 762f79420be3eafbeeaa54fa | alter table inh_nn2 inherit inh_nn1 |
+| DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 7790ffe0d97c082407041f95 | alter table p1 add constraint inh_check_constraint4 check (f1 < 10) not enforced |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 792bfa83144c849366cced48 | ALTER TABLE ONLY pp_nn ADD PRIMARY KEY (a) |
+| DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 7b1247df07f05b13ad231a2f | ALTER TABLE notnull_inhchild ADD CONSTRAINT nn1 NOT NULL i |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 7b6bb21a5b040723be849834 | ALTER TABLE pg_toast.pg_toast_2615 SET (fillfactor = '90') |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 7d5bcd83c78da7f68afcba5e | ALTER TABLE gtest20c ADD CONSTRAINT whole_row_check CHECK (gtest20c IS NOT NULL) |
+| DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 7e8ef9066d0620c524107103 | -- the not-valid state of the child constraint will be ignored here. alter table p1 add constraint inh_check_constraint10 check (f1 < 10) not enforced |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 7f15f9edb5af164ba7030c9e | -- doesn't exist in referenced table ALTER TABLE fk_partitioned_fk_2 ADD FOREIGN KEY (a, b) REFERENCES fk_notpartitioned_pk NOT VALID |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 809d8f0f51bd87e39c1e8559 | ALTER FOREIGN TABLE IF EXISTS doesnt_exist_ft1 DROP COLUMN no_column |
+| DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 81fec91e6288b91b4ef2ba41 | ALTER TABLE gtest21ax ADD CONSTRAINT cc NOT NULL b |
+| DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 83d905100c7541b2ca8410ac | ALTER TABLE atnnparted ADD CONSTRAINT dummy_constr NOT NULL id NOT VALID |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 86623fa2a5a0390ffcb27702 | ALTER TABLE fk_partitioned_fk_3_1 ADD FOREIGN KEY (a, b) REFERENCES fk_notpartitioned_pk |
+| DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 86c9a75bb873bf9cd933ab18 | ALTER TABLE pp_nn_1 ADD CONSTRAINT nn NOT NULL a NO INHERIT |
+| DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 87d49b1d8fee2fc8000b7f01 | ALTER TABLE fk_partitioned_fk ADD CONSTRAINT fk_partitioned_fk_a_b_fkey FOREIGN KEY (a, b) REFERENCES fk_notpartitioned_pk NOT ENFORCED |
+| DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 8a2b5b6a35cb6d0c5e471337 | ALTER TABLE temporal_fk_mltrng2mltrng ADD CONSTRAINT temporal_fk_mltrng2mltrng_fk FOREIGN KEY (parent_id, PERIOD valid_at) REFERENCES temporal_mltrng (id, PERIOD valid_at) ON UPDATE NO ACTION |
+| DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 8ade8c3f13ea097754bc35b9 | -- -- partitioned FK referenced deletes SET NULL -- -- -- partitioned FK referenced updates SET DEFAULT -- ALTER TABLE temporal_partitioned_fk_rng2rng ALTER COLUMN parent_id SET DEFAULT '[-1,-1]', ... |
+| DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 8b3062f171ea3aa0506bd286 | ALTER TABLE notnull_child_upg ADD CONSTRAINT nn NOT NULL a |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 8b66ab8343d94baa9f931148 | ALTER TABLE regular_table DETACH PARTITION any_name FINALIZE |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 8c854a0f491e6016674decb0 | alter table inh_child1 no inherit inh_parent |
+| DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 8d915d158baf2ba6280b7287 | ALTER TABLE temporal_fk_mltrng2mltrng ADD CONSTRAINT temporal_fk_mltrng2mltrng_fk FOREIGN KEY (parent_id, PERIOD valid_at) REFERENCES temporal_mltrng (id, PERIOD valid_at) ON UPDATE RESTRICT |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 8ed6cd09189ed1da6078fec5 | --error ALTER TABLE pp_nn_1 VALIDATE CONSTRAINT nn1 |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 8f45a571a8cecf3f2cef3308 | alter table t2 alter column z drop not null |
+| DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 903ef34fc2b1323e7a36448f | -- nope ALTER TABLE notnull_tbl1_child2 ADD NOT NULL a NOT VALID |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 9133c0d1e995c5c1320077c3 | -- Make the column NOT NULL and ensure we remove the redundant column alter table t2 alter column z set not null |
+| DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 914703b53eb8e2996ea25b92 | ALTER TABLE temporal_fk_rng2rng ADD CONSTRAINT temporal_fk_rng2rng_fk FOREIGN KEY (parent_id, PERIOD valid_at) REFERENCES temporal_rng (id, PERIOD valid_at) |
+| DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 9377e59a84775a9e3862a287 | alter table inh_nn1 alter constraint inh_nn1_f1_fkey inherit |
+| DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 93eff720b27b163eb9f4e8f3 | alter table p1_c1 add constraint inh_check_constraint6 check (f1 < 10) enforced |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 940c7e8897836825ee27b563 | alter table inh_nn4 inherit inh_nn2, inherit inh_nn1, inherit inh_nn3 |
+| DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 9496de36a39b4a3993eb1571 | ALTER TABLE fk_partitioned_fk ALTER CONSTRAINT fk_partitioned_fk_a_b_fkey ENFORCED |
+| DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 94bafb8c5482cbbf46002d73 | ALTER TABLE notnull_tbl1 ADD CONSTRAINT nn_parent NOT NULL a not valid |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 95014ba9b6c16943f3448d73 | alter table inh_parent add constraint inh_parent_fk foreign key (a) references inh_parent (a) |
+| DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 956a6f1973ac2c1de6111650 | ALTER TABLE notnull_tbl1 ADD CONSTRAINT notnull_con NOT NULL a NOT VALID |
+| DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 9579aa03f89dfd8242b5303e | -- -- partitioned FK referenced deletes CASCADE -- -- -- partitioned FK referenced updates SET NULL -- ALTER TABLE temporal_partitioned_fk_mltrng2mltrng DROP CONSTRAINT temporal_partitioned_fk_mltr... |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 96f2eaa6b750d5accdeb01e2 | -- A constraint that's NO INHERIT can be dropped without damaging children alter table inh_nn1 drop constraint inh_nn1_f1_not_null |
+| DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 981aea3a7d4dce87e2576179 | ALTER TABLE FKTABLE ALTER CONSTRAINT fk_con NOT ENFORCED |
+| DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 99952a2e70945905f935b1da | -- Modifying other attributes of a constraint should not affect its enforceability, and vice versa ALTER TABLE FKTABLE ADD CONSTRAINT fk_con FOREIGN KEY(ftest1, ftest2) REFERENCES PKTABLE NOT VALID... |
+| DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 99c29c7f48328ec96cc4e03e | ALTER TABLE notnull_tbl1_upg ADD CONSTRAINT nn NOT NULL a NOT VALID |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 9b1ffa3f12df2aa96ef0c1e1 | -- fails on existing row -- table rewrite cases ALTER TABLE gtest20a ADD COLUMN c float8 DEFAULT random() CHECK (b < 50) |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 9c454c2b30f9ae6777898575 | ALTER TABLE notnull_tbl3 ADD b int, ADD CONSTRAINT pk PRIMARY KEY (a, b) |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 9c572e54f5c3716bd8343112 | ALTER TABLE temporal_fk_mltrng2mltrng DROP CONSTRAINT temporal_fk_mltrng2mltrng_fk |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 9c9c892c12311282842c63cd | ALTER TABLE foo_parted ATTACH PARTITION foo_part_d2 FOR VALUES IN (4) |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 9d9872ce93721df0aa913cfc | -- remove from pp1, should succeed alter table pp1 alter column f1 drop not null |
+| DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 9e04b79998c033cdd582994b | ALTER TABLE fk_partitioned_fk ALTER CONSTRAINT fk_partitioned_fk_a_b_fkey NOT ENFORCED |
+| DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 9e073e4dd9811fbdaf4fbd38 | alter table p1 add constraint inh_check_constraint3 check (f1 > 0) not enforced |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 9f8ee0a181ad1b9034d172a8 | ALTER FOREIGN TABLE ft1 ADD COLUMN IF NOT EXISTS c6 integer |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 9faf5dcf18430aa79143d181 | alter table cnn_uq add unique (a) |
+| DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | a0062d2a7f36a7a023d3c40d | ALTER TABLE test_replica_identity5 REPLICA IDENTITY USING INDEX test_replica_identity5_a_b_key |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | a186a0d5f0cdc2d3714513c4 | ALTER TABLE has_volatile ADD col5 int GENERATED ALWAYS AS (tableoid::int + col2) VIRTUAL |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | a1adad7c436f7d92fe8f9540 | ALTER TABLE gtest_tableoid ADD COLUMN c regclass GENERATED ALWAYS AS (tableoid) VIRTUAL |
+| DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | a2db0b60d64b1173f39a41b1 | -- but using a different constraint name is not allowed ALTER TABLE notnull_tbl1 ADD CONSTRAINT nn NOT NULL a |
+| DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | a33e215bef80733a3acd4501 | alter table inh_nn1 alter constraint inh_nn1_f1_not_null inherit |
+| DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | a364b125a34dc530de348acf | ALTER TABLE temporal_mltrng ADD CONSTRAINT temporal_mltrng_pk PRIMARY KEY (id, valid_at WITHOUT OVERLAPS) |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | a53840d757210314bb0cba62 | ALTER TABLE temporal_fk_rng2rng ALTER COLUMN valid_at TYPE daterange USING daterange(lower(valid_at)::date, upper(valid_at)::date) |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | a5c4cbcb1fb6d90ab05d9371 | alter table pp1 alter f1 set not null |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | a90b77f90b96b95b6943ebdc | ALTER TABLE notnull_part1_upg ATTACH PARTITION notnull_part1_2_upg FOR VALUES IN (3,4) |
@@ -2519,53 +1874,98 @@ libpg_query target: `18-latest` `9ab9951b7021adcc6d25d261d5016ca0b83726b8` (Post
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | a99461f2e03d8a9d92bc8625 | ALTER TABLE test_replica_identity5 DROP CONSTRAINT test_replica_identity5_pkey |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | aa4870d01a8ae1e81d5acccb | ALTER TABLE test_replica_identity5 ALTER b DROP NOT NULL |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | aac7b9da3a9e2b743f0d4ef3 | -- remove constraint from cc1, should succeed alter table cc1 alter column a2 drop not null |
+| DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | ac90b987fb42dbbac4748c69 | ALTER TABLE notnull_tbl1 ADD CONSTRAINT nntbl1_a NOT NULL a NOT VALID |
+| DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | ad22cba290238275ce7cc4f6 | -- should fail because of duplicate referenced columns: ALTER TABLE temporal_fk_rng2rng ADD CONSTRAINT temporal_fk_rng2rng_fk2 FOREIGN KEY (parent_id, PERIOD parent_id) REFERENCES temporal_rng (id,... |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | ad4e7709a37b31a7ec7612db | alter table part_abc add d int |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | ad7b4692c8492a69b0fe9ac3 | ALTER TABLE ONLY notnull_tbl5 ALTER b DROP NOT NULL |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | ae1c9e7d2cded1c879d31c7f | ALTER TABLE fk_notpartitioned_fk ADD CONSTRAINT fk_notpartitioned_fk_a_b_fkey FOREIGN KEY (a, b) REFERENCES fk_partitioned_pk NOT VALID |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | aeab454b756f85bc6fc0d6cc | -- inh_child1 should have not null constraint alter table inh_child1 inherit inh_parent |
+| DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | afcb4b2f9c2a83f3c57de0b3 | ALTER TABLE pp_nn_1 ADD CONSTRAINT nn NOT NULL a NOT VALID |
+| DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | b00a731098108bcfc499d9e3 | -- ALTER CONSTRAINT NO INHERIT should work on top-level constraints alter table inh_nn1 alter constraint inh_nn1_f1_not_null no inherit |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | b00db4ca5108a4f768ec42f6 | ALTER FOREIGN TABLE IF EXISTS doesnt_exist_ft1 ADD COLUMN IF NOT EXISTS c6 integer |
+| DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | b023832199e29669a483d567 | ALTER TABLE temporal_fk_rng2rng ADD CONSTRAINT temporal_fk_rng2rng_fk FOREIGN KEY (parent_id, PERIOD valid_at) REFERENCES temporal_rng ON DELETE SET NULL ON UPDATE SET NULL |
+| DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | b1b94501b997bea3300eec22 | ALTER TABLE fk_partitioned_fk_2 ADD CONSTRAINT fk_partitioned_fk_a_b_fkey FOREIGN KEY (a, b) REFERENCES fk_notpartitioned_pk NOT ENFORCED |
+| DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | b3355931d7524216733e7bdd | ALTER TABLE temporal_fk_rng2rng ADD CONSTRAINT temporal_fk_rng2rng_fk FOREIGN KEY (parent_id, PERIOD valid_at) REFERENCES temporal_rng |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | b3360e83ab31f44f2ef3c8b8 | ALTER TABLE t ADD COLUMN j int |
+| DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | b3c13fbaf6c796cd149403f5 | alter table inh_nn_parent add not null a no inherit |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | b3d28a3311d6af9857ea7cf3 | -- succeeds ALTER TABLE attmp3 VALIDATE CONSTRAINT b_greater_than_ten_not_enforced |
+| DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | b474c154cb01b958a79379bd | --ok -- SET EXPRESSION supports not null constraint ALTER TABLE gtest21ax ALTER COLUMN b SET EXPRESSION AS (nullif(a, 1)) |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | b4c878a4e194b7a722d6b116 | ALTER TABLE gtest25 ADD COLUMN x int GENERATED ALWAYS AS (b * 4) VIRTUAL |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | b5b79595276e2a69db417239 | ALTER FOREIGN TABLE agg_bad OPTIONS (SET reject_limit '2') |
+| DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | b704e4f7404ea84c227e2bb6 | ALTER TABLE temporal_fk_rng2rng ALTER COLUMN parent_id SET DEFAULT '[-1,-1]', ADD CONSTRAINT temporal_fk_rng2rng_fk FOREIGN KEY (parent_id, PERIOD valid_at) REFERENCES temporal_rng ON DELETE SET DE... |
+| DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | b7831adc966f966c3e12a309 | -- Enforceability also changes the validate state, as data validation will be -- performed during this transformation. ALTER TABLE FKTABLE ALTER CONSTRAINT fk_con ENFORCED |
+| DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | b8a8efdcc16c8706b5e55114 | alter table inh_parent add constraint inh_parent_excl exclude ((1) with =) |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | b94d59bf591c9cb9196fdc87 | -- named NOT NULL constraint alter table cc1 add column a2 int constraint nn not null |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | bb4a09fe660ea08e0c564454 | ALTER TABLE fk_partitioned_fk_1 ADD FOREIGN KEY (a, b) REFERENCES fk_notpartitioned_pk |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | bbfca31b24fe274efe154db3 | alter table inh_child2 no inherit inh_parent2 |
+| DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | bc845f94c5cf4831ce511459 | -- change NO INHERIT status of inherited constraint: no dice, it's inherited alter table cc2 add not null a2 no inherit |
+| DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | bca6bf4385beeb641639812b | ALTER INDEX gin_check_idx SET (fastupdate = false) |
+| DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | beac01c79c98d677cf79c884 | ALTER TABLE fktable ALTER CONSTRAINT fktable_fk_fkey NO INHERIT |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | bfec250d0add6cbb4be0f119 | ALTER TABLE ctl_table ADD CONSTRAINT foo CHECK (b = 'text') |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | c31ed7af4cad8dd01bfbaa75 | alter table inh_child2 alter column f1 set not null |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | c35ae23a6b60a168d9eea4fc | ALTER TABLE temporal_rng3 DROP CONSTRAINT temporal_rng3_uq |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | c3997bc6c8d56f782f7e1aa4 | alter table constr_child validate constraint constr_parent_a_not_null |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | c3ca66159f44a0afb30de1e2 | -- should fail, missing NOT NULL constraint alter table inh_child2 inherit inh_child1 |
+| DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | c4058bb7449ca41162ce33ec | -- can't override ALTER TABLE ATACC1 ADD CONSTRAINT ditto NOT NULL a |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | c75ac7a8df9cc65b9075bc84 | -- this should work alter table renameColumn add column x int check (x > 0) not enforced |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | c7ab33bac89d1e8a96d655c1 | ALTER TABLE notnull_inhparent ALTER i SET NOT NULL |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | c7ce37a6cb2cd3149be29758 | ALTER TABLE fk_partitioned_fk_3 ADD FOREIGN KEY (a, b) REFERENCES fk_notpartitioned_pk NOT VALID |
+| DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | c8622a537ce1a8ccdfed3e4d | -- Reverting it back to ENFORCED will result in failure because constraint validation will be triggered, -- as it was previously in a valid state. ALTER TABLE FKTABLE ALTER CONSTRAINT fktable_ftest... |
+| DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | caec240e30f6e298188000ec | alter table p1 add constraint inh_check_constraint6 check (f1 < 10) not enforced |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | ccf768dcfce1a239d1fd3597 | ALTER FOREIGN TABLE agg_bad OPTIONS (ADD reject_limit '1') |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | cd5931a7f105a0a7212a827e | ALTER TABLE test_tsvector SET (parallel_workers = 2) |
+| DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | cd5e3bdf111057ed424641a6 | ALTER TABLE ref ALTER CONSTRAINT ref_f1_f2_fkey_1 DEFERRABLE INITIALLY DEFERRED |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | cd712fe63372085985c061f6 | ALTER TABLE gtest24ata ALTER COLUMN b TYPE gtestdomain1 |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | d01009f6b97192cc905aab45 | --error ALTER TABLE notnull_chld0 DROP CONSTRAINT nn_chld0 |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | d0a547c455e00f85e294fc8e | ALTER TABLE fk_partitioned_fk_6 ATTACH PARTITION fk_partitioned_fk_6_1 FOR VALUES IN (1) |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | d145170c3b7ba138f99fda3e | ALTER TABLE has_volatile ALTER COLUMN col5 TYPE numeric |
+| DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | d2251e1184bb31cc108a6e1e | ALTER TABLE pp_nn_1 ADD CONSTRAINT nn1 NOT NULL a NOT VALID |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | d2b6bac461bc6093d9b87d49 | ALTER TABLE notnull_tbl1 INHERIT notnull_chld0 |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | d5231864c811f25839b647c6 | ALTER TABLE cnn_pk ADD CONSTRAINT cnn_primarykey PRIMARY KEY (b) |
+| DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | d5296fbf49f916c984a67134 | -- but reverse is not allowed alter table p1_c1 add constraint inh_check_constraint7 check (f1 < 10) not enforced |
+| DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | d586b00f9204fda83e76246c | ALTER TABLE temporal3 ADD COLUMN valid_at daterange, ADD CONSTRAINT temporal3_pk PRIMARY KEY (id, valid_at WITHOUT OVERLAPS) |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | d63618514484f0d27915bf31 | ALTER TABLE notnull_tbl1 ATTACH PARTITION notnull_tbl1_3 FOR VALUES IN (NULL,5) |
+| DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | d64bec5a84483a4ac576deaf | ALTER TABLE temporal_rng3 ADD CONSTRAINT temporal_rng3_uq UNIQUE (id, valid_at WITHOUT OVERLAPS) |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | d6875c6a51fdb665f0c8b6ee | ALTER TABLE list_parted ATTACH PARTITION part_fail FOR VALUES IN (2) |
+| DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | d6f25e593fb67c2079f8a727 | ALTER TABLE FKTABLE ALTER CONSTRAINT fk_con DEFERRABLE INITIALLY DEFERRED |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | d6ff511c971abeaf1bce26ed | -- VALIDATE CONSTRAINT scans the table ALTER TABLE notnull_tbl1 VALIDATE CONSTRAINT nn |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | d740bdf024208bfc9f6472f7 | alter table constr_child2 validate constraint constr_parent2_a_not_null |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | d8c3f540acb77df6dae93529 | ALTER TABLE temporal3 DROP COLUMN valid_at CASCADE |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | d952999c60a543a6617024af | ALTER TABLE pp_nn ATTACH PARTITION pp_nn_1 FOR VALUES IN (NULL,5) |
+| DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | dabddb74f2623bf417ca75b8 | -- -- partitioned FK referenced deletes CASCADE -- -- -- partitioned FK referenced updates SET NULL -- ALTER TABLE temporal_partitioned_fk_rng2rng DROP CONSTRAINT temporal_partitioned_fk_rng2rng_fk... |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | db5ea3c3501c35204c4a642a | ALTER TABLE testjsonb SET (parallel_workers = 2) |
+| DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | db64ec2334f6dbb67fab04ad | -- -- partitioned FK referenced deletes SET NULL -- -- -- partitioned FK referenced updates SET DEFAULT -- ALTER TABLE temporal_partitioned_fk_mltrng2mltrng ALTER COLUMN parent_id SET DEFAULT '[0,1... |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | dba4d2a9263b4e82b25feac9 | ALTER TABLE atnnpart1 ADD PRIMARY KEY (id) |
+| DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | dbba17f1866801cd77b4f892 | ALTER TABLE notnull_part1_3_upg add CONSTRAINT nn3 NOT NULL a NOT VALID |
+| DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | dbbae83ff739842cbf00653c | -- try to drop a nonexistant constraint alter table inh_nn1 alter constraint foo inherit |
+| DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | dccac0246aaa8fcf541744b7 | ALTER TABLE notnull_tbl1_3 add CONSTRAINT nn3 NOT NULL a NOT VALID |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | de99144a7e1a8ab536dd5be5 | --table rewrite won't validate invalid constraint ALTER TABLE notnull_tbl1 ADD column d float8 default random() |
+| DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | dfaf51924c8ab5a6617f6bd3 | ALTER TABLE temporal_rng ADD CONSTRAINT temporal_rng_pk PRIMARY KEY (id, valid_at WITHOUT OVERLAPS) |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | e0113d5010bcb340b272ed55 | -- error ALTER TABLE gtestnn_parent ADD COLUMN c int NOT NULL GENERATED ALWAYS AS (nullif(f1, 4) + nullif(f2, 6)) VIRTUAL |
+| DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | e1c61e5c7258fd8c4945aa6e | ALTER TABLE notnull_tbl1 ADD CONSTRAINT foobar NOT NULL a |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | e1d819345898d2836a0c5939 | -- ERROR -- on_error, log_verbosity and reject_limit tests ALTER FOREIGN TABLE agg_bad OPTIONS (ADD on_error 'ignore') |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | e207880d7f626258a3c8965b | ALTER TABLE test_add_column ADD c6 integer |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | e58cc6960966c696a77d7cf1 | ALTER TABLE ONLY notnull_tbl6 DROP CONSTRAINT ann |
+| DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | e7fda49144b0bd2b12f930a8 | ALTER TABLE notnull_inhparent ADD CONSTRAINT nn NOT NULL i NOT VALID |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | e84098148cc3d0491d94556e | --now ok -- parents and child not-null will all be validated. ALTER TABLE notnull_tbl1 VALIDATE CONSTRAINT nn_parent |
+| DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | e887911d735bb9cc81946bc3 | alter table p1_c1 add constraint inh_check_constraint3 check (f1 > 0) not enforced |
+| DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | ea04f7b86fd3cb9784e6e2d0 | alter table constr_parent add not null a not valid |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | ea7ccae00c8980648021a8ea | alter table cc3 no inherit cc2 |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | eaca3ca57172d0acda441afe | ALTER TABLE has_volatile ALTER COLUMN col1 SET DATA TYPE float8, ADD COLUMN col6 float8 GENERATED ALWAYS AS (col1 * 4) VIRTUAL |
+| DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | ef181a9c0e0f7ea5d400e442 | alter index idxpart_expr_idx attach partition idxpart1_expr_idx |
+| DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | efec3493910630d8a78d1c30 | ALTER TABLE temporal_fk_rng2rng ADD CONSTRAINT temporal_fk_rng2rng_fk FOREIGN KEY (parent_id, PERIOD valid_at) REFERENCES temporal_rng ON DELETE CASCADE ON UPDATE CASCADE |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | f1a51da1b1f364c9fbfe97f8 | ALTER TABLE temporal3 ALTER COLUMN valid_at TYPE tstzrange USING tstzrange(lower(valid_at), upper(valid_at)) |
+| DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | f1c5bd0ed2bd9569fc2c671d | ALTER TABLE temporal_mltrng3 ADD CONSTRAINT temporal_mltrng3_uq UNIQUE (id, valid_at WITHOUT OVERLAPS) |
+| DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | f318db23984d00fd50b675df | -- Can change enforceability and deferrability together ALTER TABLE FKTABLE ALTER CONSTRAINT fk_con NOT ENFORCED NOT DEFERRABLE |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | f31b1a061345c0e94a212a0f | alter table cnn_pk add primary key (a) |
+| DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | f528f1bae131d62b4a0738ac | ALTER TABLE gtest25 ADD COLUMN b int GENERATED ALWAYS AS (a * 2) VIRTUAL, ALTER COLUMN b SET EXPRESSION AS (a * 3) |
+| DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | f635ebcc747c6c85b3333c9a | -- error ALTER TABLE gtestnn_parent ALTER COLUMN f3 SET EXPRESSION AS (nullif(f1, 2) + nullif(f2, 11)) |
+| DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | f64203351c54f46ab7f4bb27 | ALTER TABLE unique_tbl ALTER CONSTRAINT unique_tbl_i_key NOT ENFORCED |
+| DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | f950d97b5bd831ed0917f5f8 | alter table p1 add constraint inh_check_constraint5 check (f1 < 10) not enforced |
+| DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | fb6093628d03b0d9e0d31126 | alter table inh_nn1 -- test multicommand alter table while at it alter constraint inh_nn1_f1_not_null inherit, alter constraint inh_nn1_f1_not_null no inherit |
+| DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | fc9e733f289135904bf23d98 | ALTER TABLE notnull_part1_upg ADD CONSTRAINT notnull_con NOT NULL a NOT VALID |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | fd8268882b0e1ab08b1a280e | ALTER TABLE fk_notpartitioned_fk VALIDATE CONSTRAINT fk_notpartitioned_fk_a_b_fkey |
+| DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | fe7f771bbb15028584cf3eb5 | alter table p1_c1 add constraint inh_check_constraint10 check (f1 < 10) not valid enforced |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | fe98762f7a5d241996f44dbd | ALTER TABLE ATACC2 INHERIT ATACC1 |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TYPE_STMT | ad47ecc2003e91f9faafa17e | -- Switch type to use typanalyze function that always returns false. ALTER TYPE int_custom SET (ANALYZE = int_custom_typanalyze_false) |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_USER_MAPPING_STMT | 1171d6336f3aefdaf9ec6922 | ALTER USER MAPPING FOR public SERVER fdtest OPTIONS (ADD oauth_client_id 'myID') |
@@ -2810,8 +2210,11 @@ libpg_query target: `18-latest` `9ab9951b7021adcc6d25d261d5016ca0b83726b8` (Post
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | 00ee8f968f6c9946229d8e8e | -- -- Tests for VACUUM ONLY / ANALYZE ONLY on inheritance tables -- CREATE TABLE only_inh_parent (a int primary key, b TEXT) |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | 0230f86bcbd345ed2246020b | create table idxpart1 partition of idxpart for values from (0) to (500) |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | 02631199fd4a6bfe08fddcba | CREATE TABLE testpub_rf_tbl7 (id int PRIMARY KEY, x int, y int GENERATED ALWAYS AS (x * 111) VIRTUAL) |
+| DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | 02f7e9a73462b5a1bcb5e9c2 | -- partitioned table have not-null, then the partitions can not be NOT NULL NOT VALID. CREATE TABLE pp_nn (a int, b int, NOT NULL a) PARTITION BY LIST (a) |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | 03032588c811be17f73f9431 | -- An inheritance child table gets the constraint, but it's valid CREATE TABLE notnull_tbl1_child (a int, b int) INHERITS (notnull_tbl1) |
+| DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | 0373dac26c5f4f3a3bee1365 | -- (parent_id, valid_at) REFERENCES [implicit] -- FOREIGN KEY part should specify PERIOD CREATE TABLE temporal_fk_mltrng2mltrng ( id int4range, valid_at datemultirange, parent_id int4range, CONSTRA... |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | 042fbed578eece2f0c999251 | CREATE TABLE r1 (a int, b int GENERATED ALWAYS AS (a * 10) VIRTUAL) |
+| DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | 052446778ffd0dc01156e4b4 | -- PK with a non-range column: CREATE TABLE temporal_rng ( id int4range, valid_at TEXT, CONSTRAINT temporal_rng_pk PRIMARY KEY (id, valid_at WITHOUT OVERLAPS) ) |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | 053b5fabda5b418861d235e9 | -- references to other generated columns, including self-references CREATE TABLE gtest_err_2a (a int PRIMARY KEY, b int GENERATED ALWAYS AS (b * 2) VIRTUAL) |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | 064a257f99323f3d9fa23696 | CREATE TABLE emp1 (id SERIAL PRIMARY KEY NOT NULL, code int) |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | 069a2f83ea372a1dc4793349 | create table inh_nn_child2() inherits (inh_nn_parent) |
@@ -2820,6 +2223,7 @@ libpg_query target: `18-latest` `9ab9951b7021adcc6d25d261d5016ca0b83726b8` (Post
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | 0733919cda4791348118bd11 | CREATE TABLE gtest_part_key (f1 date NOT NULL, f2 bigint, f3 bigint GENERATED ALWAYS AS (f2 * 2) VIRTUAL) PARTITION BY RANGE ((gtest_part_key)) |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | 079f5ee5eefc4bd6c419a0fd | CREATE TABLE ctlt2 (c text NOT NULL) |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | 082e174eb1d5752b2c45b92d | CREATE TABLE cnn_pk_child () INHERITS (cnn_pk) |
+| DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | 083072c01339908c963b3de5 | -- -- FK between partitioned tables: ranges -- CREATE TABLE temporal_partitioned_rng ( id int4range, valid_at daterange, name text, CONSTRAINT temporal_paritioned_rng_pk PRIMARY KEY (id, valid_at W... |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | 09078424ea3b0a1bcdbcc646 | -- virtual CREATE TABLE testpub_gencol (a INT, b INT GENERATED ALWAYS AS (a + 1) VIRTUAL) |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | 0c6ff797980e615be5b23936 | create temp table p (a int, b int) partition by range (a) |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | 0cdf7e5eab525404bd986066 | -- Numeric type, implicit cast is squashed CREATE TABLE test_squash_numeric (id int, data numeric(5, 2)) |
@@ -2827,6 +2231,7 @@ libpg_query target: `18-latest` `9ab9951b7021adcc6d25d261d5016ca0b83726b8` (Post
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | 0d6d30b322fd66bddc7a11bd | create table inh_parent2(d int, e int, b int, primary key (d, b)) |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | 0df4f7cd18bcb8d3cd8e7c74 | CREATE TABLE tbl_phv(x int, y int PRIMARY KEY) |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | 0e00fb264067f58c91df7458 | CREATE TABLE tp2 PARTITION OF temporal_partitioned_mltrng FOR VALUES IN ('[0,1)', '[2,3)', '[4,5)', '[6,7)', '[8,9)', '[10,11)', '[12,13)', '[14,15)', '[16,17)', '[18,19)', '[20,21)', '[22,23)', '[... |
+| DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | 0f308b99b0fdf0518de433e5 | -- -- test a range with both a PK and a UNIQUE constraint -- CREATE TABLE temporal3 ( id int4range, valid_at daterange, id2 int8range, name TEXT, CONSTRAINT temporal3_pk PRIMARY KEY (id, valid_at W... |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | 0fbab787e53f3b5a3fde603a | create table notnull_tbl_fail (a int primary key constraint foo not null no inherit) |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | 0fdf426946071b424866f6ef | CREATE TABLE notnull_tbl4_lk (LIKE notnull_tbl4) |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | 0feebbcac33bab8a19bbafcd | -- Check bitmap scan can consider similar OR arguments separately without -- grouping them into SAOP. CREATE TABLE bitmap_split_or (a int NOT NULL, b int NOT NULL, c int NOT NULL) |
@@ -2835,26 +2240,39 @@ libpg_query target: `18-latest` `9ab9951b7021adcc6d25d261d5016ca0b83726b8` (Post
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | 117d17ee0c04f9fc543339d2 | create table part_abc_3_1 partition of part_abc_3 for values from (minvalue) to (1) |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | 11f710dcb5b3b017dfb6d893 | CREATE TABLE grantor_test3 () |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | 12b7f3199f0490558b0cd41b | CREATE TABLE fk_partitioned_fk (b int, a int) PARTITION BY RANGE (a, b) |
+| DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | 1332a561e4517f4b8b01bf3b | -- works: PERIOD for both referenced and referencing CREATE TABLE temporal_fk_rng2rng ( id int4range, valid_at daterange, parent_id int4range, CONSTRAINT temporal_fk_rng2rng_pk PRIMARY KEY (id, val... |
+| DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | 137e8cc51661164506e89e57 | -- with a UNIQUE constraint: CREATE TABLE temporal3 ( id int4range, valid_at daterange, CONSTRAINT temporal3_uq UNIQUE (id, valid_at WITHOUT OVERLAPS) ) |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | 13f6d59072512bf0e489c299 | CREATE TABLE tab_with_flag ( id INT PRIMARY KEY, is_flag SMALLINT) |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | 1448e965a493560245f82bf2 | CREATE TABLE tfkp1 PARTITION OF temporal_partitioned_fk_mltrng2mltrng FOR VALUES IN ('[1,2)', '[3,4)', '[5,6)', '[7,8)', '[9,10)', '[11,12)', '[13,14)', '[15,16)', '[17,18)', '[19,20)', '[21,22)', ... |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | 158443d57ee8cce978919994 | CREATE TABLE noinh_con_copy1 (LIKE noinh_con_copy INCLUDING CONSTRAINTS INCLUDING COMMENTS) |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | 15c8ae88e239a75842523122 | CREATE TEMP TABLE stats_temp(i int) |
+| DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | 16001e99d52f0dc0a521aee2 | create table notnull_tbl_fail (like notnull_tbl1, constraint foo2 not null a) |
+| DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | 16c4cda0453f54ab75bc1764 | create table notnull_tbl_fail (a serial constraint foo not null, constraint bar not null a) |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | 16dbdbad5d7448b1697a7a21 | -- LIKE must respect NO INHERIT property of constraints CREATE TABLE noinh_con_copy (a int CHECK (a > 0) NO INHERIT, b int not null, c int not null no inherit) |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | 16f8cf6b92ad13e2477b963a | create table inh_child (f1 int not null no inherit, f2 int) |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | 1745f788da459665b100ec02 | --\\d gtest23b --INSERT INTO gtest23b VALUES (1); -- ok --INSERT INTO gtest23b VALUES (5); -- error --ALTER TABLE gtest23b ALTER COLUMN b SET EXPRESSION AS (a * 5); -- error --ALTER TABLE gtest23b A... |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | 175043373072d464651559c7 | create temp table tbl_rs(a int, b int) |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | 1871894becca75884ed0c626 | -- Different number of attributes, mapping types CREATE TABLE pgss_schema_1.tab_search_diff_1 (a int) |
+| DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | 1901e722050be4fece30c49a | -- Core must test WITHOUT OVERLAPS -- with an int4range + daterange, -- so here we do some simple tests -- to make sure int + daterange works too, -- since that is the expected use-case. CREATE TAB... |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | 198becc0a73088bb92bfde00 | -- Ensure partitions are scanned for null values when adding a PK create table cnn2_parted(a int) partition by list (a) |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | 19a2f9a175c64c68a3353ff3 | -- using tableoid is allowed CREATE TABLE gtest_tableoid ( a int PRIMARY KEY, b bool GENERATED ALWAYS AS (tableoid = 'gtest_tableoid'::regclass) VIRTUAL ) |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | 19b5aec4bcd7ab0607cee669 | CREATE TABLE pagg_tab4_p2 PARTITION OF pagg_tab4 FOR VALUES IN ('B', 'A') |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | 19f436f8259457b2a7263298 | -- Can't modify inheritability of inherited constraints create table inh_nn2 () inherits (inh_nn1) |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | 19fe076e23d025991ea160dd | create table inh_nn3 (f4 float) inherits (inh_nn2) |
+| DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | 1ac101cc2bb38517a5cb63f9 | CREATE TABLE inh_nn3 (a int not null, b int, not null a no inherit) |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | 1ae97db2fbfc1843c8f70ea6 | CREATE TABLE pagg_tab6 (c text collate case_insensitive, b text collate case_insensitive) PARTITION BY LIST (b collate case_insensitive) |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | 1b154b373897620aefa9dadc | CREATE TABLE shared_pg_buffercache() |
+| DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | 1d399ebbc1f1f331e66bf21f | CREATE TABLE INSERT_TBL (x INT DEFAULT nextval('insert_seq'), y TEXT DEFAULT '-NULL-', z INT DEFAULT -1 * currval('insert_seq'), CONSTRAINT INSERT_TBL_CON CHECK (x >= 3 AND y <> 'check failed' AND ... |
+| DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | 1f03ffd6eab51f49b0cc234d | create table notnull_tbl_fail (a serial, constraint foo not null a, constraint bar not null a) |
+| DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | 1f0be52ded51a12f8e9f533a | -- with mismatched PERIOD columns: -- (parent_id, PERIOD valid_at) REFERENCES (id, valid_at) -- REFERENCES part should specify PERIOD CREATE TABLE temporal_fk_mltrng2mltrng ( id int4range, valid_at... |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | 1f35a3305e47c9fe067a7beb | CREATE TABLE gtest24 (a int PRIMARY KEY, b gtestdomain1 GENERATED ALWAYS AS (a * 2) VIRTUAL) |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | 1f5f50a29ff15da67224734e | create temp table p1 partition of p for values from (0) to (10) |
+| DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | 202d0390549e77243e776b68 | CREATE TABLE gtest_child PARTITION OF gtest_parent ( f3 WITH OPTIONS GENERATED ALWAYS AS (f2 * 2) VIRTUAL ) FOR VALUES FROM ('2016-07-01') TO ('2016-08-01') |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | 2164ba8bc2288cbbc270065e | CREATE TEMP TABLE rescan_bhs (a INT) |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | 217c0aa496cd4e37dea92b23 | -- Partitioned table with no partitions create table idxpart2 partition of idxpart for values from (1000) to (2000) partition by range (a) |
+| DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | 2194160e0257f3b7fc98d949 | -- NOT NULL NO INHERIT CREATE TABLE ATACC1 (a int, NOT NULL a NO INHERIT) |
+| DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | 22855f1069d95232e3362327 | -- with inferred PK on the referenced table: -- (parent_id, PERIOD valid_at) REFERENCES [implicit] CREATE TABLE temporal_fk_mltrng2mltrng ( id int4range, valid_at datemultirange, parent_id int4rang... |
+| DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | 22fd61558cce9a0f71a63bdc | -- (parent_id, valid_at) REFERENCES (id, PERIOD valid_at) -- FOREIGN KEY part should specify PERIOD CREATE TABLE temporal_fk_mltrng2mltrng ( id int4range, valid_at datemultirange, parent_id int4ran... |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | 231334c209391774d373898c | CREATE TABLE ATACC3 (a int) INHERITS (ATACC2) |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | 236f77a70e6d4332e17210bc | CREATE TABLE list_parted3_1 PARTITION OF list_parted3 FOR VALUES IN (1) |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | 2455f0fa4f5774a8960a568e | CREATE TABLE sj_t4 (id serial, a int) |
@@ -2874,8 +2292,10 @@ libpg_query target: `18-latest` `9ab9951b7021adcc6d25d261d5016ca0b83726b8` (Post
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | 2c973546f9256f0cf5ce93bc | -- can't drop not-null in primary key CREATE TABLE notnull_tbl2 (a INTEGER PRIMARY KEY) |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | 2d188fc4ba4dc9a9a588ddcd | create table constr_parent3 (a int not null) |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | 2d7c1e7b46ca5eb59bcda4b4 | -- NOT VALID and NOT ENFORCED foreign key on a non-partitioned table -- referencing a partitioned table CREATE TABLE fk_partitioned_pk (a int, b int, PRIMARY KEY (a, b)) PARTITION BY RANGE (a, b) |
+| DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | 2e642fae9f3ad006f51a0e8f | -- Can't create a FK with a mismatched range type CREATE TABLE temporal_fk_rng2rng ( id int4range, valid_at int4range, parent_id int4range, CONSTRAINT temporal_fk_rng2rng_pk2 PRIMARY KEY (id, valid... |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | 2ef4128bb2922698ceb13980 | -- generated NOT NULL constraint names must not collide with explicitly named constraints CREATE TABLE two_not_null_constraints ( col integer NOT NULL, CONSTRAINT two_not_null_constraints_col_not_n... |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | 30187eeee02a0229471afe4f | -- EXPLAIN - all-level tracking. CREATE TABLE test_table (x int) |
+| DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | 30518955ebb8946981e6e9a0 | -- UNIQUE with no columns just WITHOUT OVERLAPS: CREATE TABLE temporal_rng3 ( valid_at daterange, CONSTRAINT temporal_rng3_uq UNIQUE (valid_at WITHOUT OVERLAPS) ) |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | 3088ba274d3cdffc1eaaeaaa | CREATE TABLE stats_import.test_clone ( LIKE stats_import.test ) WITH (autovacuum_enabled = false) |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | 30fd3a4d5c9426837c22eebd | CREATE TABLE test12fk (a int, b text COLLATE case_insensitive REFERENCES test12pk (x) ON UPDATE CASCADE) |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | 3154cfd860371f9d8808bd68 | -- statistics on virtual generated column not allowed CREATE TABLE ext_stats_test1 (x int, y int, z int GENERATED ALWAYS AS (x+y) VIRTUAL, w xid) |
@@ -2886,9 +2306,12 @@ libpg_query target: `18-latest` `9ab9951b7021adcc6d25d261d5016ca0b83726b8` (Post
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | 33b4b4d5ff6ea572bb5c1593 | -- cannot have default/identity and generated CREATE TABLE gtest_err_5a (a int PRIMARY KEY, b int DEFAULT 5 GENERATED ALWAYS AS (a * 2) VIRTUAL) |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | 33f22a31d11c1d9fd4cb4bae | CREATE TABLE "gin_check_multicolumn"(a text[], b text[]) |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | 34609735fc694365f3de2b97 | -- enforceability cannot be specified or set for unique constraint CREATE TABLE UNIQUE_EN_TBL(i int UNIQUE ENFORCED) |
+| DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | 346df8ed7b7344878b9e94ea | create table notnull_tbl_fail (a int primary key, not null a no inherit) |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | 34950ad62e88c9118cdf2fe2 | CREATE TEMPORARY TABLE test_temp(a int not null unique, b TEXT not null, cnt int not null) |
+| DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | 34cb78453aa5e95389f8bdb5 | -- (parent_id, valid_at) REFERENCES (id, valid_at) -- both should specify PERIOD: CREATE TABLE temporal_fk_mltrng2mltrng ( id int4range, valid_at datemultirange, parent_id int4range, CONSTRAINT tem... |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | 35c8478ceb4fc9171ffbbbb8 | -- triggers CREATE TABLE gtest26 ( a int PRIMARY KEY, b int GENERATED ALWAYS AS (a * 2) VIRTUAL ) |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | 35d7674f057dee7a61c5cb07 | CREATE TABLE daucus PARTITION OF vegetables FOR VALUES IN ('daucus') |
+| DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | 36a48f183333de6dfa1698b8 | -- violates constraint -- also check with table constraint syntax CREATE TABLE gtest21ax (a int PRIMARY KEY, b int GENERATED ALWAYS AS (nullif(a, 0)) VIRTUAL, CONSTRAINT cc NOT NULL b) |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | 36a7b2af597a3319f6300b26 | -- Leave these tables around, for pg_upgrade testing -- test that removing inheritance of NOT NULL NO INHERIT works correctly create table inh_parent (f1 int not null no inherit, f2 int not null no... |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | 3738862f52ae0209068eb544 | -- =================================================================== -- test generated columns -- =================================================================== create table gloc1 ( a int, b... |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | 38234eebcd779a434bf4a35d | CREATE TABLE gtest24r (a int PRIMARY KEY, b gtestdomain1range GENERATED ALWAYS AS (gtestdomain1range(a, a + 5)) STORED) |
@@ -2898,6 +2321,7 @@ libpg_query target: `18-latest` `9ab9951b7021adcc6d25d261d5016ca0b83726b8` (Post
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | 396a49a99cfbfbe2d94ffce1 | CREATE TEMP TABLE id_alw2 (i int GENERATED ALWAYS AS IDENTITY) |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | 39af52dcb9b87a4c9484e661 | -- -- Verify that transition tables can't be used in, eg, a view. -- create table my_table (a int) |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | 39b2b98c10b6dbe944261a63 | -- test update CREATE TABLE gtest3 (a int, b int GENERATED ALWAYS AS (a * 3) VIRTUAL) |
+| DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | 39bc12329f1fc8a58d99dcfa | -- (parent_id, valid_at) REFERENCES (id, PERIOD valid_at) -- FOREIGN KEY part should specify PERIOD CREATE TABLE temporal_fk_rng2rng ( id int4range, valid_at daterange, parent_id int4range, CONSTRA... |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | 39dcb5d75fa793e93dcd6140 | CREATE TABLE notnull_part1_3_upg (a int, b int) |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | 39e7acc809f16aaaf50ad680 | create table tuplesest_tab (a int, b int) |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | 3a472feecd1a09c565844a73 | -- error cases: create table notnull_tbl_fail (a serial constraint foo not null constraint bar not null) |
@@ -2906,9 +2330,11 @@ libpg_query target: `18-latest` `9ab9951b7021adcc6d25d261d5016ca0b83726b8` (Post
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | 3b3f24f5210e3dce90a061a1 | CREATE TABLE foo_part_d2 (b float8, c text, a int) |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | 3b47ad80bcf0b79613301353 | CREATE TABLE pagg_tab5_p1 PARTITION OF pagg_tab5 FOR VALUES IN ('a', 'b') |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | 3bb5b9013d3ba1134114f8c5 | create table inh_parent_2(f2 text) |
+| DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | 3bfc1c638ece59a5343e830d | -- -- test PARTITION BY for ranges -- -- temporal PRIMARY KEY: CREATE TABLE temporal_partitioned ( id int4range, valid_at daterange, name text, CONSTRAINT temporal_paritioned_pk PRIMARY KEY (id, va... |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | 3c4151fe72c2245bfcd02fd0 | CREATE TABLE foo_part_s2 PARTITION OF foo_parted FOR VALUES IN (2) |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | 3c717dab21eb7c0d4b339afd | -- ok CREATE TABLE gtest20b (a int PRIMARY KEY, b int GENERATED ALWAYS AS (a * 2) VIRTUAL) |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | 3e4ba346c232e08e7f61f9f9 | CREATE TABLE gtest_err_7b (a int PRIMARY KEY, b int GENERATED ALWAYS AS (row_number() OVER (ORDER BY a)) VIRTUAL) |
+| DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | 3e8dd9b821a04fe553198705 | -- UNIQUE with two columns plus a range: CREATE TABLE temporal_rng3 ( id1 int4range, id2 int4range, valid_at daterange, CONSTRAINT temporal_rng3_uq UNIQUE (id1, id2, valid_at WITHOUT OVERLAPS) ) |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | 3ea4bb15ebf79c03104e9942 | create temp table t(i int primary key) |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | 3ee2ba18c0ff4e0c814d56c4 | -- PK in inheriting table: CREATE TABLE temporal_rng ( id int4range, valid_at daterange ) |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | 3f13399d53ab17cd856a0073 | create table phv_boolpart_t partition of phv_boolpart for values in (true) |
@@ -2919,22 +2345,32 @@ libpg_query target: `18-latest` `9ab9951b7021adcc6d25d261d5016ca0b83726b8` (Post
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | 416012564b2d66072cdd595f | create table inh_cc2(f4 float) inherits(inh_pp1,inh_cc1) |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | 417e39b9e9776928e4b9a7da | CREATE TABLE "gin_check_jsonb"("j" jsonb) |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | 424d4522f5ee76385ac11bf2 | CREATE TABLE gtest12 (a int PRIMARY KEY, b int, c int GENERATED ALWAYS AS (gf1(b)) VIRTUAL) |
+| DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | 42742e2389f76d5ee8743480 | -- PK with one column plus a range: CREATE TABLE temporal_rng ( -- Since we can't depend on having btree_gist here, -- use an int4range instead of an int. -- (The rangetypes regression test uses th... |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | 42d3e82c0d737db4e2af3bd9 | CREATE TEMP TABLE id_alw3 (i int GENERATED ALWAYS AS IDENTITY) |
+| DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | 43aa6cfc077691a3afa8cfe4 | -- Two scalar columns: CREATE TABLE temporal_fk2_rng2rng ( id int4range, valid_at daterange, parent_id1 int4range, parent_id2 int4range, CONSTRAINT temporal_fk2_rng2rng_pk PRIMARY KEY (id, valid_at... |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | 446904857b71048ceea8907b | CREATE TABLE distinct_on_tbl (x int, y int, z int) |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | 457d57022f6b5e44f0ca28e5 | -- error CREATE TABLE gtest24ata (a int PRIMARY KEY, b int GENERATED ALWAYS AS (a * 2) VIRTUAL) |
+| DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | 458875b3c7eaf8b9d01b33b6 | -- (parent_id, PERIOD valid_at) REFERENCES (id) CREATE TABLE temporal_fk_mltrng2mltrng ( id int4range, valid_at datemultirange, parent_id int4range, CONSTRAINT temporal_fk_mltrng2mltrng_pk PRIMARY ... |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | 45c0475e8ad4ee4c81d9f7b4 | CREATE TABLE gtest_parent (f1 date NOT NULL, f2 bigint, f3 bigint GENERATED ALWAYS AS (f2 * 2) VIRTUAL) PARTITION BY RANGE (f1) |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | 46317e28d3b10e1e9f52b0c2 | CREATE TABLE notnull_tbl1 (a int, b int) |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | 465d13d3aa35adf242953396 | CREATE TABLE bmscantest (a int, b int, t text) WITH (autovacuum_enabled = false) |
+| DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | 468e2928e7348622939e7647 | CREATE TABLE inh_nn4 (a int not null no inherit, b int, not null a) |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | 46dea46c8290eba894849c98 | -- Check that we have the correct tuples estimate for an appendrel create table tuplesest_parted (a int, b int, c float) partition by range(a) |
+| DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | 471defae079fa9bd21722fd9 | -- (parent_id, valid_at) REFERENCES (id, valid_at) -- both should specify PERIOD: CREATE TABLE temporal_fk_rng2rng ( id int4range, valid_at daterange, parent_id int4range, CONSTRAINT temporal_fk_rn... |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | 4739d98fcdacd158ecd502c4 | CREATE TABLE pgss_schema_2.tab_search_diff_2 (a text) |
+| DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | 47939518464a7a0705c5f13c | -- (parent_id) REFERENCES (id, PERIOD valid_at) CREATE TABLE temporal_fk_mltrng2mltrng ( id int4range, valid_at datemultirange, parent_id int4range, CONSTRAINT temporal_fk_mltrng2mltrng_pk PRIMARY ... |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | 487646f37e0d1e8751f99f56 | -- test that inhcount is updated correctly through multiple inheritance create table inh_pp1 (f1 int) |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | 48abffc59c7607cf40a3419e | CREATE TEMP TABLE id_alw4 (i int GENERATED ALWAYS AS IDENTITY) |
+| DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | 48ae818ed664c518903c7a11 | -- (parent_id) REFERENCES (id, PERIOD valid_at) CREATE TABLE temporal_fk_rng2rng ( id int4range, valid_at daterange, parent_id int4range, CONSTRAINT temporal_fk_rng2rng_pk PRIMARY KEY (id, valid_at... |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | 48bfbe7c81dbe910b0c290dd | CREATE TABLE sj_t3 (id serial, a int) |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | 496b1aa9b2acd52129915a07 | CREATE TABLE notnull_tbl6_1 PARTITION OF notnull_tbl6 FOR VALUES IN (1) |
+| DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | 49d7257d75ee6c18e240397d | CREATE TABLE temporal_fk2_mltrng2mltrng ( id int4range, valid_at datemultirange, parent_id1 int4range, parent_id2 int4range, CONSTRAINT temporal_fk2_mltrng2mltrng_pk PRIMARY KEY (id, valid_at WITHO... |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | 49e1399273872881609ca001 | -- Create table with NOT NULL INVALID constraint, for pg_upgrade. CREATE TABLE notnull_tbl1_upg (a int, b int) |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | 4a399c73cc209a0f60106b8e | CREATE TABLE notnull_inhchild (i int) INHERITS (notnull_inhparent) |
+| DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | 4a44d3d51e502142496ad392 | CREATE TABLE notnull_tbl4_cld3 (PRIMARY KEY (a) DEFERRABLE, CONSTRAINT a_nn NOT NULL a) INHERITS (notnull_tbl4) |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | 4a9823c8f21880cb37df736a | CREATE TABLE ctl_stats4_parent (a int, b int, c int, d int) |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | 4b0374fcf0e3a08d4c2f2572 | -- check storage of generated columns -- stored create table test9s (a int not null, b int generated always as (a * 2) stored) |
+| DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | 4dbf418a32b6b3eeda4b9bbd | -- (parent_id) REFERENCES [implicit] CREATE TABLE temporal_fk_rng2rng ( id int4range, valid_at daterange, parent_id int4range, CONSTRAINT temporal_fk_rng2rng_pk PRIMARY KEY (id, valid_at WITHOUT OV... |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | 4e92676646463908eaa708f2 | CREATE TABLE notnull_tbl4_lk2 (LIKE notnull_tbl4 INCLUDING INDEXES) |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | 4e9332be68d4529979495299 | -- Try a partition with an invalid constraint and create a PK on the parent. CREATE TABLE pp_nn (a int) PARTITION BY HASH (a) |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | 4efdc6bedd24a1f34d139f74 | CREATE TABLE gtestc (f2 int GENERATED ALWAYS AS (f1+1) VIRTUAL) INHERITS(gtestp) |
@@ -2942,12 +2378,14 @@ libpg_query target: `18-latest` `9ab9951b7021adcc6d25d261d5016ca0b83726b8` (Post
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | 4fa098173a2c345e1c84865f | CREATE TABLE fk_partitioned_pk_3 PARTITION OF fk_partitioned_pk FOR VALUES FROM (2000,2000) TO (3000,3000) PARTITION BY RANGE (a) |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | 4fc1aa7e6c980bcf6800cfb1 | -- -- Simple Lists -- CREATE TABLE test_squash (id int, data int) |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | 5086a2f548641535514a8f08 | CREATE TABLE tfkp1 partition OF temporal_partitioned_fk_rng2rng FOR VALUES IN ('[1,2)', '[3,4)', '[5,6)', '[7,8)', '[9,10)', '[11,12)') |
+| DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | 5098bc9eefcb5e76be5b71bc | CREATE TABLE temporal_fk2_rng2rng ( id int4range, valid_at daterange, parent_id1 int4range, parent_id2 int4range, CONSTRAINT temporal_fk2_rng2rng_pk PRIMARY KEY (id, valid_at WITHOUT OVERLAPS), CON... |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | 514d7e89f69e888e6817c7c3 | create table part_abc_2 (a int, c bool, b text) |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | 51807c655e270ad276fbb2f0 | -- Test case where the child constraint is invalid, the grandchild constraint -- is valid, and the validation for the grandchild should be skipped when a -- valid constraint is applied to the top p... |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | 530357c2bb121535095a7765 | -- Inheritance test tables for pg_upgrade create table constr_parent (a int) |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | 53542f7e120210062fb9cbc6 | create table inh_multiparent() inherits(inh_p1, inh_p2, inh_p3, inh_p4) |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | 54e16d438fde5fde06b6b9da | CREATE TABLE inh_nn2 (a int not null no inherit) INHERITS (inh_nn1) |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | 558fe90fd329eb744e4b22ba | -- -- range UQ: test with existing rows -- CREATE TABLE temporal_rng3 ( id int4range, valid_at daterange ) |
+| DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | 55cddc8ce8054ae32327709d | -- PK with two columns plus a multirange: CREATE TABLE temporal_mltrng2 ( id1 int4range, id2 int4range, valid_at datemultirange, CONSTRAINT temporal_mltrng2_pk PRIMARY KEY (id1, id2, valid_at WITHO... |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | 55e887b32cfb850b754fe059 | -- -- test the expansion of virtual generated columns -- -- these tests are specific to generated_virtual.sql -- create table gtest32 ( a int primary key, b int generated always as (a * 2), c int g... |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | 575c90e3e1f84170fe8f6867 | -- ok -- index constraints CREATE TABLE gtest22a (a int PRIMARY KEY, b int GENERATED ALWAYS AS (a / 2) VIRTUAL UNIQUE) |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | 57671bcd3ec4e83180f96364 | CREATE TABLE grantor_test2 () |
@@ -2973,18 +2411,22 @@ libpg_query target: `18-latest` `9ab9951b7021adcc6d25d261d5016ca0b83726b8` (Post
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | 6357fac6256ef505d548e266 | CREATE TABLE pagg_tab6_p1 PARTITION OF pagg_tab6 FOR VALUES IN ('a', 'b') |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | 63e4d5d00915f833a018ef29 | -- -- Test ALTER CONSTRAINT SET [NO] INHERIT -- create table inh_nn1 (f1 int not null no inherit) |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | 655ef8247fa959d4ce87f658 | -- Runtime pruning on UPDATE using WITH CHECK OPTIONS and RETURNING create table part_abc (a int, b text, c bool) partition by list (a) |
+| DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | 659bf230c44fa1d51240adfe | -- Foreign key CREATE TABLE temporal_fk_rng2rng ( id integer, valid_at daterange, parent_id integer, CONSTRAINT temporal_fk_rng2rng_pk PRIMARY KEY (id, valid_at WITHOUT OVERLAPS), CONSTRAINT tempor... |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | 65ad46e0bf9c13069a64fe7e | -- Can't have two constraints with the same name CREATE TABLE notnull_tbl2 (a INTEGER CONSTRAINT blah NOT NULL, b INTEGER CONSTRAINT blah NOT NULL) |
+| DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | 65c363e3d01f4041b04f8e91 | CREATE TABLE temporal_partitioned_fk_rng2rng ( id int4range, valid_at daterange, parent_id int4range, CONSTRAINT temporal_partitioned_fk_rng2rng_pk PRIMARY KEY (id, valid_at WITHOUT OVERLAPS), CONS... |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | 65c8981d7e5e3e4ae823dabc | CREATE TABLE gtest_err_7d (a int PRIMARY KEY, b int GENERATED ALWAYS AS (generate_series(1, a)) VIRTUAL) |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | 66bb752f9b54ea550c1409fd | -- As above, but create the primary key using a UNIQUE index CREATE TABLE cnn_pk (a int, b int) |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | 66e81f4bd92b82f4e5a68859 | CREATE TABLE notnull_tbl1 (a int, b int) PARTITION BY LIST (a) |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | 67a87b54494d3fcfae728e7e | -- null values CREATE TABLE gtest2 (a int PRIMARY KEY, b int GENERATED ALWAYS AS (NULL) VIRTUAL) |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | 67d6025c5f231537aea03284 | -- LIKE INCLUDING GENERATED and dropped column handling CREATE TABLE gtest28a ( a int, b int, c int, x int GENERATED ALWAYS AS (b * 2) VIRTUAL ) |
+| DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | 6875a7ce24d8079f5aa42e1e | CREATE TABLE temporal_rng3 ( id int4range, valid_at textrange2, CONSTRAINT temporal_rng3_pk PRIMARY KEY (id, valid_at WITHOUT OVERLAPS) ) |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | 68ac618b0be94f6b403bab33 | -- -- Similarly, check the merging of existing constraints; a parent constraint -- marked as NOT ENFORCED can merge with an ENFORCED child constraint, but the -- reverse is not allowed. -- create t... |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | 68b4dad14a3dd64f88a80e31 | -- check that recursive CTE processing doesn't rewrite a CTE more than once -- (must not try to expand GENERATED ALWAYS IDENTITY columns more than once) CREATE TEMP TABLE id_alw1 (i int GENERATED A... |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | 69ca5a904453105dad3a0c1a | create table inh_nn3 () inherits (inh_nn2) |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | 69d5d5b66bbe221d0ef9f594 | create table inh_multiparent2 (a int not null, f1 int) inherits(inh_p3, inh_multiparent) |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | 6a41eebf830b0046394a2f75 | CREATE TABLE trigger_test_generated ( i int, j int GENERATED ALWAYS AS (i * 2) STORED, k int GENERATED ALWAYS AS (i * 3) VIRTUAL ) |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | 6af1dbe6a45328f9cfbba82e | CREATE TABLE stats_import.test( id INTEGER PRIMARY KEY, name text, comp stats_import.complex_type, arange int4range, tags text[] ) WITH (autovacuum_enabled = false) |
+| DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | 6ba6d816e6d359f28c97cc5d | -- Can't create a FK with a mismatched multirange type CREATE TABLE temporal_fk_mltrng2mltrng ( id int4range, valid_at int4multirange, parent_id int4range, CONSTRAINT temporal_fk_mltrng2mltrng_pk2 ... |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | 6bc49d17958371a1089fe70e | -- Test the 'publish_generated_columns' parameter as 'none' and 'stored' for -- different scenarios with/without generated columns in column lists. CREATE TABLE gencols (a int, gen1 int GENERATED A... |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | 6bc4a7f133f393ee37714f30 | CREATE TABLE grouping_unique (x integer) |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | 6c7cfe972b3f2b4218ca7988 | CREATE TABLE testpub_tbl5 (a int PRIMARY KEY, b text, c text, d int generated always as (a + length(b)) stored, e int generated always as (a + length(b)) virtual ) |
@@ -2998,16 +2440,19 @@ libpg_query target: `18-latest` `9ab9951b7021adcc6d25d261d5016ca0b83726b8` (Post
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | 71335784f6e175fc41aa2841 | create table p1_c2(f1 int constraint inh_check_constraint4 check (f1 < 10)) inherits(p1) |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | 7156cada28822bfa4f749e1f | CREATE TABLE notnull_inhgrand () INHERITS (notnull_inhparent, notnull_inhchild) |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | 717201029c3f559e03106cc5 | create table inh_child3 (like inh_parent) |
+| DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | 71e9101f7b0ba15930c56028 | CREATE TABLE notnull_tbl1_2(a int, CONSTRAINT nn2 NOT NULL a, b int) |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | 72ee7ddfa13d2bb440677e41 | -- This should fail because pg_buffercache_evict_relation() doesn't accept -- local relations CREATE TEMP TABLE temp_pg_buffercache() |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | 73830606ec6c379715dfda0a | CREATE TABLE fk_notpartitioned_fk (b int, a int) |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | 7495b432dcdc890ab45e298d | create table idxpart11 partition of idxpart1 for values from (0) to (500) |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | 749c26e5c548927b1caa2be8 | CREATE TABLE test12fk (a int, b text COLLATE case_insensitive REFERENCES test12pk (x) ON UPDATE NO ACTION) |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | 759bebc856b455d247360b81 | create table part_abc_3_3 partition of part_abc_3 for values from (100) to (maxvalue) |
+| DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | 76e651025b1f0e66722b0d2e | -- (parent_id) REFERENCES [implicit] CREATE TABLE temporal_fk_mltrng2mltrng ( id int4range, valid_at datemultirange, parent_id int4range, CONSTRAINT temporal_fk_mltrng2mltrng_pk PRIMARY KEY (id, va... |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | 77701306d524fe30bf294873 | -- OK when the partition key collation is same as that of the join columns CREATE TABLE pagg_tab5 (c text collate case_insensitive, b text collate case_insensitive) PARTITION BY LIST (c collate cas... |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | 787ac5c48ad3026961570963 | create table inh_child (a int primary key) inherits (inh_parent) |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | 7970319354d5f405fed31754 | CREATE TABLE tp2 partition OF temporal_partitioned_rng FOR VALUES IN ('[2,3)', '[4,5)', '[6,7)', '[8,9)', '[10,11)', '[12,13)') |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | 7a0b4a3170d58348125d40b8 | --INSERT INTO gtest22a VALUES (2); --INSERT INTO gtest22a VALUES (3); --INSERT INTO gtest22a VALUES (4); CREATE TABLE gtest22b (a int, b int GENERATED ALWAYS AS (a / 2) VIRTUAL, PRIMARY KEY (a, b)) |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | 7a389b5b996d06ae15ee7dd2 | create table inh_p4(f1 int not null, f3 text not null) |
+| DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | 7a38ad345b9f616861b5631e | CREATE TABLE temporal_fk_mltrng2mltrng ( id int4range, valid_at datemultirange, parent_id int4range, CONSTRAINT temporal_fk_mltrng2mltrng_pk PRIMARY KEY (id, valid_at WITHOUT OVERLAPS), CONSTRAINT ... |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | 7bd08d90369c0bc2729287f5 | CREATE TABLE gtest21ax (a int PRIMARY KEY, b int GENERATED ALWAYS AS (nullif(a, 0)) VIRTUAL) |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | 7c063b2ff2e97f1c90ce8386 | CREATE TABLE tp1 partition OF temporal_partitioned_rng FOR VALUES IN ('[1,2)', '[3,4)', '[5,6)', '[7,8)', '[9,10)', '[11,12)') |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | 7cbd68a5da9c3bb0b9fdbbfd | create table sl(a int, b int, c int) |
@@ -3017,10 +2462,12 @@ libpg_query target: `18-latest` `9ab9951b7021adcc6d25d261d5016ca0b83726b8` (Post
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | 7e8aba4ad3a05661f331018f | -- fails on existing row -- check with whole-row reference CREATE TABLE gtest20c (a int, b int GENERATED ALWAYS AS (a * 2) STORED) |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | 7f05d6e0bb3fc781b1305272 | -- no PK from INHERITS: CREATE TABLE temporal_rng2 () INHERITS (temporal_rng) |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | 7f0e7e802b774c2d78e643d5 | create table inh_nn4 (f5 int, f4 float, f2 text, f3 int, f1 int) |
+| DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | 7fbb65ae718d0f3596e3d8d7 | CREATE TABLE temporal_partitioned_fk_mltrng2mltrng ( id int4range, valid_at datemultirange, parent_id int4range, CONSTRAINT temporal_partitioned_fk_mltrng2mltrng_pk PRIMARY KEY (id, valid_at WITHOU... |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | 80bb0ceb624f00a857076421 | create table inh_child1 () inherits (inh_parent1, inh_parent2) |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | 80e0909c66d08223a8130cf0 | create table constr_parent2 (a int) |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | 80f583b26f835f0ae4cbfe9f | create table sj (a int unique, b int, c int unique) |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | 80f592cc8e0ef23a4fcd1ee5 | CREATE TABLE tfkp2 PARTITION OF temporal_partitioned_fk_mltrng2mltrng FOR VALUES IN ('[0,1)', '[2,3)', '[4,5)', '[6,7)', '[8,9)', '[10,11)', '[12,13)', '[14,15)', '[16,17)', '[18,19)', '[20,21)', '... |
+| DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | 81500b98978b84ab972f7eea | -- (parent_id, valid_at) REFERENCES [implicit] -- FOREIGN KEY part should specify PERIOD CREATE TABLE temporal_fk_rng2rng ( id int4range, valid_at daterange, parent_id int4range, CONSTRAINT tempora... |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | 81b6fcfef2808d6275f09f8d | -- LIKE ... INCLUDING STATISTICS with dropped columns in the parent, -- so stxkeys attnums are not contiguous. CREATE TABLE ctl_stats3_parent (a int, b int, c int) |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | 81eb6d1ae3fb5b4829fbe226 | CREATE TABLE ATACC1 (a int) |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | 82f9722a38eb4fdd57bdf6c3 | -- error CREATE TABLE gtest_normal_child (a int, b int GENERATED ALWAYS AS (a * 2) VIRTUAL) |
@@ -3030,8 +2477,11 @@ libpg_query target: `18-latest` `9ab9951b7021adcc6d25d261d5016ca0b83726b8` (Post
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | 83f513d466f4a32ae5025868 | -- Test cross-partition updates and attribute mapping CREATE TABLE foo_parted (a int, b float8, c text) PARTITION BY LIST (a) |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | 84ab5757266eed290cd559ce | -- Adding a PK at the top level of a hierarchy should cause all descendants -- to be checked for nulls, even past a no-inherit constraint CREATE TABLE inh_nn_lvl1 (a int) |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | 85e7ded12b17c43741e055df | create table test_t (c text) |
+| DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | 85f173318ba7d3831e91f522 | CREATE TABLE fk_partitioned_fk_2 (b int, a int, CONSTRAINT fk_part_con FOREIGN KEY (a, b) REFERENCES fk_notpartitioned_pk ON UPDATE CASCADE ON DELETE CASCADE NOT ENFORCED) |
+| DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | 8776a8f1668f7d1a5607897e | -- inherits gen expr CREATE TABLE gtest_child2 PARTITION OF gtest_parent ( f3 WITH OPTIONS GENERATED ALWAYS AS (f2 * 22) VIRTUAL -- overrides gen expr ) FOR VALUES FROM ('2016-08-01') TO ('2016-09-... |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | 8844a72a76ea4a8c197bd8dd | -- Same number of attributes, different types CREATE TABLE pgss_schema_1.tab_search_diff_2 (a int) |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | 88c55978b68461e612f7fe7c | create table gtest34p (id int primary key, a int, c int generated always as (a * 10) virtual) partition by range (id) |
+| DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | 88e5f6d05b9670864cc5bff4 | create table notnull_tbl_fail (a int, primary key(a), not null a no inherit) |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | 8927d48345ea1e3f26b4e305 | create table cnn_part1 partition of cnn2_parted for values in (1, null) |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | 8968ebaa06370308e8a539eb | -- -- A unique index can prove functional dependency for GROUP BY column -- removal only if its per-column collation agrees on equality with -- the GROUP BY column's collation. An index built under... |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | 8af14ac0326e21347f950493 | -- including storage and comments CREATE TABLE ctlt1 (a text CHECK (length(a) > 2) ENFORCED PRIMARY KEY, b text CHECK (length(b) > 100) NOT ENFORCED) |
@@ -3053,6 +2503,7 @@ libpg_query target: `18-latest` `9ab9951b7021adcc6d25d261d5016ca0b83726b8` (Post
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | 93de891b8c1a96a46fa0e44b | -- -- Tests for ANALYZE ONLY / VACUUM ONLY on partitioned tables -- CREATE TABLE only_parted (a int, b text) PARTITION BY LIST (a) |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | 94472e065213cb6603ddba4c | CREATE TABLE gtestm ( a int PRIMARY KEY, b int GENERATED ALWAYS AS (a * 2) STORED ) |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | 95013c88bbf0536f59f74949 | -- fail, as partitioned tables don't allow NO INHERIT constraints CREATE TABLE noinh_con_copy1_parted (LIKE noinh_con_copy INCLUDING ALL) PARTITION BY LIST (a) |
+| DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | 95626d956689562cc3c3bb71 | create table notnull_tbl_fail (a int generated by default as identity, constraint foo not null a no inherit) |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | 97d4265e093e8d92362c98b3 | CREATE TABLE gtest_child3 (f1 date NOT NULL, f2 bigint, f3 bigint GENERATED ALWAYS AS (f2 * 33) VIRTUAL) |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | 97ff049b56693280f54d43f2 | CREATE TABLE gtest_err_7c (a int PRIMARY KEY, b int GENERATED ALWAYS AS ((SELECT a)) VIRTUAL) |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | 986a561c7e399ea1bd020e8f | CREATE TABLE gtest24r (a int PRIMARY KEY, b gtestdomain1range GENERATED ALWAYS AS (gtestdomain1range(a, a + 5)) VIRTUAL) |
@@ -3060,10 +2511,14 @@ libpg_query target: `18-latest` `9ab9951b7021adcc6d25d261d5016ca0b83726b8` (Post
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | 98b04bdd27b38119223c82b7 | create table part_abc_1 (b text, a int, c bool) |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | 9925f63620918d64f64b3693 | -- Test invalid not null on inheritance table. CREATE TABLE notnull_inhparent (i int) |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | 99b9c329bc9f41f6d6001634 | -- ALTER .. NO INHERIT works for invalid constraints CREATE TABLE notnull_tbl1 (a int) |
+| DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | 99bab07b6372501100870c99 | CREATE TABLE temporal_rng4 ( id int4range, valid_at int4_d_range, CONSTRAINT temporal_rng4_pk PRIMARY KEY(id, valid_at WITHOUT OVERLAPS) ) |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | 99e496693ca8b122cac1af12 | CREATE TABLE ctl_stats3_child (LIKE ctl_stats3_parent INCLUDING STATISTICS) |
+| DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | 99e8f4d0eb0f8b4814fc3a2a | -- temporal UNIQUE: CREATE TABLE temporal_partitioned ( id int4range, valid_at daterange, name text, CONSTRAINT temporal_paritioned_uq UNIQUE (id, valid_at WITHOUT OVERLAPS) ) PARTITION BY LIST (id) |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | 99f6b866f05c42c4c55156e9 | CREATE TABLE pgss_parallel_tab (a int) |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | 9a035f17a15a6c0e4feece0b | create table gtest34p_1 partition of gtest34p for values from (1) to (100) |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | 9b85219de7d172439b824b4f | -- Verify that constraint names and NO INHERIT are properly considered when -- multiple constraint are specified, either explicitly or via SERIAL/PK/etc, -- and that conflicting cases are rejected.... |
+| DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | 9c3fb667aafdb9a40b638b1c | -- -- FK between partitioned tables: multiranges -- CREATE TABLE temporal_partitioned_mltrng ( id int4range, valid_at datemultirange, name text, CONSTRAINT temporal_paritioned_mltrng_pk PRIMARY KEY... |
+| DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | 9c4f79c6961dab888d7518a1 | -- it's not possible to override a no-inherit constraint with an inheritable one CREATE TABLE ATACC2 (a int, CONSTRAINT a_is_not_null NOT NULL a NO INHERIT) |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | 9c59af8673f49d47e7e447c5 | create table p1(f1 int constraint p1_a_check check (f1 > 0) enforced) |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | 9c83a33e946975738f064f46 | CREATE TABLE notnull_tbl4_cld2 (PRIMARY KEY (a) DEFERRABLE) INHERITS (notnull_tbl4) |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | 9e21a590791821fc8f4d7d34 | -- -- test deinherit procedure -- -- deinherit inh_child1 create table inh_child3 () inherits (inh_child1) |
@@ -3071,12 +2526,14 @@ libpg_query target: `18-latest` `9ab9951b7021adcc6d25d261d5016ca0b83726b8` (Post
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | 9e7e72ac85b1cf7d35e1be21 | --INSERT INTO gtest23a VALUES (1, 11), (2, 22), (3, 33); CREATE TABLE gtest23x (a int PRIMARY KEY, b int GENERATED ALWAYS AS (a * 2) VIRTUAL REFERENCES gtest23a (x) ON UPDATE CASCADE) |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | 9f38a97826312f3cee5252a2 | create temp table t_append (a int not null, b int) |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | 9fddf5520285a53104acd6dd | CREATE TABLE notnull_tbl5_child () INHERITS (notnull_tbl5) |
+| DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | a05a4b354f24fdae31edc338 | CREATE TABLE ATACC1 (a int, NOT NULL a NO INHERIT) PARTITION BY LIST (a) |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | a07170bc70025fc36632361b | create table notnull_tbl_fail (a serial constraint foo not null no inherit constraint foo not null) |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | a0c2c47a9974c95b0fc1196e | --INSERT INTO gtest24nn (a) VALUES (4); -- ok --INSERT INTO gtest24nn (a) VALUES (NULL); -- error -- using user-defined type not yet supported CREATE TABLE gtest24xxx (a gtestdomain1, b gtestdomain... |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | a117b51ddf67d39f04f94689 | CREATE TABLE foo_part_s1 PARTITION OF foo_parted FOR VALUES IN (1) |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | a2449a4a238be71746083630 | create table tuplesest_parted1 partition of tuplesest_parted for values from (0) to (100) |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | a2af7e42bc28607a0eed9ae5 | CREATE TABLE vegetables (id serial, name text, genus text) PARTITION BY LIST (genus) |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | a2e0735d6610110e15a0f225 | -- virtual generated columns CREATE TABLE t5 ( a int, b text collate "C", c text collate "C" GENERATED ALWAYS AS (b COLLATE case_insensitive) ) |
+| DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | a2f66fb5fa2ae207e5f2826f | -- UNIQUE with a non-range column: CREATE TABLE temporal_rng3 ( id int4range, valid_at TEXT, CONSTRAINT temporal_rng3_uq UNIQUE (id, valid_at WITHOUT OVERLAPS) ) |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | a3ee9913ccf03e464782c9c0 | CREATE TABLE only_parted1 PARTITION OF only_parted FOR VALUES IN (1) |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | a541f07ee5b11ee6f34f663a | CREATE TABLE notnull_tbl1_chld () INHERITS (notnull_tbl1) |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | a5642f71465e7b8619901b4e | -- simple column reference for varlena types CREATE TABLE gtest_varlena (a varchar, b varchar GENERATED ALWAYS AS (a) VIRTUAL) |
@@ -3084,6 +2541,8 @@ libpg_query target: `18-latest` `9ab9951b7021adcc6d25d261d5016ca0b83726b8` (Post
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | a637e8071924008ec1ecb691 | -- ... but be sure that the immutability test is accurate CREATE TABLE gtest2 (a int, b text GENERATED ALWAYS AS (a \|\| ' sec') VIRTUAL) |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | a6e39f7bad1794847051512f | -- Test the same constraint name for different columns in different parents create table inh_parent1(a int constraint nn not null) |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | a703a0b4443bb81982ffdc61 | create table notnull_tbl_fail (a int generated by default as identity not null no inherit) |
+| DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | a8f6fdf68309bdb9892b2a1a | create table notnull_tbl_fail (a serial, constraint foo not null a no inherit) |
+| DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | ab17b28dd8793eac34b7f772 | CREATE TABLE inh_nn_parent (a int, NOT NULL a NO INHERIT) |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | ab82ac0033708c82928bf2bd | -- Attaching a child table with the same valid foreign key constraint. CREATE TABLE fk_partitioned_fk_1 (a int, b int) |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | acc5db5a96d85882421f5a28 | CREATE TABLE ctl_table(a int PRIMARY KEY, b varchar COMPRESSION pglz, c int GENERATED ALWAYS AS (a * 2) STORED, d bigint GENERATED ALWAYS AS IDENTITY, e int DEFAULT 1) |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | adc3d32c7acdebe11f549246 | -- can't drop NOT NULL from under an invalid PK CREATE TABLE list_parted3 (a int NOT NULL) PARTITION BY LIST (a) |
@@ -3094,12 +2553,15 @@ libpg_query target: `18-latest` `9ab9951b7021adcc6d25d261d5016ca0b83726b8` (Post
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | b03ff5e107ed65dc63f48b64 | CREATE TABLE pagg_tab4 (c text collate case_insensitive, b text collate case_insensitive) PARTITION BY LIST (b collate "C") |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | b08f677ad977bfcd3a2652ab | -- -- test inherit/deinherit -- create table inh_parent(f1 int) |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | b0e6c822bf542957c709f8ed | -- Bigint, implicit cast is squashed CREATE TABLE test_squash_bigint (id int, data bigint) |
+| DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | b1d14b184e2108fe1fe61ff5 | CREATE TABLE of_tt_enum_type OF tt_enum_type |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | b1d9fe4a684f02afe9c355d9 | CREATE TABLE pagg_tab6_p2 PARTITION OF pagg_tab6 FOR VALUES IN ('c', 'd') |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | b1e0d4fc97854f34314fb798 | create table phv_part_1 partition of phv_part for values in (1) |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | b2480bfeb9a1da85f920175b | CREATE TABLE regress_encoding(good text, truncated text, with_nul text, truncated_with_nul text) |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | b2acbcdd65c89eb8ce0a07d3 | -- ok (currently not supported) CREATE TABLE gtest20a (a int PRIMARY KEY, b int GENERATED ALWAYS AS (a * 2) VIRTUAL) |
+| DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | b3685ad731412214ab9ef263 | -- PK with a range column/PERIOD that isn't there: CREATE TABLE temporal_rng ( id INTEGER, CONSTRAINT temporal_rng_pk PRIMARY KEY (id, valid_at WITHOUT OVERLAPS) ) |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | b4caa89770201cac7d3b71b0 | CREATE TABLE test4nfd (a int, b text) |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | b4fc6c11b561f4c91c439850 | -- Check it for a partitioned table, too CREATE TABLE gtest31_1 (a int, b text GENERATED ALWAYS AS ('hello') VIRTUAL, c text) PARTITION BY LIST (a) |
+| DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | b59ac750c94e7d6011e698ea | CREATE TABLE gtest_child3 PARTITION OF gtest_parent ( f3 GENERATED ALWAYS AS (f2 * 2) VIRTUAL -- error ) FOR VALUES FROM ('2016-09-01') TO ('2016-10-01') |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | b66466101ecbfb9a0518c9ec | CREATE TABLE vac_tab_auto(i int, j text) WITH (autovacuum_enabled=false, vacuum_index_cleanup=auto, toast.vacuum_index_cleanup=auto) |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | b80dfd5b6ac482a04efc67c4 | create table cc2 (f4 float) inherits (pp1,cc1) |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | b846b884c31073d65d25f61b | -- Add range column and the PK at the same time CREATE TABLE temporal3 ( id int4range ) |
@@ -3109,6 +2571,7 @@ libpg_query target: `18-latest` `9ab9951b7021adcc6d25d261d5016ca0b83726b8` (Post
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | ba6bba2fb66b609d21c0967c | -- various prohibited constructs CREATE TABLE gtest_err_7a (a int PRIMARY KEY, b int GENERATED ALWAYS AS (avg(a)) VIRTUAL) |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | baf1a7324e368e185b2673d0 | -- error CREATE TABLE gtestx (x int, b int GENERATED ALWAYS AS (a * 22) VIRTUAL) INHERITS (gtest1) |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | bafecbc3127d386377dfd68b | CREATE TABLE temporal_mltrng ( id int4range, valid_at datemultirange) |
+| DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | bb2b5cb69145dd247c4b54bb | CREATE TABLE temporal_rng2 ( CONSTRAINT temporal_rng_pk PRIMARY KEY (id, valid_at WITHOUT OVERLAPS) ) INHERITS (temporal_rng) |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | bd2459e0e281e832d51b6713 | CREATE TABLE gtestnn_childdef PARTITION OF gtestnn_parent default |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | bd734abb4e199421d07d8667 | -- columns in regular and LIKE inheritance should be marked not-nullable -- for primary keys, even if those are deferred CREATE TABLE notnull_tbl4 (a INTEGER PRIMARY KEY INITIALLY DEFERRED) |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | bdbb43215cfd2f0b356a253b | -- Test row-level locks held by prepared transactions CREATE TABLE pxtest_rowlock (id int PRIMARY KEY, data text) |
@@ -3118,8 +2581,12 @@ libpg_query target: `18-latest` `9ab9951b7021adcc6d25d261d5016ca0b83726b8` (Post
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | c02d94eae333a480fef859e8 | CREATE TABLE gtest_part_key (f1 date NOT NULL, f2 bigint, f3 bigint GENERATED ALWAYS AS (f2 * 2) VIRTUAL) PARTITION BY RANGE ((f3)) |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | c05ab0477099082beea4fd1c | create table inh_child1() inherits(inh_parent) |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | c0a5d97f1c7584661b18b1ed | -- error CREATE TABLE gtest23x (a int PRIMARY KEY, b int GENERATED ALWAYS AS (a * 2) VIRTUAL REFERENCES gtest23a (x) ON DELETE SET NULL) |
+| DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | c194637bdbeb411841ce85f0 | -- with mismatched PERIOD columns: -- (parent_id, PERIOD valid_at) REFERENCES (id, valid_at) -- REFERENCES part should specify PERIOD CREATE TABLE temporal_fk_rng2rng ( id int4range, valid_at dater... |
+| DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | c1d3f869b2fa36a724587dcc | -- PK with two columns plus a range: CREATE TABLE temporal_rng2 ( id1 int4range, id2 int4range, valid_at daterange, CONSTRAINT temporal_rng2_pk PRIMARY KEY (id1, id2, valid_at WITHOUT OVERLAPS) ) |
+| DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | c2d1fc08b20ae31d7973f93d | -- with a UNIQUE constraint: CREATE TABLE temporal_mltrng3 ( id int4range, valid_at datemultirange, CONSTRAINT temporal_mltrng3_uq UNIQUE (id, valid_at WITHOUT OVERLAPS) ) |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | c35f6dfb2c6122a502d9863d | -- -- FuncExpr -- -- Verify multiple type representation end up with the same query_id CREATE TABLE test_float (data float) |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | c3e03dd9248c9e2ab897243b | create table aitest ( price_id int4, price_val int4, price_on int4 ) |
+| DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | c4ea21032686d6dbbf7d44c0 | -- should fail because of duplicate referenced columns: CREATE TABLE temporal_fk_mltrng2mltrng ( id int4range, valid_at datemultirange, parent_id int4range, CONSTRAINT temporal_fk_mltrng2mltrng_pk ... |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | c52ca309f0e8916b208b28c4 | CREATE TABLE UNIQUE_NOTEN_TBL(i int UNIQUE NOT ENFORCED) |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | c570683c94bc4c48c1ff5bc7 | -- No validation is done on the encoding itself, just the length to avoid -- overruns, so some of the byte sequences below are bogus. They cover -- all code branches, server encodings only for now.... |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | c69048246d2146dba9da6a87 | CREATE TABLE gtest21b (a int, b int GENERATED ALWAYS AS (nullif(a, 0)) VIRTUAL) |
@@ -3134,15 +2601,19 @@ libpg_query target: `18-latest` `9ab9951b7021adcc6d25d261d5016ca0b83726b8` (Post
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | ca419b195f370672ebcf4524 | -- drop column behavior CREATE TABLE gtest10 (a int PRIMARY KEY, b int, c int GENERATED ALWAYS AS (b * 2) VIRTUAL) |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | cab8f16b50ebba2f0b7942b6 | CREATE TABLE pp_nn_1(a int, b int) |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | cb38b88d73ef32470b54930a | -- This tests the issue described in match_pattern_prefix(). In the -- absence of that check, the case_insensitive tests below would -- return no rows where they should logically return one. CREATE... |
+| DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | cbd1e51b3e3f8005e41c761c | create table notnull_tbl_fail (a int constraint foo not null, constraint foo not null a no inherit) |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | cc3aeaaad316c83f82a40acb | CREATE TABLE tfkp2 partition OF temporal_partitioned_fk_rng2rng FOR VALUES IN ('[2,3)', '[4,5)', '[6,7)', '[8,9)', '[10,11)', '[12,13)') |
+| DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | cc50f50895a77cdbd4fded3b | -- UNIQUE with a range column/PERIOD that isn't there: CREATE TABLE temporal_rng3 ( id INTEGER, CONSTRAINT temporal_rng3_uq UNIQUE (id, valid_at WITHOUT OVERLAPS) ) |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | cc70c2bf47a31c00860009bd | create table inh_child1(f1 int not null) |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | ce3375571878e238b49562b8 | -- Test multiple parents with overlapping primary keys create table inh_parent1(a int, b int, c int, primary key (a, b)) |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | ce54b69fd44049185d9a3552 | create table inh_nn_child() inherits (inh_nn_parent) |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | ce6db2b90152a2a56bb67ffc | -- BooleanTest: IS TRUE with PHV-wrapped boolean partition key create table phv_boolpart (a bool, b text) partition by list (a) |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | ce888a14e1915217b67206c0 | -- verify constraints created for NOT NULL clauses CREATE TABLE notnull_tbl1 (a INTEGER NOT NULL NOT NULL) |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | ceb31057dfeec029696590fa | -- error -- foreign key actions -- Some of the behaviors are most easily visible with a -- case-insensitive collation. CREATE TABLE test12pk (x text COLLATE case_insensitive PRIMARY KEY) |
+| DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | cec1585fdd4198bb6e1cf24c | CREATE TABLE inh_nn_lvl3 (CONSTRAINT foo NOT NULL a NO INHERIT) INHERITS (inh_nn_lvl2) |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | cf3229553ad5288af4b5403b | create table p1_c1(f1 int constraint p1_a_check check (f1 > 0) not enforced) |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | cf4ffcf7c0bfde53dfd94d6b | CREATE TABLE inh_nn_lvl2 () INHERITS (inh_nn_lvl1) |
+| DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | d03b40c04944ed9f9dddae4a | CREATE TABLE notnull_tbl4_lk3 (LIKE notnull_tbl4 INCLUDING INDEXES, NOT NULL a) |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | d07847f7c9151129e7a57689 | create table p1_c1(f1 int constraint p1_a_check check (f1 > 0) enforced) |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | d0ecf4c70d6866a8998ad1d7 | -- NOT NULL NO INHERIT is not possible on partitioned tables CREATE TABLE ATACC1 (a int NOT NULL NO INHERIT) PARTITION BY LIST (a) |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | d1005d5b7e36cb98bbe1d394 | CREATE TABLE fk_partitioned_pk_1 PARTITION OF fk_partitioned_pk FOR VALUES FROM (0,0) TO (1000,1000) |
@@ -3159,21 +2630,31 @@ libpg_query target: `18-latest` `9ab9951b7021adcc6d25d261d5016ca0b83726b8` (Post
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | d57532a6233d3aad7aa28ebb | -- fails -- not-null constraints CREATE TABLE gtest21a (a int PRIMARY KEY, b int GENERATED ALWAYS AS (nullif(a, 0)) VIRTUAL NOT NULL) |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | d5b1512a3aa692b4fd6910ef | CREATE TABLE gtest_part_key (f1 date NOT NULL, f2 bigint, f3 bigint GENERATED ALWAYS AS (f2 * 2) VIRTUAL) PARTITION BY RANGE ((f3 * 3)) |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | d75616e1433f2e78ec2c5ec5 | CREATE TABLE gtesty (x int, b int GENERATED ALWAYS AS (x * 22) VIRTUAL) |
+| DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | d78a2491b3709a00754e216e | -- -- test ALTER TABLE ADD CONSTRAINT -- CREATE TABLE temporal_fk_mltrng2mltrng ( id int4range, valid_at datemultirange, parent_id int4range, CONSTRAINT temporal_fk_mltrng2mltrng_pk PRIMARY KEY (id... |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | d84bf270d5ebf3273c988c15 | -- PK from LIKE: CREATE TABLE temporal_rng2 (LIKE temporal_rng INCLUDING ALL) |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | da725a480d910dd4c51d370a | --ok CREATE TABLE notnull_tbl1_1 PARTITION OF notnull_tbl1 FOR VALUES IN (1,2) |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | dac193fd2a6dc709863a9195 | CREATE TABLE "gin_check"("Column1" int[]) |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | dae3a59313474436ac76369e | CREATE TABLE t (i int) |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | dbbc95b52575103a3c93b9b7 | -- check constraints CREATE TABLE gtest20 (a int PRIMARY KEY, b int GENERATED ALWAYS AS (a * 2) VIRTUAL CHECK (b < 50)) |
+| DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | dd85529a4aae2ec5dd24f6a3 | -- Disallow specifying conflicting NO INHERIT flags for the same constraint CREATE TABLE inh_nn1 (a int primary key, b int, not null a no inherit) |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | de03a64a259f36b47ce9b1a3 | create table p1_fail(f1 int constraint inh_check_constraint2 check (f1 < 10) not enforced) inherits(p1) |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | de66d708d58beed805f340d6 | -- a whole-row var is a self-reference on steroids, so disallow that too CREATE TABLE gtest_err_2c (a int PRIMARY KEY, b int GENERATED ALWAYS AS (num_nulls(gtest_err_2c)) VIRTUAL) |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | ded39a7b855d912c8d9ba157 | create table phv_boolpart_null partition of phv_boolpart default |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | dff51a4d6884da1204ed7f0f | create table idxpart1 partition of idxpart for values from (0) to (1000) partition by range (a) |
+| DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | e074329dc758bf903a03af66 | CREATE TABLE NE_CHECK_TBL (x int, CONSTRAINT CHECK_CON CHECK (x > 3) NOT ENFORCED) |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | e08628ea6ba70869993c0001 | CREATE TABLE FKTABLE ( ftest1 int CONSTRAINT fktable_ftest1_fkey REFERENCES PKTABLE MATCH FULL ON DELETE CASCADE ON UPDATE CASCADE NOT ENFORCED, ftest2 int ) |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | e0886c127791921070ecd908 | create table phv_part_null partition of phv_part for values in (null) |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | e0ab98bee5d2f4ad0ae7d6e1 | create table constr_child2 () inherits (constr_parent2) |
+| DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | e182309d7401dc09eda3dad3 | -- PK with one column plus a multirange: CREATE TABLE temporal_mltrng ( id int4range, valid_at datemultirange, CONSTRAINT temporal_mltrng_pk PRIMARY KEY (id, valid_at WITHOUT OVERLAPS) ) |
+| DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | e1cc04d4f7d8b3ef01b7f63e | -- UNIQUE with one column plus a range: CREATE TABLE temporal_rng3 ( id int4range, valid_at daterange, CONSTRAINT temporal_rng3_uq UNIQUE (id, valid_at WITHOUT OVERLAPS) ) |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | e1dcebcb5495187b5585830d | -- but not allowed if the child constraint is explicitly asked to be NOT ENFORCED create table p1_fail(f1 int constraint inh_check_constraint6 check (f1 < 10) not enforced) inherits(p1, p1_c1) |
+| DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | e1f15d40c842c36f816285ab | -- with inferred PK on the referenced table: -- (parent_id, PERIOD valid_at) REFERENCES [implicit] CREATE TABLE temporal_fk_rng2rng ( id int4range, valid_at daterange, parent_id int4range, CONSTRAI... |
+| DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | e1fe3b8df79ea8347a2e9346 | -- -- test input parser -- -- PK with no columns just WITHOUT OVERLAPS: CREATE TABLE temporal_rng ( valid_at daterange, CONSTRAINT temporal_rng_pk PRIMARY KEY (valid_at WITHOUT OVERLAPS) ) |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | e25787eb3dc8cb720778d49c | create table part_abc_3_2 partition of part_abc_3 for values from (1) to (100) |
+| DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | e335af3e818f66cb412474e2 | -- -- test ALTER TABLE ADD CONSTRAINT -- CREATE TABLE temporal_fk_rng2rng ( id int4range, valid_at daterange, parent_id int4range, CONSTRAINT temporal_fk_rng2rng_pk PRIMARY KEY (id, valid_at WITHOU... |
+| DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | e406695eedf682f7c9a1b217 | -- (parent_id, PERIOD valid_at) REFERENCES (id) CREATE TABLE temporal_fk_rng2rng ( id int4range, valid_at daterange, parent_id int4range, CONSTRAINT temporal_fk_rng2rng_pk PRIMARY KEY (id, valid_at... |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | e4528cc72c68368616e3d934 | -- fail CREATE TABLE unlogged1 (a int) PARTITION BY RANGE (a) |
+| DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | e47ae50454ece6ee7ab06543 | -- Check that comments on constraints and indexes are not lost at ALTER TABLE. CREATE TABLE comment_test ( id int, constraint id_notnull_constraint not null id, positive_col int CHECK (positive_col... |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | e47e59b71cd3f8e9a5abaa1b | create table inh_child (a int) |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | e4a7761caa9d465ce2b3a87b | CREATE TABLE fk_partitioned_fk_6 (a int, FOREIGN KEY (a) REFERENCES fk_partitioned_pk_6, FOREIGN KEY (a) REFERENCES fk_partitioned_pk_6 ) PARTITION BY LIST (a) |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | e5398ba17626423297b5cbb2 | CREATE TABLE brassica PARTITION OF vegetables FOR VALUES IN ('brassica') |
@@ -3187,6 +2668,7 @@ libpg_query target: `18-latest` `9ab9951b7021adcc6d25d261d5016ca0b83726b8` (Post
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | ea80d5435d59ef80dafcda06 | create table inh_pp1 (f1 int not null) |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | eaef8e7bb7600776de548775 | -- As above, but create the primary key ahead of time CREATE TABLE cnn_pk (a int, b int, CONSTRAINT cnn_primarykey PRIMARY KEY (b)) |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | ecb79adc45b38230070226fb | CREATE TABLE pgss_schema_2.tab_search_diff_1 (a int, b int) |
+| DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | edb266c4f21efffdbb03aba7 | CREATE TABLE notnull_chld0 (a int, CONSTRAINT nn_chld0 NOT NULL a) |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | ee7e4229f4e79ad3945f23bf | CREATE TABLE test_squash_cast (id int, data casttesttype) |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | eefa45aeb1044b94d77e73ea | create table phv_part_2 partition of phv_part for values in (2) |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | efc15ba6a0b9fab8d614e905 | CREATE TABLE test12fk (a int, b text COLLATE case_insensitive REFERENCES test12pk (x) ON UPDATE RESTRICT) |
@@ -3194,11 +2676,14 @@ libpg_query target: `18-latest` `9ab9951b7021adcc6d25d261d5016ca0b83726b8` (Post
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | f07f7927e3da8d754b4e84dc | create table inh_child (a int not null no inherit) |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | f1a6e9d65a6619c145a3467a | -- test that indexing commands work with TOASTed values in pg_index create table test_pg_index_toast_table (a int) |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | f281f308214e06e5a2f71f53 | CREATE TABLE notnull_tbl1_3(a int, b int) |
+| DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | f285d892b81cb0c3e3ce61bb | CREATE TABLE temporal_fk_rng2rng ( id int4range, valid_at daterange, parent_id int4range, CONSTRAINT temporal_fk_rng2rng_pk PRIMARY KEY (id, valid_at WITHOUT OVERLAPS), CONSTRAINT temporal_fk_rng2r... |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | f2b45c2e8f2d8853d786b3d0 | -- test multi layer inheritance tree create table inh_p1(f1 int not null) |
+| DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | f2e1f7873987c237d4235341 | CREATE TABLE temporal_rng4 ( id int4range, valid_at int4range_d, CONSTRAINT temporal_rng4_pk UNIQUE (id, valid_at WITHOUT OVERLAPS) ) |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | f3293c3ca6098fed4f63b02a | -- Test a not-null addition that must walk down the hierarchy CREATE TABLE inh_parent () |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | f359b02c0eb6b8e811402118 | -- composite function with row expansion create table test_composite(x integer) |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | f3754c878a69cb83a6673369 | CREATE TABLE tp1 PARTITION OF temporal_partitioned FOR VALUES IN ('[1,2)', '[2,3)') |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | f40ac9f71ec415ad1b0d5e23 | create table inh_child2 () inherits (inh_parent) |
+| DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | f453cc1eadeb42899a050cf8 | CREATE TABLE temporal_rng3 ( id int4range, valid_at textrange2, CONSTRAINT temporal_rng3_uq UNIQUE (id, valid_at WITHOUT OVERLAPS) ) |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | f5dbab1e94af53336b470adc | CREATE TABLE gtest_normal_child (a int, b int GENERATED ALWAYS AS (a * 2) VIRTUAL) INHERITS (gtest_normal) |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | f6102b841f09f858f040000b | CREATE TABLE pagg_tab4_p1 PARTITION OF pagg_tab4 FOR VALUES IN ('a', 'b') |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | f6a895a966f2fe2d3e3d907a | CREATE TABLE ctlt1_inh (LIKE ctlt1 INCLUDING CONSTRAINTS INCLUDING COMMENTS) INHERITS (ctlt1) |
@@ -3206,16 +2691,23 @@ libpg_query target: `18-latest` `9ab9951b7021adcc6d25d261d5016ca0b83726b8` (Post
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | f73b7e3f25466afa6dc11a53 | CREATE TEMP TABLE tab_search_diff_1 (a int, b int, c int) |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | f814dc46cf0df1d3262819b4 | -- don't interfere with other types of constraints create table inh_parent (a int primary key) |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | f8ef96376a1e0994ef86c9a4 | CREATE TABLE fk_partitioned_pk_2 PARTITION OF fk_partitioned_pk FOR VALUES FROM (1000,1000) TO (2000,2000) |
+| DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | f903d1068b9888f00ecc4a67 | create table inh_nn3 (f4 float, constraint nn3_f1 not null f1 no inherit) inherits (inh_nn1, inh_nn2) |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | f985f79f2b82b792e8c4f0a7 | CREATE TABLE "gin_check_text_array"("Column1" text[]) |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | fa1f844798a27e98eec99b92 | CREATE TABLE fk_partitioned_pk_3_1 PARTITION OF fk_partitioned_pk_3 FOR VALUES FROM (2000) TO (2100) |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | faa5de77b2c674d14da4a21a | CREATE TEMP TABLE tab_search_diff_2 (a bigint) |
+| DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | fb88c0ad676e02e37f040f22 | -- should fail because of duplicate referenced columns: CREATE TABLE temporal_fk_rng2rng ( id int4range, valid_at daterange, parent_id int4range, CONSTRAINT temporal_fk_rng2rng_pk PRIMARY KEY (id, ... |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | fb93b0630f40d3db1b7a7a35 | create table sk (a int, b int) |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | fbe0a758612651c9e97e47ff | -- Create a table with the int_custom type CREATE TABLE test_table ( id int, data int_custom ) |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | fc86251ead4ac2affa7f4764 | -- -- test multi inheritance tree -- create table inh_parent(f1 int not null) |
+| DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | fccaf1e428bd91f7506a7faa | CREATE TABLE gtest_child3 PARTITION OF gtest_parent ( f3 GENERATED ALWAYS AS (f2 * 2) STORED -- error ) FOR VALUES FROM ('2016-09-01') TO ('2016-10-01') |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | fd1a6173589088a121d7e122 | CREATE TABLE gtestxx_1 (a int NOT NULL, b int) |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | fd2b6142898435903e222fe1 | CREATE TABLE inh_child (i int) INHERITS (inh_parent) |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | fdb2ff9cf785cac0a4a28429 | create table inh_child() inherits (inh_parent1, inh_parent2) |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | fdc059ddf9e83ca9ef1f10c8 | -- Also try inheritance added after table creation CREATE TABLE notnull_tbl1_child2 (c int, b int, a int) |
+| DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | fdedcc6dbb6b49a2749c07b9 | CREATE TABLE notnull_part1_2_upg (a int, CONSTRAINT nn2 NOT NULL a, b int) |
+| DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | fdf983696a9f77268b467920 | -- -- test changing the PK's dependencies -- CREATE TABLE temporal3 ( id int4range, valid_at daterange, CONSTRAINT temporal3_pk PRIMARY KEY (id, valid_at WITHOUT OVERLAPS) ) |
+| DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | fe8853e630eb99534adadcb4 | -- Two scalar columns: CREATE TABLE temporal_fk2_mltrng2mltrng ( id int4range, valid_at datemultirange, parent_id1 int4range, parent_id2 int4range, CONSTRAINT temporal_fk2_mltrng2mltrng_pk PRIMARY ... |
+| DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | fea3d9d59a64f137f2e64e25 | CREATE TABLE gtest28 OF gtest_type (f1 WITH OPTIONS GENERATED ALWAYS AS (f2 *2) VIRTUAL) |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_TABLE_AS_STMT | 29dcc5b03e739e2bf90aee42 | -- Tests for COPY TO with materialized views. -- COPY TO should fail for an unpopulated materialized view -- but succeed for a populated one. CREATE MATERIALIZED VIEW copytest_mv AS SELECT 1 AS id ... |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_TABLE_AS_STMT | 29e3d7bf87c61aa237e6007a | CREATE MATERIALIZED VIEW pgss_materialized_view_2 AS SELECT * FROM generate_series(1, 5) as id |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_TABLE_AS_STMT | 4cf1d58e45058bfaca9d2f26 | -- -- Extended statistics on sb_2 (x, y, z) improve a bucket size estimation, -- and the optimizer may choose hash join. -- CREATE TABLE sb_1 AS SELECT gs % 10 AS x, gs % 10 AS y, gs % 10 AS z FROM... |
@@ -4307,6 +3799,20 @@ libpg_query target: `18-latest` `9ab9951b7021adcc6d25d261d5016ca0b83726b8` (Post
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_PREPARE_STMT | ca4aeecba9910d81cc7230aa | -- VtA is supported for custom plans where params are substituted with -- constants. VtA is not supported with generic plans where params prevent -- us from building a constant array. PREPARE test ... |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_PREPARE_STMT | cc9f6a6cf261246b9b96d380 | PREPARE p1(int, int, int, int, int) AS SELECT * FROM test_squash WHERE id IN ($1, $2, $3, $4, $5) |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_PREPARE_STMT | f8fc95a48a51803e76295f6d | PREPARE p1(int, int, int, int, int) AS SELECT * FROM test_squash WHERE id = ANY(ARRAY[$1, $2, $3, $4, $5]) |
+| DEEP_SUPPORTED | PG_QUERY__NODE__NODE_REFRESH_MAT_VIEW_STMT | 6740aa51c939a2169832ca06 | REFRESH MATERIALIZED VIEW pgss_materialized_view |
+| DEEP_SUPPORTED | PG_QUERY__NODE__NODE_REFRESH_MAT_VIEW_STMT | 8e935bbdfebfa4022ca7641c | REFRESH MATERIALIZED VIEW copytest_mv |
+| DEEP_SUPPORTED | PG_QUERY__NODE__NODE_REINDEX_STMT | 034c9c0e9d9f0f6ef13e6476 | REINDEX TABLE pg_toast.pg_toast_1262 |
+| DEEP_SUPPORTED | PG_QUERY__NODE__NODE_REINDEX_STMT | 0b172e04558f1a14bf730759 | reindex index concurrently test_pg_index_toast_index |
+| DEEP_SUPPORTED | PG_QUERY__NODE__NODE_REINDEX_STMT | 2a65d4dcd78b3002d7206411 | -- no catalog index -- These are the toast table and index of pg_database. REINDEX TABLE CONCURRENTLY pg_toast.pg_toast_1262 |
+| DEEP_SUPPORTED | PG_QUERY__NODE__NODE_REINDEX_STMT | 3324964e229954b4276a3a6e | REINDEX (TABLESPACE regress_tblspace) TABLE CONCURRENTLY pg_toast.pg_toast_1262 |
+| DEEP_SUPPORTED | PG_QUERY__NODE__NODE_REINDEX_STMT | 383d62debafae47f0cf781a8 | reindex index concurrently idxpart11_expr_idx |
+| DEEP_SUPPORTED | PG_QUERY__NODE__NODE_REINDEX_STMT | 3d9942adce2594e1baa45992 | REINDEX (TABLESPACE regress_tblspace) INDEX CONCURRENTLY pg_toast.pg_toast_1262_index |
+| DEEP_SUPPORTED | PG_QUERY__NODE__NODE_REINDEX_STMT | 48662c800d895cabda0285a1 | -- no catalog toast table REINDEX INDEX CONCURRENTLY pg_toast.pg_toast_1262_index |
+| DEEP_SUPPORTED | PG_QUERY__NODE__NODE_REINDEX_STMT | 73b0949fad12186a89be0546 | reindex index concurrently idxpart1_expr_idx |
+| DEEP_SUPPORTED | PG_QUERY__NODE__NODE_REINDEX_STMT | 7e5d9ea896e961eb39d865e5 | reindex index test_pg_index_toast_index |
+| DEEP_SUPPORTED | PG_QUERY__NODE__NODE_REINDEX_STMT | 8245589af6f6fc3976950c7b | -- toast relations, fail REINDEX (TABLESPACE regress_tblspace) INDEX pg_toast.pg_toast_1262_index |
+| DEEP_SUPPORTED | PG_QUERY__NODE__NODE_REINDEX_STMT | 97a9ad1acaaab32cfce38bc8 | REINDEX (TABLESPACE regress_tblspace) TABLE pg_toast.pg_toast_1262 |
+| DEEP_SUPPORTED | PG_QUERY__NODE__NODE_REINDEX_STMT | dd30277f49ae5d04218e1547 | REINDEX INDEX pg_toast.pg_toast_1262_index |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_RENAME_STMT | 4f90ac02d1602c413d350b6e | -- substring needing last byte of its slice_size ALTER TABLE toast_3b_utf8 RENAME TO toast_4b_utf8 |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_RENAME_STMT | d9be204c01e944901e43d038 | ALTER TABLE temporal3 RENAME COLUMN valid_at TO valid_thru |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_RENAME_STMT | ed7b0d669739aefd2f9de265 | ALTER TABLE notnull_tbl4_lk3 RENAME CONSTRAINT notnull_tbl4_a_not_null TO a_nn |
@@ -5570,124 +5076,6 @@ libpg_query target: `18-latest` `9ab9951b7021adcc6d25d261d5016ca0b83726b8` (Post
 | ERROR | PG_QUERY__NODE__NODE_ALTER_PUBLICATION_STMT | 52d7259230f9645916abd830 | ALTER PUBLICATION testpub_fortable SET TABLE testpub_tbl1 (id, ctid) |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_PUBLICATION_STMT | a1788f53fc8b2cede5b672d7 | ALTER PUBLICATION testpub_ins_trunct ADD TABLE pub_test.testpub_nopk, testpub_tbl1 |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_PUBLICATION_STMT | fc3cb3903bca7dab8f30ea24 | ALTER PUBLICATION testpub_fortable SET TABLE testpub_tbl5 (a, a) |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 003a575a0731d3a287e8f2e8 | -- DROP CONSTRAINT recurses correctly on invalid constraints ALTER TABLE notnull_tbl1 ALTER CONSTRAINT nntbl1_a INHERIT |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 030bd70cb513b576e70a0b59 | ALTER TABLE temporal_rng2 ADD CONSTRAINT temporal_rng_pk PRIMARY KEY (id, valid_at WITHOUT OVERLAPS) |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 0349daccc7588273fad7efc9 | ALTER TABLE fktable ALTER CONSTRAINT fktable_fk_fkey NOT ENFORCED |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 069b31f81beae46ed1099297 | ALTER TABLE testpub_rf_tbl7 ALTER COLUMN y SET EXPRESSION AS (x * testpub_rf_func2()) |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 0d9e74318aa68e56115fd5c5 | ALTER TABLE notnull_parent_upg ADD CONSTRAINT nn NOT NULL a NOT VALID |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 168fb72c9698b507a682c424 | ALTER TABLE ATACC1 ADD NOT NULL a NO INHERIT |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 17e665fbdd654a91cc03a9b4 | -- succeeds ALTER TABLE attmp3 ADD CONSTRAINT b_greater_than_ten_not_enforced CHECK (b > 10) NOT ENFORCED |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 1b8fa7452fdc598e02a0e11f | ALTER TABLE temporal_fk_rng2rng ADD CONSTRAINT temporal_fk_rng2rng_fk FOREIGN KEY (parent_id, PERIOD valid_at) REFERENCES temporal_rng ON UPDATE RESTRICT |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 1dae06b0c6e78b2547c804cc | ALTER TABLE fk_notpartitioned_fk ADD CONSTRAINT fk_notpartitioned_fk_a_b_fkey2 FOREIGN KEY (a, b) REFERENCES fk_partitioned_pk NOT ENFORCED |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 1fdbc5bbdc459ac9f7986afd | alter table inh_nn2 alter constraint inh_nn1_f2_not_null no inherit |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 202ad492828b44839cedb398 | ALTER TABLE temporal_fk2_mltrng2mltrng ADD CONSTRAINT temporal_fk2_mltrng2mltrng_fk FOREIGN KEY (parent_id1, parent_id2, PERIOD valid_at) REFERENCES temporal_mltrng2 (id1, id2, PERIOD valid_at) |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 21603ae21f34e70a7fc73ae7 | alter table inh_nn3 alter constraint nn3_f1 inherit |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 22acbcba76880e47a1a456f2 | -- attach the indexes; parents stay invalid alter index idxpart1_expr_idx attach partition idxpart11_expr_idx |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 23be1e20f2c1221081970a08 | ALTER TABLE temporal_fk_mltrng2mltrng ADD CONSTRAINT temporal_fk_mltrng2mltrng_fk FOREIGN KEY (parent_id, PERIOD valid_at) REFERENCES temporal_mltrng (id, PERIOD valid_at) |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 273b221d3011d17cc4b09d6e | -- constraints other than not-null are not supported alter table inh_nn1 alter constraint inh_nn1_f1_check inherit |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 28221787bd8889a6ad488a94 | -- -- partitioned FK referenced updates CASCADE -- ALTER TABLE temporal_partitioned_fk_mltrng2mltrng DROP CONSTRAINT temporal_partitioned_fk_mltrng2mltrng_fk, ADD CONSTRAINT temporal_partitioned_fk... |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 29737b96fe94f04b1e9a17bf | ALTER TABLE notnull_tbl1 ADD NOT NULL a NOT VALID, ADD NOT NULL b NOT VALID |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 2a0ec8383b0fdbee7b4cc843 | ALTER TABLE fk_notpartitioned_fk ALTER CONSTRAINT fk_notpartitioned_fk_a_b_fkey2 ENFORCED |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 2a292f5bf6ad80f9acb80a69 | ALTER TABLE temporal_fk_rng2rng ADD CONSTRAINT temporal_fk_rng2rng_fk FOREIGN KEY (parent_id, PERIOD valid_at) REFERENCES temporal_rng ON UPDATE NO ACTION |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 2bf309323b734a0722eae7cb | ALTER TABLE notnull_chld0 ADD CONSTRAINT nn_chld0 NOT NULL a not valid |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 2dea23fa2eb1840be13c743e | ALTER TABLE cnn_pk ADD CONSTRAINT cnn_primarykey PRIMARY KEY USING INDEX cnn_uq |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 2e7eb0fd5f2866514ab2ed81 | ALTER TABLE temporal_fk_mltrng2mltrng ALTER CONSTRAINT temporal_fk_mltrng2mltrng_fk DEFERRABLE INITIALLY DEFERRED |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 305bfd07992f3bb65b0233d0 | alter index idxpart_expr_idx attach partition idxpart2_expr_idx |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 31387fef237b77474e2b5e52 | alter table constr_parent2 add not null a not valid |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 31e15803d78d7790a8652903 | ALTER TABLE unique_tbl ALTER CONSTRAINT unique_tbl_i_key ENFORCED |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 34ecbccfdf12debb9356a48b | ALTER TABLE atnotnull1 ADD COLUMN b INT, ADD NOT NULL b |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 3a9cd422a95a76e7303fea33 | -- error ALTER TABLE notnull_tbl1 ADD CONSTRAINT nn NOT NULL a NOT VALID |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 3b476cbee2da81c62f57099c | ALTER TABLE temporal3 ADD COLUMN valid_at daterange, ADD CONSTRAINT temporal3_uq UNIQUE (id, valid_at WITHOUT OVERLAPS) |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 3c0240f62e94b2be99910336 | ALTER TABLE temporal_fk2_rng2rng ADD CONSTRAINT temporal_fk2_rng2rng_fk FOREIGN KEY (parent_id1, parent_id2, PERIOD valid_at) REFERENCES temporal_rng2 (id1, id2, PERIOD valid_at) |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 3d0334c33cf9a80f2769a439 | ALTER TABLE testpub_gencol REPLICA IDENTITY USING index testpub_gencol_idx |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 3d3f5b7ed3b7d9730369ede2 | -- Changing it back to ENFORCED will recreate the necessary FK triggers -- that are deferrable and initially deferred ALTER TABLE FKTABLE ALTER CONSTRAINT fktable_fk_fkey ENFORCED |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 3da0e1c87fb3b79f6f52ebb0 | ALTER TABLE temporal_fk_rng2rng ALTER CONSTRAINT temporal_fk_rng2rng_fk DEFERRABLE INITIALLY DEFERRED |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 41ea983a45ad6b4088060d07 | alter table cnn_uq add unique using index cnn_uq_idx |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 4b9c855bccee740d11dd9a0a | ALTER TABLE atnnpart1 ADD CONSTRAINT another_constr NOT NULL id |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 4cae1aa9d5af98658396f8b0 | -- -- partitioned FK referenced updates CASCADE -- ALTER TABLE temporal_partitioned_fk_rng2rng DROP CONSTRAINT temporal_partitioned_fk_rng2rng_fk, ADD CONSTRAINT temporal_partitioned_fk_rng2rng_fk ... |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 4e435ac6f2c8d6791aafb932 | -- error - generated column "b" must be published explicitly as it is -- part of the REPLICA IDENTITY. ALTER TABLE testpub_gencol REPLICA IDENTITY FULL |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 5b61e13592b0abf64c0e4405 | ALTER TABLE temporal3 ADD CONSTRAINT temporal3_uq UNIQUE USING INDEX idx_temporal3_uq |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 5c44d98009cf0811fac98f1f | -- change child constraint ALTER TABLE fk_partitioned_fk_2 ALTER CONSTRAINT fk_part_con ENFORCED |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 5e021a1f5ec7c6f533dfccee | ALTER TABLE notnull_tbl1 ALTER CONSTRAINT nntbl1_a NO INHERIT |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 61b3d703548c0d83e58b3002 | -- but it's OK when the identity is FULL ALTER TABLE test_replica_identity3 REPLICA IDENTITY FULL |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 633d32e11c011b4f4fd46a6c | alter table p1_c1 add constraint inh_check_constraint8 check (f1 < 10) not enforced |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 64ebfca5dc6dcb2c0237fad7 | -- Changing the constraint to NOT ENFORCED drops the associated FK triggers ALTER TABLE FKTABLE ALTER CONSTRAINT fktable_fk_fkey NOT ENFORCED |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 675b3e52d837ce78688fed33 | alter table p1 add constraint inh_check_constraint9 check (f1 < 10) not enforced |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 6c03824af775e5f45e023075 | ALTER TABLE temporal3 ADD CONSTRAINT temporal3_pk PRIMARY KEY USING INDEX idx_temporal3_uq |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 6f89d5897f725689748a04de | ALTER TABLE temporal_fk_rng2rng ADD CONSTRAINT temporal_fk_rng2rng_fk FOREIGN KEY (parent_id, PERIOD valid_at) REFERENCES temporal_rng ON DELETE RESTRICT |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 7036bb12df4b14afe53184b0 | ALTER TABLE inh_nn_parent ADD CONSTRAINT nna NOT NULL a |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 72fc8736d6467824f7cbb7e9 | alter table p1_c1 add constraint inh_check_constraint4 check (f1 < 10) not enforced |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 74a16a00b52cd468b396c7c2 | alter table inh_nn1 alter constraint inh_nn1_pkey inherit |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 7790ffe0d97c082407041f95 | alter table p1 add constraint inh_check_constraint4 check (f1 < 10) not enforced |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 7b1247df07f05b13ad231a2f | ALTER TABLE notnull_inhchild ADD CONSTRAINT nn1 NOT NULL i |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 7e8ef9066d0620c524107103 | -- the not-valid state of the child constraint will be ignored here. alter table p1 add constraint inh_check_constraint10 check (f1 < 10) not enforced |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 81fec91e6288b91b4ef2ba41 | ALTER TABLE gtest21ax ADD CONSTRAINT cc NOT NULL b |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 83d905100c7541b2ca8410ac | ALTER TABLE atnnparted ADD CONSTRAINT dummy_constr NOT NULL id NOT VALID |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 86c9a75bb873bf9cd933ab18 | ALTER TABLE pp_nn_1 ADD CONSTRAINT nn NOT NULL a NO INHERIT |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 87d49b1d8fee2fc8000b7f01 | ALTER TABLE fk_partitioned_fk ADD CONSTRAINT fk_partitioned_fk_a_b_fkey FOREIGN KEY (a, b) REFERENCES fk_notpartitioned_pk NOT ENFORCED |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 8a2b5b6a35cb6d0c5e471337 | ALTER TABLE temporal_fk_mltrng2mltrng ADD CONSTRAINT temporal_fk_mltrng2mltrng_fk FOREIGN KEY (parent_id, PERIOD valid_at) REFERENCES temporal_mltrng (id, PERIOD valid_at) ON UPDATE NO ACTION |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 8ade8c3f13ea097754bc35b9 | -- -- partitioned FK referenced deletes SET NULL -- -- -- partitioned FK referenced updates SET DEFAULT -- ALTER TABLE temporal_partitioned_fk_rng2rng ALTER COLUMN parent_id SET DEFAULT '[-1,-1]', ... |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 8b3062f171ea3aa0506bd286 | ALTER TABLE notnull_child_upg ADD CONSTRAINT nn NOT NULL a |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 8d915d158baf2ba6280b7287 | ALTER TABLE temporal_fk_mltrng2mltrng ADD CONSTRAINT temporal_fk_mltrng2mltrng_fk FOREIGN KEY (parent_id, PERIOD valid_at) REFERENCES temporal_mltrng (id, PERIOD valid_at) ON UPDATE RESTRICT |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 903ef34fc2b1323e7a36448f | -- nope ALTER TABLE notnull_tbl1_child2 ADD NOT NULL a NOT VALID |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 914703b53eb8e2996ea25b92 | ALTER TABLE temporal_fk_rng2rng ADD CONSTRAINT temporal_fk_rng2rng_fk FOREIGN KEY (parent_id, PERIOD valid_at) REFERENCES temporal_rng (id, PERIOD valid_at) |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 9377e59a84775a9e3862a287 | alter table inh_nn1 alter constraint inh_nn1_f1_fkey inherit |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 9496de36a39b4a3993eb1571 | ALTER TABLE fk_partitioned_fk ALTER CONSTRAINT fk_partitioned_fk_a_b_fkey ENFORCED |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 94bafb8c5482cbbf46002d73 | ALTER TABLE notnull_tbl1 ADD CONSTRAINT nn_parent NOT NULL a not valid |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 956a6f1973ac2c1de6111650 | ALTER TABLE notnull_tbl1 ADD CONSTRAINT notnull_con NOT NULL a NOT VALID |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 9579aa03f89dfd8242b5303e | -- -- partitioned FK referenced deletes CASCADE -- -- -- partitioned FK referenced updates SET NULL -- ALTER TABLE temporal_partitioned_fk_mltrng2mltrng DROP CONSTRAINT temporal_partitioned_fk_mltr... |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 981aea3a7d4dce87e2576179 | ALTER TABLE FKTABLE ALTER CONSTRAINT fk_con NOT ENFORCED |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 99c29c7f48328ec96cc4e03e | ALTER TABLE notnull_tbl1_upg ADD CONSTRAINT nn NOT NULL a NOT VALID |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 9e04b79998c033cdd582994b | ALTER TABLE fk_partitioned_fk ALTER CONSTRAINT fk_partitioned_fk_a_b_fkey NOT ENFORCED |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 9e073e4dd9811fbdaf4fbd38 | alter table p1 add constraint inh_check_constraint3 check (f1 > 0) not enforced |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | a0062d2a7f36a7a023d3c40d | ALTER TABLE test_replica_identity5 REPLICA IDENTITY USING INDEX test_replica_identity5_a_b_key |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | a2db0b60d64b1173f39a41b1 | -- but using a different constraint name is not allowed ALTER TABLE notnull_tbl1 ADD CONSTRAINT nn NOT NULL a |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | a33e215bef80733a3acd4501 | alter table inh_nn1 alter constraint inh_nn1_f1_not_null inherit |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | a364b125a34dc530de348acf | ALTER TABLE temporal_mltrng ADD CONSTRAINT temporal_mltrng_pk PRIMARY KEY (id, valid_at WITHOUT OVERLAPS) |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | ac90b987fb42dbbac4748c69 | ALTER TABLE notnull_tbl1 ADD CONSTRAINT nntbl1_a NOT NULL a NOT VALID |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | ad22cba290238275ce7cc4f6 | -- should fail because of duplicate referenced columns: ALTER TABLE temporal_fk_rng2rng ADD CONSTRAINT temporal_fk_rng2rng_fk2 FOREIGN KEY (parent_id, PERIOD parent_id) REFERENCES temporal_rng (id,... |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | afcb4b2f9c2a83f3c57de0b3 | ALTER TABLE pp_nn_1 ADD CONSTRAINT nn NOT NULL a NOT VALID |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | b00a731098108bcfc499d9e3 | -- ALTER CONSTRAINT NO INHERIT should work on top-level constraints alter table inh_nn1 alter constraint inh_nn1_f1_not_null no inherit |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | b023832199e29669a483d567 | ALTER TABLE temporal_fk_rng2rng ADD CONSTRAINT temporal_fk_rng2rng_fk FOREIGN KEY (parent_id, PERIOD valid_at) REFERENCES temporal_rng ON DELETE SET NULL ON UPDATE SET NULL |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | b1b94501b997bea3300eec22 | ALTER TABLE fk_partitioned_fk_2 ADD CONSTRAINT fk_partitioned_fk_a_b_fkey FOREIGN KEY (a, b) REFERENCES fk_notpartitioned_pk NOT ENFORCED |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | b3355931d7524216733e7bdd | ALTER TABLE temporal_fk_rng2rng ADD CONSTRAINT temporal_fk_rng2rng_fk FOREIGN KEY (parent_id, PERIOD valid_at) REFERENCES temporal_rng |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | b3c13fbaf6c796cd149403f5 | alter table inh_nn_parent add not null a no inherit |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | b474c154cb01b958a79379bd | --ok -- SET EXPRESSION supports not null constraint ALTER TABLE gtest21ax ALTER COLUMN b SET EXPRESSION AS (nullif(a, 1)) |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | b704e4f7404ea84c227e2bb6 | ALTER TABLE temporal_fk_rng2rng ALTER COLUMN parent_id SET DEFAULT '[-1,-1]', ADD CONSTRAINT temporal_fk_rng2rng_fk FOREIGN KEY (parent_id, PERIOD valid_at) REFERENCES temporal_rng ON DELETE SET DE... |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | b7831adc966f966c3e12a309 | -- Enforceability also changes the validate state, as data validation will be -- performed during this transformation. ALTER TABLE FKTABLE ALTER CONSTRAINT fk_con ENFORCED |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | b8a8efdcc16c8706b5e55114 | alter table inh_parent add constraint inh_parent_excl exclude ((1) with =) |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | bc845f94c5cf4831ce511459 | -- change NO INHERIT status of inherited constraint: no dice, it's inherited alter table cc2 add not null a2 no inherit |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | bca6bf4385beeb641639812b | ALTER INDEX gin_check_idx SET (fastupdate = false) |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | beac01c79c98d677cf79c884 | ALTER TABLE fktable ALTER CONSTRAINT fktable_fk_fkey NO INHERIT |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | c4058bb7449ca41162ce33ec | -- can't override ALTER TABLE ATACC1 ADD CONSTRAINT ditto NOT NULL a |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | c8622a537ce1a8ccdfed3e4d | -- Reverting it back to ENFORCED will result in failure because constraint validation will be triggered, -- as it was previously in a valid state. ALTER TABLE FKTABLE ALTER CONSTRAINT fktable_ftest... |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | caec240e30f6e298188000ec | alter table p1 add constraint inh_check_constraint6 check (f1 < 10) not enforced |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | cd5e3bdf111057ed424641a6 | ALTER TABLE ref ALTER CONSTRAINT ref_f1_f2_fkey_1 DEFERRABLE INITIALLY DEFERRED |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | d2251e1184bb31cc108a6e1e | ALTER TABLE pp_nn_1 ADD CONSTRAINT nn1 NOT NULL a NOT VALID |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | d5296fbf49f916c984a67134 | -- but reverse is not allowed alter table p1_c1 add constraint inh_check_constraint7 check (f1 < 10) not enforced |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | d586b00f9204fda83e76246c | ALTER TABLE temporal3 ADD COLUMN valid_at daterange, ADD CONSTRAINT temporal3_pk PRIMARY KEY (id, valid_at WITHOUT OVERLAPS) |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | d64bec5a84483a4ac576deaf | ALTER TABLE temporal_rng3 ADD CONSTRAINT temporal_rng3_uq UNIQUE (id, valid_at WITHOUT OVERLAPS) |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | d6f25e593fb67c2079f8a727 | ALTER TABLE FKTABLE ALTER CONSTRAINT fk_con DEFERRABLE INITIALLY DEFERRED |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | dabddb74f2623bf417ca75b8 | -- -- partitioned FK referenced deletes CASCADE -- -- -- partitioned FK referenced updates SET NULL -- ALTER TABLE temporal_partitioned_fk_rng2rng DROP CONSTRAINT temporal_partitioned_fk_rng2rng_fk... |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | db64ec2334f6dbb67fab04ad | -- -- partitioned FK referenced deletes SET NULL -- -- -- partitioned FK referenced updates SET DEFAULT -- ALTER TABLE temporal_partitioned_fk_mltrng2mltrng ALTER COLUMN parent_id SET DEFAULT '[0,1... |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | dbba17f1866801cd77b4f892 | ALTER TABLE notnull_part1_3_upg add CONSTRAINT nn3 NOT NULL a NOT VALID |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | dbbae83ff739842cbf00653c | -- try to drop a nonexistant constraint alter table inh_nn1 alter constraint foo inherit |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | dccac0246aaa8fcf541744b7 | ALTER TABLE notnull_tbl1_3 add CONSTRAINT nn3 NOT NULL a NOT VALID |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | dfaf51924c8ab5a6617f6bd3 | ALTER TABLE temporal_rng ADD CONSTRAINT temporal_rng_pk PRIMARY KEY (id, valid_at WITHOUT OVERLAPS) |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | e1c61e5c7258fd8c4945aa6e | ALTER TABLE notnull_tbl1 ADD CONSTRAINT foobar NOT NULL a |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | e7fda49144b0bd2b12f930a8 | ALTER TABLE notnull_inhparent ADD CONSTRAINT nn NOT NULL i NOT VALID |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | e887911d735bb9cc81946bc3 | alter table p1_c1 add constraint inh_check_constraint3 check (f1 > 0) not enforced |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | ea04f7b86fd3cb9784e6e2d0 | alter table constr_parent add not null a not valid |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | ef181a9c0e0f7ea5d400e442 | alter index idxpart_expr_idx attach partition idxpart1_expr_idx |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | efec3493910630d8a78d1c30 | ALTER TABLE temporal_fk_rng2rng ADD CONSTRAINT temporal_fk_rng2rng_fk FOREIGN KEY (parent_id, PERIOD valid_at) REFERENCES temporal_rng ON DELETE CASCADE ON UPDATE CASCADE |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | f1c5bd0ed2bd9569fc2c671d | ALTER TABLE temporal_mltrng3 ADD CONSTRAINT temporal_mltrng3_uq UNIQUE (id, valid_at WITHOUT OVERLAPS) |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | f318db23984d00fd50b675df | -- Can change enforceability and deferrability together ALTER TABLE FKTABLE ALTER CONSTRAINT fk_con NOT ENFORCED NOT DEFERRABLE |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | f528f1bae131d62b4a0738ac | ALTER TABLE gtest25 ADD COLUMN b int GENERATED ALWAYS AS (a * 2) VIRTUAL, ALTER COLUMN b SET EXPRESSION AS (a * 3) |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | f635ebcc747c6c85b3333c9a | -- error ALTER TABLE gtestnn_parent ALTER COLUMN f3 SET EXPRESSION AS (nullif(f1, 2) + nullif(f2, 11)) |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | f64203351c54f46ab7f4bb27 | ALTER TABLE unique_tbl ALTER CONSTRAINT unique_tbl_i_key NOT ENFORCED |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | f950d97b5bd831ed0917f5f8 | alter table p1 add constraint inh_check_constraint5 check (f1 < 10) not enforced |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | fb6093628d03b0d9e0d31126 | alter table inh_nn1 -- test multicommand alter table while at it alter constraint inh_nn1_f1_not_null inherit, alter constraint inh_nn1_f1_not_null no inherit |
-| ERROR | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | fc9e733f289135904bf23d98 | ALTER TABLE notnull_part1_upg ADD CONSTRAINT notnull_con NOT NULL a NOT VALID |
 | ERROR | PG_QUERY__NODE__NODE_ALTER_TSCONFIGURATION_STMT | 5ffca48f8e01844fc4f59d1f | ALTER TEXT SEARCH CONFIGURATION evttrig_tscfg DROP MAPPING FOR word |
 | ERROR | PG_QUERY__NODE__NODE_COPY_STMT | 1021fb3d0a7c5db4f2f75029 | COPY (UPDATE stats_track_tab SET x = 2 WHERE x = 1 RETURNING x) TO stdout |
 | ERROR | PG_QUERY__NODE__NODE_COPY_STMT | 21a551ddacfd544860681ac8 | COPY ( MERGE INTO sq_target t USING sq_source s ON tid = sid WHEN MATCHED AND tid >= 2 THEN UPDATE SET balance = t.balance + delta WHEN NOT MATCHED THEN INSERT (balance, tid) VALUES (balance + delt... |
@@ -5708,99 +5096,7 @@ libpg_query target: `18-latest` `9ab9951b7021adcc6d25d261d5016ca0b83726b8` (Post
 | ERROR | PG_QUERY__NODE__NODE_CREATE_PUBLICATION_STMT | a5e09d1078d0b1f769deaf71 | -- error - generated column "b" must be published explicitly as it is -- part of the REPLICA IDENTITY index. CREATE PUBLICATION pub_gencol FOR TABLE testpub_gencol |
 | ERROR | PG_QUERY__NODE__NODE_CREATE_PUBLICATION_STMT | b1f39566e0f5f35c1dc739d0 | -- ok - generated column "b" is published explicitly CREATE PUBLICATION pub_gencol FOR TABLE testpub_gencol with (publish_generated_columns = stored) |
 | ERROR | PG_QUERY__NODE__NODE_CREATE_PUBLICATION_STMT | d7ebfe49ac3aae32cc22d215 | CREATE PUBLICATION testpub_xxx WITH (publish_generated_columns = foo) |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STMT | 02f7e9a73462b5a1bcb5e9c2 | -- partitioned table have not-null, then the partitions can not be NOT NULL NOT VALID. CREATE TABLE pp_nn (a int, b int, NOT NULL a) PARTITION BY LIST (a) |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STMT | 0373dac26c5f4f3a3bee1365 | -- (parent_id, valid_at) REFERENCES [implicit] -- FOREIGN KEY part should specify PERIOD CREATE TABLE temporal_fk_mltrng2mltrng ( id int4range, valid_at datemultirange, parent_id int4range, CONSTRA... |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STMT | 052446778ffd0dc01156e4b4 | -- PK with a non-range column: CREATE TABLE temporal_rng ( id int4range, valid_at TEXT, CONSTRAINT temporal_rng_pk PRIMARY KEY (id, valid_at WITHOUT OVERLAPS) ) |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STMT | 083072c01339908c963b3de5 | -- -- FK between partitioned tables: ranges -- CREATE TABLE temporal_partitioned_rng ( id int4range, valid_at daterange, name text, CONSTRAINT temporal_paritioned_rng_pk PRIMARY KEY (id, valid_at W... |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STMT | 0f308b99b0fdf0518de433e5 | -- -- test a range with both a PK and a UNIQUE constraint -- CREATE TABLE temporal3 ( id int4range, valid_at daterange, id2 int8range, name TEXT, CONSTRAINT temporal3_pk PRIMARY KEY (id, valid_at W... |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STMT | 1332a561e4517f4b8b01bf3b | -- works: PERIOD for both referenced and referencing CREATE TABLE temporal_fk_rng2rng ( id int4range, valid_at daterange, parent_id int4range, CONSTRAINT temporal_fk_rng2rng_pk PRIMARY KEY (id, val... |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STMT | 137e8cc51661164506e89e57 | -- with a UNIQUE constraint: CREATE TABLE temporal3 ( id int4range, valid_at daterange, CONSTRAINT temporal3_uq UNIQUE (id, valid_at WITHOUT OVERLAPS) ) |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STMT | 16001e99d52f0dc0a521aee2 | create table notnull_tbl_fail (like notnull_tbl1, constraint foo2 not null a) |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STMT | 16c4cda0453f54ab75bc1764 | create table notnull_tbl_fail (a serial constraint foo not null, constraint bar not null a) |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STMT | 1901e722050be4fece30c49a | -- Core must test WITHOUT OVERLAPS -- with an int4range + daterange, -- so here we do some simple tests -- to make sure int + daterange works too, -- since that is the expected use-case. CREATE TAB... |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STMT | 1ac101cc2bb38517a5cb63f9 | CREATE TABLE inh_nn3 (a int not null, b int, not null a no inherit) |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STMT | 1d399ebbc1f1f331e66bf21f | CREATE TABLE INSERT_TBL (x INT DEFAULT nextval('insert_seq'), y TEXT DEFAULT '-NULL-', z INT DEFAULT -1 * currval('insert_seq'), CONSTRAINT INSERT_TBL_CON CHECK (x >= 3 AND y <> 'check failed' AND ... |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STMT | 1f03ffd6eab51f49b0cc234d | create table notnull_tbl_fail (a serial, constraint foo not null a, constraint bar not null a) |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STMT | 1f0be52ded51a12f8e9f533a | -- with mismatched PERIOD columns: -- (parent_id, PERIOD valid_at) REFERENCES (id, valid_at) -- REFERENCES part should specify PERIOD CREATE TABLE temporal_fk_mltrng2mltrng ( id int4range, valid_at... |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STMT | 202d0390549e77243e776b68 | CREATE TABLE gtest_child PARTITION OF gtest_parent ( f3 WITH OPTIONS GENERATED ALWAYS AS (f2 * 2) VIRTUAL ) FOR VALUES FROM ('2016-07-01') TO ('2016-08-01') |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STMT | 2194160e0257f3b7fc98d949 | -- NOT NULL NO INHERIT CREATE TABLE ATACC1 (a int, NOT NULL a NO INHERIT) |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STMT | 22855f1069d95232e3362327 | -- with inferred PK on the referenced table: -- (parent_id, PERIOD valid_at) REFERENCES [implicit] CREATE TABLE temporal_fk_mltrng2mltrng ( id int4range, valid_at datemultirange, parent_id int4rang... |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STMT | 22fd61558cce9a0f71a63bdc | -- (parent_id, valid_at) REFERENCES (id, PERIOD valid_at) -- FOREIGN KEY part should specify PERIOD CREATE TABLE temporal_fk_mltrng2mltrng ( id int4range, valid_at datemultirange, parent_id int4ran... |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STMT | 2e642fae9f3ad006f51a0e8f | -- Can't create a FK with a mismatched range type CREATE TABLE temporal_fk_rng2rng ( id int4range, valid_at int4range, parent_id int4range, CONSTRAINT temporal_fk_rng2rng_pk2 PRIMARY KEY (id, valid... |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STMT | 30518955ebb8946981e6e9a0 | -- UNIQUE with no columns just WITHOUT OVERLAPS: CREATE TABLE temporal_rng3 ( valid_at daterange, CONSTRAINT temporal_rng3_uq UNIQUE (valid_at WITHOUT OVERLAPS) ) |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STMT | 346df8ed7b7344878b9e94ea | create table notnull_tbl_fail (a int primary key, not null a no inherit) |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STMT | 34cb78453aa5e95389f8bdb5 | -- (parent_id, valid_at) REFERENCES (id, valid_at) -- both should specify PERIOD: CREATE TABLE temporal_fk_mltrng2mltrng ( id int4range, valid_at datemultirange, parent_id int4range, CONSTRAINT tem... |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STMT | 36a48f183333de6dfa1698b8 | -- violates constraint -- also check with table constraint syntax CREATE TABLE gtest21ax (a int PRIMARY KEY, b int GENERATED ALWAYS AS (nullif(a, 0)) VIRTUAL, CONSTRAINT cc NOT NULL b) |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STMT | 39bc12329f1fc8a58d99dcfa | -- (parent_id, valid_at) REFERENCES (id, PERIOD valid_at) -- FOREIGN KEY part should specify PERIOD CREATE TABLE temporal_fk_rng2rng ( id int4range, valid_at daterange, parent_id int4range, CONSTRA... |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STMT | 3bfc1c638ece59a5343e830d | -- -- test PARTITION BY for ranges -- -- temporal PRIMARY KEY: CREATE TABLE temporal_partitioned ( id int4range, valid_at daterange, name text, CONSTRAINT temporal_paritioned_pk PRIMARY KEY (id, va... |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STMT | 3e8dd9b821a04fe553198705 | -- UNIQUE with two columns plus a range: CREATE TABLE temporal_rng3 ( id1 int4range, id2 int4range, valid_at daterange, CONSTRAINT temporal_rng3_uq UNIQUE (id1, id2, valid_at WITHOUT OVERLAPS) ) |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STMT | 42742e2389f76d5ee8743480 | -- PK with one column plus a range: CREATE TABLE temporal_rng ( -- Since we can't depend on having btree_gist here, -- use an int4range instead of an int. -- (The rangetypes regression test uses th... |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STMT | 43aa6cfc077691a3afa8cfe4 | -- Two scalar columns: CREATE TABLE temporal_fk2_rng2rng ( id int4range, valid_at daterange, parent_id1 int4range, parent_id2 int4range, CONSTRAINT temporal_fk2_rng2rng_pk PRIMARY KEY (id, valid_at... |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STMT | 458875b3c7eaf8b9d01b33b6 | -- (parent_id, PERIOD valid_at) REFERENCES (id) CREATE TABLE temporal_fk_mltrng2mltrng ( id int4range, valid_at datemultirange, parent_id int4range, CONSTRAINT temporal_fk_mltrng2mltrng_pk PRIMARY ... |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STMT | 468e2928e7348622939e7647 | CREATE TABLE inh_nn4 (a int not null no inherit, b int, not null a) |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STMT | 471defae079fa9bd21722fd9 | -- (parent_id, valid_at) REFERENCES (id, valid_at) -- both should specify PERIOD: CREATE TABLE temporal_fk_rng2rng ( id int4range, valid_at daterange, parent_id int4range, CONSTRAINT temporal_fk_rn... |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STMT | 47939518464a7a0705c5f13c | -- (parent_id) REFERENCES (id, PERIOD valid_at) CREATE TABLE temporal_fk_mltrng2mltrng ( id int4range, valid_at datemultirange, parent_id int4range, CONSTRAINT temporal_fk_mltrng2mltrng_pk PRIMARY ... |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STMT | 48ae818ed664c518903c7a11 | -- (parent_id) REFERENCES (id, PERIOD valid_at) CREATE TABLE temporal_fk_rng2rng ( id int4range, valid_at daterange, parent_id int4range, CONSTRAINT temporal_fk_rng2rng_pk PRIMARY KEY (id, valid_at... |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STMT | 49d7257d75ee6c18e240397d | CREATE TABLE temporal_fk2_mltrng2mltrng ( id int4range, valid_at datemultirange, parent_id1 int4range, parent_id2 int4range, CONSTRAINT temporal_fk2_mltrng2mltrng_pk PRIMARY KEY (id, valid_at WITHO... |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STMT | 4a44d3d51e502142496ad392 | CREATE TABLE notnull_tbl4_cld3 (PRIMARY KEY (a) DEFERRABLE, CONSTRAINT a_nn NOT NULL a) INHERITS (notnull_tbl4) |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STMT | 4dbf418a32b6b3eeda4b9bbd | -- (parent_id) REFERENCES [implicit] CREATE TABLE temporal_fk_rng2rng ( id int4range, valid_at daterange, parent_id int4range, CONSTRAINT temporal_fk_rng2rng_pk PRIMARY KEY (id, valid_at WITHOUT OV... |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STMT | 5098bc9eefcb5e76be5b71bc | CREATE TABLE temporal_fk2_rng2rng ( id int4range, valid_at daterange, parent_id1 int4range, parent_id2 int4range, CONSTRAINT temporal_fk2_rng2rng_pk PRIMARY KEY (id, valid_at WITHOUT OVERLAPS), CON... |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STMT | 55cddc8ce8054ae32327709d | -- PK with two columns plus a multirange: CREATE TABLE temporal_mltrng2 ( id1 int4range, id2 int4range, valid_at datemultirange, CONSTRAINT temporal_mltrng2_pk PRIMARY KEY (id1, id2, valid_at WITHO... |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STMT | 659bf230c44fa1d51240adfe | -- Foreign key CREATE TABLE temporal_fk_rng2rng ( id integer, valid_at daterange, parent_id integer, CONSTRAINT temporal_fk_rng2rng_pk PRIMARY KEY (id, valid_at WITHOUT OVERLAPS), CONSTRAINT tempor... |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STMT | 65c363e3d01f4041b04f8e91 | CREATE TABLE temporal_partitioned_fk_rng2rng ( id int4range, valid_at daterange, parent_id int4range, CONSTRAINT temporal_partitioned_fk_rng2rng_pk PRIMARY KEY (id, valid_at WITHOUT OVERLAPS), CONS... |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STMT | 6875a7ce24d8079f5aa42e1e | CREATE TABLE temporal_rng3 ( id int4range, valid_at textrange2, CONSTRAINT temporal_rng3_pk PRIMARY KEY (id, valid_at WITHOUT OVERLAPS) ) |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STMT | 6ba6d816e6d359f28c97cc5d | -- Can't create a FK with a mismatched multirange type CREATE TABLE temporal_fk_mltrng2mltrng ( id int4range, valid_at int4multirange, parent_id int4range, CONSTRAINT temporal_fk_mltrng2mltrng_pk2 ... |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STMT | 71e9101f7b0ba15930c56028 | CREATE TABLE notnull_tbl1_2(a int, CONSTRAINT nn2 NOT NULL a, b int) |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STMT | 76e651025b1f0e66722b0d2e | -- (parent_id) REFERENCES [implicit] CREATE TABLE temporal_fk_mltrng2mltrng ( id int4range, valid_at datemultirange, parent_id int4range, CONSTRAINT temporal_fk_mltrng2mltrng_pk PRIMARY KEY (id, va... |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STMT | 7a38ad345b9f616861b5631e | CREATE TABLE temporal_fk_mltrng2mltrng ( id int4range, valid_at datemultirange, parent_id int4range, CONSTRAINT temporal_fk_mltrng2mltrng_pk PRIMARY KEY (id, valid_at WITHOUT OVERLAPS), CONSTRAINT ... |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STMT | 7fbb65ae718d0f3596e3d8d7 | CREATE TABLE temporal_partitioned_fk_mltrng2mltrng ( id int4range, valid_at datemultirange, parent_id int4range, CONSTRAINT temporal_partitioned_fk_mltrng2mltrng_pk PRIMARY KEY (id, valid_at WITHOU... |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STMT | 81500b98978b84ab972f7eea | -- (parent_id, valid_at) REFERENCES [implicit] -- FOREIGN KEY part should specify PERIOD CREATE TABLE temporal_fk_rng2rng ( id int4range, valid_at daterange, parent_id int4range, CONSTRAINT tempora... |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STMT | 85f173318ba7d3831e91f522 | CREATE TABLE fk_partitioned_fk_2 (b int, a int, CONSTRAINT fk_part_con FOREIGN KEY (a, b) REFERENCES fk_notpartitioned_pk ON UPDATE CASCADE ON DELETE CASCADE NOT ENFORCED) |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STMT | 8776a8f1668f7d1a5607897e | -- inherits gen expr CREATE TABLE gtest_child2 PARTITION OF gtest_parent ( f3 WITH OPTIONS GENERATED ALWAYS AS (f2 * 22) VIRTUAL -- overrides gen expr ) FOR VALUES FROM ('2016-08-01') TO ('2016-09-... |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STMT | 88e5f6d05b9670864cc5bff4 | create table notnull_tbl_fail (a int, primary key(a), not null a no inherit) |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STMT | 95626d956689562cc3c3bb71 | create table notnull_tbl_fail (a int generated by default as identity, constraint foo not null a no inherit) |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STMT | 99bab07b6372501100870c99 | CREATE TABLE temporal_rng4 ( id int4range, valid_at int4_d_range, CONSTRAINT temporal_rng4_pk PRIMARY KEY(id, valid_at WITHOUT OVERLAPS) ) |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STMT | 99e8f4d0eb0f8b4814fc3a2a | -- temporal UNIQUE: CREATE TABLE temporal_partitioned ( id int4range, valid_at daterange, name text, CONSTRAINT temporal_paritioned_uq UNIQUE (id, valid_at WITHOUT OVERLAPS) ) PARTITION BY LIST (id) |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STMT | 9c3fb667aafdb9a40b638b1c | -- -- FK between partitioned tables: multiranges -- CREATE TABLE temporal_partitioned_mltrng ( id int4range, valid_at datemultirange, name text, CONSTRAINT temporal_paritioned_mltrng_pk PRIMARY KEY... |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STMT | 9c4f79c6961dab888d7518a1 | -- it's not possible to override a no-inherit constraint with an inheritable one CREATE TABLE ATACC2 (a int, CONSTRAINT a_is_not_null NOT NULL a NO INHERIT) |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STMT | a05a4b354f24fdae31edc338 | CREATE TABLE ATACC1 (a int, NOT NULL a NO INHERIT) PARTITION BY LIST (a) |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STMT | a2f66fb5fa2ae207e5f2826f | -- UNIQUE with a non-range column: CREATE TABLE temporal_rng3 ( id int4range, valid_at TEXT, CONSTRAINT temporal_rng3_uq UNIQUE (id, valid_at WITHOUT OVERLAPS) ) |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STMT | a8f6fdf68309bdb9892b2a1a | create table notnull_tbl_fail (a serial, constraint foo not null a no inherit) |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STMT | ab17b28dd8793eac34b7f772 | CREATE TABLE inh_nn_parent (a int, NOT NULL a NO INHERIT) |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STMT | b1d14b184e2108fe1fe61ff5 | CREATE TABLE of_tt_enum_type OF tt_enum_type |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STMT | b3685ad731412214ab9ef263 | -- PK with a range column/PERIOD that isn't there: CREATE TABLE temporal_rng ( id INTEGER, CONSTRAINT temporal_rng_pk PRIMARY KEY (id, valid_at WITHOUT OVERLAPS) ) |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STMT | b59ac750c94e7d6011e698ea | CREATE TABLE gtest_child3 PARTITION OF gtest_parent ( f3 GENERATED ALWAYS AS (f2 * 2) VIRTUAL -- error ) FOR VALUES FROM ('2016-09-01') TO ('2016-10-01') |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STMT | bb2b5cb69145dd247c4b54bb | CREATE TABLE temporal_rng2 ( CONSTRAINT temporal_rng_pk PRIMARY KEY (id, valid_at WITHOUT OVERLAPS) ) INHERITS (temporal_rng) |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STMT | c194637bdbeb411841ce85f0 | -- with mismatched PERIOD columns: -- (parent_id, PERIOD valid_at) REFERENCES (id, valid_at) -- REFERENCES part should specify PERIOD CREATE TABLE temporal_fk_rng2rng ( id int4range, valid_at dater... |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STMT | c1d3f869b2fa36a724587dcc | -- PK with two columns plus a range: CREATE TABLE temporal_rng2 ( id1 int4range, id2 int4range, valid_at daterange, CONSTRAINT temporal_rng2_pk PRIMARY KEY (id1, id2, valid_at WITHOUT OVERLAPS) ) |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STMT | c2d1fc08b20ae31d7973f93d | -- with a UNIQUE constraint: CREATE TABLE temporal_mltrng3 ( id int4range, valid_at datemultirange, CONSTRAINT temporal_mltrng3_uq UNIQUE (id, valid_at WITHOUT OVERLAPS) ) |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STMT | c4ea21032686d6dbbf7d44c0 | -- should fail because of duplicate referenced columns: CREATE TABLE temporal_fk_mltrng2mltrng ( id int4range, valid_at datemultirange, parent_id int4range, CONSTRAINT temporal_fk_mltrng2mltrng_pk ... |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STMT | cbd1e51b3e3f8005e41c761c | create table notnull_tbl_fail (a int constraint foo not null, constraint foo not null a no inherit) |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STMT | cc50f50895a77cdbd4fded3b | -- UNIQUE with a range column/PERIOD that isn't there: CREATE TABLE temporal_rng3 ( id INTEGER, CONSTRAINT temporal_rng3_uq UNIQUE (id, valid_at WITHOUT OVERLAPS) ) |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STMT | cec1585fdd4198bb6e1cf24c | CREATE TABLE inh_nn_lvl3 (CONSTRAINT foo NOT NULL a NO INHERIT) INHERITS (inh_nn_lvl2) |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STMT | d03b40c04944ed9f9dddae4a | CREATE TABLE notnull_tbl4_lk3 (LIKE notnull_tbl4 INCLUDING INDEXES, NOT NULL a) |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STMT | d78a2491b3709a00754e216e | -- -- test ALTER TABLE ADD CONSTRAINT -- CREATE TABLE temporal_fk_mltrng2mltrng ( id int4range, valid_at datemultirange, parent_id int4range, CONSTRAINT temporal_fk_mltrng2mltrng_pk PRIMARY KEY (id... |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STMT | dd85529a4aae2ec5dd24f6a3 | -- Disallow specifying conflicting NO INHERIT flags for the same constraint CREATE TABLE inh_nn1 (a int primary key, b int, not null a no inherit) |
 | ERROR | PG_QUERY__NODE__NODE_CREATE_STMT | e06e6ec92a7d3f86807488e6 | CREATE TEMP TABLE fktable2 (fk int references pktable ENFORCED NOT ENFORCED) |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STMT | e074329dc758bf903a03af66 | CREATE TABLE NE_CHECK_TBL (x int, CONSTRAINT CHECK_CON CHECK (x > 3) NOT ENFORCED) |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STMT | e182309d7401dc09eda3dad3 | -- PK with one column plus a multirange: CREATE TABLE temporal_mltrng ( id int4range, valid_at datemultirange, CONSTRAINT temporal_mltrng_pk PRIMARY KEY (id, valid_at WITHOUT OVERLAPS) ) |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STMT | e1cc04d4f7d8b3ef01b7f63e | -- UNIQUE with one column plus a range: CREATE TABLE temporal_rng3 ( id int4range, valid_at daterange, CONSTRAINT temporal_rng3_uq UNIQUE (id, valid_at WITHOUT OVERLAPS) ) |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STMT | e1f15d40c842c36f816285ab | -- with inferred PK on the referenced table: -- (parent_id, PERIOD valid_at) REFERENCES [implicit] CREATE TABLE temporal_fk_rng2rng ( id int4range, valid_at daterange, parent_id int4range, CONSTRAI... |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STMT | e1fe3b8df79ea8347a2e9346 | -- -- test input parser -- -- PK with no columns just WITHOUT OVERLAPS: CREATE TABLE temporal_rng ( valid_at daterange, CONSTRAINT temporal_rng_pk PRIMARY KEY (valid_at WITHOUT OVERLAPS) ) |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STMT | e335af3e818f66cb412474e2 | -- -- test ALTER TABLE ADD CONSTRAINT -- CREATE TABLE temporal_fk_rng2rng ( id int4range, valid_at daterange, parent_id int4range, CONSTRAINT temporal_fk_rng2rng_pk PRIMARY KEY (id, valid_at WITHOU... |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STMT | e406695eedf682f7c9a1b217 | -- (parent_id, PERIOD valid_at) REFERENCES (id) CREATE TABLE temporal_fk_rng2rng ( id int4range, valid_at daterange, parent_id int4range, CONSTRAINT temporal_fk_rng2rng_pk PRIMARY KEY (id, valid_at... |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STMT | e47ae50454ece6ee7ab06543 | -- Check that comments on constraints and indexes are not lost at ALTER TABLE. CREATE TABLE comment_test ( id int, constraint id_notnull_constraint not null id, positive_col int CHECK (positive_col... |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STMT | edb266c4f21efffdbb03aba7 | CREATE TABLE notnull_chld0 (a int, CONSTRAINT nn_chld0 NOT NULL a) |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STMT | f285d892b81cb0c3e3ce61bb | CREATE TABLE temporal_fk_rng2rng ( id int4range, valid_at daterange, parent_id int4range, CONSTRAINT temporal_fk_rng2rng_pk PRIMARY KEY (id, valid_at WITHOUT OVERLAPS), CONSTRAINT temporal_fk_rng2r... |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STMT | f2e1f7873987c237d4235341 | CREATE TABLE temporal_rng4 ( id int4range, valid_at int4range_d, CONSTRAINT temporal_rng4_pk UNIQUE (id, valid_at WITHOUT OVERLAPS) ) |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STMT | f453cc1eadeb42899a050cf8 | CREATE TABLE temporal_rng3 ( id int4range, valid_at textrange2, CONSTRAINT temporal_rng3_uq UNIQUE (id, valid_at WITHOUT OVERLAPS) ) |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STMT | f903d1068b9888f00ecc4a67 | create table inh_nn3 (f4 float, constraint nn3_f1 not null f1 no inherit) inherits (inh_nn1, inh_nn2) |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STMT | fb88c0ad676e02e37f040f22 | -- should fail because of duplicate referenced columns: CREATE TABLE temporal_fk_rng2rng ( id int4range, valid_at daterange, parent_id int4range, CONSTRAINT temporal_fk_rng2rng_pk PRIMARY KEY (id, ... |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STMT | fccaf1e428bd91f7506a7faa | CREATE TABLE gtest_child3 PARTITION OF gtest_parent ( f3 GENERATED ALWAYS AS (f2 * 2) STORED -- error ) FOR VALUES FROM ('2016-09-01') TO ('2016-10-01') |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STMT | fdedcc6dbb6b49a2749c07b9 | CREATE TABLE notnull_part1_2_upg (a int, CONSTRAINT nn2 NOT NULL a, b int) |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STMT | fdf983696a9f77268b467920 | -- -- test changing the PK's dependencies -- CREATE TABLE temporal3 ( id int4range, valid_at daterange, CONSTRAINT temporal3_pk PRIMARY KEY (id, valid_at WITHOUT OVERLAPS) ) |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STMT | fe8853e630eb99534adadcb4 | -- Two scalar columns: CREATE TABLE temporal_fk2_mltrng2mltrng ( id int4range, valid_at datemultirange, parent_id1 int4range, parent_id2 int4range, CONSTRAINT temporal_fk2_mltrng2mltrng_pk PRIMARY ... |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STMT | fea3d9d59a64f137f2e64e25 | CREATE TABLE gtest28 OF gtest_type (f1 WITH OPTIONS GENERATED ALWAYS AS (f2 *2) VIRTUAL) |
 | ERROR | PG_QUERY__NODE__NODE_CREATE_TABLE_AS_STMT | 2b8ba84770bdc5cb524e843b | CREATE TEMPORARY TABLE pgss_ctas_2 AS EXECUTE test_prepare_pgss |
 | ERROR | PG_QUERY__NODE__NODE_CREATE_TABLE_AS_STMT | 55880f2e11738903f5001875 | CREATE TEMPORARY TABLE pgss_ctas_4 AS EXECUTE test_prepare_pgss |
 | ERROR | PG_QUERY__NODE__NODE_EXPLAIN_STMT | 88426cde677fdf2db899fe39 | EXPLAIN (ANALYZE, COSTS OFF, SUMMARY OFF, TIMING OFF, BUFFERS OFF) CREATE TABLE selinto_schema.tbl_withdata4 (a) AS EXECUTE data_sel WITH DATA |
@@ -5823,14 +5119,7 @@ libpg_query target: `18-latest` `9ab9951b7021adcc6d25d261d5016ca0b83726b8` (Post
 | ERROR | PG_QUERY__NODE__NODE_VARIABLE_SET_STMT | efa1b85c4bda6d329cfe770a | SET LOCAL SESSION AUTHORIZATION 'regress_stat_set_2' |
 | PARTIAL | PG_QUERY__NODE__NODE_INSERT_STMT | fff040341e4a1456c3de7ef8 | INSERT INTO onek_with_null(unique1, unique2) VALUES (NULL, -1), (NULL, 2_147_483_647), (NULL, NULL), (100, NULL), (500, NULL) |
 | PARTIAL | PG_QUERY__NODE__NODE_LOAD_STMT | df5ab9de4096a79d0a2bcbef | LOAD 'pg_overexplain' |
-| TRAILING_INPUT | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 1663440ac0cf84dcf19f2e99 | alter table p1_c1 add constraint inh_check_constraint9 check (f1 < 10) not valid enforced |
-| TRAILING_INPUT | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 4a05fb3c4e0e639be729567b | -- allowed to merge enforced constraint with parent's not enforced constraint alter table p1_c1 add constraint inh_check_constraint5 check (f1 < 10) enforced |
-| TRAILING_INPUT | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 4f801b6f5d679c7169d23b23 | alter table p1 add constraint inh_check_constraint7 check (f1 < 10) enforced |
-| TRAILING_INPUT | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 519e0ea0701176ec67557ccd | alter table p1 add constraint inh_check_constraint8 check (f1 < 10) enforced |
-| TRAILING_INPUT | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 93eff720b27b163eb9f4e8f3 | alter table p1_c1 add constraint inh_check_constraint6 check (f1 < 10) enforced |
 | TRAILING_INPUT | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 9561b52e5be5e680ed62a2fe | -- this should fail alter table renameColumn add column y int check (x > 0) not enforced enforced |
-| TRAILING_INPUT | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 99952a2e70945905f935b1da | -- Modifying other attributes of a constraint should not affect its enforceability, and vice versa ALTER TABLE FKTABLE ADD CONSTRAINT fk_con FOREIGN KEY(ftest1, ftest2) REFERENCES PKTABLE NOT VALID... |
-| TRAILING_INPUT | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | fe7f771bbb15028584cf3eb5 | alter table p1_c1 add constraint inh_check_constraint10 check (f1 < 10) not valid enforced |
 | TRAILING_INPUT | PG_QUERY__NODE__NODE_CREATE_FUNCTION_STMT | 02c1feda5a273db2fd42d0ec | CREATE OR REPLACE FUNCTION regexp_replace(string citext, pattern citext, replacement text, flags text) returns TEXT LANGUAGE SQL IMMUTABLE STRICT PARALLEL SAFE RETURN pg_catalog.regexp_replace( $1:... |
 | TRAILING_INPUT | PG_QUERY__NODE__NODE_CREATE_FUNCTION_STMT | 07e9dfbff7c03eafa8e4cba1 | CREATE OR REPLACE FUNCTION replace( citext, citext, citext ) RETURNS TEXT LANGUAGE SQL IMMUTABLE STRICT PARALLEL SAFE RETURN pg_catalog.regexp_replace( $1::text, pg_catalog.regexp_replace($2::text,... |
 | TRAILING_INPUT | PG_QUERY__NODE__NODE_CREATE_FUNCTION_STMT | 29ed872195838cbbfb853d18 | CREATE OR REPLACE FUNCTION regexp_match(string citext, pattern citext, flags text) RETURNS TEXT[] LANGUAGE SQL IMMUTABLE STRICT PARALLEL SAFE RETURN pg_catalog.regexp_match( $1::text, $2::text, CAS... |
@@ -5859,20 +5148,6 @@ libpg_query target: `18-latest` `9ab9951b7021adcc6d25d261d5016ca0b83726b8` (Post
 | TRAILING_INPUT | PG_QUERY__NODE__NODE_VARIABLE_SET_STMT | 2883046f1e58bfa966e2f29d | SET SESSION CHARACTERISTICS AS TRANSACTION READ ONLY, READ ONLY |
 | TRAILING_INPUT | PG_QUERY__NODE__NODE_VARIABLE_SET_STMT | f8df4d44e2f17213c6326e62 | SET SESSION CHARACTERISTICS AS TRANSACTION READ ONLY, READ WRITE |
 | TRAILING_INPUT | PG_QUERY__NODE__NODE_VARIABLE_SHOW_STMT | 6b6c8b3bbddfd97dd05a27b4 | SHOW isn.weak |
-| TYPE_MISMATCH | PG_QUERY__NODE__NODE_REFRESH_MAT_VIEW_STMT | 6740aa51c939a2169832ca06 | REFRESH MATERIALIZED VIEW pgss_materialized_view |
-| TYPE_MISMATCH | PG_QUERY__NODE__NODE_REFRESH_MAT_VIEW_STMT | 8e935bbdfebfa4022ca7641c | REFRESH MATERIALIZED VIEW copytest_mv |
-| TYPE_MISMATCH | PG_QUERY__NODE__NODE_REINDEX_STMT | 034c9c0e9d9f0f6ef13e6476 | REINDEX TABLE pg_toast.pg_toast_1262 |
-| TYPE_MISMATCH | PG_QUERY__NODE__NODE_REINDEX_STMT | 0b172e04558f1a14bf730759 | reindex index concurrently test_pg_index_toast_index |
-| TYPE_MISMATCH | PG_QUERY__NODE__NODE_REINDEX_STMT | 2a65d4dcd78b3002d7206411 | -- no catalog index -- These are the toast table and index of pg_database. REINDEX TABLE CONCURRENTLY pg_toast.pg_toast_1262 |
-| TYPE_MISMATCH | PG_QUERY__NODE__NODE_REINDEX_STMT | 3324964e229954b4276a3a6e | REINDEX (TABLESPACE regress_tblspace) TABLE CONCURRENTLY pg_toast.pg_toast_1262 |
-| TYPE_MISMATCH | PG_QUERY__NODE__NODE_REINDEX_STMT | 383d62debafae47f0cf781a8 | reindex index concurrently idxpart11_expr_idx |
-| TYPE_MISMATCH | PG_QUERY__NODE__NODE_REINDEX_STMT | 3d9942adce2594e1baa45992 | REINDEX (TABLESPACE regress_tblspace) INDEX CONCURRENTLY pg_toast.pg_toast_1262_index |
-| TYPE_MISMATCH | PG_QUERY__NODE__NODE_REINDEX_STMT | 48662c800d895cabda0285a1 | -- no catalog toast table REINDEX INDEX CONCURRENTLY pg_toast.pg_toast_1262_index |
-| TYPE_MISMATCH | PG_QUERY__NODE__NODE_REINDEX_STMT | 73b0949fad12186a89be0546 | reindex index concurrently idxpart1_expr_idx |
-| TYPE_MISMATCH | PG_QUERY__NODE__NODE_REINDEX_STMT | 7e5d9ea896e961eb39d865e5 | reindex index test_pg_index_toast_index |
-| TYPE_MISMATCH | PG_QUERY__NODE__NODE_REINDEX_STMT | 8245589af6f6fc3976950c7b | -- toast relations, fail REINDEX (TABLESPACE regress_tblspace) INDEX pg_toast.pg_toast_1262_index |
-| TYPE_MISMATCH | PG_QUERY__NODE__NODE_REINDEX_STMT | 97a9ad1acaaab32cfce38bc8 | REINDEX (TABLESPACE regress_tblspace) TABLE pg_toast.pg_toast_1262 |
-| TYPE_MISMATCH | PG_QUERY__NODE__NODE_REINDEX_STMT | dd30277f49ae5d04218e1547 | REINDEX INDEX pg_toast.pg_toast_1262_index |
 | TYPE_MISMATCH | PG_QUERY__NODE__NODE_VARIABLE_SET_STMT | 096f4b0b73310691abeadfe7 | reset rls_test.blah |
 | TYPE_MISMATCH | PG_QUERY__NODE__NODE_VARIABLE_SET_STMT | 3747b884a086d1d9ec428b7d | RESET vacuum_truncate |
 | TYPE_MISMATCH | PG_QUERY__NODE__NODE_VARIABLE_SET_STMT | 4b8498aed90d75217b2f8c13 | RESET pgcrypto.builtin_crypto_enabled |
@@ -5886,813 +5161,731 @@ libpg_query target: `18-latest` `9ab9951b7021adcc6d25d261d5016ca0b83726b8` (Post
 
 | Previous | Current | Oracle Node | ID | SQL |
 | --- | --- | --- | --- | --- |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_FOREIGN_SERVER_STMT | 00248bd552e1607b5386b276 | -- ERROR ALTER SERVER file_server OPTIONS (ADD force_null '*') |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_POLICY_STMT | 00306a3d0ab89065f143fc58 | CREATE POLICY p1 ON document FOR SELECT USING (cid = (SELECT cid from category WHERE cname = 'novel')) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OWNER_STMT | 0098c4db66442d27906e9d84 | ALTER SERVER s5 OWNER TO regress_test_role |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | 0293644918cc5b1e9d246a22 | CREATE TABLE badcompresstbl (a text COMPRESSION I_Do_Not_Exist_Compression) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_POLICY_STMT | 034361621d936063238fcf03 | CREATE POLICY pa_target_pol ON pa_target USING (tid != 0) |
-| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DROP_USER_MAPPING_STMT | 03563ac8a5541dddd7e57f37 | DROP USER MAPPING IF EXISTS FOR user SERVER ss4 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_POLICY_STMT | 03c34d867c391c8e5b21b318 | ALTER POLICY pp1 ON part_document USING (dauthor = current_user) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 03f6935befd7b9ae47b30db2 | ALTER FOREIGN TABLE IF EXISTS doesnt_exist_ft1 OPTIONS (DROP delimiter, SET quote '~', ADD escape '@') |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | 0466786e3d699453fe76bbb6 | create statistics atref_stat on ((b).a is not null) from atref |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_FDW_STMT | 047c074cc536916514e5f1e9 | -- ERROR ALTER FOREIGN DATA WRAPPER foo HANDLER test_fdw_handler |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_USER_MAPPING_STMT | 0492b182499f59bd651aa1d8 | CREATE USER MAPPING FOR regress_testrolx SERVER sv9 OPTIONS (user 'regress_testrolx') |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FOREIGN_SERVER_STMT | 04a1d2b8e834630b76d2dbd1 | CREATE SERVER t2 FOREIGN DATA WRAPPER foo |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FOREIGN_SERVER_STMT | 052964d23e97fd72bcaf290a | CREATE SERVER sv9 FOREIGN DATA WRAPPER test_wrapper |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | 056fe1d6a736f39d2d4735ce | CREATE FOREIGN TABLE ft2 () INHERITS (fd_pt1) SERVER s0 OPTIONS (delimiter ',', quote '"', "be quoted" 'value') |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FDW_STMT | 05b876cdcc312c14100450ce | -- Foreign tables CREATE FOREIGN DATA WRAPPER wrapper_stats |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OWNER_STMT | 05c4f5f5846707dc0b5bd0a0 | -- ERROR ALTER FOREIGN DATA WRAPPER foo OWNER TO regress_unprivileged_role |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | 060c9d81dd013a88f156725a | CREATE STATISTICS tst on (z) from ext_stats_test1 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | 0622d4f679e21f01e7df89c7 | CREATE FOREIGN TABLE tru_ftable (id int) SERVER loopback OPTIONS (table_name 'tru_rtable0') |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 06cb619bb32ed7c029c9a792 | ALTER FOREIGN TABLE ft1 DROP c11 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | 06eccfa36dd2e8ae42b607ba | -- ERROR CREATE FOREIGN TABLE tbl () SERVER file_server OPTIONS ("a=b" 'true') |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | 07f491ecb5b9a902d0848e4e | CREATE STATISTICS tst ON (x \|\| 'x'), (x \|\| 'x'), (y + 1), (x \|\| 'x'), (x \|\| 'x'), (y + 1), (x \|\| 'x'), (x \|\| 'x'), (y + 1) FROM ext_stats_test |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 0886ee8847ceace5f6e06f6c | ALTER FOREIGN TABLE ft1 ALTER COLUMN c1 OPTIONS (column_name 'C 1') |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_POLICY_STMT | 08898b7e9c2b6416c887b7cc | CREATE POLICY blog_1 ON blog USING (id % 2 = 0) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FOREIGN_SERVER_STMT | 09052e9b9d5b6e6497e91b46 | CREATE SERVER s5 VERSION '15.0' FOREIGN DATA WRAPPER foo |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_IMPORT_FOREIGN_SCHEMA_STMT | 09b28bbc67426a08bbc17964 | IMPORT FOREIGN SCHEMA import_source FROM SERVER loopback INTO import_dest3 OPTIONS (import_collate 'false', import_generated 'false', import_not_null 'false') |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_USER_MAPPING_STMT | 09dda4c7504a3687798647b0 | -- ERROR CREATE USER MAPPING FOR public SERVER s9 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | 09ff267d2977fa6603eb463d | CREATE FOREIGN TABLE table30000 ( x int ) SERVER fetch101 OPTIONS ( fetch_size '30000' ) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OWNER_STMT | 0a3d9a926cc6654239a65165 | -- ERROR ALTER FOREIGN DATA WRAPPER foo OWNER TO regress_test_role_super |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_POLICY_STMT | 0a8c0d582dc54d1d862a8a8d | CREATE POLICY r2 ON rec2 USING (a = (SELECT x FROM rec1v WHERE y = b)) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_USER_MAPPING_STMT | 0b3d5d7985b442493d36ae18 | CREATE USER MAPPING FOR user SERVER s8 OPTIONS (username 'test', password 'secret') |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_POLICY_STMT | 0ba073c6c7a91500f9552433 | CREATE POLICY p1 ON t1 USING (a % 2 = 0) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_RENAME_STMT | 0be9d91833b14beb3c1bb72a | ALTER POLICY p1 ON event_trigger_test RENAME TO p2 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | 0c1097990afafc922e4abfff | CREATE STATISTICS tststats.s8 ON a, b FROM tststats.pt |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_POLICY_STMT | 0c4c2aa6f3cd3a63d183ef84 | CREATE POLICY p2 ON t1 TO regress_rls_carol USING ((a % 4) = 0) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | 0c83c8318029bcf85b92a6d9 | -- ERROR CREATE FOREIGN TABLE tbl () SERVER file_server OPTIONS (format 'binary', quote ':') |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_POLICY_STMT | 0ca5a8f1042a0a4e2703e030 | ALTER POLICY dep_p1 ON dep1 USING (true) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_USER_MAPPING_STMT | 0cb901a43494c904502d552f | ALTER USER MAPPING FOR regress_test_role SERVER s6 OPTIONS (DROP username) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_POLICY_STMT | 0ed8138117039a736db766bb | CREATE POLICY p1 ON event_trigger_test USING (FALSE) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_POLICY_STMT | 0eedd238e2546edc852d445d | CREATE POLICY foo ON pg_description FOR SELECT USING (description NOT LIKE 'secret%') |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | 0f460acd885f4c3a074bec9f | -- ERROR CREATE FOREIGN TABLE tbl () SERVER file_server OPTIONS (format 'csv', quote '-', null '=-=') |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_FOREIGN_SERVER_STMT | 0f812c61c1eec0941e1c5c96 | -- postgres_fdw.application_name overrides application_name option -- of a server object if both settings are present. ALTER SERVER loopback2 OPTIONS (SET application_name 'fdw_wrong') |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | 0fbbee95b5046e40f6f85e6b | CREATE FOREIGN TABLE batch_cp_upd_test3_f PARTITION OF batch_cp_upd_test FOR VALUES IN (3) SERVER loopback OPTIONS (table_name 'batch_cp_upd_test3', batch_size '1') |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_POLICY_STMT | 10064636a5b28e0d0dd89cf6 | CREATE POLICY p1 ON r1 FOR SELECT USING (false) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FOREIGN_SERVER_STMT | 103809e5bd7213b5f64b20b1 | CREATE SERVER testserver1 FOREIGN DATA WRAPPER postgres_fdw |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | 10815da084a8c3058c1ecc3d | -- fails -- SET STORAGE may need to add a TOAST table create table test_storage (a text, c text storage plain) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | 109a2219d86b4a73e844f028 | -- ERROR CREATE FOREIGN TABLE tbl () SERVER file_server OPTIONS (format 'csv', delimiter '---') |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_USER_MAPPING_STMT | 1171d6336f3aefdaf9ec6922 | ALTER USER MAPPING FOR public SERVER fdtest OPTIONS (ADD oauth_client_id 'myID') |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_USER_MAPPING_STMT | 118e25e57812ef7e2f8919ec | -- If we add a password for our user mapping instead, we should get a different -- error because the password wasn't actually *used* when we run with trust auth. -- -- This won't work with installc... |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | 124d9df0f94d88d8e599e45e | -- ERROR CREATE FOREIGN TABLE tbl () SERVER file_server OPTIONS (log_verbosity 'unsupported') |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FOREIGN_SERVER_STMT | 14091feaa95b4728d2621391 | -- ERROR CREATE SERVER s10 FOREIGN DATA WRAPPER foo |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FOREIGN_SERVER_STMT | 1502f6ee5900b8dc4a5717f5 | -- Invalid fdw_tuple_cost option CREATE SERVER inv_scst FOREIGN DATA WRAPPER postgres_fdw OPTIONS(fdw_tuple_cost '100$%$#$#') |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_POLICY_STMT | 153e2ab11d1f9923d24f4131 | CREATE POLICY p3 ON y2 USING (a % 4 = 0) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | 15c11f7eb4849b6e3eaeacb7 | CREATE STATISTICS alt_stat2 ON a, b FROM alt_regress_1 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 15cdce4a2814358865ed9a96 | ALTER FOREIGN TABLE ft1 ALTER COLUMN c8 SET DATA TYPE text |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 160708f679a6e1284abf6658 | -- Disable batch inserting into foreign tables with BEFORE ROW INSERT triggers -- even if the batch_size option is enabled. ALTER FOREIGN TABLE ftable OPTIONS ( SET batch_size '10' ) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 167451de2a3ab73144d5a910 | ALTER FOREIGN TABLE agg_csv INHERIT agg |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_FOREIGN_SERVER_STMT | 1684a9dd38261b520f176246 | -- should work ALTER SERVER loopback OPTIONS (SET dbname 'no such database') |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | 168564e82be6ff1abfee167f | CREATE STATISTICS expr_stats_1 (mcv) ON (a+b), (a-b), (2*a), (3*b) FROM expr_stats |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | 16af0265fc7643deb4ecb70c | CREATE STATISTICS parent_stat (dependencies) ON a, c FROM parent |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FDW_STMT | 178780abe55c77a4f0b0235b | CREATE FOREIGN DATA WRAPPER test_fdw HANDLER invalid_fdw_handler |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_USER_MAPPING_STMT | 17ac37f42fe2cd437eacb740 | ALTER USER MAPPING FOR SESSION_USER SERVER sv6 OPTIONS (SET user 'SESSION_USER_alt') |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | 1812f0481551136467a50a92 | -- ERROR CREATE FOREIGN TABLE tbl () SERVER file_server OPTIONS (format 'csv', quote '---') |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_FOREIGN_SERVER_STMT | 18218984c02016b0b33d2f4c | ALTER SERVER loopback2 OPTIONS (ADD async_capable 'true') |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 1848d477923da3e9cc61b858 | ALTER FOREIGN TABLE foreign_stats ADD COLUMN b integer DEFAULT 1 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | 188864b6300249f5865b791f | CREATE FOREIGN TABLE ft1 ( c1 integer OPTIONS ("param 1" 'val1') NOT NULL, c2 text OPTIONS (param2 'val2', param3 'val3') CHECK (c2 <> ''), c3 date, CHECK (c3 BETWEEN '1994-01-01'::date AND '1994-0... |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_FDW_STMT | 19172feda99fd118d4a1787a | -- ERROR ALTER FOREIGN DATA WRAPPER foo OPTIONS (gotcha 'true') |
-| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DROP_USER_MAPPING_STMT | 1927682088893709f789da12 | -- DROP USER MAPPING IF EXISTS DROP USER MAPPING IF EXISTS FOR CURRENT_USER SERVER sv1 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_FOREIGN_SERVER_STMT | 19465fffec8081d9bb20b853 | -- ERROR option validation ALTER SERVER s8 OPTIONS (connect_timeout '30', SET dbname 'db1', DROP host) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | 194f0c214e4cde6039b1b160 | CREATE STATISTICS mcv_lists_partial_stats (mcv) ON a, b, c FROM mcv_lists_partial |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_FDW_STMT | 19614de4a47f91f2a6bcfb71 | -- should preserve dependency on test_fdw_handler ALTER FOREIGN DATA WRAPPER test_fdw VALIDATOR postgresql_fdw_validator |
-| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DROP_USER_MAPPING_STMT | 19626d28e0762ee85209a772 | -- We're done with the role named after a specific user and need to check the -- changes to the public mapping. DROP USER MAPPING FOR CURRENT_USER SERVER loopback_nopw |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_POLICY_STMT | 19f1782ebb8268841b17dc27 | CREATE POLICY p3 ON r1 FOR INSERT WITH CHECK (true) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | 1a14d6dd1894aa28f789f6f4 | -- ERROR CREATE FOREIGN TABLE tbl () SERVER file_server OPTIONS (reject_limit '1') |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_USER_MAPPING_STMT | 1a1ac7e73ca91c0eb0ef4959 | CREATE USER MAPPING FOR current_user SERVER s1 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FDW_STMT | 1aa835cf0064f00204c47b8a | -- ERROR CREATE FOREIGN DATA WRAPPER test_fdw HANDLER test_fdw_handler HANDLER invalid_fdw_handler |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_POLICY_STMT | 1ad7924cffa1612fc425d9ef | ALTER POLICY p2 ON s2 USING (x in (select a from s1 where b like '%d2%')) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 1afbe892d09c8181a7f08163 | ALTER FOREIGN TABLE text_csv ALTER COLUMN word3 OPTIONS (force_not_null 'true') |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_POLICY_STMT | 1b0f52a2a71c4e8012aae910 | CREATE POLICY p0 ON x1 FOR ALL USING (c = current_user) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_FOREIGN_SERVER_STMT | 1b8939db5808002aebb68536 | ALTER SERVER loopback2 OPTIONS (DROP async_capable) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | 1bc0e1240db785cc58f0bd30 | -- check use of a boolean-returning expression CREATE STATISTICS ab1_exprstat_6 ON (case a when 1 then true else false end), b FROM ab1 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_POLICY_STMT | 1beb4b9d545eee77dba9c001 | ALTER POLICY r2 ON rec2 USING (a = (SELECT x FROM rec1v WHERE y = b)) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | 1c0dc685d52607e9b2d9571b | CREATE FOREIGN TABLE prem1 (f1 int, f2 text) SERVER loopback OPTIONS (table_name 'ploc1') |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_POLICY_STMT | 1c4129d3d7cd625382e40c46 | ALTER POLICY r1 ON rec1 USING (x = (SELECT a FROM rec2v WHERE b = y)) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | 1ca411995349bb99d9f3af33 | -- error CREATE TABLE cminh(f1 TEXT COMPRESSION lz4) INHERITS(cmdata) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | 1cd01f323368c391e8760b97 | -- ERROR CREATE FOREIGN TABLE tbl () SERVER file_server OPTIONS (format 'csv', null ' ') |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | 1cf9107e09f0c3cbe6e59aa7 | -- ERROR CREATE FOREIGN TABLE tbl () SERVER file_server OPTIONS (format 'binary', header 'true') |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | 1d02ab7736ebbff9054bbce0 | CREATE STATISTICS ctlt1_expr_stat ON (a \|\| b) FROM ctlt1 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | 1d367d4465f8be57af71dfa6 | CREATE FOREIGN TABLE tru_ftable_parent (id int) SERVER loopback OPTIONS (table_name 'tru_rtable_parent') |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FDW_STMT | 1d8ac11e1d51a0e04afcbf17 | CREATE FOREIGN DATA WRAPPER postgres_fdw HANDLER postgres_fdw_handler VALIDATOR postgres_fdw_validator |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 1def6391805041234c04b18a | ALTER FOREIGN TABLE ft1 ALTER COLUMN c8 OPTIONS (SET p2 'V2', DROP p1) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | 1e00645ea21bc963f2cfa41c | CREATE FOREIGN TABLE tru_pk_ftable (id int) SERVER loopback OPTIONS (table_name 'tru_pk_table') |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | 1e047afdc04ff6d44c35b033 | CREATE STATISTICS ab1_a_b_stats ON a, b FROM ab1 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_FOREIGN_SERVER_STMT | 1e3bd9b98e42c11a00d920c9 | ALTER SERVER loopback2 OPTIONS (DROP parallel_abort) |
-| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DROP_USER_MAPPING_STMT | 1e76b9d320a1bb378ea3cb46 | DROP USER MAPPING FOR "Public" SERVER sv8 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_POLICY_STMT | 1ee2b4904a325121b8f0c0f2 | CREATE POLICY p0 ON r1 USING (b * 10 = c) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_USER_MAPPING_STMT | 1ee7f5ef55c0ab7dce4ce480 | ALTER USER MAPPING FOR public SERVER s4 OPTIONS (ADD modified '1') |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OBJECT_SCHEMA_STMT | 1fadefd4c35cb05f15d44392 | ALTER FOREIGN TABLE ft1 SET SCHEMA foreign_schema |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | 1fba997f582be2c1aca1fa17 | CREATE STATISTICS tststats.s7 ON a, b FROM tststats.f |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_FOREIGN_SERVER_STMT | 1fcaba6a07efc52fede0e7b0 | ALTER SERVER loopback2 OPTIONS (DROP parallel_commit) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | 1fe584dd8f7d6d9e08cd19fc | -- create statistics with both MCV and expressions CREATE STATISTICS mcv_lists_stats (mcv) ON (mod(a,20)), (mod(b::int,10)), (mod(c,5)) FROM mcv_lists |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_IMPORT_FOREIGN_SCHEMA_STMT | 20299bcabb564f8b93ffca3d | IMPORT FOREIGN SCHEMA import_source FROM SERVER loopback INTO import_dest2 OPTIONS (import_default 'true') |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | 208518c7601ccd0a17ca6def | -- ERROR CREATE FOREIGN TABLE tbl () SERVER file_server OPTIONS (force_not_null '*') |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FOREIGN_SERVER_STMT | 20aae49dbbc7212a859028f9 | CREATE SERVER sv1 FOREIGN DATA WRAPPER test_wrapper |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_POLICY_STMT | 20c374f42b69137973040c5a | CREATE POLICY p3 ON rls_tbl FOR UPDATE USING (c1 <= 3) WITH CHECK (c1 > 5) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_FOREIGN_SERVER_STMT | 20dbaed68e0ce2f4a95b038c | ALTER SERVER loopback OPTIONS (ADD fdw_startup_cost '10000.0') |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_FOREIGN_SERVER_STMT | 21dd3fd3ca79dcbd27e09f7e | -- 0 -- 'truncatable' option ALTER SERVER loopback OPTIONS (ADD truncatable 'false') |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_RENAME_STMT | 221b917999140d83d12ecaa4 | ALTER POLICY p1 ON t1 RENAME TO p2 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_POLICY_STMT | 22f5b81ceba5c8e8fde29c7a | CREATE POLICY p2 ON r1 FOR UPDATE USING (a < 20) WITH CHECK (true) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_USER_MAPPING_STMT | 23f6c21618074d55f7275e94 | CREATE USER MAPPING FOR SESSION_USER SERVER sv6 OPTIONS (user 'SESSION_USER') |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_USER_MAPPING_STMT | 2439b4088c15fa8e7df88211 | ALTER USER MAPPING FOR public SERVER testserver1 OPTIONS (ADD oauth_client_id 'myID') |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_USER_MAPPING_STMT | 24688363661de6e9c8c6da1f | -- ERROR ALTER USER MAPPING FOR current_user SERVER s8 OPTIONS (username 'test') |
-| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DROP_USER_MAPPING_STMT | 246bbeb3ed08c93027003841 | DROP USER MAPPING FOR SESSION_USER SERVER sv6 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | 258f76c2b9c71778f15b3242 | -- create statistics CREATE STATISTICS func_deps_stat (dependencies) ON (mod(a,11)), (mod(b::int, 13)), (mod(c, 7)) FROM functional_dependencies |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | 25f9eee52679d652ff8d00e2 | CREATE STATISTICS sts_sch2.fail ON a, b, c FROM sts_sch1.tbl |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FOREIGN_SERVER_STMT | 260f7ca486c7941f86c68519 | CREATE SERVER sv2 FOREIGN DATA WRAPPER test_wrapper |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_FOREIGN_SERVER_STMT | 26325383e07faef7f30ff726 | ALTER SERVER s6 VERSION '0.5' |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_POLICY_STMT | 268ba362428acfd9e4e632a1 | CREATE POLICY r1 ON rec1 USING (x = (SELECT a FROM rec2v WHERE b = y)) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | 26c7027d64142a990bb6905f | -- update using datum from different table CREATE TABLE cmmove2(f1 text COMPRESSION pglz) |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_IMPORT_FOREIGN_SCHEMA_STMT | 2713aeb2e56f2fff6e50da9c | IMPORT FOREIGN SCHEMA nonesuch FROM SERVER loopback INTO notthere |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 27163aa1d868ed6847d14d9d | -- c2positive ALTER FOREIGN TABLE ft1 DROP CONSTRAINT ft1_c2positive |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_POLICY_STMT | 2748660103ec2324c9598240 | CREATE POLICY p3 ON document FOR UPDATE USING (cid = (SELECT cid from category WHERE cname = 'novel')) WITH CHECK (dauthor = current_user) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_USER_MAPPING_STMT | 277b6bb46a17f4a9019bcd3a | CREATE USER MAPPING FOR "user" SERVER sv5 OPTIONS (user '"USER"') |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_POLICY_STMT | 278d63c6e23c7e8217872936 | CREATE POLICY priv_test_parent_tbl_pol ON tststats.priv_test_parent_tbl USING (2 * a < 0) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | 279b93b2015eb95e02d3832c | CREATE STATISTICS s_expr ON mod(id, 2), lower(col) FROM stats_ext_tbl |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | 27ad4e76b09e49c9e9972b15 | -- try setting compression for incompressible data type CREATE TABLE cmdata2 (f1 int COMPRESSION pglz) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_POLICY_STMT | 27f36121a9d907fe05e7d9ea | -- fail -- only owner can change policies ALTER POLICY p1 ON document USING (true) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | 280334941bb77ccf35ca8255 | -- Invalid batch_size option CREATE FOREIGN TABLE inv_bsz (c1 int ) SERVER loopback OPTIONS (batch_size '100$%$#$#') |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 29965512ee4bd5954a8ad8f1 | ALTER FOREIGN TABLE IF EXISTS doesnt_exist_ft1 ADD COLUMN c7 integer NOT NULL |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 29a28919c1bb4d952794f7ef | -- ERROR ALTER FOREIGN TABLE ft2 ADD CONSTRAINT fd_pt1chk2 CHECK (c2 <> '') |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_POLICY_STMT | 2a106e68ca293bed85599071 | CREATE POLICY p2 ON r2 FOR INSERT WITH CHECK (false) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_FDW_STMT | 2a3ec4daa447e086022c544a | -- No option is allowed to be specified at foreign data wrapper level ALTER FOREIGN DATA WRAPPER postgres_fdw OPTIONS (nonexistent 'fdw') |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_USER_MAPPING_STMT | 2ae129122852e343059b1ac6 | CREATE USER MAPPING FOR CURRENT_USER SERVER loopback2 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | 2b10caf40a1f28d7c298672f | -- create separate functional dependencies CREATE STATISTICS functional_dependencies_multi_1 (dependencies) ON a, b FROM functional_dependencies_multi |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_FDW_STMT | 2b321434d7bdb9ca5a3c6f40 | -- ERROR ALTER FOREIGN DATA WRAPPER foo HANDLER test_fdw_handler HANDLER anything |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FDW_STMT | 2be0722de1cf048c1be51ccb | -- Check that foreign tables are rejected CREATE FOREIGN DATA WRAPPER dummy |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | 2be925db852fb0d5386f17e9 | CREATE STATISTICS alt_stat1 ON a, b FROM alt_regress_2 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | 2c015beafafbce43ce1d1624 | CREATE STATISTICS ctl_stats4_stat ON a, c FROM ctl_stats4_parent |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 2c8253fd3f4c521f202eb5e0 | ALTER FOREIGN TABLE IF EXISTS doesnt_exist_ft1 ADD COLUMN c10 integer OPTIONS (p1 'v1') |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | 2cbc48144776aad625bced4d | create foreign table rem3 (f1 int, f2 text) server loopback options(table_name 'loc3') |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | 2ccb5ab18e16e68103bcb4f6 | CREATE FOREIGN TABLE reind_fdw_10_20 PARTITION OF reind_fdw_parent FOR VALUES FROM (10) TO (20) SERVER loopback OPTIONS (table_name 'reind_local_10_20') |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_USER_MAPPING_STMT | 2cce0391b4c8f12e4638791a | CREATE USER MAPPING FOR user SERVER s4 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | 2d829f55436731cae9fb0b6c | CREATE FOREIGN TABLE remote_tbl (a int, b int, c text) SERVER loopback OPTIONS (table_name 'base_tbl3') |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_RENAME_STMT | 2de44cbe53bf697b0d5d6a67 | -- failed (name conflict) ALTER FOREIGN DATA WRAPPER alt_fdw1 RENAME TO alt_fdw3 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | 2def07c89bb977c9740dc729 | CREATE STATISTICS tab_expr_stats_1 (mcv) ON a, (2*a), (3*b) FROM tab_expr_stats |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_FOREIGN_SERVER_STMT | 2e0c67e80e5a939cca73eefd | -- ERROR ALTER SERVER s9 VERSION '1.1' |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_USER_MAPPING_STMT | 2e29f62999dc635b6533f3bd | -- should work again -- Test that alteration of user mapping options causes reconnection ALTER USER MAPPING FOR CURRENT_USER SERVER loopback OPTIONS (ADD user 'no such user') |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 2e82fcafad028172600bbccb | ALTER FOREIGN TABLE ft1 OPTIONS (SET table_name 'T 0') |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 2e9cab523d73531ae65571b5 | ALTER FOREIGN TABLE IF EXISTS doesnt_exist_ft1 ADD c11 integer |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | 2ed4831743c53699d38b1bda | create foreign table remp2 (b text, a int check (a in (2))) server loopback options (table_name 'loct2') |
-| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DROP_USER_MAPPING_STMT | 2ed5ac20b835a7bbbb586ac4 | DROP USER MAPPING FOR public SERVER s7 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_POLICY_STMT | 2efea6cdaf121a8bda00fea7 | CREATE POLICY p1 ON y1 FOR SELECT USING (a % 2 = 1) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FDW_STMT | 2f8f789d038490b5b7e12d91 | create foreign data wrapper copytest_wrapper |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_RENAME_STMT | 2fb9df10e725a4cb81ff1713 | ALTER FOREIGN TABLE IF EXISTS doesnt_exist_ft1 RENAME c1 TO foreign_column_1 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 2fcb24ee13de89cbc67ba64d | ALTER FOREIGN TABLE ft4 OPTIONS (ADD use_remote_estimate 'true') |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_USER_MAPPING_STMT | 2ff1cfae25ea7227e0fe31d6 | ALTER USER MAPPING FOR USER SERVER sv4 OPTIONS (SET user 'USER_alt') |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FOREIGN_SERVER_STMT | 300d905bfa18031055bbc329 | CREATE SERVER s1 FOREIGN DATA WRAPPER foo |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_POLICY_STMT | 30657c1dcf492f096d1b10a1 | CREATE POLICY p1 ON s1 USING (a in (select x from s2 where y like '%2f%')) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 30665db7de949719bbb50518 | ALTER FOREIGN TABLE IF EXISTS doesnt_exist_ft1 ALTER COLUMN c6 SET NOT NULL |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | 3075452c3460c2495b5f9853 | -- statistics without a less-than operator not supported CREATE STATISTICS tst (ndistinct) ON w from ext_stats_test1 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | 30ace61360d2f9543a5afc49 | CREATE STATISTICS mcv_lists_multi_2 (mcv) ON c, d FROM mcv_lists_multi |
-| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DROP_USER_MAPPING_STMT | 30ed2a6d7c5da4368186538f | DROP USER MAPPING IF EXISTS FOR USER SERVER sv4 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_USER_MAPPING_STMT | 313f8b5af12196dabe0228e1 | CREATE USER MAPPING FOR regress_unprivileged_role SERVER s10 OPTIONS (user 'secret') |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_POLICY_STMT | 3167a4889180054996abc099 | CREATE POLICY p1 ON rls_tbl USING (a < 0) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_POLICY_STMT | 316d6c2f5925b78ce09ca10a | -- -- Test ALL policies with ON CONFLICT DO UPDATE (much the same as existing UPDATE -- tests) -- CREATE POLICY p3_with_all ON document FOR ALL USING (cid = (SELECT cid from category WHERE cname = ... |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | 3179f575019600ae4d767463 | CREATE STATISTICS alt_stat2 ON a, b FROM alt_regress_2 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | 31ae5a4b166f6f0bf487d0c4 | CREATE FOREIGN TABLE foreign_tbl2 () INHERITS (foreign_tbl) SERVER loopback OPTIONS (table_name 'base_tbl') |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | 31bbabe5a6ec237a5fa7bde7 | CREATE STATISTICS IF NOT EXISTS ab1_a_b_stats ON a, b FROM ab1 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | 32b3049aa9dde5f90ccec572 | -- ERROR CREATE FOREIGN TABLE tbl () SERVER file_server OPTIONS (format 'text', delimiter '.') |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | 330662f9dc0d090f09bc5f06 | CREATE STATISTICS ON a, b, c FROM sts_sch1.tbl |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | 349086ca4492e8e32afac9b1 | CREATE STATISTICS tststats.s2 ON a, b FROM tststats.ti |
-| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DROP_USER_MAPPING_STMT | 34d363856ab61402c89a2e0f | -- DROP USER MAPPING DROP USER MAPPING FOR CURRENT_USER SERVER sv1 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | 35cb34f6c308b8f1570d85ce | CREATE STATISTICS tststats.s3 ON a, b FROM tststats.s |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_POLICY_STMT | 3676f414f8c86ab27d4af172 | CREATE POLICY p1 ON x1 FOR SELECT USING (a % 2 = 0) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | 36f8121e59ebc606537c3302 | CREATE STATISTICS pg_temp.stats_ext_temp ON a, b FROM ab1 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 374ad812e6ab218b04cf10e2 | -- ERROR ALTER FOREIGN TABLE ft1 DROP CONSTRAINT ft1_c9_check |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 376da0ac318df263cc732c4f | ALTER FOREIGN TABLE IF EXISTS doesnt_exist_ft1 ADD COLUMN c6 integer |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_POLICY_STMT | 379aa9d83421688e971f43da | CREATE POLICY p4 ON x1 FOR DELETE USING (a < 8) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 38621497535540ffc416915e | ALTER FOREIGN TABLE ft1 ALTER COLUMN c8 SET STORAGE PLAIN |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FDW_STMT | 3867a1fff505c315d28b2451 | CREATE FOREIGN DATA WRAPPER file_fdw HANDLER file_fdw_handler VALIDATOR file_fdw_validator |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 3911111a5791550e10b3803b | ALTER FOREIGN TABLE ft4 OPTIONS (SET use_remote_estimate 'false') |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | 39bad7469450d77e2f122853 | CREATE FOREIGN TABLE foreign_tbl (a int, b int) SERVER loopback OPTIONS (table_name 'base_tbl') |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 3a0551eb4b94f57386607809 | ALTER FOREIGN TABLE ft1 ADD COLUMN c9 integer |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | 3a1731d0f13bc74546141d57 | -- create statistics CREATE STATISTICS func_deps_stat (dependencies) ON a, b, c FROM functional_dependencies |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FOREIGN_SERVER_STMT | 3a95979154149aa121273717 | create server copytest_server foreign data wrapper copytest_wrapper |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_FDW_STMT | 3aae3a5298ca71bf6bac82a1 | ALTER FOREIGN DATA WRAPPER foo OPTIONS (b '4') |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_POLICY_STMT | 3ab82b0dedacbed9d67ed635 | ALTER POLICY p1 ON event_trigger_test USING (TRUE) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 3ad3cc0f5570beba5b629260 | ALTER FOREIGN TABLE ft1 OPTIONS (schema_name 'S 1', table_name 'T 1') |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | 3b2adaf37787ee8e0fc95bac | CREATE FOREIGN TABLE ftprt1_p2 PARTITION OF fprt1 FOR VALUES FROM (250) TO (500) SERVER loopback OPTIONS (TABLE_NAME 'fprt1_p2') |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | 3b3c7b50ca3c2ef107994b31 | CREATE FOREIGN TABLE ft_part2 (a INT) SERVER s0 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | 3cb4f131c3f6ed584bf70e04 | -- expression stats may be built on a single expression column CREATE STATISTICS ab1_exprstat_1 ON (a+b) FROM ab1 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OWNER_STMT | 3ceb6b6f63ca27b0add2eefa | -- ERROR ALTER SERVER s4 OWNER TO regress_unprivileged_role |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_POLICY_STMT | 3cfc2d037421c86544b8185c | -- Create policy on parent -- user's security level must be higher than or equal to document's CREATE POLICY pp1 ON part_document AS PERMISSIVE USING (dlevel <= (SELECT seclv FROM uaccount WHERE pg... |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FDW_STMT | 3ea4a255158a78cd479f1b67 | -- CREATE USER MAPPING CREATE FOREIGN DATA WRAPPER test_wrapper |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_USER_MAPPING_STMT | 3eda1f31414708ee0e9f2825 | CREATE USER MAPPING FOR current_user SERVER t1 OPTIONS (username 'bob', password 'boo') |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | 3efbf10f21eb781ad78fedaa | CREATE TABLE cmdata2 (f1 TEXT COMPRESSION pglz, f2 TEXT COMPRESSION lz4) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | 3f307fc8019bac4f52786e31 | -- ERROR CREATE FOREIGN TABLE tbl () SERVER file_server OPTIONS (force_null '*') |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 3fa0b9349ded1832ed80159f | ALTER FOREIGN TABLE IF EXISTS doesnt_exist_ft1 ALTER COLUMN c7 DROP NOT NULL |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_FOREIGN_SERVER_STMT | 3fb061c42d512333f07f4ad5 | ALTER SERVER loopback OPTIONS (SET keep_connections 'on') |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | 3fd2dbf0e4a31828d0ddc736 | -- create statistics on expressions CREATE STATISTICS func_deps_stat (dependencies) ON (a * 2), upper(b), (c + 1) FROM functional_dependencies |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_POLICY_STMT | 3ff79482b4efef2e4b884db3 | CREATE POLICY p1 ON r1 AS RESTRICTIVE USING (b > 10) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_USER_MAPPING_STMT | 4003c447ddc70908f16afc95 | -- Should not get that error once a user mapping is created CREATE USER MAPPING FOR regress_view_owner_another SERVER loopback OPTIONS (password_required 'false') |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | 406ca34ec29aad626c784436 | -- ERROR CREATE FOREIGN TABLE tbl () SERVER file_server OPTIONS (format 'text', quote ':') |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_USER_MAPPING_STMT | 406f98a42fbe7e94196ccaa5 | CREATE USER MAPPING FOR "current_user" SERVER sv2 OPTIONS (user '"current_user"') |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 4155419c9cd3dcc8b06c1536 | ALTER FOREIGN TABLE ft1 ADD COLUMN c6 integer |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_RENAME_STMT | 41947156a8959717cb611946 | ALTER FOREIGN TABLE IF EXISTS doesnt_exist_ft1 RENAME TO foreign_table_1 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | 41da001f8cadb8d5c288c961 | CREATE TABLE cmdata2 (f1 text COMPRESSION pglz) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_FDW_STMT | 42143b6f1d1b54044ad60437 | -- ALTER FOREIGN DATA WRAPPER ALTER FOREIGN DATA WRAPPER foo OPTIONS (nonexistent 'fdw') |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | 4232de1239e8c5097aea1883 | CREATE STATISTICS alt_stat1 ON a, b FROM alt_regress_1 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FOREIGN_SERVER_STMT | 42f2eb2e0544d881dddf4c1c | CREATE SERVER sv3 FOREIGN DATA WRAPPER test_wrapper |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 4399e7df0eaaa72363aa6394 | ALTER FOREIGN TABLE IF EXISTS doesnt_exist_ft1 DROP COLUMN c9 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_POLICY_STMT | 43d197f53271cbb8c6339b1d | CREATE POLICY policy_stats ON tab_policy_stats USING (a = 5) WITH CHECK (b < 5) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 43e0b37a95431d1a5ae4bcaf | -- ERROR ALTER FOREIGN TABLE fd_pt2_1 ALTER c2 SET NOT NULL |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_USER_MAPPING_STMT | 442f4491b528907d717c95e2 | CREATE USER MAPPING FOR public SERVER s6 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_POLICY_STMT | 445bb0c69e62d68fe071e5ca | CREATE POLICY p4 ON rls_tbl_force FOR DELETE USING (c1 = 8) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_FDW_STMT | 4578b01c636c13abbf8465f6 | -- ERROR ALTER FOREIGN DATA WRAPPER foo OPTIONS (DROP c) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_USER_MAPPING_STMT | 459ef9d8fc65e9c0880f7630 | create user mapping for regress_evt_user server useless_server |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | 45d17eca84a3ea459b2c1949 | -- create statistics CREATE STATISTICS mcv_lists_stats (mcv) ON a, b, d FROM mcv_lists |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_USER_MAPPING_STMT | 46794796462e9971e6d005aa | CREATE USER MAPPING FOR current_user SERVER s7 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FOREIGN_SERVER_STMT | 4687fb727c3c8dc042f8055f | -- ERROR CREATE SERVER IF NOT EXISTS s1 FOREIGN DATA WRAPPER foo |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_POLICY_STMT | 470dda346747ba9254ea9ab8 | create policy p1 on rls_t for select to regress_rls_alice using (true) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_FOREIGN_SERVER_STMT | 473a90d7bcbffefef88f165b | ALTER SERVER loopback OPTIONS (SET analyze_sampling 'random') |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | 48cb4932cdcb571b8ece43b8 | -- copy to existing table CREATE TABLE cmmove3(f1 text COMPRESSION pglz) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 48d87cce436ff723f34f2399 | ALTER FOREIGN TABLE ft2 ALTER COLUMN c1 OPTIONS (column_name 'C 1') |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_IMPORT_FOREIGN_SCHEMA_STMT | 48e730825a770bb213241f3e | IMPORT FOREIGN SCHEMA import_source FROM SERVER loopback INTO import_dest1 |
-| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DROP_USER_MAPPING_STMT | 49873b489d22210a5ae45267 | -- ERROR DROP USER MAPPING FOR user SERVER ss4 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_POLICY_STMT | 4a2bbc63daff321da0c6d549 | CREATE POLICY p3 ON rls_part USING (a < 0) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | 4a6234dfc00fcfff233b566e | CREATE STATISTICS expr_stats_1 (mcv) ON a, b, (b \|\| c), (c \|\| b) FROM expr_stats |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | 4b09e0e35b33523cfe4a86ce | CREATE STATISTICS tst ON a FROM ext_stats_test s TABLESAMPLE system (x) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | 4b8f86231e85efde9aef70a2 | CREATE FOREIGN TABLE ft7 ( c1 int NOT NULL, c2 int NOT NULL, c3 text ) SERVER loopback3 OPTIONS (schema_name 'S 1', table_name 'T 4') |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FOREIGN_SERVER_STMT | 4b95a61c8067b2cf2335a454 | CREATE SERVER server_stats FOREIGN DATA WRAPPER wrapper_stats |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_FOREIGN_SERVER_STMT | 4bc6b2c9d9556665fdf022e8 | ALTER SERVER loopback OPTIONS (SET analyze_sampling 'system') |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 4bfa29fd196ccdc0a721217f | ALTER FOREIGN TABLE agg_bad OPTIONS (ADD log_verbosity 'silent') |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_POLICY_STMT | 4d12d9dd38e8ac2e734f9069 | -- only owner can change policies ALTER POLICY pp1 ON part_document USING (true) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | 4d51a8132e8b4bb19ac8644f | -- ERROR CREATE FOREIGN TABLE tbl () SERVER file_server OPTIONS (format 'csv', delimiter '-', quote '-') |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | 4d8294a43b700b2668be2c8f | create statistics (mcv) ON a, b, (a+b), (a-b) FROM stts_t1 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | 4d82ac0c70aafab3bce01a93 | -- ERROR CREATE FOREIGN TABLE tbl () SERVER file_server OPTIONS (format 'text', escape ':') |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_POLICY_STMT | 4d9b7430ef6715cd8368cbe0 | CREATE POLICY coll_p ON coll_t USING (c < ('foo'::text COLLATE "C")) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_POLICY_STMT | 4e13ec1d4bb05742be173678 | create policy p1 on rls_t for select to regress_rls_alice using (c = current_setting('rls_test.blah')) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | 4e43ec181a1ca9eed67145ba | -- Extended statistics with an attribute that cannot be analyzed. -- This includes all statistics kinds. CREATE STATISTICS test_stats ON data, id FROM test_table |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_POLICY_STMT | 4e77fafd0277415ce3a7eb5e | CREATE POLICY r2 ON rec2 USING (a = (SELECT x FROM rec1 WHERE y = b)) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FOREIGN_SERVER_STMT | 4e9f840b14842bd3fee851dd | CREATE SERVER IF NOT EXISTS ext_cine_srv FOREIGN DATA WRAPPER ext_cine_fdw |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | 4ee3e922b63edf05515ea8f5 | create statistics stts_s2.stts_yama (dependencies, mcv) on col1, col3 from stts_t3 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_FOREIGN_SERVER_STMT | 4f4a791748bc0d91fa51f9f5 | ALTER SERVER s8 OPTIONS (foo '1') |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_POLICY_STMT | 4f7ce759d114ed20e4373bd5 | CREATE POLICY genpol ON addr_nsp.gentable |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | 4fa4ff1a38b5de6b3873c3e1 | CREATE STATISTICS tststats.s9 ON a, b FROM tststats.pt1 |
-| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DROP_USER_MAPPING_STMT | 503e28f8a331d99fedf04635 | DROP USER MAPPING FOR public SERVER fdtest |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | 5064509419d66e3499cddea6 | CREATE FOREIGN TABLE ftable (a text, b int) SERVER loopback OPTIONS (table_name 'batch_table', batch_size '2') |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_USER_MAPPING_STMT | 510a6fb71cca09df9996b9e3 | CREATE USER MAPPING FOR public SERVER testserver1 OPTIONS (user 'value', password 'value') |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FOREIGN_SERVER_STMT | 512389e991daa7ca9ff8a538 | create server useless_server foreign data wrapper useless |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | 51281918cdf5ec7fe0b3deff | -- =================================================================== -- create foreign tables -- =================================================================== CREATE FOREIGN TABLE ft1 ( c0 ... |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | 514233a0536e37ea2a836b70 | CREATE STATISTICS stxdinh ON a, b FROM stxdinh |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | 525c78212651b50ac2722c04 | -- create separate MCV statistics CREATE STATISTICS mcv_lists_multi_1 (mcv) ON a, b FROM mcv_lists_multi |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_USER_MAPPING_STMT | 528f9576a2b449c7e96656cd | CREATE USER MAPPING FOR PUBLIC SERVER sv7 OPTIONS (user 'PUBLIC') |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 52935ee7a4575a5301f183a8 | ALTER FOREIGN TABLE ft1 ALTER COLUMN c4 SET DEFAULT 0 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 52cbdd1f44f3f1245a4fdcf4 | ALTER FOREIGN TABLE agg_text OPTIONS (SET format 'text') |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 5331b3d73311918b8f31ef3c | -- =================================================================== -- conversion error -- =================================================================== ALTER FOREIGN TABLE ft1 ALTER COLUM... |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_IMPORT_FOREIGN_SCHEMA_STMT | 54017858932aa39351343e76 | IMPORT FOREIGN SCHEMA import_source LIMIT TO (t5) FROM SERVER loopback INTO import_dest5 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FOREIGN_SERVER_STMT | 5413262a1d3cd0c2f435c9b1 | CREATE SERVER sv4 FOREIGN DATA WRAPPER test_wrapper |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_FOREIGN_SERVER_STMT | 5480a35b053bd2d2f2e0dcae | ALTER SERVER loopback OPTIONS (ADD async_capable 'true') |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_FDW_STMT | 5488d8e69fa77dc38ce7037a | -- ERROR ALTER FOREIGN DATA WRAPPER foo NO VALIDATOR |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_USER_MAPPING_STMT | 54900e111e41017674d06ff6 | -- Attempt to add a valid option that's not allowed in a user mapping ALTER USER MAPPING FOR public SERVER testserver1 OPTIONS (ADD sslmode 'require') |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_USER_MAPPING_STMT | 55666b653c3689f85df47ff0 | CREATE USER MAPPING FOR current_user SERVER s9 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | 558c861012a0f6651358b9fe | -- create statistics CREATE STATISTICS mcv_lists_stats (mcv) ON a, b, c FROM mcv_lists |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | 55ab4107ab947a08afea85ec | CREATE STATISTICS mcv_lists_arrays_stats (mcv) ON a, b, c FROM mcv_lists_arrays |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | 561c6453bdff13917a053fd2 | create foreign table rem2 (f1 int, f2 text) server loopback options(table_name 'loc2') |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_USER_MAPPING_STMT | 5648c9c3bd64d10ee0f13b6e | -- should fail ALTER USER MAPPING FOR CURRENT_USER SERVER loopback OPTIONS (DROP user) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | 58d0707de896885951e0a3e5 | -- test creating table with compression method CREATE TABLE cmdata(f1 text COMPRESSION pglz) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_FOREIGN_SERVER_STMT | 58fc4dd4c541c633fc730def | ALTER SERVER loopback2 OPTIONS (ADD parallel_abort 'true') |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_USER_MAPPING_STMT | 590252a4517e291e5f76acf2 | CREATE USER MAPPING FOR regress_multi_conn_user1 SERVER loopback |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_FDW_STMT | 591f256f969e930d8d3fa72d | -- ERROR ALTER FOREIGN DATA WRAPPER foo OPTIONS (ADD x '1', DROP x) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 595a6a18cd999730faf81ab5 | ALTER FOREIGN TABLE ft1 ADD PRIMARY KEY (c7) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | 5978d132406ec8adca27fba2 | -- ERROR CREATE FOREIGN TABLE tbl () SERVER file_server OPTIONS (format 'text', delimiter 'a') |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_POLICY_STMT | 59933f11f2b691b25ab6161e | -- should succeed -- partitioned target CREATE POLICY p1 ON dob_t2 TO regress_rls_dob_role1,regress_rls_dob_role2 USING (true) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_POLICY_STMT | 5a63737af5bb7ab5ddb41347 | CREATE POLICY p1 ON r2 FOR SELECT USING (true) |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_IMPORT_FOREIGN_SCHEMA_STMT | 5a9b5993e3c10139f2fc3d8d | IMPORT FOREIGN SCHEMA import_source LIMIT TO (t1, nonesuch, t4_part) FROM SERVER loopback INTO import_dest4 |
-| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DROP_USER_MAPPING_STMT | 5aa90f51979d073b463049fa | DROP USER MAPPING FOR regress_testrolx SERVER sv9 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | 5b07cbbe987539ceb48a32a1 | CREATE FOREIGN TABLE fpagg_tab_p3 PARTITION OF pagg_tab FOR VALUES FROM (20) TO (30) SERVER loopback OPTIONS (table_name 'pagg_tab_p3') |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | 5b830c5f6f6817018c802016 | CREATE STATISTICS stxdinp ON (a + 1), a, b FROM stxdinp |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 5c1d4cbe10e1a5c0d301fe2f | ALTER FOREIGN TABLE ft1 ADD COLUMN c11 serial |
-| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DROP_USER_MAPPING_STMT | 5c4db08dc5486fed0f372d4d | DROP USER MAPPING FOR regress_view_owner_another SERVER loopback |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_POLICY_STMT | 5c6751af345649f0dba4b1ac | CREATE POLICY seeall ON range_parted AS PERMISSIVE FOR SELECT USING (true) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FDW_STMT | 5cb9c44220f9b47e89fb0e19 | CREATE FOREIGN DATA WRAPPER foobar |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | 5cc460c7773178c30ac8781b | CREATE STATISTICS tst ON a FROM JSON_TABLE(jsonb '123', '$' COLUMNS (item int)) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FOREIGN_SERVER_STMT | 5d048f8499e9890d759f958e | CREATE SERVER t1 FOREIGN DATA WRAPPER foo |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OWNER_STMT | 5d8921c2eeb8afba57f829b6 | ALTER SERVER s6 OWNER TO regress_test_indirect |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | 5e358dcaa8e9339523a46004 | CREATE STATISTICS expr_stat_comp_1 ON c0, c1 FROM expr_stats_incompatible_test |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FOREIGN_SERVER_STMT | 5e90ceaa00657c1d6c2966a3 | CREATE SERVER s3 TYPE 'oracle' FOREIGN DATA WRAPPER foo |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | 5eecb7b545865ef5514fb1ef | CREATE FOREIGN TABLE foreign_tbl (b int) SERVER loopback OPTIONS (table_name 'base_tbl') |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | 5fa2c3da9a2d0aa905175ab7 | -- ERROR CREATE FOREIGN TABLE ft1 ( c1 integer OPTIONS ("param 1" 'val1') PRIMARY KEY, c2 text OPTIONS (param2 'val2', param3 'val3'), c3 date ) SERVER s0 OPTIONS (delimiter ',', quote '"', "be quo... |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | 601506393cc4a963d9f6205f | CREATE STATISTICS ctl_table_stat ON a,b FROM ctl_table |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 6033ec9ee0d5ec1cb578da09 | ALTER FOREIGN TABLE ft1 ADD c11 integer |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 60714c72f9455648a37dc0d1 | ALTER FOREIGN TABLE IF EXISTS doesnt_exist_ft1 ALTER COLUMN c7 OPTIONS (ADD p1 'v1', ADD p2 'v2'), ALTER COLUMN c8 OPTIONS (ADD p1 'v1', ADD p2 'v2') |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_USER_MAPPING_STMT | 61b455f09061bf0695c1cdb2 | -- ERROR ALTER USER MAPPING FOR public SERVER t1 OPTIONS (ADD modified '1') |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | 61c98ccc8452422a20e04a5e | CREATE FOREIGN TABLE ft5 ( c1 int NOT NULL, c2 int NOT NULL, c3 text ) SERVER loopback OPTIONS (schema_name 'S 1', table_name 'T 4') |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_USER_MAPPING_STMT | 61f46de166c12d223a36bb03 | CREATE USER MAPPING FOR CURRENT_USER SERVER loopback_nopw |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | 6286742cb59f0750d11b52d3 | CREATE STATISTICS tst (ndistinct) ON z from ext_stats_test1 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 6297e9d67402a501bb6faa7c | ALTER FOREIGN TABLE ft2 DROP COLUMN cx |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_USER_MAPPING_STMT | 62acc8aaf446339b60f68750 | -- ERROR CREATE USER MAPPING FOR regress_file_fdw_user SERVER file_server |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FDW_STMT | 631b1c1994e8c0d8840799fd | -- CREATE FOREIGN DATA WRAPPER CREATE FOREIGN DATA WRAPPER foo VALIDATOR bar |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_POLICY_STMT | 6348234f891c9f1344c8cd73 | CREATE POLICY p2 ON r1 FOR INSERT WITH CHECK (true) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_FOREIGN_SERVER_STMT | 63bde991c336a5a1e0f33c69 | -- Adjust fdw_startup_cost so that we get an unordered path in the Append. ALTER SERVER loopback2 OPTIONS (ADD fdw_startup_cost '0.00') |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_FOREIGN_SERVER_STMT | 6403451ee0a9e41398867455 | ALTER SERVER loopback OPTIONS (DROP fdw_startup_cost) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 642f7fb129f0ff189d6e8bef | ALTER FOREIGN TABLE ft1 ADD COLUMN c5 integer DEFAULT 0 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 64850a82124c76f030ed5373 | ALTER FOREIGN TABLE ft1 ALTER COLUMN c7 DROP NOT NULL |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_POLICY_STMT | 64bef39b1f569ad8faa592bc | CREATE POLICY p4 ON r2 FOR DELETE USING (false) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_POLICY_STMT | 6534ae0771a441ffbc4209b7 | CREATE POLICY p1 ON dob_t1 TO regress_rls_dob_role1 USING (true) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 6591f013d18e9412563fa61e | -- =================================================================== -- local type can be different from remote type in some cases, -- in particular if similarly-named operators do equivalent thi... |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | 66c7531fcb9b759e5bda0f53 | CREATE FOREIGN TABLE fpagg_tab_p2 PARTITION OF pagg_tab FOR VALUES FROM (10) TO (20) SERVER loopback OPTIONS (table_name 'pagg_tab_p2') |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_USER_MAPPING_STMT | 67a3d59e6fe19a196f7eb47d | -- ERROR CREATE USER MAPPING FOR public SERVER file_server OPTIONS (force_not_null '*') |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_POLICY_STMT | 67aee0b7ae133f65c038fdef | CREATE POLICY p1 ON y1 FOR ALL USING (a % 2 = 0) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_FOREIGN_SERVER_STMT | 684ca81ae2786564cba837bc | ALTER SERVER fdtest OPTIONS (ADD oauth_client_id 'myID') |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | 68a12b68816fdd30a261fabf | CREATE STATISTICS mcv_lists_uuid_stats (mcv) ON a, b, c FROM mcv_lists_uuid |
-| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DROP_USER_MAPPING_STMT | 68aa5d9aa45e5e94002de951 | DROP USER MAPPING IF EXISTS FOR public SERVER s7 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | 68c2ecf202652e7ea45eadfd | CREATE FOREIGN TABLE foreign_part PARTITION OF temp_parted DEFAULT SERVER s0 |
-| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DROP_USER_MAPPING_STMT | 69a81fed33d5b822c1ade677 | DROP USER MAPPING FOR regress_multi_conn_user2 SERVER loopback |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_USER_MAPPING_STMT | 6a536ad23db4efac00448aab | -- ERROR duplicate CREATE USER MAPPING FOR public SERVER s4 OPTIONS ("this mapping" 'is public') |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_FOREIGN_SERVER_STMT | 6ae6b12d2b70cea3ace473be | ALTER SERVER loopback OPTIONS (analyze_sampling 'invalid') |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | 6af60af75522916a68cce710 | -- Test INCLUDING ALL -- INDEXES, IDENTITY, COMPRESSION, STORAGE are not copied. CREATE FOREIGN TABLE ctl_foreign_table2(LIKE ctl_table INCLUDING ALL) SERVER ctl_s0 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 6b326485eb5d8eba77995949 | ALTER FOREIGN TABLE ft1 ALTER COLUMN c8 SET DATA TYPE integer |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | 6bb63e8a6b0809e130da15ad | CREATE STATISTICS tststats.s1 ON a, b FROM tststats.t |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | 6bccb1767544313bb9e53425 | CREATE FOREIGN TABLE batch_table_p0f PARTITION OF batch_table FOR VALUES WITH (MODULUS 2, REMAINDER 0) SERVER loopback OPTIONS (table_name 'batch_table_p0') |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | 6c97ecc643fe902b4e6e3ed3 | -- validator tests CREATE FOREIGN TABLE tbl () SERVER file_server OPTIONS (foo 'bar') |
-| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DROP_USER_MAPPING_STMT | 6ccfe51e184835e3057cbb1a | DROP USER MAPPING FOR USER SERVER sv4 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FOREIGN_SERVER_STMT | 6cd141b2ce1a1d7d6d85bce2 | CREATE SERVER fetch101 FOREIGN DATA WRAPPER postgres_fdw OPTIONS( fetch_size '101' ) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_POLICY_STMT | 6cd817d9294eead657664515 | CREATE POLICY p1 ON t1 TO regress_rls_bob USING ((a % 2) = 0) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | 6cedd2ae49c31fec1b41258e | -- Ensure statistics are dropped when columns are CREATE STATISTICS ab1_b_c_stats ON b, c FROM ab1 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_USER_MAPPING_STMT | 6d41b005831e988dd215253d | CREATE USER MAPPING FOR regress_multi_conn_user2 SERVER loopback |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_USER_MAPPING_STMT | 6e1513fffa0ddd39f603e63d | CREATE USER MAPPING FOR public SERVER fdtest OPTIONS (server 'localhost') |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 6e542698ea0ca012d9f49774 | -- force_not_null and force_null can be used together on the same column ALTER FOREIGN TABLE text_csv ALTER COLUMN word1 OPTIONS (force_null 'true') |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_RENAME_STMT | 6efa25b446861ff3481cfe1b | -- failed (name conflict) ALTER SERVER alt_fserv1 RENAME TO alt_fserv3 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 6f4608a60ee8797a79bae0e8 | ALTER FOREIGN TABLE async_p1 OPTIONS (use_remote_estimate 'true') |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FOREIGN_SERVER_STMT | 7033d888589ecc351fe36d96 | CREATE SERVER sv8 FOREIGN DATA WRAPPER test_wrapper |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 704c4a1d8df86926b27fc69c | ALTER FOREIGN TABLE IF EXISTS doesnt_exist_ft1 DROP c11 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | 7088f369b286895fbb57186c | CREATE STATISTICS tst ON a FROM foo NATURAL JOIN bar |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | 709ac68b821be0a53baff795 | CREATE STATISTICS s_col ON id, col FROM stats_ext_tbl |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | 70a5613401ff3cc6ef2ed972 | CREATE FOREIGN TABLE ft1 ( c1 integer OPTIONS ("param 1" 'val1') NOT NULL, c2 text OPTIONS (param2 'val2', param3 'val3'), c3 date, UNIQUE (c3) ) SERVER s0 OPTIONS (delimiter ',', quote '"', "be qu... |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FDW_STMT | 7140a37dd972081ef7d11d1c | CREATE FOREIGN DATA WRAPPER postgresql VALIDATOR postgresql_fdw_validator |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_FOREIGN_SERVER_STMT | 71f302efc10413350d364040 | -- We don't allow batch insert when there are any WCO constraints ALTER SERVER loopback OPTIONS (ADD batch_size '10') |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_USER_MAPPING_STMT | 72294a26fc08f9cbebb10eae | -- ERROR CREATE USER MAPPING FOR public SERVER s4 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 723429affe9de34cb55ce696 | ALTER FOREIGN TABLE ft1 ALTER COLUMN c6 SET NOT NULL |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | 72690aa2737db7a32160a15c | CREATE STATISTICS tst (ndistinct) ON xmin from ext_stats_test1 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | 72e4e6573afb6a49a0c2f7d0 | CREATE STATISTICS s12 (ndistinct) ON (c * 10), (d - 1) FROM ndistinct |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | 72e99bb66189dd2fefdd96de | create foreign table remt1 (a int, b text) server loopback options (table_name 'loct1') |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_USER_MAPPING_STMT | 7340c6e241ad0adb35e4b5d9 | ALTER USER MAPPING FOR public SERVER testserver1 OPTIONS (DROP user, DROP password) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_POLICY_STMT | 7378ac52666653edb26d67a5 | CREATE POLICY pguc ON event_trigger_test USING (FALSE) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_FOREIGN_SERVER_STMT | 73b6948233355748d81adf92 | ALTER SERVER testserver1 OPTIONS (ADD oauth_client_id 'myID') |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OWNER_STMT | 73b8068dfab5b0ff92a616af | ALTER SERVER s1 OWNER TO regress_test_role2 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_POLICY_STMT | 759a0faddef833d71737a7b1 | CREATE POLICY policy_range_parted_wholerow on range_parted AS RESTRICTIVE for UPDATE USING (true) WITH CHECK (range_parted = row('b', 10, 112, 1, NULL)::range_parted) |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_IMPORT_FOREIGN_SCHEMA_STMT | 7610230da9bb61a3fa39f6ba | -- ERROR IMPORT FOREIGN SCHEMA s1 LIMIT TO (t1) FROM SERVER s9 INTO public |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | 7625ed8c986d1a8b73cf6130 | create foreign table bar2 (f3 int) inherits (bar) server loopback options (table_name 'loct2') |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | 76680239b4e2036a10bdb2d2 | CREATE FOREIGN TABLE remote_application_name (application_name text) SERVER loopback2 OPTIONS (schema_name 'public', table_name 'my_application_name') |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | 7671d12e587259583a948eda | CREATE FOREIGN TABLE ft_part_1_2 (a INT NOT NULL) SERVER s0 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 76baa946953b125ae070a146 | ALTER FOREIGN TABLE ft1 SET TABLESPACE ts |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_USER_MAPPING_STMT | 76d067f89be7373cc77cdb36 | -- ERROR CREATE USER MAPPING FOR current_user SERVER s4 |
-| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DROP_USER_MAPPING_STMT | 7727234b95cad3759249687b | DROP USER MAPPING IF EXISTS FOR PUBLIC SERVER sv7 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 7745be55d6449938d470cd24 | ALTER FOREIGN TABLE foreign_tbl INHERIT parent_tbl |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 777ca9aef2e7e982004016cc | ALTER FOREIGN TABLE IF EXISTS doesnt_exist_ft1 ALTER COLUMN c8 TYPE char(10) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FDW_STMT | 786430aacd93464d029c90c7 | create foreign data wrapper useless |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_FOREIGN_SERVER_STMT | 78c4aa206c3853500416f27d | ALTER SERVER loopback2 OPTIONS (DROP fdw_startup_cost) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_FOREIGN_SERVER_STMT | 78cff72e3def74f035432637 | ALTER SERVER loopback2 OPTIONS (ADD parallel_commit 'true') |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | 790d8376414b9056419108ba | CREATE STATISTICS s12 (ndistinct) ON c, d FROM ndistinct |
-| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DROP_USER_MAPPING_STMT | 7a058e9702c9c1bed4c87f23 | -- ERROR DROP USER MAPPING FOR regress_test_role SERVER s6 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_USER_MAPPING_STMT | 7a6ba6d2de86b2ea1f8012f6 | CREATE USER MAPPING FOR "Public" SERVER sv8 OPTIONS (user '"Public"') |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | 7aeaf9b3d14bc4cb7815678e | -- incorrect expressions CREATE STATISTICS tst ON (y) FROM ext_stats_test |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | 7b6695c65d5f94bfc2b01f4a | -- adding anything to the expression builds all statistics kinds CREATE STATISTICS ab1_exprstat_3 ON (a+b), a FROM ab1 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_FOREIGN_SERVER_STMT | 7b9a6feb63bf9a4b1fcf7a3f | ALTER SERVER loopback OPTIONS (DROP parallel_abort) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 7ba446eac665dff05b68c02f | ALTER FOREIGN TABLE IF EXISTS doesnt_exist_ft1 DROP CONSTRAINT IF EXISTS no_const |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_POLICY_STMT | 7bb83d7107f8685a3d5ef0a2 | CREATE POLICY p2 ON rls_tbl FOR SELECT USING (c1 <= 3) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_USER_MAPPING_STMT | 7be0534be7f8066893784560 | CREATE USER MAPPING FOR public SERVER loopback3 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_USER_MAPPING_STMT | 7bf3687205e62ee2ab3301d8 | -- Unpriv user cannot make the mapping passwordless ALTER USER MAPPING FOR CURRENT_USER SERVER loopback_nopw OPTIONS (ADD password_required 'false') |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 7c0bffb243b0d78f960b0b8e | -- ERROR ALTER FOREIGN TABLE ft1 DROP CONSTRAINT IF EXISTS no_const |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FDW_STMT | 7c341030cc20ed141816c19e | CREATE FOREIGN DATA WRAPPER addr_fdw |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | 7c70a0ed92e35d9aa898213e | CREATE STATISTICS tst ON a, b FROM nonexistent |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FDW_STMT | 7d37eb11c4d3892a68da2e30 | -- -- Foreign Data Wrapper and Foreign Server -- CREATE FOREIGN DATA WRAPPER alt_fdw1 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_USER_MAPPING_STMT | 7d3de8ae4c6184760c939d4f | -- ERROR CREATE USER MAPPING FOR public SERVER file_server OPTIONS (force_null '*') |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FOREIGN_SERVER_STMT | 7e0a12cd6d56458d90fbdb06 | CREATE SERVER addr_fserv FOREIGN DATA WRAPPER addr_fdw |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | 7e9c80d7285f0eaca4b7a544 | create foreign table grem1 ( a int, b int generated always as (a * 2) stored, c int generated always as (a * 3) virtual ) server loopback options(table_name 'gloc1') |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_USER_MAPPING_STMT | 7eaa133e134b45db49a18ace | CREATE USER MAPPING FOR regress_no_priv_user SERVER file_server |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_USER_MAPPING_STMT | 7ee07a4215193f6da1b646b0 | CREATE USER MAPPING FOR regress_view_owner SERVER loopback |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | 7ee8393c00849feb3a22644e | CREATE STATISTICS tst ON x, x, y, x, x, (x \|\| 'x'), (y + 1), (x \|\| 'x'), (x \|\| 'x'), (y + 1) FROM ext_stats_test |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | 7f3ea467753c54c48fe02644 | -- statistics on system column not allowed CREATE STATISTICS tst on tableoid from ext_stats_test1 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_POLICY_STMT | 7f84cd9ce9a82fde72f90c0a | -- should fail, already gone CREATE POLICY p1 ON dob_t1 TO regress_rls_dob_role1,regress_rls_dob_role2 USING (true) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FOREIGN_SERVER_STMT | 7f87da2c7add2d24b6adee34 | CREATE SERVER s4 TYPE 'oracle' FOREIGN DATA WRAPPER foo OPTIONS (host 'a', dbname 'b') |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_POLICY_STMT | 7fee556000acf9a887235650 | CREATE POLICY comment_1 ON comment USING (blog_id < 4) |
-| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DROP_USER_MAPPING_STMT | 803bc7a4791484a10c5040c1 | -- ERROR DROP USER MAPPING IF EXISTS FOR regress_test_missing_role SERVER s4 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FOREIGN_SERVER_STMT | 803eb25d5d5b67b153d41fa0 | CREATE SERVER sv7 FOREIGN DATA WRAPPER test_wrapper |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 809d8f0f51bd87e39c1e8559 | ALTER FOREIGN TABLE IF EXISTS doesnt_exist_ft1 DROP COLUMN no_column |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_POLICY_STMT | 80b0d61ee26bbba703bfd410 | CREATE POLICY p1 ON b1 USING (a % 2 = 0) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | 81128ef3ea86492881a6200a | CREATE FOREIGN TABLE fd_pt2_1 PARTITION OF fd_pt2 FOR VALUES IN (1) SERVER s0 OPTIONS (delimiter ',', quote '"', "be quoted" 'value') |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 819947b630f202c6e8fa07b5 | -- =================================================================== -- test check constraints -- =================================================================== -- Consistent check constrain... |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FOREIGN_SERVER_STMT | 8203f267f06825b9506dd1e9 | CREATE SERVER alt_fserv1 FOREIGN DATA WRAPPER alt_fdw1 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_FOREIGN_SERVER_STMT | 8210e0d1d13b19f702a86121 | ALTER SERVER s3 OPTIONS ("tns name" 'orcl', port '1521') |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_USER_MAPPING_STMT | 826bb3c7a99ab1a60bf3c5d3 | ALTER USER MAPPING FOR "Public" SERVER sv8 OPTIONS (SET user '"Public"_alt') |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_RENAME_STMT | 82b80976ce3dd17a78d758a3 | -- ERROR ALTER FOREIGN TABLE foreign_schema.ft1 RENAME c1 TO foreign_column_1 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FDW_STMT | 82f103758f0de46a99ddc0da | CREATE FOREIGN DATA WRAPPER foo OPTIONS (testing '1') |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | 8348e63982e44bc60f644b36 | CREATE FOREIGN TABLE batch_table_p0f PARTITION OF batch_table FOR VALUES WITH (MODULUS 3, REMAINDER 0) SERVER loopback OPTIONS (table_name 'batch_table_p0', batch_size '10') |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 8355f457b3a0799bedf3b9a6 | -- ERROR ALTER FOREIGN TABLE text_csv OPTIONS (SET format 'csv') |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_FOREIGN_SERVER_STMT | 83b2bd4b50989edc9e0e9241 | -- Error, invalid list syntax ALTER SERVER testserver1 OPTIONS (ADD extensions 'foo; bar') |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_POLICY_STMT | 83c0c96aadc1d1b017f8f7d0 | CREATE POLICY P ON tbl1 TO regress_rls_eve, regress_rls_frank USING (true) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_POLICY_STMT | 8401937326fdfe7f6203395d | CREATE POLICY p3 ON r2 FOR UPDATE USING (false) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | 8411e88dcaaaf7c390f1c481 | -- create statistics CREATE STATISTICS mcv_lists_stats (mcv) ON (mod(a,7)), (mod(b::int,11)), (mod(c,13)) FROM mcv_lists |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_FOREIGN_SERVER_STMT | 84153e80883e629d20fe1144 | -- ERROR ALTER SERVER s0 OPTIONS (a '1') |
-| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DROP_USER_MAPPING_STMT | 843c0931c223c0a24a2a9706 | DROP USER MAPPING IF EXISTS FOR SESSION_USER SERVER sv6 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | 845bfa3cb1ce41a542c7381d | -- The ndistinct extended statistics on (x, y, z) provides more reliable value -- of bucket size. CREATE STATISTICS extstat_sb_2 (ndistinct) ON x, y, z FROM sb_2 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_POLICY_STMT | 8499225bb8dbba2d6f00ea81 | CREATE POLICY p4 ON rls_tbl FOR DELETE USING (c1 <= 3) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 84ef4d2dd76ecddc390f0570 | ALTER FOREIGN TABLE foreign_schema.foreign_table_1 ENABLE TRIGGER trigtest_before_stmt |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_USER_MAPPING_STMT | 8517904f7c8be0321f2cb9ab | ALTER USER MAPPING FOR "user" SERVER sv5 OPTIONS (SET user '"user"_alt') |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 8598e7e905c41ca19018720d | -- ERROR ALTER FOREIGN TABLE fd_pt2_1 ADD CONSTRAINT fd_pt2chk1 CHECK (c1 > 0) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 85f57f1cc380614ac769562d | ALTER FOREIGN TABLE ft1 ALTER COLUMN xmin OPTIONS (ADD p1 'v1') |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_FOREIGN_SERVER_STMT | 86199166637c4039ec843f47 | ALTER SERVER batch10 OPTIONS( SET batch_size '20' ) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | 863c06904bef6b3e5a910b4e | CREATE STATISTICS s12 (ndistinct) ON a, (b+1), (c * 10) FROM ndistinct |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_USER_MAPPING_STMT | 86795024e33b11143dc77bfb | ALTER USER MAPPING FOR nonexistent SERVER sv10 OPTIONS (SET user 'nonexistent_alt') |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | 868f15bd4e719cb2eeb42d90 | CREATE FOREIGN TABLE tststats.f (a int, b int, c text) SERVER extstats_dummy_srv |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | 86dadbfb759a9f7b745242f8 | -- ERROR CREATE FOREIGN TABLE tbl () SERVER file_server OPTIONS (on_error 'unsupported') |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | 870ddcc542c3ee6e2d0f6167 | CREATE FOREIGN TABLE async_p1 PARTITION OF async_pt FOR VALUES FROM (1000) TO (2000) SERVER loopback OPTIONS (table_name 'base_tbl1') |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | 87208f9c670ed829f84a55bf | CREATE STATISTICS tst ON a FROM (SELECT * FROM ext_stats_test) AS foo |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_FOREIGN_SERVER_STMT | 87881f30b0b1126d77326570 | alter server loopback options (drop fdw_tuple_cost) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_FOREIGN_SERVER_STMT | 87c554f959503a51c96f9b03 | ALTER SERVER s9 VERSION '1.2' |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_POLICY_STMT | 87cf4a664c535fd6fd51e369 | -- and Dave isn't allowed to see manga documents CREATE POLICY p1r ON document AS RESTRICTIVE TO regress_rls_dave USING (cid <> 44) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | 87df3bcb2f0c71c9f9453416 | CREATE STATISTICS tst ON (x \|\| 'x'), (x \|\| 'x'), y FROM ext_stats_test |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | 87e26fec37f20086dd05a981 | CREATE STATISTICS sts_sch2.pass2 ON a, b, c FROM sts_sch1.tbl |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FOREIGN_SERVER_STMT | 87ffdfb9c980fef6f1b68b32 | CREATE SERVER s9 FOREIGN DATA WRAPPER postgresql |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_FOREIGN_SERVER_STMT | 88059535310b4f6282503389 | -- Test %c (session ID) and %C (cluster name) escape sequences. ALTER SERVER loopback2 OPTIONS (SET application_name 'fdw_%C%c') |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FOREIGN_SERVER_STMT | 885a204958a8d0e1e122baf0 | -- =================================================================== -- test invalid server, foreign table and foreign data wrapper options -- ====================================================... |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | 8865741671ae7d2c6c7726a0 | CREATE STATISTICS t_b_c_stat (mcv) ON b, c FROM bitmap_split_or |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | 8887b6196333c5b3529fc08f | CREATE FOREIGN TABLE batch_cp_upd_test1_f PARTITION OF batch_cp_upd_test FOR VALUES IN (1) SERVER loopback OPTIONS (table_name 'batch_cp_upd_test1', batch_size '10') |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | 88a081f0ea332d1a3a0f351c | -- Disable batch insert CREATE FOREIGN TABLE ftable ( x int ) SERVER loopback OPTIONS ( table_name 'batch_table', batch_size '1' ) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OWNER_STMT | 8a16296c4a104ae3a460eac9 | -- ERROR ALTER SERVER s1 OWNER TO regress_test_role |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 8a54ab1eff8af7717fccb67b | ALTER FOREIGN TABLE ft1 DROP CONSTRAINT no_const |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_FDW_STMT | 8a964076727a3b05d26aad12 | -- force_not_null is not allowed to be specified at any foreign object level: ALTER FOREIGN DATA WRAPPER file_fdw OPTIONS (ADD force_not_null '*') |
-| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DROP_USER_MAPPING_STMT | 8b97d383aa8c60c4e3169d30 | DROP USER MAPPING FOR "current_user" SERVER sv2 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 8bdf701a63a18816852423a4 | ALTER FOREIGN TABLE foreign_schema.foreign_table_1 DISABLE TRIGGER trigtest_before_stmt |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_FOREIGN_SERVER_STMT | 8c1c50105424a0eafcce09b7 | ALTER SERVER testserver1 OPTIONS (DROP extensions) |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_IMPORT_FOREIGN_SCHEMA_STMT | 8c998d9eecc20b3c99f223df | -- ERROR IMPORT FOREIGN SCHEMA s1 EXCEPT (t1, t2) FROM SERVER s9 INTO public OPTIONS (option1 'value1', option2 'value2') |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_FOREIGN_SERVER_STMT | 8cd6ba5ceb7d572889c25526 | -- =================================================================== -- test parallel commit and parallel abort -- =================================================================== ALTER SERVER... |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | 8d6d662db8e8f6aa1f459dd0 | CREATE FOREIGN TABLE ftprt2_p2 PARTITION OF fprt2 FOR VALUES FROM (250) TO (500) SERVER loopback OPTIONS (table_name 'fprt2_p2', use_remote_estimate 'true') |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 8d8eacf7211783b9da5feab4 | ALTER FOREIGN TABLE ft1 DROP CONSTRAINT ft1_c2negative |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 8da0b0db2c47b9d626ffb544 | ALTER FOREIGN TABLE ft1 ALTER COLUMN c1 SET STATISTICS 10000 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | 8e0f82506edc544ad93624db | create foreign table remt2 (a int, b text) server loopback options (table_name 'loct2') |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_IMPORT_FOREIGN_SCHEMA_STMT | 8e12afd49163a6ec7169125f | -- IMPORT FOREIGN SCHEMA IMPORT FOREIGN SCHEMA s1 FROM SERVER s9 INTO public |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | 8e48603565dacfd5686dcf6c | -- ERROR CREATE FOREIGN TABLE ft_part2 (a INT NOT NULL) SERVER s0 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FDW_STMT | 8e6f8cdcbb721d34727ba00f | CREATE FOREIGN DATA WRAPPER file_fdw2 HANDLER file_fdw_handler VALIDATOR file_fdw_validator |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_POLICY_STMT | 8e8495fde3085df0f7f72f3c | CREATE POLICY p1 ON current_check FOR SELECT USING (currentid % 2 = 0) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_POLICY_STMT | 8e8b689b38270262a74ae581 | -- be even number CREATE POLICY p2 ON t2 FOR ALL TO PUBLIC USING (a % 2 = 1) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | 8e9ecc48953d67d2ef206768 | CREATE STATISTICS s12 (ndistinct) ON c, d, (c * 10), (d - 1) FROM ndistinct |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | 8ebb6f6505ed23cfea0d2959 | CREATE FOREIGN TABLE ftprt2_p1 (b int, c varchar, a int) SERVER loopback OPTIONS (table_name 'fprt2_p1', use_remote_estimate 'true') |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | 8f493088b8e82e2d87e192f3 | CREATE STATISTICS tst ON x, x, y, x, x, y, x, x, y FROM ext_stats_test |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_USER_MAPPING_STMT | 8f84bd311b0eb8719158627e | CREATE USER MAPPING FOR CURRENT_USER SERVER loopback |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_FDW_STMT | 8f8f2965f0049d9d7ebb117f | ALTER FOREIGN DATA WRAPPER foo OPTIONS (ADD d '5') |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_POLICY_STMT | 8faa40338e56c7efad02492f | CREATE POLICY d1 ON dependent FOR ALL TO PUBLIC USING (x = (SELECT d.x FROM dependee d WHERE d.y = y)) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_FOREIGN_SERVER_STMT | 8fc2ac61c50c493f66d9dc61 | -- Now this will be pushed as sort operator is part of the extension. alter server loopback options (add fdw_tuple_cost '0.5') |
-| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DROP_USER_MAPPING_STMT | 90392f9589d9b38216abccbc | DROP USER MAPPING FOR "user" SERVER sv5 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_USER_MAPPING_STMT | 907126cfa22f6d470f03ed3e | ALTER USER MAPPING FOR CURRENT_USER SERVER loopback_nopw OPTIONS (ADD sslkey 'foo.key') |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 9078431c64ab3cc61f0a9e73 | -- accepted ALTER FOREIGN TABLE tru_ftable OPTIONS (SET truncatable 'false') |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_USER_MAPPING_STMT | 91412ed6044c9c5e35824b9f | -- ERROR CREATE USER MAPPING IF NOT EXISTS FOR current_user SERVER s1 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_FOREIGN_SERVER_STMT | 917ae882230ab58f56bfe22d | ALTER SERVER loopback OPTIONS (SET application_name 'fdw_conn_check') |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_USER_MAPPING_STMT | 91e390c339c10996241cda35 | -- ALTER USER MAPPING ALTER USER MAPPING FOR CURRENT_USER SERVER sv1 OPTIONS (SET user 'CURRENT_USER_alt') |
-| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DROP_USER_MAPPING_STMT | 9236f6b9c7df5ec89bb6d716 | DROP USER MAPPING FOR public SERVER s4 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | 92f8a9989a0ab4e52d7baa00 | CREATE FOREIGN TABLE ft2 ( c1 integer NOT NULL, c2 text, c3 date ) SERVER s0 OPTIONS (delimiter ',', quote '"', "be quoted" 'value') |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_POLICY_STMT | 937f68e975cd15d7d65f444f | CREATE POLICY p3_with_default ON document FOR UPDATE USING (cid = (SELECT cid from category WHERE cname = 'novel')) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FDW_STMT | 9392d109af40e0eac0580ee3 | CREATE FOREIGN DATA WRAPPER ext_cine_fdw |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_POLICY_STMT | 9442b52ffb74d0f104a4f4b8 | CREATE POLICY evtrg_nontemp_pol ON evtrg_nontemp_table USING (f2 > 0) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_POLICY_STMT | 9461d16a6b3656b4131105dc | CREATE POLICY p1 ON rls_test_restrictive USING (true) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | 9469d7512489ffe079097492 | CREATE STATISTICS tststats.s5 ON a, b FROM tststats.mv |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_USER_MAPPING_STMT | 9510cd8f3d88bf24b65ae6e6 | CREATE USER MAPPING FOR regress_file_fdw_superuser SERVER file_server |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FOREIGN_SERVER_STMT | 952ce25f5b81af27445a3048 | CREATE SERVER s0 FOREIGN DATA WRAPPER dummy |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 9599241bd11df4cc841d28cb | ALTER FOREIGN TABLE ft1 ADD COLUMN c8 integer DEFAULT 0 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_POLICY_STMT | 95e0ffefeec5820b8d455bcb | CREATE POLICY p3 ON s1 FOR INSERT WITH CHECK (a = (SELECT a FROM s1)) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | 963f1a5456a119c135ead668 | create statistics (ndistinct, dependencies, mcv) on a, b from stts_t1 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_USER_MAPPING_STMT | 96e61cfe7b633cced4af3efa | ALTER USER MAPPING FOR CURRENT_ROLE SERVER sv3 OPTIONS (SET user 'CURRENT_ROLE_alt') |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_FOREIGN_SERVER_STMT | 9711163f05e9f2111b955c0f | ALTER SERVER loopback OPTIONS (SET analyze_sampling 'bernoulli') |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FOREIGN_SERVER_STMT | 971877c4063abd0bb2a8ec9d | CREATE SERVER sv6 FOREIGN DATA WRAPPER test_wrapper |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | 9783d33f122215ce49a26768 | CREATE FOREIGN TABLE ft1 (c1 integer NOT NULL) SERVER s0 |
-| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DROP_USER_MAPPING_STMT | 97b27353564026b69fdd5452 | -- Clean up DROP USER MAPPING FOR regress_multi_conn_user1 SERVER loopback |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | 982e52fd9afc379663633421 | CREATE STATISTICS tst (unrecognized) ON x, y FROM ext_stats_test |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_USER_MAPPING_STMT | 98904bb6cc4f2f148974e0de | ALTER USER MAPPING FOR CURRENT_USER SERVER loopback_nopw OPTIONS (ADD sslcert 'foo.crt') |
-| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DROP_USER_MAPPING_STMT | 98f0187f65447a9cb4081301 | DROP USER MAPPING FOR current_user SERVER t1 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_POLICY_STMT | 991bfa809699d4e2cd006a40 | CREATE POLICY p2 ON current_check FOR DELETE USING (currentid = 4 AND rlsuser = current_user) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | 991dfc7aef3a2a13f3934291 | create foreign table tab_batch_sharded_p1 partition of tab_batch_sharded for values with (modulus 2, remainder 1) server loopback options (table_name 'tab_batch_sharded_p1_remote') |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | 9984f36efc850f5b165e6c55 | CREATE FOREIGN TABLE fd_pt2_1 ( c1 integer NOT NULL, c2 text, c3 date, c4 char ) SERVER s0 OPTIONS (delimiter ',', quote '"', "be quoted" 'value') |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FDW_STMT | 99871cfdaa4cbe2cad6a2017 | -- ERROR CREATE FOREIGN DATA WRAPPER foo OPTIONS ("test wrapper" 'true') |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_POLICY_STMT | 9a221c14fc299c0479a60352 | -- one may only update documents in 'novel' category and new dlevel must be > 0 CREATE POLICY p3 ON document FOR UPDATE USING (cid = (SELECT cid from category WHERE cname = 'novel')) WITH CHECK (dl... |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | 9a34fd6be98059028b2cb015 | -- correct command CREATE STATISTICS s10 ON a, b, c FROM ndistinct |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 9a728d0ac07322c742766487 | ALTER FOREIGN TABLE IF EXISTS doesnt_exist_ft1 ADD COLUMN c8 integer |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_USER_MAPPING_STMT | 9bb50f4e25b2f3cfec568b79 | ALTER USER MAPPING FOR public SERVER testserver1 OPTIONS (ADD oauth_issuer 'https://example.com') |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FOREIGN_SERVER_STMT | 9bc4ce39c6371d2503fe79df | CREATE SERVER sv5 FOREIGN DATA WRAPPER test_wrapper |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_POLICY_STMT | 9c4773779c86706e0350a410 | CREATE POLICY p1 ON rls_tbl_force USING (c1 = 5) WITH CHECK (c1 < 5) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 9cc6f3f77a7b002bfb35a886 | ALTER FOREIGN TABLE IF EXISTS doesnt_exist_ft1 DROP CONSTRAINT ft1_c1_check |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_POLICY_STMT | 9d693dbca4213a6141f7f79a | CREATE POLICY p3 ON current_check FOR UPDATE USING (currentid = 4) WITH CHECK (rlsuser = current_user) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_POLICY_STMT | 9d80d036436e847e69b5bfbf | CREATE POLICY p2 ON z1 TO regress_rls_group2 USING (a % 2 = 1) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FDW_STMT | 9e138856d204ca3733c8ded7 | -- ERROR CREATE FOREIGN DATA WRAPPER test_fdw HANDLER test_fdw_handler |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FOREIGN_SERVER_STMT | 9e914a4e799cf10bf91a97e9 | CREATE SERVER sv10 FOREIGN DATA WRAPPER test_wrapper |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | 9eaac9fd8e81402dc84ed4b3 | create statistics (mcv) ON (a+b), (a-b) FROM stts_t1 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FDW_STMT | 9eb2ab796e48ef074343ab41 | -- ERROR CREATE FOREIGN DATA WRAPPER foo |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | 9ebba0036b636eb1dd18cf77 | CREATE STATISTICS s11 (ndistinct) ON a, b, (a*5), (b+1) FROM ndistinct |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 9f26cd63b255a8086f24eb14 | -- ERROR ALTER FOREIGN TABLE ft1 ADD CONSTRAINT ft1_c9_check CHECK (c9 < 0) NOT VALID |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 9f8ee0a181ad1b9034d172a8 | ALTER FOREIGN TABLE ft1 ADD COLUMN IF NOT EXISTS c6 integer |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 9f92de53016747ebdf9a854a | ALTER FOREIGN TABLE ft2 OPTIONS (use_remote_estimate 'true') |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_POLICY_STMT | 9fa1300f950204d0b06c00f0 | CREATE POLICY p1 ON r1 FOR SELECT USING (a < 20) |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_IMPORT_FOREIGN_SCHEMA_STMT | 9fa9e38184d68db7b8ce4101 | --ERROR IMPORT FOREIGN SCHEMA s1 EXCEPT (t1) FROM SERVER s9 INTO public |
-| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DROP_USER_MAPPING_STMT | 9fd8f8c132f4d58a7709735f | DROP USER MAPPING IF EXISTS FOR CURRENT_USER SERVER sv3 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | 9fdf3d3507abf9994fde86f5 | create foreign table remp1 (a int check (a in (1)), b text) server loopback options (table_name 'loct1') |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_FOREIGN_SERVER_STMT | a0238dc6693cfeb2d2b97dc5 | -- Connections are not closed at the end of the alter and drop statements. -- That's because the connections are in midst of this xact, -- they are just marked as invalid in pgfdw_inval_callback. A... |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_FOREIGN_SERVER_STMT | a07a86ec8ccde5f9dd3f73b5 | ALTER SERVER loopback OPTIONS (ADD extensions 'postgres_fdw') |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | a0a47f58a99119afa5f5f62f | CREATE STATISTICS regress_schema_2.ab1_a_b_stats ON a, b FROM ab1 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | a120089d2b6dda8f7f421568 | CREATE FOREIGN TABLE insert_tbl (a int, b int, c text) SERVER loopback OPTIONS (table_name 'base_tbl4') |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | a1227c6e142d33389130cea4 | create statistics (ndistinct) on a, b from stts_t1 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_USER_MAPPING_STMT | a123daa935477587a1646cb7 | CREATE USER MAPPING FOR CURRENT_USER SERVER sv1 OPTIONS (user 'CURRENT_USER') |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | a1463927f6d923f7e1339c8d | ALTER FOREIGN TABLE IF EXISTS doesnt_exist_ft1 ADD COLUMN c9 integer |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | a18785bf46ece092174cd026 | CREATE FOREIGN TABLE ft2 ( c1 int NOT NULL, c2 int NOT NULL, cx int, c3 text, c4 timestamptz, c5 timestamp, c6 varchar(10), c7 char(10) default 'ft2', c8 user_enum ) SERVER loopback |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | a1db74e132ba9172b07d0d7e | -- error ALTER FOREIGN TABLE tru_ftable OPTIONS (ADD truncatable 'true') |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | a23ff165cad15e55fbc7a163 | -- create statistics with expressions only (we create three separate stats, in order not to build more complex extended stats) CREATE STATISTICS mcv_lists_stats_1 ON (mod(a,20)) FROM mcv_lists |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | a2971e782e8bc986a55a338a | -- test compression with partition CREATE TABLE cmpart(f1 text COMPRESSION lz4) PARTITION BY HASH(f1) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_FOREIGN_SERVER_STMT | a2d044c3d27135f0c2298acd | -- ERROR ALTER SERVER s4 VERSION '0.5' |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | a30982b22b3720a0ebb8843b | CREATE STATISTICS ctl_stats3_stat ON a, c FROM ctl_stats3_parent |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | a314f587ff74f46629ea34e7 | ALTER FOREIGN TABLE agg_csv ADD CHECK (a >= 0) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | a4755bf80651138f2d82e03b | create statistics (ndistinct, dependencies) on a, b from stts_t1 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_POLICY_STMT | a47d397429669e66e0bd3de8 | ALTER POLICY p2 ON s2 USING (x % 2 = 0) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FDW_STMT | a48e98d6ba21b506f7669c83 | CREATE FOREIGN DATA WRAPPER dblink_fdw VALIDATOR dblink_fdw_validator |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | a49d4e8c8f70060f5842d96b | create foreign table ft3 (f1 text collate "C", f2 text, f3 varchar(10)) server loopback options (table_name 'loct3', use_remote_estimate 'true') |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | a4efd9ac3741b81c12459a26 | -- child must have parent's INHERIT constraints ALTER FOREIGN TABLE ft2 INHERIT fd_pt1 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | a51ea86c4378a3c15d49b6cd | CREATE FOREIGN TABLE analyze_ftable (id int, a text, b bigint) SERVER loopback OPTIONS (table_name 'analyze_table') |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_FOREIGN_SERVER_STMT | a6a2e083484cb4c3d6500fe3 | alter server loopback options (set extensions 'postgres_fdw') |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | a6aa900da9dc8318deb1159f | -- create statistics CREATE STATISTICS mcv_lists_stats (mcv) ON a, b, c, ia FROM mcv_lists |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FDW_STMT | a6dc7fc71fadb4484aa7ee95 | CREATE FOREIGN DATA WRAPPER foo VALIDATOR postgresql_fdw_validator |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_POLICY_STMT | a6de3d1b738c181785804b54 | CREATE POLICY r1 ON rec1 USING (x = (SELECT r.x FROM rec1 r WHERE y = r.y)) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_POLICY_STMT | a739c070c223e972990a3206 | ALTER POLICY r1 ON rec1 USING (x = (SELECT a FROM rec2 WHERE b = y)) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_RENAME_STMT | a7654d51725f0ea86ce3fea5 | ALTER POLICY p1 ON t1 RENAME TO p1 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_POLICY_STMT | a767b7f6c9214cfe61041f25 | CREATE POLICY policy_range_parted_subplan on range_parted AS RESTRICTIVE for UPDATE USING (true) WITH CHECK ((SELECT range_parted.c <= c1 FROM mintab)) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FDW_STMT | a7f9b076b885cf2f0cc6847a | -- ERROR CREATE FOREIGN DATA WRAPPER foo OPTIONS (testing '1', another '2') |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | a8639bfe0e5cf66d0cd01e98 | -- ERROR CREATE FOREIGN TABLE tbl () SERVER file_server OPTIONS (format 'csv', delimiter '-', null '=-=') |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | a8d7516b5c02ab432b5e9e41 | -- error ALTER FOREIGN TABLE tru_ftable OPTIONS (SET truncatable 'true') |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_USER_MAPPING_STMT | a9298e5aa92ed1e99eb0f410 | CREATE USER MAPPING FOR current_user SERVER s5 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_FOREIGN_SERVER_STMT | a9ce12e1d01d6e0cdb04c9a5 | ALTER SERVER s6 OPTIONS (DROP host, DROP dbname) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_POLICY_STMT | aa7bc86c49f3720b5741bd5b | CREATE POLICY p1 ON document FOR SELECT USING (true) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | aa860bc45cfa5266d9232013 | ALTER FOREIGN TABLE foreign_tbl NO INHERIT parent_tbl |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FOREIGN_SERVER_STMT | aac73a7ef55f10fb1fca4cec | CREATE SERVER "integer" FOREIGN DATA WRAPPER addr_fdw |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_USER_MAPPING_STMT | ab1ee8c7be20df9ffddf921c | CREATE USER MAPPING FOR CURRENT_ROLE SERVER sv3 OPTIONS (user 'CURRENT_ROLE') |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | abe33740abbda6a49ebf85d3 | -- ERROR CREATE FOREIGN TABLE tbl () SERVER file_server OPTIONS (format 'csv', delimiter ' ') |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_POLICY_STMT | ac21c5da4719cc8be52eaaef | CREATE POLICY priv_test_tbl_pol ON tststats.priv_test_tbl USING (2 * a < 0) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | ac4852bd866e778462089355 | ALTER FOREIGN TABLE agg_csv NO INHERIT agg |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_POLICY_STMT | ac4d39808b76f0013c10bf16 | CREATE POLICY p1 ON r1 USING (false) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | ac5a3c106e31bf1b6496a9cb | CREATE STATISTICS alt_stat2 ON a FROM tftest(1) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_USER_MAPPING_STMT | ac742cf13781de79c6c7efe0 | -- unpriv user also cannot set sslcert / sslkey on the user mapping -- first set password_required so we see the right error messages ALTER USER MAPPING FOR CURRENT_USER SERVER loopback_nopw OPTION... |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | aca63db5df0e6c47e0ffcb77 | ALTER FOREIGN TABLE table30 OPTIONS ( SET batch_size '40') |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | acc5db5a96d85882421f5a28 | CREATE TABLE ctl_table(a int PRIMARY KEY, b varchar COMPRESSION pglz, c int GENERATED ALWAYS AS (a * 2) STORED, d bigint GENERATED ALWAYS AS IDENTITY, e int DEFAULT 1) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_POLICY_STMT | adaa43bc4b018278dc62b1f0 | CREATE POLICY p1 ON copy_rel_to USING (a % 2 = 0) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_POLICY_STMT | ae0318126291a7d8ed0a401b | CREATE POLICY p1 ON rls_test_permissive USING (data % 2 = 0) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_FOREIGN_SERVER_STMT | ae59be629210c78344fd9e06 | ALTER SERVER s1 VERSION '1.1' |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_POLICY_STMT | ae9f1a47970a688fa143a0b1 | CREATE POLICY a_temp_pol ON a_temp_tbl USING (f2 > 0) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_POLICY_STMT | aeb19ba56d79296102948e18 | CREATE POLICY pp3 ON part_document_satire AS RESTRICTIVE USING (cid < 55) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | af7b687a7f4614997a10e38e | CREATE FOREIGN TABLE batch_table_p1f PARTITION OF batch_table FOR VALUES WITH (MODULUS 3, REMAINDER 1) SERVER loopback OPTIONS (table_name 'batch_table_p1', batch_size '1') |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | b00db4ca5108a4f768ec42f6 | ALTER FOREIGN TABLE IF EXISTS doesnt_exist_ft1 ADD COLUMN IF NOT EXISTS c6 integer |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_USER_MAPPING_STMT | b052557cc7b109e7e6de951e | ALTER USER MAPPING FOR "current_user" SERVER sv2 OPTIONS (SET user '"current_user"_alt') |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | b052c624c5a78dfcd5268338 | CREATE FOREIGN TABLE foreign_tbl (a int, b int) SERVER loopback OPTIONS (table_name 'child_tbl') |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | b0de162b620d91b1106c4377 | CREATE FOREIGN TABLE prem2 (f1 int, f2 text) SERVER loopback2 OPTIONS (table_name 'ploc2') |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FOREIGN_SERVER_STMT | b12129a637f48187eeb3f2ff | CREATE SERVER s7 TYPE 'oracle' VERSION '17.0' FOREIGN DATA WRAPPER foo OPTIONS (host 'a', dbname 'b') |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | b140c3a88f537cc27c8a1eda | alter foreign table rem2 drop constraint rem2_f1positive |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_POLICY_STMT | b1a0ca1fe9795cb94389d565 | CREATE POLICY p3 ON x1 FOR UPDATE USING (a % 2 = 0) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_FOREIGN_SERVER_STMT | b1eda69f9b5706578db6985e | ALTER SERVER loopback OPTIONS (DROP async_capable) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | b21c42e7b8fa77c408bf68fd | CREATE TABLE cmpart2(f1 text COMPRESSION pglz) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | b30819a79dc8d350c14f64fb | ALTER FOREIGN TABLE ft1 OPTIONS (SET table_name 'T 1') |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_STATS_STMT | b34cb709a7bba7cc63818e8b | ALTER STATISTICS ab1_a_b_stats SET STATISTICS -1 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | b37ac864fad4140a5566e6fd | CREATE FOREIGN TABLE ft_empty (c1 int NOT NULL, c2 text) SERVER loopback OPTIONS (table_name 'loct_empty') |
-| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DROP_USER_MAPPING_STMT | b37e0f2be32a8fd7631d5667 | DROP USER MAPPING FOR CURRENT_ROLE SERVER sv3 |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_IMPORT_FOREIGN_SCHEMA_STMT | b3cfe4805b8d1012ad9e51af | IMPORT FOREIGN SCHEMA nonesuch FROM SERVER nowhere INTO notthere |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | b3fa472c2c98b702a54c19ee | ALTER FOREIGN TABLE table30000 OPTIONS ( SET fetch_size '60000') |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FOREIGN_SERVER_STMT | b41cddbb7dc74bd13111c78c | CREATE SERVER ctl_s0 FOREIGN DATA WRAPPER ctl_dummy |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_POLICY_STMT | b4310ff25544679e003dcd89 | CREATE POLICY p1 ON copy_t USING (a % 2 = 0) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_USER_MAPPING_STMT | b469d0598b082bb00d1d51ff | -- ERROR ALTER USER MAPPING FOR public SERVER s5 OPTIONS (gotcha 'true') |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_FDW_STMT | b4929718d9af444681ecb408 | ALTER FOREIGN DATA WRAPPER foo OPTIONS (ADD e '6') |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_USER_MAPPING_STMT | b4f6ba68b4f446deaaed6efc | -- But the superuser can ALTER USER MAPPING FOR regress_nosuper SERVER loopback_nopw OPTIONS (ADD password_required 'false') |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | b5012349441c8dc0381b2e4c | CREATE STATISTICS tst ON x, x, y FROM ext_stats_test |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_POLICY_STMT | b51494a7a63a066b65d61827 | CREATE POLICY p1 ON rls_tbl USING (rls_tbl >= ROW(1,1,1)) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_USER_MAPPING_STMT | b542b88eaa485fe5559aaa1b | CREATE USER MAPPING FOR USER SERVER sv4 OPTIONS (user 'USER') |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | b566f75e122a3b02d4e03231 | CREATE STATISTICS ctlt1_a_b_stat ON a,b FROM ctlt1 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | b5b79595276e2a69db417239 | ALTER FOREIGN TABLE agg_bad OPTIONS (SET reject_limit '2') |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_POLICY_STMT | b60883b8353201f2bf52a6e8 | CREATE POLICY p1 ON rls_test_both USING (data % 2 = 0) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | b7b1833ac9004a8c7a09c3bd | -- ERROR CREATE FOREIGN TABLE tbl () SERVER file_server OPTIONS (format 'text', delimiter '1') |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OWNER_STMT | b7d3730f1728dddea0bca4dc | ALTER SERVER t1 OWNER TO regress_test_indirect |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | b7ec58e2aa99697e9263ac2c | CREATE FOREIGN TABLE remote_backend_pid (pid int) SERVER loopback OPTIONS (table_name 'my_backend_pid') |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_USER_MAPPING_STMT | b80af2b93fd4e4a8301098ab | CREATE USER MAPPING FOR nonexistent SERVER sv10 OPTIONS (user 'nonexistent') |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | b814084e8a12a49a4284ea73 | create foreign table remp (a int check (a in (3)), b text) server loopback options (table_name 'loct') |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | b92fc3e48db77755154e0eb8 | ALTER FOREIGN TABLE ft1 ALTER COLUMN c1 SET (n_distinct = 100) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | b969d34cd21584b2131a3045 | ALTER FOREIGN TABLE ft1 ADD COLUMN c7 integer NOT NULL |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | b98ce077fb5adc662273f61d | ALTER FOREIGN TABLE ft1 ALTER COLUMN c8 SET STATISTICS -1 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_FOREIGN_SERVER_STMT | ba0b22316613d2a0b591a3be | -- =================================================================== -- reestablish new connection -- =================================================================== -- Change application_nam... |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_POLICY_STMT | ba4ad93e457893572fc6c239 | -- Create policies on r2 which prevent the -- owner from seeing any rows, but RI should -- still see them. CREATE POLICY p1 ON r2 USING (false) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OBJECT_SCHEMA_STMT | ba61c828ba749fbb931cf3dc | ALTER FOREIGN TABLE IF EXISTS doesnt_exist_ft1 SET SCHEMA foreign_schema |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_POLICY_STMT | ba82d75aaeb46069513e3484 | -- one may only delete documents in 'manga' category CREATE POLICY p4 ON document FOR DELETE USING (cid = (SELECT cid from category WHERE cname = 'manga')) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | ba84e30536370fe75d2af925 | CREATE FOREIGN TABLE ft1 ( c1 integer OPTIONS ("param 1" 'val1') REFERENCES ref_table (id), c2 text OPTIONS (param2 'val2', param3 'val3'), c3 date ) SERVER s0 OPTIONS (delimiter ',', quote '"', "b... |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_POLICY_STMT | bab4349bc4bde9a4ae78e81f | CREATE POLICY p1 ON rls_tbl USING (c1 > 5) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_FOREIGN_SERVER_STMT | bacae19c6c43738cffa5d552 | -- =================================================================== -- Test foreign server level option keep_connections -- =================================================================== --... |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | baf2226de0950739f2e31766 | ALTER FOREIGN TABLE foreign_stats ADD CONSTRAINT b_nonzero CHECK (b <> 0) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | bb245b2fe1a0144bca82eb9c | -- Extended statistics with an expression that cannot be analyzed. CREATE STATISTICS test_stats ON func_int_custom(data), (id) FROM test_table |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | bb3a18a28169c15eb463699e | CREATE STATISTICS s10 (ndistinct) ON (a+1), (b+100), (2*c) FROM ndistinct |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_FOREIGN_SERVER_STMT | bb51cb15c885910c427ab9c3 | -- error ALTER SERVER loopback OPTIONS (DROP truncatable) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | bb6b2ac64a578b96619ffa72 | CREATE STATISTICS ab1_b_a_stats ON b, a FROM ab1 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_POLICY_STMT | bb82d62a724c0852a69d3659 | ALTER POLICY p1 ON s1 USING (a in (select x from v2)) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | bbd13119a5bf966c6e793b15 | ALTER FOREIGN TABLE ft1 DROP COLUMN no_column |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | bbf62ba71cc9ea34fbe547a0 | CREATE FOREIGN TABLE child_foreign (b text, c numeric, a int) SERVER loopback OPTIONS (table_name 'child_local') |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | bc695d63c1dad4208b195c9d | -- date_trunc on timestamptz is not immutable, but that should not matter CREATE STATISTICS ab1_exprstat_4 ON date_trunc('day', d) FROM ab1 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | bca67aa86625d5a0a8e3a594 | CREATE FOREIGN TABLE ftprt1_p1 PARTITION OF fprt1 FOR VALUES FROM (0) TO (250) SERVER loopback OPTIONS (table_name 'fprt1_p1', use_remote_estimate 'true') |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FOREIGN_SERVER_STMT | bca6c90572f3b722a6a18fbf | -- ERROR CREATE SERVER file_server2 FOREIGN DATA WRAPPER file_fdw |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_USER_MAPPING_STMT | bd0939b71c9f3a79c0fe4595 | -- ERROR ALTER USER MAPPING FOR regress_test_role SERVER s6 OPTIONS (gotcha 'true') |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | bd4fa14b8c98c15556f531c2 | CREATE STATISTICS tst ON a FROM XMLTABLE('foo' PASSING 'bar' COLUMNS a text) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | bd58c9db229a79584abb5e85 | CREATE STATISTICS group_tbl_stat (ndistinct) ON a, b FROM group_tbl |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | bddbd4467892d35f25fcb69f | create foreign table remp (a int check (a in (1)), b text) server loopback options (table_name 'loct') |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | be67c533aa51c2e91c5ff6c2 | ALTER FOREIGN TABLE ft1 DROP COLUMN c9 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_POLICY_STMT | be9d1d75fabf1751405c6681 | ALTER POLICY p ON tbl1 TO regress_rls_frank USING (true) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_USER_MAPPING_STMT | bf3a67c79fbd62a79b02f81b | -- But creation of user mappings for non-superusers should fail CREATE USER MAPPING FOR public SERVER loopback_nopw |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | bf542459d1b94311f5bd2c8f | CREATE FOREIGN TABLE test_foreign_table () SERVER dummy_server |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | bfbc1d1626b21a256758195d | ALTER FOREIGN TABLE IF EXISTS doesnt_exist_ft1 ALTER COLUMN c8 OPTIONS (SET p2 'V2', DROP p1) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | c03cf294023cfc76c88bbde6 | ALTER FOREIGN TABLE ft1 ADD COLUMN c10 integer OPTIONS (p1 'v1') |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | c05852640f2b4a922d59d13b | ALTER FOREIGN TABLE ft1 OPTIONS (DROP delimiter, SET quote '~', ADD escape '@') |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_FOREIGN_SERVER_STMT | c10af4c10346e5a777ee7f0d | ALTER SERVER loopback OPTIONS (DROP parallel_commit) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | c313c0883bc881cd4ed84820 | -- unsupported targets CREATE STATISTICS tst ON a FROM (VALUES (x)) AS foo |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | c3308bfe386fb737618f67b0 | CREATE STATISTICS t_a_b_stat (mcv) ON a, b FROM bitmap_split_or |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | c3f4effd7c9eaebc63c94821 | CREATE STATISTICS tststats.priv_test_stats (mcv) ON a, b FROM tststats.priv_test_tbl |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | c3fad855fc02f5516e03bf25 | ALTER FOREIGN TABLE async_p1 OPTIONS (DROP use_remote_estimate) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_FOREIGN_SERVER_STMT | c51ca4987598db73ed930b75 | -- OAuth options are not allowed in either context ALTER SERVER testserver1 OPTIONS (ADD oauth_issuer 'https://example.com') |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | c52fd35329cdba847a9338f7 | CREATE FOREIGN TABLE pg_temp.ft1_nopw ( c1 int NOT NULL, c2 int NOT NULL, c3 text, c4 timestamptz, c5 timestamp, c6 varchar(10), c7 char(10) default 'ft1', c8 user_enum ) SERVER loopback_nopw OPTIO... |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | c5345c7412a4b26f17db2c71 | ALTER FOREIGN TABLE IF EXISTS doesnt_exist_ft1 OWNER TO regress_test_role |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | c5393c778b69474c5c6c8606 | create foreign table foo2 (f3 int) inherits (foo) server loopback options (table_name 'loct1') |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_POLICY_STMT | c5e3c68709ec19535c008b23 | CREATE POLICY p4 ON rls_child_tbl USING (a < 0) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_USER_MAPPING_STMT | c6384ebbf8cda138a0b94360 | ALTER USER MAPPING FOR current_user SERVER s5 OPTIONS (ADD modified '1') |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_POLICY_STMT | c64b10dc1290421661d623fd | CREATE POLICY p1 ON z1 TO regress_rls_group1 USING (a % 2 = 0) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | c6810c7248b7f45f13ef0aa2 | -- check STORAGE correctness create table test_storage_failed (a text, b int storage extended) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | c69ba0712e2bf6eb981e2a0e | CREATE FOREIGN TABLE foreign_stats (a int) SERVER server_stats |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_POLICY_STMT | c6c92fafde9d9c288502e7de | CREATE POLICY p2 ON rls_tbl_force FOR SELECT USING (c1 = 8) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | c7226a60473e584a4ef94bf4 | ALTER FOREIGN TABLE agg_text OWNER TO regress_file_fdw_user |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | c7a290cd373c039ab9374b70 | CREATE STATISTICS s10 (ndistinct) ON a, b, (2*c) FROM ndistinct |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_POLICY_STMT | c7b2e559682b0ee9eedcfb96 | -- but Dave isn't allowed to anything at cid 50 or above -- this is to make sure that we sort the policies by name first -- when applying WITH CHECK, a later INSERT by Dave should fail due -- to p1... |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | c8163bb7fb9843f48004845c | CREATE FOREIGN TABLE tru_ftable_child () INHERITS (tru_ftable_parent) SERVER loopback OPTIONS (table_name 'tru_rtable_child') |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_FOREIGN_SERVER_STMT | c85888be60aedf8ad2c1e4a4 | ALTER SERVER loopback OPTIONS (analyze_sampling 'auto') |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_USER_MAPPING_STMT | c91ad11beeaf5cbc439c7919 | -- ERROR ALTER USER MAPPING FOR user SERVER ss4 OPTIONS (gotcha 'true') |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | c922feb8aff4e9043c038343 | -- Create foreign partitions CREATE FOREIGN TABLE fpagg_tab_p1 PARTITION OF pagg_tab FOR VALUES FROM (0) TO (10) SERVER loopback OPTIONS (table_name 'pagg_tab_p1') |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_POLICY_STMT | c995e9920777b9e4de821e46 | CREATE POLICY pp3 ON part_document AS RESTRICTIVE USING ((SELECT dlevel <= seclv FROM uaccount WHERE pguser = current_user)) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | ca5c103dcf847338213e459e | CREATE FOREIGN TABLE addr_nsp.genftable (a int) SERVER addr_fserv |
-| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DROP_USER_MAPPING_STMT | ca83e08df715f5b12e8adcf7 | DROP USER MAPPING FOR public SERVER s8 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_USER_MAPPING_STMT | cb0f4a2cff8de0332a5434d4 | -- ERROR CREATE USER MAPPING FOR user SERVER s8 OPTIONS (user 'test', password 'secret') |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FOREIGN_SERVER_STMT | cb214c153aaa4748618afaf0 | CREATE SERVER s8 FOREIGN DATA WRAPPER postgresql OPTIONS (foo '1') |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_USER_MAPPING_STMT | cb9ffcf7ebb3f6504e2b122b | CREATE USER MAPPING FOR current_user SERVER s6 OPTIONS (username 'test') |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | cbe009732fa77af5a579448c | CREATE STATISTICS sts_sch2.pass1 ON a, b, c FROM sts_sch1.tbl |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FOREIGN_SERVER_STMT | cc507b04c5f07128dd3db127 | CREATE SERVER s6 VERSION '16.0' FOREIGN DATA WRAPPER foo OPTIONS (host 'a', dbname 'b') |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | cc7097265b3b87ee8878eb0e | CREATE STATISTICS tst on (tableoid) from ext_stats_test1 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | cc70f024bbcef340288ec6e3 | -- pg_column_toast_chunk_id CREATE TABLE test_chunk_id (a TEXT, b TEXT STORAGE EXTERNAL) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | cc8acf09ca7b8ffae772513d | CREATE FOREIGN TABLE table30 ( x int ) SERVER batch10 OPTIONS ( batch_size '30' ) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | cc9e974131762290cfaba162 | create statistics stts_s1.stts_foo on col1, col2 from stts_t3 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FDW_STMT | cca21d0cba291d57393faf4a | CREATE FOREIGN DATA WRAPPER extstats_dummy_fdw |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | ccf768dcfce1a239d1fd3597 | ALTER FOREIGN TABLE agg_bad OPTIONS (ADD reject_limit '1') |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | cd0f42e9701bbca7d69b0004 | create foreign table foo2child (f3 int) inherits (foo2) server loopback options (table_name 'loct4') |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | cd19c5b7e86eed53dc296e2d | ALTER FOREIGN TABLE ft1 DROP COLUMN c0 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_FDW_STMT | ce54fdd920490c087084bf2a | -- ERROR -- force_null is not allowed to be specified at any foreign object level: ALTER FOREIGN DATA WRAPPER file_fdw OPTIONS (ADD force_null '*') |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | ce89dabfa39ee0ebf2f49cfd | ALTER FOREIGN TABLE ft1 ALTER COLUMN c5 DROP DEFAULT |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | cefc2840f69734dde6e81a2a | ALTER FOREIGN TABLE async_p2 OPTIONS (use_remote_estimate 'true') |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_POLICY_STMT | d09998138a1c8af1bc53f328 | CREATE POLICY p2 ON document FOR INSERT WITH CHECK (dauthor = current_user) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_FOREIGN_SERVER_STMT | d0b4096e49dea979581b6e36 | ALTER SERVER s2 VERSION '1.1' |
-| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DROP_USER_MAPPING_STMT | d12c679dc0951a4c2a111ad9 | DROP USER MAPPING IF EXISTS FOR regress_testrolx SERVER sv9 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | d14810fbbed6cb1a5296ed20 | create foreign table rem1 (f1 serial, f2 text) server loopback options(table_name 'loc1') |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_FOREIGN_SERVER_STMT | d17989310dc8e82d394ca49d | -- Test copy tuple routing with the batch_size option enabled alter server loopback options (add batch_size '2') |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | d197714b292424eb89900838 | ALTER FOREIGN TABLE ft1 OWNER TO regress_test_role |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FOREIGN_SERVER_STMT | d1d3c89e00aa24d504a69174 | -- No ERROR, just NOTICE CREATE SERVER s2 FOREIGN DATA WRAPPER foo OPTIONS (host 'a', dbname 'b') |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_USER_MAPPING_STMT | d23c3416fa0f4441fd9084bb | -- ERROR ALTER USER MAPPING FOR current_user SERVER s8 OPTIONS (DROP user, SET password 'public') |
-| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DROP_USER_MAPPING_STMT | d2c8d39d5a6f2bcb0cdd34cd | DROP USER MAPPING FOR PUBLIC SERVER sv7 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | d330fcf15c745ab1c41784af | alter foreign table rem2 add constraint rem2_f1positive check (f1 >= 0) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | d36eb3d07453e7018f5d31ce | CREATE STATISTICS tst on (z+1) from ext_stats_test1 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | d397dc463298a3a7dc9082a6 | alter foreign table remt1 inherit parent |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_USER_MAPPING_STMT | d3a914600d7641ee5c697735 | CREATE USER MAPPING FOR public SERVER s10 OPTIONS (user 'secret') |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | d45a217fbb645604df160247 | CREATE STATISTICS mcv_lists_bool_stats (mcv) ON a, b, c FROM mcv_lists_bool |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | d4601e71c00f80e7aa69b73b | -- Test error handling, if accessing one of the foreign partitions errors out CREATE FOREIGN TABLE async_p_broken PARTITION OF async_pt FOR VALUES FROM (10000) TO (10001) SERVER loopback OPTIONS (t... |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_FOREIGN_SERVER_STMT | d4a7e772b6f3f810d61e6c5c | -- If we add a password to the connstr it'll fail, because we don't allow passwords -- in connstrs only in user mappings. ALTER SERVER loopback_nopw OPTIONS (ADD password 'dummypw') |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | d515d4fceef55ebd2a9a07fd | CREATE STATISTICS tst on z from ext_stats_test1 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | d540df445daa158d160d87eb | create statistics on b, c from stts_t2 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | d586593d61909fc3065ccd9c | ALTER FOREIGN TABLE ft2 OPTIONS (schema_name 'S 1', table_name 'T 1') |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | d58cb4e935869bd95db72aec | -- ERROR CREATE FOREIGN TABLE tbl () SERVER file_server |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | d5c6ce8a272e2bb6afe43d9b | CREATE STATISTICS ab1_a_b_c_stats ON a, b, c FROM ab1 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_POLICY_STMT | d5e8206043907c4a8ee2e133 | CREATE POLICY p2 ON y1 FOR SELECT USING (a > 2) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FOREIGN_SERVER_STMT | d6d9b5dacc7a3f8561da9e9c | CREATE SERVER batch10 FOREIGN DATA WRAPPER postgres_fdw OPTIONS( batch_size '10' ) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | d6e8002e2d36473b1df13916 | ALTER FOREIGN TABLE agg_bad ADD CHECK (a >= 0) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | d6ee8d6b4bdbc7ddb0756019 | ALTER FOREIGN TABLE IF EXISTS doesnt_exist_ft1 DROP COLUMN IF EXISTS no_column |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | d74ce7367c64fec8fcba09fb | CREATE STATISTICS gtest31_2_stat ON ((y).b is not null) FROM gtest31_2 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | d77757fdca4d1eb265a8e7af | ALTER FOREIGN TABLE IF EXISTS doesnt_exist_ft1 ALTER COLUMN c8 SET DATA TYPE text |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_USER_MAPPING_STMT | d791c0c2d026371ccd483a46 | ALTER USER MAPPING FOR regress_testrolx SERVER sv9 OPTIONS (SET user 'regress_testrolx_alt') |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_FOREIGN_SERVER_STMT | d7c9be99b005d8a22ce3c590 | ALTER SERVER loopback OPTIONS (ADD parallel_abort 'true') |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | d7e30d025669ab0df92f55d9 | CREATE STATISTICS tststats.s4 ON a, b FROM tststats.v |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_USER_MAPPING_STMT | d7fc381d61c0e75b06be2321 | -- Ensure valid options we haven't used in a user mapping yet are -- permitted to check validation. ALTER USER MAPPING FOR public SERVER testserver1 OPTIONS (ADD sslkey 'value', ADD sslcert 'value') |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | d8317f5bc2e0f06ffe649e00 | CREATE FOREIGN TABLE ftable ( x int ) SERVER loopback OPTIONS ( table_name 'batch_table', batch_size '10' ) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | d8449989e2c57f1ae8ef87ca | CREATE STATISTICS expr_stats_1 (mcv) ON a, b, (2*a), (3*b), (a+b), (a-b) FROM expr_stats |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_USER_MAPPING_STMT | d89191c631e6ae9ebfe90328 | CREATE USER MAPPING FOR public SERVER t1 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_POLICY_STMT | da317849b48a858e09f8ab83 | CREATE POLICY p1 ON rls_test_restrictive USING (data % 2 = 0) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | da3ca3dc97cd92e73b404f23 | alter foreign table foo2 options (use_remote_estimate 'true') |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_FDW_STMT | daaacbd3f36e0a91c80bc647 | -- ERROR ALTER FOREIGN DATA WRAPPER foo VALIDATOR bar |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_POLICY_STMT | daf7fe3cc75c28c95691e8b4 | create policy p1 on ec1 using (f1 < '5'::int8alias1) |
-| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DROP_USER_MAPPING_STMT | daf821a7400448c0b9143c2a | DROP USER MAPPING IF EXISTS FOR "current_user" SERVER sv2 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_POLICY_STMT | db12b172e3afb20c78a82ac6 | ALTER POLICY p1 ON document USING (dauthor = current_user) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_FDW_STMT | db7f212eebe83c919d6d2521 | -- HANDLER related checks ALTER FOREIGN DATA WRAPPER foo HANDLER invalid_fdw_handler |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_USER_MAPPING_STMT | dbaf51da04610270278ec4b2 | ALTER USER MAPPING FOR PUBLIC SERVER sv7 OPTIONS (SET user 'public_alt') |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | dc81ac18c67725bae1f3bb76 | CREATE FOREIGN TABLE ft4 ( c1 int NOT NULL, c2 int NOT NULL, c3 text ) SERVER loopback OPTIONS (schema_name 'S 1', table_name 'T 3') |
-| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DROP_USER_MAPPING_STMT | dcb160a04f8382d06894c6af | DROP USER MAPPING IF EXISTS FOR "Public" SERVER sv8 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FOREIGN_SERVER_STMT | de419f5ac6f57041a4987ede | CREATE SERVER file_server FOREIGN DATA WRAPPER file_fdw |
-| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_IMPORT_FOREIGN_SCHEMA_STMT | dec9c9529ed5d856f1bcfa02 | IMPORT FOREIGN SCHEMA nonesuch FROM SERVER loopback INTO import_dest4 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_STATS_STMT | df29e492735ebc0c47cbfab8 | ALTER STATISTICS IF EXISTS ab1_a_b_stats SET STATISTICS 0 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_POLICY_STMT | df572189a9b03b1cfbd1c3a6 | CREATE POLICY p2 ON x1 FOR INSERT WITH CHECK (a % 2 = 1) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | df829464d57afc7552b385ba | CREATE FOREIGN TABLE batch_table_p1f PARTITION OF batch_table FOR VALUES WITH (MODULUS 2, REMAINDER 1) SERVER loopback OPTIONS (table_name 'batch_table_p1') |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_FOREIGN_SERVER_STMT | dfb5ae36634a61bcdadbb034 | ALTER SERVER loopback OPTIONS (DROP extensions) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_POLICY_STMT | e0340957b23d168c1a8d3e46 | --fail CREATE POLICY p1 ON y2 FOR ALL USING (a % 2 = 0) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FOREIGN_SERVER_STMT | e09f763d8bb5df953e176feb | CREATE SERVER dummy_server FOREIGN DATA WRAPPER dummy |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | e0b4ea77afff141701b7766f | -- with a single expression, we only enable expression statistics CREATE STATISTICS ab1_exprstat_2 ON (a+b) FROM ab1 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_FDW_STMT | e0d6876d0ceda5cdecfa79d6 | ALTER FOREIGN DATA WRAPPER foo VALIDATOR postgresql_fdw_validator |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | e0f6f4ac515236e94e89277b | CREATE FOREIGN TABLE ft6 ( c1 int NOT NULL, c2 int NOT NULL, c3 text ) SERVER loopback2 OPTIONS (schema_name 'S 1', table_name 'T 4') |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_OWNER_STMT | e113052ee1882331d5450db7 | ALTER SERVER s1 OWNER TO regress_test_indirect |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | e12ecee1b8276ae0d6116dea | CREATE STATISTICS addr_nsp.gentable_stat ON a, b FROM addr_nsp.gentable |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | e1d819345898d2836a0c5939 | -- ERROR -- on_error, log_verbosity and reject_limit tests ALTER FOREIGN TABLE agg_bad OPTIONS (ADD on_error 'ignore') |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | e2381f114638b8e25aae1cd9 | CREATE STATISTICS tststats.s6 ON a, b FROM tststats.ty |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | e28644abb4b290a3c2ffaa44 | -- ERROR CREATE FOREIGN TABLE tbl () SERVER file_server OPTIONS (format 'binary', escape ':') |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_POLICY_STMT | e2af95052de99a5622698de5 | ALTER POLICY dep_p1 ON dep1 TO regress_rls_bob,regress_rls_carol |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | e45f509e069df41ae88a0bc4 | CREATE FOREIGN TABLE ftable PARTITION OF parent FOR VALUES IN ('AAA') SERVER loopback OPTIONS (table_name 'batch_table', batch_size '2') |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FOREIGN_SERVER_STMT | e4a37099f348a36c15715853 | CREATE SERVER ext_cine_srv FOREIGN DATA WRAPPER dummy |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | e4ae89c9d6c08bb4bff0bb1c | -- ERROR ALTER FOREIGN TABLE ft1 ALTER COLUMN c8 TYPE user_enum |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | e50b1b42df7a6c85c644e1a7 | -- ERROR CREATE FOREIGN TABLE tbl () SERVER file_server OPTIONS (format 'xml') |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | e543105c37d12e83c5be554a | CREATE FOREIGN TABLE async_p3 PARTITION OF async_pt FOR VALUES FROM (3000) TO (4000) SERVER loopback2 OPTIONS (table_name 'base_tbl3') |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_POLICY_STMT | e628f1bb14ac9f2e978a1709 | -- should succeed -- same cases with duplicate polroles entries CREATE POLICY p1 ON dob_t1 TO regress_rls_dob_role1,regress_rls_dob_role1 USING (true) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_POLICY_STMT | e67bc021c935f2b01334f424 | -- policy must accept ctid = (InvalidBlockNumber,0) since updates check it -- before assigning a ctid to the new row CREATE POLICY p1 ON current_check_2 AS PERMISSIVE USING (ctid IN ('(0,1)', '(0,2... |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_POLICY_STMT | e69ddfe144263ac962565dae | -- user's security level must be higher than or equal to document's CREATE POLICY p1 ON document AS PERMISSIVE USING (dlevel <= (SELECT seclv FROM uaccount WHERE pguser = current_user)) |
-| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DROP_USER_MAPPING_STMT | e719fdd3735b6924f54d772a | DROP USER MAPPING IF EXISTS FOR nonexistent SERVER sv10 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | e737fdbbb701d934ddbb360c | -- date_trunc on timestamp is immutable CREATE STATISTICS ab1_exprstat_5 ON date_trunc('day', c) FROM ab1 |
-| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DROP_USER_MAPPING_STMT | e757f28aa8fb2ab3fcc452cf | -- cleanup DROP USER MAPPING FOR public SERVER loopback_nopw |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_FOREIGN_SERVER_STMT | e76c7503313ce1de5a26dc1c | -- OK but gets a warning ALTER SERVER testserver1 OPTIONS (ADD extensions 'foo, bar') |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_POLICY_STMT | e7725bab38d550172b5b063f | CREATE POLICY p2 ON y2 USING (a % 3 = 0) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_FOREIGN_SERVER_STMT | e79241986dfe12d7c4167bd6 | -- ERROR ALTER SERVER s1 VERSION '1.0' OPTIONS (servername 's1') |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | e7a609ea10f3e01d3c260e3c | CREATE STATISTICS tst on (tableoid::int+1) from ext_stats_test1 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | e7b01eb6d3f2c8bc6118336b | CREATE FOREIGN TABLE ft3 ( c1 integer NOT NULL, c2 text, c3 date ) INHERITS(ft2) SERVER s0 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_FOREIGN_SERVER_STMT | e7bc251753101dd4d0eeab14 | ALTER SERVER loopback OPTIONS (SET analyze_sampling 'off') |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | e7c11c955e6bc78d14a270b9 | create foreign table copytest_foreign_table (a int) server copytest_server |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | e886d9ebb52b782e4f2a5eca | CREATE STATISTICS mcv_lists_stats_3 ON (mod(c,5)) FROM mcv_lists |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | e8d2e8b01f2fcf896baf6fbd | -- But inconsistent check constraints provide inconsistent results ALTER FOREIGN TABLE ft1 ADD CONSTRAINT ft1_c2negative CHECK (c2 < 0) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_POLICY_STMT | e90b89fb64a425248b6e2726 | -- should fail, already gone CREATE POLICY p1 ON dob_t1 TO regress_rls_dob_role1,regress_rls_dob_role1,regress_rls_dob_role2 USING (true) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_POLICY_STMT | e9351c233689e14f8a66503d | CREATE POLICY p2 ON r1 AS RESTRICTIVE USING ((SELECT c) < 400) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | e950bb12c385d81666b43f11 | CREATE STATISTICS ext_stat ON (a \|\| b) FROM test_like_6 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FDW_STMT | e95974c753e1873670430ff5 | CREATE FOREIGN DATA WRAPPER foo OPTIONS (testing '1', testing '2') |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_POLICY_STMT | e9f0ff0edd25116d04f15c9b | CREATE POLICY p ON t USING (max(c)) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_POLICY_STMT | ea8999bd093a36f991f82b94 | CREATE POLICY measurement_p ON measurement USING (peaktemp IS NOT NULL) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_POLICY_STMT | eaaec03cc776907eda451582 | CREATE POLICY p1 ON rls_tbl USING (EXISTS (SELECT 1 FROM ref_tbl)) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_FOREIGN_SERVER_STMT | eaca1428d3f6aebf008ff7d9 | -- ERROR ALTER SERVER file_server OPTIONS (ADD force_not_null '*') |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_RENAME_STMT | eadff4ace3c5ceefe25ceecc | ALTER FOREIGN TABLE foreign_schema.ft1 RENAME TO foreign_table_1 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | eb9761ffb1ce7d32215fec21 | CREATE FOREIGN TABLE remt2 (c1 int, c2 text) SERVER loopback OPTIONS (table_name 'loct2') |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_RENAME_STMT | ec50b7ac60d399dfa5b3e0c4 | -- OK ALTER SERVER alt_fserv1 RENAME TO alt_fserv2 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_USER_MAPPING_STMT | ec6c8862ba10d5e13eec90c7 | -- But we can add valid ones fine ALTER USER MAPPING FOR public SERVER testserver1 OPTIONS (ADD sslpassword 'dummy') |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_FOREIGN_SERVER_STMT | eca7fcb2fada3e5952a8b4bd | -- =================================================================== -- tests for validator -- =================================================================== -- requiressl and some other par... |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | ed78f1b5d2f5211d378fe309 | ALTER FOREIGN TABLE ft1 ALTER COLUMN c8 TYPE char(10) USING '0' |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | ed825a2e0e8166380caf3460 | -- Invalid fetch_size option CREATE FOREIGN TABLE inv_fsz (c1 int ) SERVER loopback OPTIONS (fetch_size '100$%$#$#') |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_FOREIGN_SERVER_STMT | ed8cf5f602a1f41d3a079c3d | ALTER SERVER loopback OPTIONS (DROP batch_size) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_FDW_STMT | ee020bf22c2a4dbdfe9546b5 | -- should fail ALTER FOREIGN DATA WRAPPER dblink_fdw OPTIONS (nonexistent 'fdw') |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | ee0a5da5e13955dc942c3bac | -- ERROR CREATE FOREIGN TABLE tbl () SERVER file_server OPTIONS (on_error 'ignore', reject_limit '0') |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_POLICY_STMT | ee3b3b2a518b3cc9dc30ff03 | CREATE POLICY policy_range_parted ON range_parted for UPDATE USING (true) WITH CHECK (c % 2 = 0) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | ee3fafd88a21d0ed9a3bc2bb | ALTER FOREIGN TABLE ft1 ADD COLUMN c4 integer |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | f03119bf55717787be22333b | CREATE FOREIGN TABLE ft_part_1_2 (a INT) SERVER s0 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_STATS_STMT | f0c908229cdcebe45417e5ff | -- setting statistics target 0 skips the statistics, without printing any message, so check catalog ALTER STATISTICS ab1_a_b_stats SET STATISTICS 0 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | f134981434233de84187162d | -- ERROR ALTER FOREIGN TABLE ft1 ALTER COLUMN c7 OPTIONS (ADD p1 'v1', ADD p2 'v2'), ALTER COLUMN c8 OPTIONS (ADD p1 'v1', ADD p2 'v2') |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | f1831a5617e10569fc01e8d1 | CREATE STATISTICS tst ON a, b FROM ext_stats_test |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_POLICY_STMT | f224dfd2d8590f99e5e1add1 | CREATE POLICY p3 ON z1 AS RESTRICTIVE USING (a NOT IN (SELECT a FROM z1_blacklist)) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_RENAME_STMT | f2b3b07215b79357b496766c | ALTER FOREIGN DATA WRAPPER alt_fdw1 RENAME TO alt_fdw2 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_POLICY_STMT | f3d756684e355e5950f12672 | CREATE POLICY p1 ON r1 USING (true) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | f41f4b2abf50504c35d4eae0 | CREATE STATISTICS mcv_lists_stats_2 ON (mod(b::int,10)) FROM mcv_lists |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_FOREIGN_SERVER_STMT | f41fa8374ae236379a8943a7 | -- OAuth options are not allowed in either context ALTER SERVER fdtest OPTIONS (ADD oauth_issuer 'https://example.com') |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | f4808f78eea286ff0d71af88 | ALTER FOREIGN TABLE async_p2 OPTIONS (DROP use_remote_estimate) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FDW_STMT | f516560de4cb734dde87eeba | -- -- CREATE FOREIGN TABLE LIKE -- CREATE FOREIGN DATA WRAPPER ctl_dummy |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | f549961b30bbbeea1d57783a | CREATE FOREIGN TABLE async_p2 PARTITION OF async_pt FOR VALUES FROM (2000) TO (3000) SERVER loopback2 OPTIONS (table_name 'base_tbl2') |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_POLICY_STMT | f54d5a92d65e1ac219c86175 | -- Dave is only allowed to see cid < 55 CREATE POLICY pp1r ON part_document AS RESTRICTIVE TO regress_rls_dave USING (cid < 55) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | f551a7a1d37be9042e64dbd3 | CREATE FOREIGN TABLE ft_part1 PARTITION OF lt1 FOR VALUES FROM (0) TO (1000) SERVER s0 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | f58f1efbdabef47d1eaa2d86 | -- ERROR ALTER FOREIGN TABLE ft1 DROP COLUMN IF EXISTS no_column |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | f593cbb36e4563c55556b628 | -- =================================================================== -- REINDEX -- =================================================================== -- remote table is not created here CREATE F... |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_POLICY_STMT | f5cae7f1ea415bf317178acb | CREATE POLICY dep_p1 ON dep1 TO regress_rls_bob USING (c1 > (select max(dep2.c1) from dep2)) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_POLICY_STMT | f5dac76b1fa27357da7d7c9c | CREATE POLICY p3 ON rls_tbl_force FOR UPDATE USING (c1 = 8) WITH CHECK (c1 >= 5) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_POLICY_STMT | f6535999802c43f87aff90d2 | CREATE POLICY p2 ON rls_ptbl USING (a < 0) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_FOREIGN_SERVER_STMT | f680b2fc2fa7892b0b5e90b8 | -- Specify escape sequences in application_name option of a server -- object so as to test that they are replaced with status information -- expectedly. Note that we are also relying on ALTER SERVE... |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | f6d4c2a780ff818f5468272e | ALTER FOREIGN TABLE ft1 ALTER COLUMN c8 TYPE char(10) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | f6f0bb07b18dee0f95c663ed | CREATE FOREIGN TABLE b (bb TEXT) INHERITS (a) SERVER loopback OPTIONS (table_name 'loct') |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FDW_STMT | f7e1e427545223852472de39 | CREATE FOREIGN DATA WRAPPER alt_fdw2 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FOREIGN_SERVER_STMT | f7eaa5c6ce6a273a7d879f13 | CREATE SERVER alt_fserv2 FOREIGN DATA WRAPPER alt_fdw2 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | f826908ed93a7299da1db989 | -- ERROR CREATE FOREIGN TABLE tbl () SERVER file_server OPTIONS (format 'binary', on_error 'ignore') |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FOREIGN_SERVER_STMT | f8374945c82f3b5e13e5dcec | -- ERROR CREATE SERVER s8 FOREIGN DATA WRAPPER postgresql OPTIONS (host 'localhost', dbname 's8db') |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | f87383fbb15e2a7dedad1292 | -- ERROR CREATE FOREIGN TABLE tbl () SERVER file_server OPTIONS (format 'text', delimiter '\\') |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | f8f377fbe73d7a214f3d9b4f | CREATE FOREIGN TABLE ft_part_1_1 PARTITION OF lt1_part1 FOR VALUES FROM (0) TO (100) SERVER s0 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | f9046de9ac1ffc18337b640a | CREATE FOREIGN TABLE foreign_tbl (a text, b int) SERVER loopback OPTIONS (table_name 'local_tbl') |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_FOREIGN_SERVER_STMT | f94d1097754301568cbbffdd | ALTER SERVER fetch101 OPTIONS( SET fetch_size '202' ) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FOREIGN_SERVER_STMT | f95ea631f3c33c86167be627 | -- ERROR CREATE SERVER s9 FOREIGN DATA WRAPPER foo |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | f96d72c2a0f3c5ff205893fa | create statistics stts_hoge on col1, col2, col3 from stts_t3 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_USER_MAPPING_STMT | f9a46643cb73c83a3031250c | ALTER USER MAPPING FOR public SERVER fdtest OPTIONS (ADD oauth_issuer 'https://example.com') |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | f9e117ad4d66fbebd6ee5e3c | -- basic statistics on both attributes (no expressions) CREATE STATISTICS s11 (ndistinct) ON a, b FROM ndistinct |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | fa21cc79bb111c1b51686cd1 | -- ERROR CREATE FOREIGN TABLE foreign_part (a int) SERVER s0 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_POLICY_STMT | fa5cca3e06c8ba8067b54ee5 | CREATE POLICY p2 ON category USING (CASE WHEN current_user = 'regress_rls_bob' THEN cid IN (11, 33) WHEN current_user = 'regress_rls_carol' THEN cid IN (22, 44) ELSE false END) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FOREIGN_SERVER_STMT | fbac917cd1f321f3aefa50d4 | CREATE SERVER extstats_dummy_srv FOREIGN DATA WRAPPER extstats_dummy_fdw |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | fbd3dfcc733fd4c3ca32b7bb | -- ERROR CREATE FOREIGN TABLE tbl () SERVER file_server OPTIONS (format 'text', escape '-') |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | fbf7bc2b91087759bcf7f666 | -- ERROR CREATE FOREIGN TABLE ft1 () SERVER no_server |
-| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DROP_USER_MAPPING_STMT | fceee740e978075eb5da1f79 | DROP USER MAPPING IF EXISTS FOR "user" SERVER sv5 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_FDW_STMT | fd6d2c34984c32f400ed0254 | ALTER FOREIGN DATA WRAPPER foo OPTIONS (SET c '4') |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STATS_STMT | fdfb0519f3c084db54ff52b9 | CREATE STATISTICS functional_dependencies_multi_2 (dependencies) ON c, d FROM functional_dependencies_multi |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | fea6fbcbddae2b4ac7765d45 | -- ERROR CREATE FOREIGN TABLE tbl () SERVER file_server OPTIONS (format 'csv', escape '---') |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_USER_MAPPING_STMT | fea790c4d90b398699a3763e | CREATE USER MAPPING FOR regress_addr_user SERVER "integer" |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_FOREIGN_TABLE_STMT | fedca79e9ca6157ab47b2635 | CREATE FOREIGN TABLE tru_ftable__p1 PARTITION OF tru_ptable FOR VALUES WITH (MODULUS 2, REMAINDER 1) SERVER loopback OPTIONS (table_name 'tru_rtable1') |
-| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DROP_USER_MAPPING_STMT | fef22a552d6fa6ce1c337353 | DROP USER MAPPING FOR nonexistent SERVER sv10 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_USER_MAPPING_STMT | fefd13fcbda75105870cfa8a | -- ERROR CREATE USER MAPPING FOR public SERVER s8 |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_POLICY_STMT | ff8239be28b9c91dd1f5e0fe | create policy p2 on rls_t for select to regress_rls_bob using (false) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_POLICY_STMT | ff97d73a69ba6c1a286f3115 | CREATE POLICY p2 ON s2 USING (x in (select a from s1 where b like '%22%')) |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | ffc98c941ffd0934fec169cf | ALTER FOREIGN TABLE ft1 ADD COLUMN c8 integer |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 003a575a0731d3a287e8f2e8 | -- DROP CONSTRAINT recurses correctly on invalid constraints ALTER TABLE notnull_tbl1 ALTER CONSTRAINT nntbl1_a INHERIT |
+| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_REINDEX_STMT | 005f0964ebc0c9120dea0645 | REINDEX TABLE pg_class |
+| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_REINDEX_STMT | 00758d606da22280d92d52ab | REINDEX INDEX sro_idx |
+| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CLUSTER_STMT | 01469a6249baf8b1cca68e78 | CLUSTER clstr_1_pkey ON clstr_1 |
+| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_REFRESH_MAT_VIEW_STMT | 0174a31b0b44b463acb25b26 | refresh materialized view parallel_mat_view |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | 02f7e9a73462b5a1bcb5e9c2 | -- partitioned table have not-null, then the partitions can not be NOT NULL NOT VALID. CREATE TABLE pp_nn (a int, b int, NOT NULL a) PARTITION BY LIST (a) |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 03056f3240a1bcbd1cc1e86a | ALTER INDEX dummy_test_idx SET (option_enum = 'three') |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 030bd70cb513b576e70a0b59 | ALTER TABLE temporal_rng2 ADD CONSTRAINT temporal_rng_pk PRIMARY KEY (id, valid_at WITHOUT OVERLAPS) |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 0319aaf73edefc9839eadbe1 | -- try additional syntax ALTER TABLE fktable ALTER CONSTRAINT fktable_fk_fkey NOT DEFERRABLE |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 0349daccc7588273fad7efc9 | ALTER TABLE fktable ALTER CONSTRAINT fktable_fk_fkey NOT ENFORCED |
+| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_REINDEX_STMT | 034c9c0e9d9f0f6ef13e6476 | REINDEX TABLE pg_toast.pg_toast_1262 |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 035553052559b33df7a2c470 | ALTER TABLE s.x ADD CONSTRAINT e2rows EXCLUDE USING btree ((s.index_this_expr(y, s.const())) COLLATE s.coll WITH s.=) USING INDEX TABLESPACE regress_create_idx_tblspace WHERE (s.index_row_if(y)) |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | 0373dac26c5f4f3a3bee1365 | -- (parent_id, valid_at) REFERENCES [implicit] -- FOREIGN KEY part should specify PERIOD CREATE TABLE temporal_fk_mltrng2mltrng ( id int4range, valid_at datemultirange, parent_id int4range, CONSTRA... |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 0465f263fbc5c71c4cc191b1 | ALTER INDEX dummy_test_idx SET (option_int = 'val3') |
+| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_REINDEX_STMT | 0479a3ff034b2961fe8b6edd | REINDEX SCHEMA reindex_test |
+| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_LOCK_STMT | 049674c1a1b19018652ea441 | LOCK TABLE lock_tbl1 IN SHARE ROW EXCLUSIVE MODE NOWAIT |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | 052446778ffd0dc01156e4b4 | -- PK with a non-range column: CREATE TABLE temporal_rng ( id int4range, valid_at TEXT, CONSTRAINT temporal_rng_pk PRIMARY KEY (id, valid_at WITHOUT OVERLAPS) ) |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | 052d707aab1b7244371458ad | CREATE TABLE zoo ( cage INTEGER, animal TEXT, EXCLUDE USING gist (cage WITH =, animal WITH <>) ) |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 05ce1f60f52d76a3418a26be | ALTER INDEX dummy_test_idx SET (option_real = true) |
+| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_REINDEX_STMT | 05f20638396e136f1e31e37f | reindex index gist_pointidx |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 0665a6ffe05ba12fe90fd07f | ALTER TABLE gtest25 ADD COLUMN b int GENERATED ALWAYS AS (a * 2) STORED, ALTER COLUMN b SET EXPRESSION AS (a * 3) |
+| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_LOCK_STMT | 068d318815cabcbf9e8f331c | LOCK TABLE lock_tbl1 IN EXCLUSIVE MODE |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 069b31f81beae46ed1099297 | ALTER TABLE testpub_rf_tbl7 ALTER COLUMN y SET EXPRESSION AS (x * testpub_rf_func2()) |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 06a795d72f238f0ff7865c54 | ALTER TABLE itest7 ALTER COLUMN a RESTART |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 06bd3678b382603235c9e44f | ALTER INDEX dummy_test_idx SET (option_bool = 1) |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | 083072c01339908c963b3de5 | -- -- FK between partitioned tables: ranges -- CREATE TABLE temporal_partitioned_rng ( id int4range, valid_at daterange, name text, CONSTRAINT temporal_paritioned_rng_pk PRIMARY KEY (id, valid_at W... |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 08757c9475ac905c106f96cb | ALTER TABLE testpub_tbl5 REPLICA IDENTITY USING INDEX testpub_tbl5_b_key |
+| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_REFRESH_MAT_VIEW_STMT | 09369ecee80433d189c80050 | refresh materialized view mvtest_error |
+| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_REINDEX_STMT | 09b1c5d008e5f99080b1bfb4 | reindex index spgist_point_idx |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 0ace9654c03b8100ab39dd55 | -- This triggers an update of pg_index.indisreplident for parted_replica_idx. alter table only parted_replica_tab_1 replica identity using index parted_replica_idx_1 |
+| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_REINDEX_STMT | 0b172e04558f1a14bf730759 | reindex index concurrently test_pg_index_toast_index |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 0b3c37c46e6e9c13a11150f0 | -- fail alter index idxpart_1_idx attach partition idxpart1_1_idx |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 0b4aefd4db98b920439661fc | ALTER INDEX dummy_test_idx SET (option_bool = 'val4') |
+| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_REINDEX_STMT | 0ba75fc19a30cff0925cd094 | -- ok REINDEX TABLE CONCURRENTLY reind_fdw_parent |
+| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_REINDEX_STMT | 0be595dbb31362337cdbd53f | -- notice REINDEX (CONCURRENTLY) TABLE concur_reindex_tab |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 0c2663543b3769fe421f75ec | ALTER TABLE s.x ADD CONSTRAINT e0rows EXCLUDE USING btree ((s.index_this_expr(y, s.const())) COLLATE s.coll WITH s.=) USING INDEX TABLESPACE regress_create_idx_tblspace WHERE (s.index_row_if(y)) |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 0c5cdbbe9eb95111d32fcb3a | ALTER INDEX t_b_idx ATTACH PARTITION tp_b_a_key |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | 0c7b2b01453fc253a109d51f | -- Not OK with just -\|- create table idxpart (a int4range, exclude USING GIST (a with -\|- )) partition by range (a) |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 0d9e74318aa68e56115fd5c5 | ALTER TABLE notnull_parent_upg ADD CONSTRAINT nn NOT NULL a NOT VALID |
+| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_REFRESH_MAT_VIEW_STMT | 0e2e84584de77098e90e435c | REFRESH MATERIALIZED VIEW mvtest_tm |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | 0eddf1d21f4d3e10ecdb9e6a | CREATE TABLE gtest_child PARTITION OF gtest_parent ( f3 WITH OPTIONS GENERATED ALWAYS AS (f2 * 2) STORED ) FOR VALUES FROM ('2016-07-01') TO ('2016-08-01') |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | 0f308b99b0fdf0518de433e5 | -- -- test a range with both a PK and a UNIQUE constraint -- CREATE TABLE temporal3 ( id int4range, valid_at daterange, id2 int8range, name TEXT, CONSTRAINT temporal3_pk PRIMARY KEY (id, valid_at W... |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 0f83b762b156411811f52210 | alter index idxpart_a_b_idx attach partition idxpart1_tst2 |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | 0f8a31b0d34897a09f0360dc | -- inherits gen expr CREATE TABLE gtest_child2 PARTITION OF gtest_parent ( f3 WITH OPTIONS GENERATED ALWAYS AS (f2 * 22) STORED -- overrides gen expr ) FOR VALUES FROM ('2016-08-01') TO ('2016-09-01') |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 0faf4e6f50f7a922f49fc859 | ALTER INDEX dummy_test_idx RESET (option_string_null) |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 0fd4b4c077c846e33ccc2a40 | -- fail, deferrable ALTER TABLE test_replica_identity REPLICA IDENTITY USING INDEX test_replica_identity_unique_defer |
+| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CLUSTER_STMT | 117076b0af965a65440a8fa6 | -- and after clustering on clstr_expression_upper_b CLUSTER clstr_expression USING clstr_expression_upper_b |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 1191cafd519af7db68bf0971 | ALTER TABLE ONLY test_replica_identity4 REPLICA IDENTITY USING INDEX test_replica_identity4_pkey |
+| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_REINDEX_STMT | 11d6b463738acd9530b5caee | -- error REINDEX TABLE CONCURRENTLY concur_reindex_part_index_10 |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 11f79a612de175e577292649 | -- Create table for check on foreign key dependence switch with indexes swapped ALTER TABLE concur_reindex_tab ADD PRIMARY KEY USING INDEX concur_reindex_ind1 |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 1242f64d6b26cc9690ce100d | ALTER INDEX dummy_test_idx RESET (option_enum) |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 1265c8cb31abf1b59dce0bf9 | ALTER INDEX concur_exprs_index_expr ALTER COLUMN 1 SET STATISTICS 100 |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 1267c943e8f43cabf31bc3cb | ALTER TABLE itest8 ADD COLUMN f3 int NOT NULL, ALTER COLUMN f3 ADD GENERATED ALWAYS AS IDENTITY, ALTER COLUMN f3 SET GENERATED BY DEFAULT SET INCREMENT 10 |
+| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_REINDEX_STMT | 12c5f8cc3e371c1cfddbb7cc | REINDEX TABLE concur_heap |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | 1332a561e4517f4b8b01bf3b | -- works: PERIOD for both referenced and referencing CREATE TABLE temporal_fk_rng2rng ( id int4range, valid_at daterange, parent_id int4range, CONSTRAINT temporal_fk_rng2rng_pk PRIMARY KEY (id, val... |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 1351701d61985049b0b12566 | ALTER TABLE rf_tbl_abcd_nopk REPLICA IDENTITY NOTHING |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 13691398dbd9feaad050eea9 | ALTER VIEW regtest_view SET (security_barrier) |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | 137e8cc51661164506e89e57 | -- with a UNIQUE constraint: CREATE TABLE temporal3 ( id int4range, valid_at daterange, CONSTRAINT temporal3_uq UNIQUE (id, valid_at WITHOUT OVERLAPS) ) |
+| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_LOCK_STMT | 13e141d865dc1f47c3cf6ade | LOCK TABLE lock_view1 IN ACCESS EXCLUSIVE MODE |
+| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_REINDEX_STMT | 1493e834094fc56286079879 | REINDEX TABLE CONCURRENTLY concur_reindex_matview |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | 14cd86df22620c26c23bb2a5 | -- OK with equals and &&, and equals is the partition key create table idxpart (a int4range, b int4range, exclude USING GIST (a with =, b with &&)) partition by range (a) |
+| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_REINDEX_STMT | 14f0dca0594416f7a1db8d0d | REINDEX TABLE CONCURRENTLY concur_reindex_part_0_1 |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 151788c79a9bce5fb0088cb1 | ALTER TABLE fktable ALTER CONSTRAINT fktable_fk_fkey DEFERRABLE INITIALLY IMMEDIATE |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 151b92a104e5ca9634402719 | ALTER INDEX concur_reindex_part_index ATTACH PARTITION concur_reindex_part_index_0 |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | 16001e99d52f0dc0a521aee2 | create table notnull_tbl_fail (like notnull_tbl1, constraint foo2 not null a) |
+| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 1663440ac0cf84dcf19f2e99 | alter table p1_c1 add constraint inh_check_constraint9 check (f1 < 10) not valid enforced |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 168fb72c9698b507a682c424 | ALTER TABLE ATACC1 ADD NOT NULL a NO INHERIT |
+| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_REFRESH_MAT_VIEW_STMT | 16a88b1dff24048596713f8c | REFRESH MATERIALIZED VIEW sro_index_mv |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | 16c4cda0453f54ab75bc1764 | create table notnull_tbl_fail (a serial constraint foo not null, constraint bar not null a) |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 1738948d41fb7ffef83c3557 | alter index idxpart2_a_idx attach partition idxpart22_a_idx |
+| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_REINDEX_STMT | 1746e95eab67a0f84dff64f8 | REINDEX INDEX CONCURRENTLY reindex_inj.ind_simple |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 17a3ce0e126e8ae06da9af79 | ALTER TABLE rf_tbl_abcd_nopk REPLICA IDENTITY USING INDEX idx_abcd_nopk_c |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 17bc016b7d6ce4d64092b763 | ALTER TABLE ataddindex ADD PRIMARY KEY USING INDEX ataddindexi0, ALTER f1 TYPE BIGINT |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 17e665fbdd654a91cc03a9b4 | -- succeeds ALTER TABLE attmp3 ADD CONSTRAINT b_greater_than_ten_not_enforced CHECK (b > 10) NOT ENFORCED |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 181145abe757874c0086aac5 | ---- -- Make sure non index cases work ---- ALTER TABLE test_replica_identity REPLICA IDENTITY DEFAULT |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 189157cdfc9f8b69e9e12b75 | ALTER TABLE tt2 OF tt_t0 |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | 1901e722050be4fece30c49a | -- Core must test WITHOUT OVERLAPS -- with an int4range + daterange, -- so here we do some simple tests -- to make sure int + daterange works too, -- since that is the expected use-case. CREATE TAB... |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 19890b32624319e47b21fd3a | -- Check ALTER ALTER INDEX reloptions_test_idx SET (fillfactor=40) |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | 19bf5f89125e5a6213ff7a63 | create table parttmp (id int, valid_at daterange, exclude using gist (id with <>, valid_at with &&)) partition by range (id) |
+| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CLUSTER_STMT | 1a56669c617ed7d908d271ab | CLUSTER clstrpart USING clstrpart_idx |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | 1ac101cc2bb38517a5cb63f9 | CREATE TABLE inh_nn3 (a int not null, b int, not null a no inherit) |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 1acc9c73fb38144fe61d5818 | ALTER VIEW rw_view1 ALTER COLUMN bb SET DEFAULT 'View default' |
+| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CLUSTER_STMT | 1b3361facaf338439851fa2a | CLUSTER sro_tab USING sro_cluster_idx |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 1b8fa7452fdc598e02a0e11f | ALTER TABLE temporal_fk_rng2rng ADD CONSTRAINT temporal_fk_rng2rng_fk FOREIGN KEY (parent_id, PERIOD valid_at) REFERENCES temporal_rng ON UPDATE RESTRICT |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | 1bdf5923ce4e0bacd614f73e | create table rewritemetoo1 of rewritetype |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | 1d399ebbc1f1f331e66bf21f | CREATE TABLE INSERT_TBL (x INT DEFAULT nextval('insert_seq'), y TEXT DEFAULT '-NULL-', z INT DEFAULT -1 * currval('insert_seq'), CONSTRAINT INSERT_TBL_CON CHECK (x >= 3 AND y <> 'check failed' AND ... |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 1d633ae3accc43b33a5ac790 | alter table test_storage alter a set storage default |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 1dae06b0c6e78b2547c804cc | ALTER TABLE fk_notpartitioned_fk ADD CONSTRAINT fk_notpartitioned_fk_a_b_fkey2 FOREIGN KEY (a, b) REFERENCES fk_partitioned_pk NOT ENFORCED |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 1dc2f9c7583bb8d6714fa287 | alter table idxpart add exclude USING GIST (a with =, b with &&) |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 1dd2407f1d4df35c929f289a | ALTER TABLE FKTABLE ALTER CONSTRAINT fkdd2 DEFERRABLE INITIALLY DEFERRED |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | 1e45375992223036a8b79d9c | -- error CREATE TABLE persons2 OF person_type ( id WITH OPTIONS PRIMARY KEY, UNIQUE (name) ) |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | 1f03ffd6eab51f49b0cc234d | create table notnull_tbl_fail (a serial, constraint foo not null a, constraint bar not null a) |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | 1f0be52ded51a12f8e9f533a | -- with mismatched PERIOD columns: -- (parent_id, PERIOD valid_at) REFERENCES (id, valid_at) -- REFERENCES part should specify PERIOD CREATE TABLE temporal_fk_mltrng2mltrng ( id int4range, valid_at... |
+| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_LOCK_STMT | 1f214339396140bc0669f0cc | lock table pxtest3 in access share mode nowait |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 1fdbc5bbdc459ac9f7986afd | alter table inh_nn2 alter constraint inh_nn1_f2_not_null no inherit |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 202ad492828b44839cedb398 | ALTER TABLE temporal_fk2_mltrng2mltrng ADD CONSTRAINT temporal_fk2_mltrng2mltrng_fk FOREIGN KEY (parent_id1, parent_id2, PERIOD valid_at) REFERENCES temporal_mltrng2 (id1, id2, PERIOD valid_at) |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | 202d0390549e77243e776b68 | CREATE TABLE gtest_child PARTITION OF gtest_parent ( f3 WITH OPTIONS GENERATED ALWAYS AS (f2 * 2) VIRTUAL ) FOR VALUES FROM ('2016-07-01') TO ('2016-08-01') |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 20c74e53c04b349d2426218f | ALTER INDEX dummy_test_idx RESET (option_int) |
+| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_REFRESH_MAT_VIEW_STMT | 20cde6dc55851548a9fb0622 | REFRESH MATERIALIZED VIEW CONCURRENTLY mvtest_tm |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 20f462d4397d8c3ac7cb3c25 | ALTER TABLE testpub_tbl8_0 REPLICA IDENTITY USING INDEX testpub_tbl8_0_pkey |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 21279d0aebb5c3cdf193a2a1 | ALTER TABLE cwi_test ADD primary key USING INDEX cwi_uniq_idx |
+| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_REINDEX_STMT | 212df679bc56531b67b43de0 | -- error -- Partitioned with no leaves REINDEX INDEX concur_reindex_part_10 |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 21603ae21f34e70a7fc73ae7 | alter table inh_nn3 alter constraint nn3_f1 inherit |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | 2194160e0257f3b7fc98d949 | -- NOT NULL NO INHERIT CREATE TABLE ATACC1 (a int, NOT NULL a NO INHERIT) |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | 21ab5f0e2c6fe5814515315a | CREATE TABLE test6a OF priv_testtype1 |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 221c64a8c019b9fae859888c | ALTER INDEX dummy_test_idx SET (option_bool = 3.4) |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | 22855f1069d95232e3362327 | -- with inferred PK on the referenced table: -- (parent_id, PERIOD valid_at) REFERENCES [implicit] CREATE TABLE temporal_fk_mltrng2mltrng ( id int4range, valid_at datemultirange, parent_id int4rang... |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 22acbcba76880e47a1a456f2 | -- attach the indexes; parents stay invalid alter index idxpart1_expr_idx attach partition idxpart11_expr_idx |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | 22fd61558cce9a0f71a63bdc | -- (parent_id, valid_at) REFERENCES (id, PERIOD valid_at) -- FOREIGN KEY part should specify PERIOD CREATE TABLE temporal_fk_mltrng2mltrng ( id int4range, valid_at datemultirange, parent_id int4ran... |
+| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_REINDEX_STMT | 234e46ca7764f5a7beeb3496 | REINDEX TABLE CONCURRENTLY concur_reindex_tab |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 23afcbd3bd2d6307a114b395 | ALTER INDEX concur_reindex_part_index ATTACH PARTITION concur_reindex_part_index_10 |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 23be1e20f2c1221081970a08 | ALTER TABLE temporal_fk_mltrng2mltrng ADD CONSTRAINT temporal_fk_mltrng2mltrng_fk FOREIGN KEY (parent_id, PERIOD valid_at) REFERENCES temporal_mltrng (id, PERIOD valid_at) |
+| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_LOCK_STMT | 25350561171c69c9add0fc50 | LOCK TABLE lock_view1 |
+| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_REINDEX_STMT | 25a86d1652bdba4a32e880ee | REINDEX INDEX CONCURRENTLY reindex_inj.ind_expr_pred |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 25a8b9978ecac7fcd072d495 | ALTER INDEX dummy_test_idx SET (option_string_null = NULL) |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | 25c164d58ea1e8fd593eff6f | create table test_range_excl( room int4range, speaker int4range, during tsrange, exclude using gist (room with =, during with &&), exclude using gist (speaker with =, during with &&) ) |
+| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_REINDEX_STMT | 267ec04535d6378ded491e1d | -- error REINDEX TABLE CONCURRENTLY concur_reindex_tab3 |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | 26a07b17ab324b96d2100c04 | CREATE TABLE gtest_child3 PARTITION OF gtest_parent ( f3 WITH OPTIONS GENERATED ALWAYS AS IDENTITY -- error ) FOR VALUES FROM ('2016-09-01') TO ('2016-10-01') |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 273b221d3011d17cc4b09d6e | -- constraints other than not-null are not supported alter table inh_nn1 alter constraint inh_nn1_f1_check inherit |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | 27a098077b6c1502e6627071 | -- OK more than one equal column and a && column create table idxpart (a int4range, b int4range, c int4range, exclude USING GIST (a with =, b with =, c with &&)) partition by range (a, b) |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 2813717510a2f146d7ddb8df | ALTER INDEX dummy_test_idx RESET (option_real) |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 28221787bd8889a6ad488a94 | -- -- partitioned FK referenced updates CASCADE -- ALTER TABLE temporal_partitioned_fk_mltrng2mltrng DROP CONSTRAINT temporal_partitioned_fk_mltrng2mltrng_fk, ADD CONSTRAINT temporal_partitioned_fk... |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | 287485e0e18c0407aa63c0ab | CREATE TABLE evttrig.part_10_20 PARTITION OF evttrig.parted (id) FOR VALUES FROM (10) TO (20) PARTITION BY RANGE (id) |
+| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CLUSTER_STMT | 288630a0103f63c51018bf84 | CLUSTER clstrpart USING clstrpart_only_idx |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 28fbe3af4b65e6c1df83eabb | alter table cwi_test add primary key using index cwi_test_a_idx |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | 2920a3de69e53dc900458fa4 | create table idxpart1pk partition of idxpart (a primary key) for values from (0) to (100) |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 29737b96fe94f04b1e9a17bf | ALTER TABLE notnull_tbl1 ADD NOT NULL a NOT VALID, ADD NOT NULL b NOT VALID |
+| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_REINDEX_STMT | 298eb3bf722f2fcf6ba7ef84 | REINDEX (TABLESPACE regress_tblspace, CONCURRENTLY) TABLE regress_tblspace_test_tbl |
+| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_REFRESH_MAT_VIEW_STMT | 29f3778467eb0d9045c514d3 | REFRESH MATERIALIZED VIEW mvtest_mv_foo |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 2a0ec8383b0fdbee7b4cc843 | ALTER TABLE fk_notpartitioned_fk ALTER CONSTRAINT fk_notpartitioned_fk_a_b_fkey2 ENFORCED |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 2a292f5bf6ad80f9acb80a69 | ALTER TABLE temporal_fk_rng2rng ADD CONSTRAINT temporal_fk_rng2rng_fk FOREIGN KEY (parent_id, PERIOD valid_at) REFERENCES temporal_rng ON UPDATE NO ACTION |
+| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_REINDEX_STMT | 2a65d4dcd78b3002d7206411 | -- no catalog index -- These are the toast table and index of pg_database. REINDEX TABLE CONCURRENTLY pg_toast.pg_toast_1262 |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 2b3d45cd9f4dc790e92819c1 | ALTER TABLE testpub_tbl_both_filters REPLICA IDENTITY USING INDEX testpub_tbl_both_filters_pkey |
+| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_REINDEX_STMT | 2bc91b10a822231e74db35a2 | REINDEX INDEX hash_split_index |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 2bf309323b734a0722eae7cb | ALTER TABLE notnull_chld0 ADD CONSTRAINT nn_chld0 NOT NULL a not valid |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 2c0c30c66898ef857fa58d76 | ALTER TABLE reloptions_test RESET (toast.autovacuum_vacuum_cost_delay) |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 2d4b53a2d0f828b8a721b499 | -- Rebuild the index using a different fillfactor ALTER INDEX hash_split_index SET (fillfactor = 10) |
+| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_REINDEX_STMT | 2d645d7e5d2206b024880de2 | REINDEX INDEX maintain_test_a_idx |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 2dea23fa2eb1840be13c743e | ALTER TABLE cnn_pk ADD CONSTRAINT cnn_primarykey PRIMARY KEY USING INDEX cnn_uq |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 2e1fd11fc3349d7da11984fe | ALTER TABLE ref ALTER CONSTRAINT ref_f1_f2_fkey DEFERRABLE INITIALLY DEFERRED |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | 2e642fae9f3ad006f51a0e8f | -- Can't create a FK with a mismatched range type CREATE TABLE temporal_fk_rng2rng ( id int4range, valid_at int4range, parent_id int4range, CONSTRAINT temporal_fk_rng2rng_pk2 PRIMARY KEY (id, valid... |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 2e7eb0fd5f2866514ab2ed81 | ALTER TABLE temporal_fk_mltrng2mltrng ALTER CONSTRAINT temporal_fk_mltrng2mltrng_fk DEFERRABLE INITIALLY DEFERRED |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 2ed3f98adc8bb0bd4983b090 | alter index idxpart_pkey attach partition idxpart0_pkey |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 2fba96be4d610afefe1288b5 | ALTER VIEW view_stats ALTER COLUMN a SET DEFAULT 2 |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 2fd825652cc330b0595ae8b0 | -- invalid ALTER VIEW rw_view1 SET (check_option=local) |
+| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CLUSTER_STMT | 2ff2db8acf4e15ba03c8a848 | -- Verify that toast tables are clusterable CLUSTER pg_toast.pg_toast_826 USING pg_toast_826_index |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | 30518955ebb8946981e6e9a0 | -- UNIQUE with no columns just WITHOUT OVERLAPS: CREATE TABLE temporal_rng3 ( valid_at daterange, CONSTRAINT temporal_rng3_uq UNIQUE (valid_at WITHOUT OVERLAPS) ) |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 305bfd07992f3bb65b0233d0 | alter index idxpart_expr_idx attach partition idxpart2_expr_idx |
+| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_REFRESH_MAT_VIEW_STMT | 30a86cdcd1826ba0b6302ddf | refresh materialized view concurrently parallel_mat_view |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 31387fef237b77474e2b5e52 | alter table constr_parent2 add not null a not valid |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 31e15803d78d7790a8652903 | ALTER TABLE unique_tbl ALTER CONSTRAINT unique_tbl_i_key ENFORCED |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 32ded5bad682b81ad572c4f5 | ALTER INDEX t_a_idx ATTACH PARTITION tp_pkey |
+| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_REINDEX_STMT | 3324964e229954b4276a3a6e | REINDEX (TABLESPACE regress_tblspace) TABLE CONCURRENTLY pg_toast.pg_toast_1262 |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 33bbf41994e7e314d39b61ee | -- OK ALTER TABLE tt0 OF tt_t0 |
+| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_LOCK_STMT | 33bfe24bc3f1b55f1b9bde8d | LOCK lock_tbl1 IN ROW SHARE MODE |
+| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_REINDEX_STMT | 33c479b9dcdd73a63f8c1788 | REINDEX TABLE CONCURRENTLY testcomment |
+| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_REINDEX_STMT | 3408794077f941ef43d28b35 | -- error REINDEX TABLE CONCURRENTLY reindex_foreign |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | 346df8ed7b7344878b9e94ea | create table notnull_tbl_fail (a int primary key, not null a no inherit) |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 349cffa52aad76c053bda75b | alter view base_tab_def_view alter d set default 'View default' |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | 34cb78453aa5e95389f8bdb5 | -- (parent_id, valid_at) REFERENCES (id, valid_at) -- both should specify PERIOD: CREATE TABLE temporal_fk_mltrng2mltrng ( id int4range, valid_at datemultirange, parent_id int4range, CONSTRAINT tem... |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 34ecbccfdf12debb9356a48b | ALTER TABLE atnotnull1 ADD COLUMN b INT, ADD NOT NULL b |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 35e4bfbf168786d2934c6a4e | ALTER INDEX dummy_test_idx SET (option_real = 'val5') |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | 36a48f183333de6dfa1698b8 | -- violates constraint -- also check with table constraint syntax CREATE TABLE gtest21ax (a int PRIMARY KEY, b int GENERATED ALWAYS AS (nullif(a, 0)) VIRTUAL, CONSTRAINT cc NOT NULL b) |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 373e6905cea0507392528973 | alter index idxpart_a_b_idx attach partition idxpart1_tst1 |
+| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_REINDEX_STMT | 37a208e3c5042f9d0a26423e | REINDEX index CONCURRENTLY stats_test_idx1 |
+| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_REINDEX_STMT | 383d62debafae47f0cf781a8 | reindex index concurrently idxpart11_expr_idx |
+| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_REINDEX_STMT | 385158fcaf4b836a1656c348 | REINDEX INDEX pg_index_indrelid_index |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 38a84bf0bbe153096af5b183 | -- fail, partial index ALTER TABLE test_replica_identity REPLICA IDENTITY USING INDEX test_replica_identity_partial |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 38b2992740998c2df3e555a8 | alter table attbl replica identity using index pk_attbl |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | 39bc12329f1fc8a58d99dcfa | -- (parent_id, valid_at) REFERENCES (id, PERIOD valid_at) -- FOREIGN KEY part should specify PERIOD CREATE TABLE temporal_fk_rng2rng ( id int4range, valid_at daterange, parent_id int4range, CONSTRA... |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | 39c5ea39f79875df7ec21748 | -- on another column create table parted_collate_must_match2 partition of parted_collate_must_match (b collate "POSIX") for values from ('m') to ('z') |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 3a50269694d17736264df285 | -- Case 2. REPLICA IDENTITY FULL ALTER TABLE rf_tbl_abcd_pk REPLICA IDENTITY FULL |
+| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_REFRESH_MAT_VIEW_STMT | 3a909cb37ebb258695830891 | REFRESH MATERIALIZED VIEW CONCURRENTLY mvtest_boxmv |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 3a9cd422a95a76e7303fea33 | -- error ALTER TABLE notnull_tbl1 ADD CONSTRAINT nn NOT NULL a NOT VALID |
+| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_REINDEX_STMT | 3aa9583c57ecf3239942c7b2 | REINDEX INDEX CONCURRENTLY concur_reindex_part_index_0_1 |
+| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_REINDEX_STMT | 3ab607890a5fe3defcf5d857 | -- The invalid index is not processed when running REINDEX TABLE. REINDEX TABLE CONCURRENTLY concur_reindex_tab4 |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 3b476cbee2da81c62f57099c | ALTER TABLE temporal3 ADD COLUMN valid_at daterange, ADD CONSTRAINT temporal3_uq UNIQUE (id, valid_at WITHOUT OVERLAPS) |
+| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_REFRESH_MAT_VIEW_STMT | 3b85ad17a7dbc7655138ff29 | REFRESH MATERIALIZED VIEW mvtest_tvm |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 3bae0176f727d20f9d58eae4 | ALTER INDEX dummy_test_idx SET (option_real = 3.2) |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | 3bfc1c638ece59a5343e830d | -- -- test PARTITION BY for ranges -- -- temporal PRIMARY KEY: CREATE TABLE temporal_partitioned ( id int4range, valid_at daterange, name text, CONSTRAINT temporal_paritioned_pk PRIMARY KEY (id, va... |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 3c0240f62e94b2be99910336 | ALTER TABLE temporal_fk2_rng2rng ADD CONSTRAINT temporal_fk2_rng2rng_fk FOREIGN KEY (parent_id1, parent_id2, PERIOD valid_at) REFERENCES temporal_rng2 (id1, id2, PERIOD valid_at) |
+| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CLUSTER_STMT | 3c704818421e41a69b3f2c79 | CLUSTER ptnowner USING ptnowner_i_idx |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 3d0334c33cf9a80f2769a439 | ALTER TABLE testpub_gencol REPLICA IDENTITY USING index testpub_gencol_idx |
+| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_LOCK_STMT | 3d07927f9d23358865413ec5 | LOCK TABLE lock_tbl1 IN ROW EXCLUSIVE MODE NOWAIT |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 3d3f5b7ed3b7d9730369ede2 | -- Changing it back to ENFORCED will recreate the necessary FK triggers -- that are deferrable and initially deferred ALTER TABLE FKTABLE ALTER CONSTRAINT fktable_fk_fkey ENFORCED |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | 3d848c5e0cccf824ad30c6a8 | CREATE TABLE gtest_child3 PARTITION OF gtest_parent ( f3 DEFAULT 42 -- error ) FOR VALUES FROM ('2016-09-01') TO ('2016-10-01') |
+| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_REINDEX_STMT | 3d9942adce2594e1baa45992 | REINDEX (TABLESPACE regress_tblspace) INDEX CONCURRENTLY pg_toast.pg_toast_1262_index |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 3da0e1c87fb3b79f6f52ebb0 | ALTER TABLE temporal_fk_rng2rng ALTER CONSTRAINT temporal_fk_rng2rng_fk DEFERRABLE INITIALLY DEFERRED |
+| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_LOCK_STMT | 3ddebc9b6ffaf2b484f31f09 | LOCK TABLE lock_tbl1 IN SHARE MODE |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 3e7ce882156ad7f860eeec81 | -- OK alter index idxpart_a_b_idx attach partition idxpart1_a_b_idx |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | 3e8dd9b821a04fe553198705 | -- UNIQUE with two columns plus a range: CREATE TABLE temporal_rng3 ( id1 int4range, id2 int4range, valid_at daterange, CONSTRAINT temporal_rng3_uq UNIQUE (id1, id2, valid_at WITHOUT OVERLAPS) ) |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 4043f2b990ebae6281af1a5d | -- notice -- Change the expression ALTER TABLE gtest29 ALTER COLUMN b SET EXPRESSION AS (a * 3) |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | 40590822637c196ca7821c37 | create table twoconstraints (f1 int unique, f2 box, exclude using gist(f2 with &&)) |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 40f18bff081db6c09819e941 | -- fails ALTER TABLE pitest2_p1 ALTER COLUMN f3 SET INCREMENT BY 2 |
+| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_LOCK_STMT | 41c9d480e337a1a98b968a50 | LOCK TABLE lock_view1 IN EXCLUSIVE MODE |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 41ea983a45ad6b4088060d07 | alter table cnn_uq add unique using index cnn_uq_idx |
+| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_REINDEX_STMT | 42117f2e96c9432586c81ae0 | -- Fails when running in a transaction REINDEX INDEX CONCURRENTLY concur_temp_ind_3 |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | 4234aee93fa75719f45878e4 | CREATE TABLE quuux_default1 PARTITION OF quuux_default ( CONSTRAINT check_1 CHECK (a IS NOT NULL AND a = 1) ) FOR VALUES IN ('b') |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | 42742e2389f76d5ee8743480 | -- PK with one column plus a range: CREATE TABLE temporal_rng ( -- Since we can't depend on having btree_gist here, -- use an int4range instead of an int. -- (The rangetypes regression test uses th... |
+| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_LOCK_STMT | 4343e0e4e05896d6341108d7 | LOCK TABLE lock_tbl1 IN ROW EXCLUSIVE MODE |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | 43aa6cfc077691a3afa8cfe4 | -- Two scalar columns: CREATE TABLE temporal_fk2_rng2rng ( id int4range, valid_at daterange, parent_id1 int4range, parent_id2 int4range, CONSTRAINT temporal_fk2_rng2rng_pk PRIMARY KEY (id, valid_at... |
+| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_REINDEX_STMT | 43c8a5a2a7c14f0fe8ca33e4 | REINDEX (TABLESPACE regress_tblspace) TABLE tablespace_table |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 440adcfb9c12250ac10a400b | ALTER FOREIGN TABLE ft1 ALTER CONSTRAINT ft1_c9_check DEFERRABLE |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 445b6b6a01b1d5c9326aff5c | ALTER TABLE tt5 OF tt_t0 |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 4467932c160bcc5986e7e4ec | -- should fail ALTER VIEW rw_view2 RESET (check_option) |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 45322ba755f91c5ad855d2a9 | ALTER INDEX reloptions_test_idx3 SET (fillfactor=40) |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | 458875b3c7eaf8b9d01b33b6 | -- (parent_id, PERIOD valid_at) REFERENCES (id) CREATE TABLE temporal_fk_mltrng2mltrng ( id int4range, valid_at datemultirange, parent_id int4range, CONSTRAINT temporal_fk_mltrng2mltrng_pk PRIMARY ... |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 45da35a6830e8b8957210dbe | ---- -- Make sure index cases succeed ---- -- succeed, primary key ALTER TABLE test_replica_identity REPLICA IDENTITY USING INDEX test_replica_identity_pkey |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | 468e2928e7348622939e7647 | CREATE TABLE inh_nn4 (a int not null no inherit, b int, not null a) |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 46a982518ccd66967b37e940 | ALTER INDEX dummy_test_idx SET (option_int = true) |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 46fd34b7102168a05e929540 | -- fail, hash indexes cannot do uniqueness ALTER TABLE test_replica_identity REPLICA IDENTITY USING INDEX test_replica_identity_hash |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 470314a22f9b97f45a7817ca | ALTER INDEX dummy_test_idx RESET (option_bool) |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | 471defae079fa9bd21722fd9 | -- (parent_id, valid_at) REFERENCES (id, valid_at) -- both should specify PERIOD: CREATE TABLE temporal_fk_rng2rng ( id int4range, valid_at daterange, parent_id int4range, CONSTRAINT temporal_fk_rn... |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | 47939518464a7a0705c5f13c | -- (parent_id) REFERENCES (id, PERIOD valid_at) CREATE TABLE temporal_fk_mltrng2mltrng ( id int4range, valid_at datemultirange, parent_id int4range, CONSTRAINT temporal_fk_mltrng2mltrng_pk PRIMARY ... |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 480ef2e4c12db09f08c10ad6 | -- alter generation expression of parent and all its children altogether ALTER TABLE gtest_parent ALTER COLUMN f3 SET EXPRESSION AS (f2 * 2) |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 482046f94766e5fc7cfb1496 | ALTER INDEX dummy_test_idx SET (option_real = 4) |
+| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_REINDEX_STMT | 48662c800d895cabda0285a1 | -- no catalog toast table REINDEX INDEX CONCURRENTLY pg_toast.pg_toast_1262_index |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | 48ae818ed664c518903c7a11 | -- (parent_id) REFERENCES (id, PERIOD valid_at) CREATE TABLE temporal_fk_rng2rng ( id int4range, valid_at daterange, parent_id int4range, CONSTRAINT temporal_fk_rng2rng_pk PRIMARY KEY (id, valid_at... |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 48bc18cac9074a38e81f606b | -- alter only parent's and one child's generation expression ALTER TABLE ONLY gtest_parent ALTER COLUMN f3 SET EXPRESSION AS (f2 * 4) |
+| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_LOCK_STMT | 497c463ac82ba5f00889f6ab | LOCK TABLE lock_tbl1 IN ACCESS EXCLUSIVE MODE NOWAIT |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | 49d7257d75ee6c18e240397d | CREATE TABLE temporal_fk2_mltrng2mltrng ( id int4range, valid_at datemultirange, parent_id1 int4range, parent_id2 int4range, CONSTRAINT temporal_fk2_mltrng2mltrng_pk PRIMARY KEY (id, valid_at WITHO... |
+| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 4a05fb3c4e0e639be729567b | -- allowed to merge enforced constraint with parent's not enforced constraint alter table p1_c1 add constraint inh_check_constraint5 check (f1 < 10) enforced |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 4a0b8780eea2c3fdb804d7ae | -- fails ALTER TABLE ONLY pitest2 ALTER COLUMN f3 SET GENERATED BY DEFAULT SET INCREMENT BY 2 SET START WITH 1000 RESTART |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | 4a44d3d51e502142496ad392 | CREATE TABLE notnull_tbl4_cld3 (PRIMARY KEY (a) DEFERRABLE, CONSTRAINT a_nn NOT NULL a) INHERITS (notnull_tbl4) |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 4b9c855bccee740d11dd9a0a | ALTER TABLE atnnpart1 ADD CONSTRAINT another_constr NOT NULL id |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 4c47da03120b8f09128dd2fa | -- should log old key ALTER TABLE table_with_unique_not_null REPLICA IDENTITY USING INDEX table_with_unique_not_null_id_key |
+| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CLUSTER_STMT | 4c4920f1b94d3128bdf0142e | CLUSTER clustertest_pkey ON clustertest |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 4cae1aa9d5af98658396f8b0 | -- -- partitioned FK referenced updates CASCADE -- ALTER TABLE temporal_partitioned_fk_rng2rng DROP CONSTRAINT temporal_partitioned_fk_rng2rng_fk, ADD CONSTRAINT temporal_partitioned_fk_rng2rng_fk ... |
+| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_REFRESH_MAT_VIEW_STMT | 4cccaca9c7f9a999575bfd04 | REFRESH MATERIALIZED VIEW CONCURRENTLY citext_matview |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | 4ce4e71e7f9fd35d528d65c3 | create table idxpart1 partition of idxpart (i) for values with (modulus 2, remainder 1) |
+| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_REINDEX_STMT | 4d30e805e027a52432d2955a | REINDEX TABLE CONCURRENTLY pg_class |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | 4dbf418a32b6b3eeda4b9bbd | -- (parent_id) REFERENCES [implicit] CREATE TABLE temporal_fk_rng2rng ( id int4range, valid_at daterange, parent_id int4range, CONSTRAINT temporal_fk_rng2rng_pk PRIMARY KEY (id, valid_at WITHOUT OV... |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 4ddf10837c75191ee6c10ff8 | ALTER INDEX tbspace_reindex_part_index_0 ATTACH PARTITION tbspace_reindex_part_index_0_2 |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 4e1ebbcc3c2057c4522a5d76 | -- check that we log nothing despite having a pkey ALTER TABLE table_without_key REPLICA IDENTITY NOTHING |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 4e435ac6f2c8d6791aafb932 | -- error - generated column "b" must be published explicitly as it is -- part of the REPLICA IDENTITY. ALTER TABLE testpub_gencol REPLICA IDENTITY FULL |
+| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_REINDEX_STMT | 4ebc64044946fa1a3938247b | REINDEX INDEX unlogged1_pkey |
+| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_REINDEX_STMT | 4f1904c6e892f5008a21d67b | REINDEX INDEX pg_class_relname_nsp_index |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 4f4719ae43febaffb27a5b88 | ALTER TABLE tt1 OF tt_t0 |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 4f69883f67d23884cbd5f07b | ALTER INDEX tbl_idx ALTER COLUMN 4 SET STATISTICS 1000 |
+| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_REFRESH_MAT_VIEW_STMT | 4f6a8b91f0995d2bf204eb56 | REFRESH MATERIALIZED VIEW CONCURRENTLY mvtest_tvmm |
+| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 4f801b6f5d679c7169d23b23 | alter table p1 add constraint inh_check_constraint7 check (f1 < 10) enforced |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 4ff540b9bb2e8f00587f1957 | ALTER TABLE cwi_test ADD UNIQUE USING INDEX cwi_uniq4_idx |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | 5098bc9eefcb5e76be5b71bc | CREATE TABLE temporal_fk2_rng2rng ( id int4range, valid_at daterange, parent_id1 int4range, parent_id2 int4range, CONSTRAINT temporal_fk2_rng2rng_pk PRIMARY KEY (id, valid_at WITHOUT OVERLAPS), CON... |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 509bf9b50c7d75d9d1021ae4 | ALTER VIEW rw_view1 SET (check_option=here) |
+| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 519e0ea0701176ec67557ccd | alter table p1 add constraint inh_check_constraint8 check (f1 < 10) enforced |
+| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_REINDEX_STMT | 52c4c32290dda741f84d3bdd | REINDEX (TABLESPACE regress_tblspace, CONCURRENTLY) TABLE tbspace_reindex_part |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 54c60c3313e338b386bb18f1 | alter table idxpart add exclude USING GIST (a with -\|-) |
+| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_REINDEX_STMT | 556876b8d58400b10cf677f8 | -- fail REINDEX (TABLESPACE regress_tblspace, CONCURRENTLY) TABLE tablespace_table |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | 55cddc8ce8054ae32327709d | -- PK with two columns plus a multirange: CREATE TABLE temporal_mltrng2 ( id1 int4range, id2 int4range, valid_at datemultirange, CONSTRAINT temporal_mltrng2_pk PRIMARY KEY (id1, id2, valid_at WITHO... |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | 55e5b2a4bc9d170cc7ae396d | -- Not OK with equals and &&, and equals is not the partition key create table idxpart (a int4range, b int4range, c int4range, exclude USING GIST (b with =, c with &&)) partition by range (a) |
+| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_REINDEX_STMT | 5692546346f1edfd20584978 | REINDEX INDEX CONCURRENTLY concur_temp_ind_2 |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 56f197f10887e18a3f784881 | ALTER TABLE tbl_include_box add PRIMARY KEY USING INDEX tbl_include_box_idx_unique |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 57c9f7e9719fa481e391b8eb | ALTER TABLE FKTABLE ALTER CONSTRAINT fknd2 NOT DEFERRABLE |
+| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_REFRESH_MAT_VIEW_STMT | 57d61693210ca9a198909017 | REFRESH MATERIALIZED VIEW mvtest_mv_v_4 |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 588f950f22fe3f69c0506480 | -- reassign an already-typed table ALTER TABLE tt7 NOT OF |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 59853e55001f6bb556970c2e | -- error ALTER TABLE gtest23b ALTER COLUMN b SET EXPRESSION AS (a * 1) |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 599246087178766f185858c2 | ALTER TABLE itest6 ALTER COLUMN a SET GENERATED BY DEFAULT SET INCREMENT BY 2 SET START WITH 100 RESTART |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 5adfdadf32183a27b03db135 | ALTER INDEX testschema.part_a_idx SET TABLESPACE pg_default |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 5b61e13592b0abf64c0e4405 | ALTER TABLE temporal3 ADD CONSTRAINT temporal3_uq UNIQUE USING INDEX idx_temporal3_uq |
+| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CLUSTER_STMT | 5c256cc0731e520aef2d0cc6 | CLUSTER abbrev_abort_uuids USING abbrev_abort_uuids__abort_decreasing_idx |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 5c44d98009cf0811fac98f1f | -- change child constraint ALTER TABLE fk_partitioned_fk_2 ALTER CONSTRAINT fk_part_con ENFORCED |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 5d48d42f5ecce8a027a19cdb | ALTER TABLE test_replica_identity3 REPLICA IDENTITY USING INDEX test_replica_identity3_id_key |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | 5d872dc225d65e0a9943d3f7 | CREATE TABLE evttrig.part_1_10 PARTITION OF evttrig.parted (id) FOR VALUES FROM (1) TO (10) |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 5de2dd77b9156f239859e7ce | ALTER TABLE toasted_several REPLICA IDENTITY FULL |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 5e021a1f5ec7c6f533dfccee | ALTER TABLE notnull_tbl1 ALTER CONSTRAINT nntbl1_a NO INHERIT |
+| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CLUSTER_STMT | 5e71e8531f4b3795c2c80f3c | CLUSTER clustertest |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 5ec5a8ade3e334012738af1f | ALTER VIEW rw_view1 SET (security_invoker = true) |
+| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CLUSTER_STMT | 5eca00af6a926f8db24686d0 | CLUSTER abbrev_abort_uuids USING abbrev_abort_uuids__abort_increasing_idx |
+| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_LOCK_STMT | 5ecd1d381750a192fc151b88 | LOCK TABLE lock_tbl2 |
+| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_LOCK_STMT | 5f0ff1bfd04842751ec7883a | LOCK TABLE lock_view5 IN EXCLUSIVE MODE |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 5fba5852e4407d8a1f7088c8 | ALTER INDEX dummy_test_idx SET (option_string_val = 4) |
+| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CLUSTER_STMT | 60320c539220e69682bf9bf9 | cluster clstr_4 using cluster_sort |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 61b3d703548c0d83e58b3002 | -- but it's OK when the identity is FULL ALTER TABLE test_replica_identity3 REPLICA IDENTITY FULL |
+| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CLUSTER_STMT | 61e662c21b7b84edca2fb855 | CLUSTER test_prepared1 USING test_prepared1_pkey |
+| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_REINDEX_STMT | 6253edee8055ae8fda09dcc0 | REINDEX INDEX tbl_gist_idx |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 628755a57fb2b482506b47cd | ALTER INDEX tbspace_reindex_part_index ATTACH PARTITION tbspace_reindex_part_index_10 |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 62cfcae22a774909b029c48b | ALTER INDEX dummy_test_idx SET (option_enum = true) |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 633d32e11c011b4f4fd46a6c | alter table p1_c1 add constraint inh_check_constraint8 check (f1 < 10) not enforced |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | 64345c1fbe01b1deea447c1f | -- Check deferred exclusion constraint CREATE TABLE deferred_excl ( f1 int, f2 int, CONSTRAINT deferred_excl_con EXCLUDE (f1 WITH =) INITIALLY DEFERRED ) |
+| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_REINDEX_STMT | 647300b373c196697c5d485a | -- system catalog, fail REINDEX (TABLESPACE pg_global) TABLE pg_authid |
+| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CLUSTER_STMT | 6482de564a1c74e1af8399ba | CLUSTER clstr_1 |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 64ebfca5dc6dcb2c0237fad7 | -- Changing the constraint to NOT ENFORCED drops the associated FK triggers ALTER TABLE FKTABLE ALTER CONSTRAINT fktable_fk_fkey NOT ENFORCED |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 6566d55b288701a0f650b81e | -- RESET fails if a value is specified ALTER TABLE reloptions_test RESET (fillfactor=12) |
+| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_REINDEX_STMT | 65846a09d61ec91d1407dbd1 | REINDEX SCHEMA CONCURRENTLY concur_reindex_schema |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | 659bf230c44fa1d51240adfe | -- Foreign key CREATE TABLE temporal_fk_rng2rng ( id integer, valid_at daterange, parent_id integer, CONSTRAINT temporal_fk_rng2rng_pk PRIMARY KEY (id, valid_at WITHOUT OVERLAPS), CONSTRAINT tempor... |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 65a517469acc311df3d1b0ce | ALTER MATERIALIZED VIEW testschema.amv SET TABLESPACE regress_tblspace |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | 65c363e3d01f4041b04f8e91 | CREATE TABLE temporal_partitioned_fk_rng2rng ( id int4range, valid_at daterange, parent_id int4range, CONSTRAINT temporal_partitioned_fk_rng2rng_pk PRIMARY KEY (id, valid_at WITHOUT OVERLAPS), CONS... |
+| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_REFRESH_MAT_VIEW_STMT | 6740aa51c939a2169832ca06 | REFRESH MATERIALIZED VIEW pgss_materialized_view |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 675b3e52d837ce78688fed33 | alter table p1 add constraint inh_check_constraint9 check (f1 < 10) not enforced |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 6797b15cf11e947077afb486 | ALTER TABLE tt7 OF tt_t0 |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 6833861b3b2f9536980afb45 | ALTER INDEX ptif_test_index ATTACH PARTITION ptif_test3_index |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | 6875a7ce24d8079f5aa42e1e | CREATE TABLE temporal_rng3 ( id int4range, valid_at textrange2, CONSTRAINT temporal_rng3_pk PRIMARY KEY (id, valid_at WITHOUT OVERLAPS) ) |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 68798cff8169d795b17914a4 | ALTER TABLE gtest31_1 ALTER COLUMN b SET EXPRESSION AS ('hello3') |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | 68e191de21fe4f7dbf051d0b | CREATE TABLE test6b OF priv_testtype1 |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 69de8d99a19ba5b589efd60c | -- Set boolean option to true without specifying value ALTER TABLE reloptions_test SET (autovacuum_enabled, fillfactor=32) |
+| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CLUSTER_STMT | 6a92974ab7164793e1803e5c | CLUSTER clstr_2 USING clstr_2_pkey |
+| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CLUSTER_STMT | 6aa837ee8ed103338f3592ce | CLUSTER pg_class USING pg_class_oid_index |
+| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_REINDEX_STMT | 6ace57c4fd51917ad4ac99fe | -- Not the current database REINDEX DATABASE not_current_database |
+| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_REINDEX_STMT | 6b0970af1e9f79c0af267fae | REINDEX INDEX CONCURRENTLY concur_reindex_partidx |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 6b23cebafeea626cbb55b618 | alter index gist_pointidx SET (fillfactor = 40) |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | 6b6d622e39fc8a3ce018119e | -- Not OK more than one equal column: partition keys are a proper superset of constraint create table idxpart (a int4range, b int4range, exclude USING GIST (a with = )) partition by range (a, b) |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | 6ba6d816e6d359f28c97cc5d | -- Can't create a FK with a mismatched multirange type CREATE TABLE temporal_fk_mltrng2mltrng ( id int4range, valid_at int4multirange, parent_id int4range, CONSTRAINT temporal_fk_mltrng2mltrng_pk2 ... |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 6c03824af775e5f45e023075 | ALTER TABLE temporal3 ADD CONSTRAINT temporal3_pk PRIMARY KEY USING INDEX idx_temporal3_uq |
+| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_REFRESH_MAT_VIEW_STMT | 6c16791d9ae7b764daa612b9 | REFRESH MATERIALIZED VIEW sro_mv |
+| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_REINDEX_STMT | 6c17cc1f2e44314713084549 | REINDEX INDEX CONCURRENTLY concur_reindex_ind |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 6c39a181f10b873faea75592 | -- fail, deferrable ALTER TABLE test_replica_identity_t3 REPLICA IDENTITY USING INDEX pk |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 6cbe0baa18d631459637fe7c | -- parted_replica_idx becomes valid here. alter index parted_replica_idx_1 ATTACH PARTITION parted_replica_idx_11 |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 6cd86a703d9802eab5c53a86 | ALTER TABLE tt3 OF tt_t0 |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 6f6215e9058d26314bc730e7 | -- parted_replica_idx is not valid yet here, because parted_replica_idx_1 -- is not valid. alter index parted_replica_idx ATTACH PARTITION parted_replica_idx_1 |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 6f89d5897f725689748a04de | ALTER TABLE temporal_fk_rng2rng ADD CONSTRAINT temporal_fk_rng2rng_fk FOREIGN KEY (parent_id, PERIOD valid_at) REFERENCES temporal_rng ON DELETE RESTRICT |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | 6feee5604a6ed57ad15e47a8 | CREATE TABLE pitest_pfail PARTITION OF pitest3 ( f3 WITH OPTIONS GENERATED ALWAYS AS IDENTITY ) FOR VALUES FROM ('2016-07-01') TO ('2016-08-01') |
+| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_REINDEX_STMT | 701dbdd550b01b372c74298f | REINDEX TABLE reindex_foreign |
+| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_LOCK_STMT | 702671cebde35ee354263b07 | LOCK atest1 IN ACCESS EXCLUSIVE MODE |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 7036bb12df4b14afe53184b0 | ALTER TABLE inh_nn_parent ADD CONSTRAINT nna NOT NULL a |
+| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_REINDEX_STMT | 707aed5a27526320819d4f26 | REINDEX (TABLESPACE regress_tblspace) INDEX regress_tblspace_test_tbl_idx |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | 71e9101f7b0ba15930c56028 | CREATE TABLE notnull_tbl1_2(a int, CONSTRAINT nn2 NOT NULL a, b int) |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 72fc8736d6467824f7cbb7e9 | alter table p1_c1 add constraint inh_check_constraint4 check (f1 < 10) not enforced |
+| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_REINDEX_STMT | 73b0949fad12186a89be0546 | reindex index concurrently idxpart1_expr_idx |
+| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_LOCK_STMT | 744faa48144e035d57d67b6c | LOCK TABLE lock_view8 |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 7494b4ba1edbd5fe02ba23b1 | ALTER INDEX concur_reindex_part_index_0 ATTACH PARTITION concur_reindex_part_index_0_2 |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 74a16a00b52cd468b396c7c2 | alter table inh_nn1 alter constraint inh_nn1_pkey inherit |
+| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_REINDEX_STMT | 74d4f4531eb349cf347f1bae | -- error -- Partitioned index with no leaves REINDEX TABLE concur_reindex_part_index_10 |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 75a42968131b438a7c7a97e2 | ALTER INDEX testschema.anindex SET TABLESPACE regress_tblspace |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 75b1dfef4cef4bb3189ddc75 | ALTER TABLE gtest22c ALTER COLUMN b SET EXPRESSION AS (a * 4) |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 75f1b88336ecb9a8a661587f | alter index idxpart2_a_idx attach partition idxpart21_a_idx |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | 7679840521e89df74d3c0f13 | -- OK with more than one equal column: constraint is a proper superset of partition key create table idxpart (a int4range, b int4range, exclude USING GIST (a with =, b with =)) partition by range (a) |
+| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_REINDEX_STMT | 76898acfab5aac5145792db4 | -- error REINDEX INDEX CONCURRENTLY concur_reindex_part |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 76a36171974bf87233464333 | ALTER TABLE ataddindex ALTER f1 SET DATA TYPE TEXT, ADD EXCLUDE ((f1 LIKE 'a') WITH =) |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | 76e651025b1f0e66722b0d2e | -- (parent_id) REFERENCES [implicit] CREATE TABLE temporal_fk_mltrng2mltrng ( id int4range, valid_at datemultirange, parent_id int4range, CONSTRAINT temporal_fk_mltrng2mltrng_pk PRIMARY KEY (id, va... |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 7720da8143796aa8f3260f23 | ALTER TABLE gtest_child ALTER COLUMN f3 SET EXPRESSION AS (f2 * 10) |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 7738e5af004ed1b33767c46d | -- failure: one of the partitions has REPLICA IDENTITY FULL ALTER TABLE testpub_tbl8_1 REPLICA IDENTITY FULL |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 7790ffe0d97c082407041f95 | alter table p1 add constraint inh_check_constraint4 check (f1 < 10) not enforced |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 7820bf4ddcc5f39ad94fe5fe | -- SET identity column ALTER TABLE pitest2_p1 ALTER COLUMN f3 SET GENERATED BY DEFAULT |
+| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_LOCK_STMT | 7859afda8959fdfd2259c235 | LOCK TABLE lock_view7 IN EXCLUSIVE MODE |
+| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_REFRESH_MAT_VIEW_STMT | 79fa2133874d0e7ad8599a4a | REFRESH MATERIALIZED VIEW ddl_deparse_mv |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | 7a38ad345b9f616861b5631e | CREATE TABLE temporal_fk_mltrng2mltrng ( id int4range, valid_at datemultirange, parent_id int4range, CONSTRAINT temporal_fk_mltrng2mltrng_pk PRIMARY KEY (id, valid_at WITHOUT OVERLAPS), CONSTRAINT ... |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | 7aa4070f22bbfb763e3554d2 | CREATE TABLE fail_part OF mytype |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 7ab4f452cad8f71754195955 | ALTER INDEX ptif_test1_index ATTACH PARTITION ptif_test11_index |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 7b1247df07f05b13ad231a2f | ALTER TABLE notnull_inhchild ADD CONSTRAINT nn1 NOT NULL i |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | 7b2e04f5a66d61fb0023d054 | create table parted_conflict_test_1 partition of parted_conflict_test (b unique) for values in (1, 2) |
+| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_REINDEX_STMT | 7b8890320e825a8e36df28ac | REINDEX INDEX concur_reindex_part_index |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 7bfe29bf8187e9a98aee745c | ALTER TABLE FKTABLE ALTER CONSTRAINT fkdi2 DEFERRABLE INITIALLY IMMEDIATE |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | 7d478c091aa66ac3ae9865fb | CREATE TABLE IF NOT EXISTS fkey_table ( id INT NOT NULL DEFAULT nextval('fkey_table_seq'::REGCLASS), datatype_id INT NOT NULL REFERENCES datatype_table(id), big_id BIGINT NOT NULL, sometext TEXT CO... |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 7da1dcaeb8ae31d6ba46e3cd | ALTER INDEX concur_reindex_part_index_0 ATTACH PARTITION concur_reindex_part_index_0_1 |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 7e1c21f256174417da960638 | ALTER TABLE regtest_table_4 ADD CONSTRAINT regtest_tbl4_con EXCLUDE USING btree (z WITH =) |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 7e204974964ab35af6b8c5ba | -- should fail on existing data without the WHERE clause ALTER TABLE circles ADD EXCLUDE USING gist (c1 WITH &&, (c2::circle) WITH &&) |
+| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_REINDEX_STMT | 7e5d9ea896e961eb39d865e5 | reindex index test_pg_index_toast_index |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 7e8ef9066d0620c524107103 | -- the not-valid state of the child constraint will be ignored here. alter table p1 add constraint inh_check_constraint10 check (f1 < 10) not enforced |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | 7fbb65ae718d0f3596e3d8d7 | CREATE TABLE temporal_partitioned_fk_mltrng2mltrng ( id int4range, valid_at datemultirange, parent_id int4range, CONSTRAINT temporal_partitioned_fk_mltrng2mltrng_pk PRIMARY KEY (id, valid_at WITHOU... |
+| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_REINDEX_STMT | 80182387e00af488902247a1 | REINDEX INDEX CONCURRENTLY concur_temp_ind_1 |
+| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_REFRESH_MAT_VIEW_STMT | 801a882450a72d5178ae45b8 | REFRESH MATERIALIZED VIEW matview_schema.mv_withdata2 |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | 81500b98978b84ab972f7eea | -- (parent_id, valid_at) REFERENCES [implicit] -- FOREIGN KEY part should specify PERIOD CREATE TABLE temporal_fk_rng2rng ( id int4range, valid_at daterange, parent_id int4range, CONSTRAINT tempora... |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 81fec91e6288b91b4ef2ba41 | ALTER TABLE gtest21ax ADD CONSTRAINT cc NOT NULL b |
+| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_REINDEX_STMT | 8245589af6f6fc3976950c7b | -- toast relations, fail REINDEX (TABLESPACE regress_tblspace) INDEX pg_toast.pg_toast_1262_index |
+| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_LOCK_STMT | 830ab9f4ce1c2b7090c15000 | LOCK TABLE lock_tbl1 IN SHARE UPDATE EXCLUSIVE MODE |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 83268d8a5f1a325ba72f9de5 | ALTER INDEX ptif_test_index ATTACH PARTITION ptif_test2_index |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 834842fbc1f0ab9bc59476a9 | alter table idxpart add exclude USING GIST (a with =, b with =, c with &&) |
+| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_REFRESH_MAT_VIEW_STMT | 83661512259c9ec83334773e | REFRESH MATERIALIZED VIEW mvtest_mv |
+| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_REINDEX_STMT | 839029dd1527a7cce7c9ffad | REINDEX TABLE testcomment |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 83d905100c7541b2ca8410ac | ALTER TABLE atnnparted ADD CONSTRAINT dummy_constr NOT NULL id NOT VALID |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | 84218c4bef457c7e169dde74 | CREATE TABLE employees OF employee_type ( PRIMARY KEY (name), salary WITH OPTIONS DEFAULT 1000 ) |
+| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_LOCK_STMT | 847075522690f3699bec1a96 | lock twophase_tab in access exclusive mode |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 84ee526e1835ce6efadb2c47 | ALTER TABLE testpub_tbl8_1 REPLICA IDENTITY USING INDEX testpub_tbl8_1_pkey |
+| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_REINDEX_STMT | 854429a1d47a370c7e7316cb | REINDEX INDEX CONCURRENTLY sro_pidx |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 85686aebd2a65a8762100aee | alter index parted_conflict_a_idx attach partition parted_conflict_1_a_idx |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | 85f173318ba7d3831e91f522 | CREATE TABLE fk_partitioned_fk_2 (b int, a int, CONSTRAINT fk_part_con FOREIGN KEY (a, b) REFERENCES fk_notpartitioned_pk ON UPDATE CASCADE ON DELETE CASCADE NOT ENFORCED) |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 867f04984ec59e3e9ff4f959 | alter table idxpart add exclude USING GIST (a with =, b with =) |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 86c9a75bb873bf9cd933ab18 | ALTER TABLE pp_nn_1 ADD CONSTRAINT nn NOT NULL a NO INHERIT |
+| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_REFRESH_MAT_VIEW_STMT | 86dda09bff45fa5d2c8d9202 | REFRESH MATERIALIZED VIEW CONCURRENTLY mvtest_mv_foo |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | 8776a8f1668f7d1a5607897e | -- inherits gen expr CREATE TABLE gtest_child2 PARTITION OF gtest_parent ( f3 WITH OPTIONS GENERATED ALWAYS AS (f2 * 22) VIRTUAL -- overrides gen expr ) FOR VALUES FROM ('2016-08-01') TO ('2016-09-... |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 87d49b1d8fee2fc8000b7f01 | ALTER TABLE fk_partitioned_fk ADD CONSTRAINT fk_partitioned_fk_a_b_fkey FOREIGN KEY (a, b) REFERENCES fk_notpartitioned_pk NOT ENFORCED |
+| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_REINDEX_STMT | 88a1e8cc4a852c121cc7c17a | REINDEX TABLE CONCURRENTLY concur_reindex_part_0_2 |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | 88e5f6d05b9670864cc5bff4 | create table notnull_tbl_fail (a int, primary key(a), not null a no inherit) |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 89c8c719aa7035d76973b0a3 | ALTER INDEX pt_stats_index ATTACH PARTITION pt_stats2_index |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 8a155d07c30955f9e7ac31d0 | ALTER INDEX tbspace_reindex_part_index ATTACH PARTITION tbspace_reindex_part_index_0 |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 8a2b5b6a35cb6d0c5e471337 | ALTER TABLE temporal_fk_mltrng2mltrng ADD CONSTRAINT temporal_fk_mltrng2mltrng_fk FOREIGN KEY (parent_id, PERIOD valid_at) REFERENCES temporal_mltrng (id, PERIOD valid_at) ON UPDATE NO ACTION |
+| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CLUSTER_STMT | 8a81204d948e08648deb6ddb | cluster clstr_temp using clstr_temp_pkey |
+| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_REINDEX_STMT | 8acbf9ac8725f52691d331e2 | REINDEX INDEX pg_database_oid_index |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 8ade8c3f13ea097754bc35b9 | -- -- partitioned FK referenced deletes SET NULL -- -- -- partitioned FK referenced updates SET DEFAULT -- ALTER TABLE temporal_partitioned_fk_rng2rng ALTER COLUMN parent_id SET DEFAULT '[-1,-1]', ... |
+| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_LOCK_STMT | 8b212f2dc76ebe630df5b030 | LOCK TABLE lock_tbl1 IN ROW SHARE MODE NOWAIT |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 8b3062f171ea3aa0506bd286 | ALTER TABLE notnull_child_upg ADD CONSTRAINT nn NOT NULL a |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | 8b9e0571e2230b12956036cd | create table parted_notnull_inh_test1 partition of parted_notnull_inh_test (a not null, b default 1) for values in (1) |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 8c3974950654511172eb3f87 | ALTER TABLE gtest31_1 ALTER COLUMN b SET EXPRESSION AS ('hello2') |
+| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_LOCK_STMT | 8d347e192192a4cfdedee5e9 | LOCK TABLE lock_view3 IN EXCLUSIVE MODE |
+| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_REINDEX_STMT | 8d3f1968ef3859fcc1947f34 | REINDEX (TABLESPACE pg_global) INDEX CONCURRENTLY regress_tblspace_test_tbl_idx |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 8d915d158baf2ba6280b7287 | ALTER TABLE temporal_fk_mltrng2mltrng ADD CONSTRAINT temporal_fk_mltrng2mltrng_fk FOREIGN KEY (parent_id, PERIOD valid_at) REFERENCES temporal_mltrng (id, PERIOD valid_at) ON UPDATE RESTRICT |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | 8d9ed8586bff1603fda00207 | CREATE TABLE itest12 OF itest_type (f1 WITH OPTIONS GENERATED ALWAYS AS IDENTITY) |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 8e44e58511ebadd8a4ff9a99 | ALTER TABLE test_replica_identity REPLICA IDENTITY FULL |
+| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_REFRESH_MAT_VIEW_STMT | 8e935bbdfebfa4022ca7641c | REFRESH MATERIALIZED VIEW copytest_mv |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 8e985becced7945466d6d6ee | -- These ALTER TABLE variants will not recurse. ALTER TABLE itest7 ALTER COLUMN a SET GENERATED BY DEFAULT |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 903ef34fc2b1323e7a36448f | -- nope ALTER TABLE notnull_tbl1_child2 ADD NOT NULL a NOT VALID |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | 908f59091ffe87e16c6ad471 | CREATE TABLE tbl (c1 int,c2 int, c3 int, c4 box, EXCLUDE USING btree (c1 WITH =) INCLUDE(c3,c4)) |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 90a2364b84c0cc341427c032 | alter index idxpart_a_b_idx attach partition idxpart_a_b_idx |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | 90c5b39eae82ddb9edfdab27 | /* * 6. EXCLUDE constraint. */ CREATE TABLE tbl_gist (c1 int, c2 int, c3 int, c4 box, EXCLUDE USING gist (c4 WITH &&) INCLUDE (c1, c2, c3)) |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 914703b53eb8e2996ea25b92 | ALTER TABLE temporal_fk_rng2rng ADD CONSTRAINT temporal_fk_rng2rng_fk FOREIGN KEY (parent_id, PERIOD valid_at) REFERENCES temporal_rng (id, PERIOD valid_at) |
+| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_REINDEX_STMT | 9154bff388931a3ecedc8b07 | -- REINDEX for partitioned tables -- REINDEX INDEX fails for partitioned tables -- Top-most parent REINDEX INDEX concur_reindex_part |
+| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_REINDEX_STMT | 917af7b670dd99dafb823d67 | REINDEX TABLE sro_ptab |
+| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_REINDEX_STMT | 91d24419e692249055095c79 | -- ditto REINDEX (CONCURRENTLY) SYSTEM |
+| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_REFRESH_MAT_VIEW_STMT | 91fde729bcdff2a92988e98f | REFRESH MATERIALIZED VIEW mvtest_tvvm |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 92a3840564f8afe3bcf34c1a | -- Check option won't cascade down to base view with INSTEAD OF triggers ALTER VIEW rw_view2 SET (check_option=cascaded) |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 9377e59a84775a9e3862a287 | alter table inh_nn1 alter constraint inh_nn1_f1_fkey inherit |
+| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 93eff720b27b163eb9f4e8f3 | alter table p1_c1 add constraint inh_check_constraint6 check (f1 < 10) enforced |
+| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_LOCK_STMT | 93f69945eca04d2a54bfa571 | LOCK TABLE lock_tbl1 IN SHARE MODE NOWAIT |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 9428e339009ae398f5faff14 | ALTER TABLE test_replica_identity2 REPLICA IDENTITY USING INDEX test_replica_identity2_id_key |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 9496de36a39b4a3993eb1571 | ALTER TABLE fk_partitioned_fk ALTER CONSTRAINT fk_partitioned_fk_a_b_fkey ENFORCED |
+| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_REINDEX_STMT | 94b8f0dd5a9a1e53a1bdfe4a | -- REINDEX REINDEX TABLE concur_reindex_tab |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 94bafb8c5482cbbf46002d73 | ALTER TABLE notnull_tbl1 ADD CONSTRAINT nn_parent NOT NULL a not valid |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | 95626d956689562cc3c3bb71 | create table notnull_tbl_fail (a int generated by default as identity, constraint foo not null a no inherit) |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 956a6f1973ac2c1de6111650 | ALTER TABLE notnull_tbl1 ADD CONSTRAINT notnull_con NOT NULL a NOT VALID |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 956f2796dc320d9047112da3 | -- Move back to the default tablespace. ALTER INDEX regress_tblspace_test_tbl_idx SET TABLESPACE pg_default |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 9579aa03f89dfd8242b5303e | -- -- partitioned FK referenced deletes CASCADE -- -- -- partitioned FK referenced updates SET NULL -- ALTER TABLE temporal_partitioned_fk_mltrng2mltrng DROP CONSTRAINT temporal_partitioned_fk_mltr... |
+| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_REINDEX_STMT | 96206b12ba2440a3a5e6f0dc | -- error REINDEX INDEX CONCURRENTLY concur_reindex_part_10 |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 9644b3bb6481aa12ad3bfc2b | -- fails ALTER TABLE pitest2 ALTER COLUMN f3 SET GENERATED BY DEFAULT SET INCREMENT BY 2 SET START WITH 1000 RESTART |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 9645928d0c7bf3447c1e87bd | alter index idxpart_a_b_idx attach partition idxpart1_b_idx |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 96a90eaade087d86f8f80d78 | ALTER INDEX dummy_test_idx SET (option_string_val = true) |
+| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_REINDEX_STMT | 977688b7223088fbaa099686 | REINDEX INDEX CONCURRENTLY brin_insert_optimization_idx |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 9779564eb810faa551c5b3bf | alter table anothertab add exclude using btree (f3 with =) |
+| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_REINDEX_STMT | 97a9ad1acaaab32cfce38bc8 | REINDEX (TABLESPACE regress_tblspace) TABLE pg_toast.pg_toast_1262 |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 981aea3a7d4dce87e2576179 | ALTER TABLE FKTABLE ALTER CONSTRAINT fk_con NOT ENFORCED |
+| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_REINDEX_STMT | 988a0d65c2377b7503027d4e | REINDEX INDEX CONCURRENTLY concur_reindex_tab3_c2_excl |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 995aa90580818a6948278a59 | -- must reject alter index idxpart_a_idx attach partition idxpart2_a_idx |
+| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 99952a2e70945905f935b1da | -- Modifying other attributes of a constraint should not affect its enforceability, and vice versa ALTER TABLE FKTABLE ADD CONSTRAINT fk_con FOREIGN KEY(ftest1, ftest2) REFERENCES PKTABLE NOT VALID... |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | 99bab07b6372501100870c99 | CREATE TABLE temporal_rng4 ( id int4range, valid_at int4_d_range, CONSTRAINT temporal_rng4_pk PRIMARY KEY(id, valid_at WITHOUT OVERLAPS) ) |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 99c29c7f48328ec96cc4e03e | ALTER TABLE notnull_tbl1_upg ADD CONSTRAINT nn NOT NULL a NOT VALID |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 99db06da6e1da34c7e38a462 | ALTER VIEW my_property_normal SET (security_barrier=true) |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | 99e8f4d0eb0f8b4814fc3a2a | -- temporal UNIQUE: CREATE TABLE temporal_partitioned ( id int4range, valid_at daterange, name text, CONSTRAINT temporal_paritioned_uq UNIQUE (id, valid_at WITHOUT OVERLAPS) ) PARTITION BY LIST (id) |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 9a91cfff45a93c1c81c7e4de | -- fail, not a candidate key, nullable column ALTER TABLE test_replica_identity REPLICA IDENTITY USING INDEX test_replica_identity_nonkey |
+| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_LOCK_STMT | 9b658fec253d2b542f25d8be | LOCK TABLE ONLY lock_tbl1 |
+| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_REINDEX_STMT | 9b8ba83a49dd79883f5a11af | REINDEX TABLE maintain_test |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | 9b8cd0c503af545be26a1f7b | CREATE TABLE test_tbl2 OF test_type2 |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | 9c3fb667aafdb9a40b638b1c | -- -- FK between partitioned tables: multiranges -- CREATE TABLE temporal_partitioned_mltrng ( id int4range, valid_at datemultirange, name text, CONSTRAINT temporal_paritioned_mltrng_pk PRIMARY KEY... |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | 9c4f79c6961dab888d7518a1 | -- it's not possible to override a no-inherit constraint with an inheritable one CREATE TABLE ATACC2 (a int, CONSTRAINT a_is_not_null NOT NULL a NO INHERIT) |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 9c6dc2187c477e01e9720ede | ALTER TABLE sts_sch1.tbl ALTER COLUMN c SET EXPRESSION AS (a * 3) |
+| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_REINDEX_STMT | 9daf00b1b36d84daf6fdbb97 | REINDEX TABLE pg_operator |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 9e04b79998c033cdd582994b | ALTER TABLE fk_partitioned_fk ALTER CONSTRAINT fk_partitioned_fk_a_b_fkey NOT ENFORCED |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 9e073e4dd9811fbdaf4fbd38 | alter table p1 add constraint inh_check_constraint3 check (f1 > 0) not enforced |
+| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_LOCK_STMT | 9e0b18761a81625d504cec26 | LOCK TABLE lock_tbl1 IN ACCESS SHARE MODE |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 9ef243a111a050cd6595e9c1 | ALTER INDEX attmp_idx ALTER COLUMN 2 SET STATISTICS -1 |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 9f3068c210245936aba14375 | alter table anothertab add exclude using btree (f4 with =) where (f4 is not null) |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | 9f3118d053ae0d6160071e77 | alter table idxpart add exclude USING GIST (a with =) |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | a0062d2a7f36a7a023d3c40d | ALTER TABLE test_replica_identity5 REPLICA IDENTITY USING INDEX test_replica_identity5_a_b_key |
+| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_REINDEX_STMT | a04c42c8a535543a5caae495 | REINDEX TABLE pg_shdescription |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | a05a4b354f24fdae31edc338 | CREATE TABLE ATACC1 (a int, NOT NULL a NO INHERIT) PARTITION BY LIST (a) |
+| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_REINDEX_STMT | a0a2a81c346b899d29e70493 | REINDEX (TABLESPACE regress_tblspace) TABLE regress_tblspace_test_tbl |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | a13e9afd64533a9d463b5ae3 | -- should log the full old row now ALTER TABLE table_without_key REPLICA IDENTITY FULL |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | a1d87f477ba2589ed1113849 | -- -- EXCLUDE constraints -- CREATE TABLE circles ( c1 CIRCLE, c2 TEXT, EXCLUDE USING gist (c1 WITH &&, (c2::circle) WITH &&) WHERE (circle_center(c1) <> '(0,0)') ) |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | a29d6d2d7333881cef5c6445 | -- OK to add an exclusion constraint if partitioning by its equal column create table idxpart (a int4range, exclude USING GIST (a with = )) partition by range (a) |
+| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_REFRESH_MAT_VIEW_STMT | a2ca7cd1362277f518050a5a | REFRESH MATERIALIZED VIEW mvtest_mv_v_2 |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | a2db0b60d64b1173f39a41b1 | -- but using a different constraint name is not allowed ALTER TABLE notnull_tbl1 ADD CONSTRAINT nn NOT NULL a |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | a2f66fb5fa2ae207e5f2826f | -- UNIQUE with a non-range column: CREATE TABLE temporal_rng3 ( id int4range, valid_at TEXT, CONSTRAINT temporal_rng3_uq UNIQUE (id, valid_at WITHOUT OVERLAPS) ) |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | a33e215bef80733a3acd4501 | alter table inh_nn1 alter constraint inh_nn1_f1_not_null inherit |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | a364b125a34dc530de348acf | ALTER TABLE temporal_mltrng ADD CONSTRAINT temporal_mltrng_pk PRIMARY KEY (id, valid_at WITHOUT OVERLAPS) |
+| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_REINDEX_STMT | a3655194df1866b5c7fa1056 | REINDEX TABLE CONCURRENTLY concur_appclass_tab |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | a36a7e443939b334f313e4ae | CREATE TABLE test_ex_constraints ( c circle, EXCLUDE USING gist (c WITH &&) ) |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | a3d664d7c7b089095bb0bd4e | -- idxpart1_a_idx is not valid, so idxpart_a_idx should not become valid: alter index idxpart_a_idx attach partition idxpart1_a_idx |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | a3e7883d6e6350cd1f9c5d73 | ALTER TABLE table_dropped_index_no_pk REPLICA IDENTITY USING INDEX table_dropped_index_no_pk_idx |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | a5abfa948ed4768b88a7d600 | ALTER TABLE table_dropped_index_with_pk REPLICA IDENTITY USING INDEX table_dropped_index_with_pk_idx |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | a5b060ba7d52833ada649383 | ALTER INDEX dummy_test_idx SET (option_int = 10) |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | a5de2099c00140cd96fd737e | ALTER TABLE cwi_test ADD UNIQUE USING INDEX cwi_uniq3_idx |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | a5f683312b0f50a57c83f053 | alter table idxpart add exclude USING GIST (b with =, c with &&) |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | a6701960c9ef6cd1bc8d80e2 | ALTER INDEX dummy_test_idx SET (option_enum = 0) |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | a69099b84ff982af55026c30 | ALTER INDEX tbspace_reindex_part_index_0 ATTACH PARTITION tbspace_reindex_part_index_0_1 |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | a69b666b3a412e963944c033 | -- fail, not our index ALTER TABLE test_replica_identity REPLICA IDENTITY USING INDEX test_replica_identity_othertable_pkey |
+| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CLUSTER_STMT | a6f16ff188b65e5909c527b9 | CLUSTER clstr_tst_c ON clstr_tst |
+| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_REFRESH_MAT_VIEW_STMT | a71834a064412c4b8c37edbc | REFRESH MATERIALIZED VIEW CONCURRENTLY mvtest_mv |
+| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_REINDEX_STMT | a7f65af12d8977f0dcba51e1 | REINDEX TABLE concur_reindex_part |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | a885724c326d6eb4952d11d8 | ALTER TABLE itest6 ALTER COLUMN b SET INCREMENT BY 2 |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | a895f9c65cf387d6b5145d17 | ALTER TABLE tt6 OF tt_t0 |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | a8f6fdf68309bdb9892b2a1a | create table notnull_tbl_fail (a serial, constraint foo not null a no inherit) |
+| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CLUSTER_STMT | a9a6b946978d7a05989b64ca | CLUSTER vaccluster |
+| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_REINDEX_STMT | a9d25d6d9d35418fff8762a3 | REINDEX TABLE test_maint_search_path.test_maint |
+| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_LOCK_STMT | aa9cc98da879c61760febb43 | LOCK TABLE lock_tbl1 IN EXCLUSIVE MODE NOWAIT |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | ab17b28dd8793eac34b7f772 | CREATE TABLE inh_nn_parent (a int, NOT NULL a NO INHERIT) |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | ac4e3c442800b1f45ad9ae5e | ALTER INDEX dummy_test_idx RESET (option_string_val) |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | ac90b987fb42dbbac4748c69 | ALTER TABLE notnull_tbl1 ADD CONSTRAINT nntbl1_a NOT NULL a NOT VALID |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | ad22cba290238275ce7cc4f6 | -- should fail because of duplicate referenced columns: ALTER TABLE temporal_fk_rng2rng ADD CONSTRAINT temporal_fk_rng2rng_fk2 FOREIGN KEY (parent_id, PERIOD parent_id) REFERENCES temporal_rng (id,... |
+| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_REINDEX_STMT | ae26804df6e25020612d03af | -- shared catalog, fail REINDEX (TABLESPACE regress_tblspace) TABLE pg_authid |
+| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_REINDEX_STMT | aee4fc2df6597837d7a0470d | REINDEX INDEX CONCURRENTLY concur_reindex_ind1 |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | af0487dd5044bcf8994da260 | ALTER TABLE parent ALTER COLUMN a SET GENERATED BY DEFAULT |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | af20e671373e7cb267fef038 | ALTER INDEX testschema.part_a_idx SET TABLESPACE pg_global |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | afcb4b2f9c2a83f3c57de0b3 | ALTER TABLE pp_nn_1 ADD CONSTRAINT nn NOT NULL a NOT VALID |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | afe5ec110611fb9b962bda15 | -- fail alter index idxpart_2_idx attach partition idxpart1_2c_idx |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | b00a731098108bcfc499d9e3 | -- ALTER CONSTRAINT NO INHERIT should work on top-level constraints alter table inh_nn1 alter constraint inh_nn1_f1_not_null no inherit |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | b023832199e29669a483d567 | ALTER TABLE temporal_fk_rng2rng ADD CONSTRAINT temporal_fk_rng2rng_fk FOREIGN KEY (parent_id, PERIOD valid_at) REFERENCES temporal_rng ON DELETE SET NULL ON UPDATE SET NULL |
+| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CLUSTER_STMT | b06298dd21b83ea8793a8b4e | CLUSTER maintain_test USING maintain_test_a_idx |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | b0ee61eb81babc1523275056 | ALTER VIEW rw_view1 SET (security_barrier = true) |
+| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_REFRESH_MAT_VIEW_STMT | b0f4ed7ffb113e9460cf9ebc | REFRESH MATERIALIZED VIEW tid_matview |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | b1b94501b997bea3300eec22 | ALTER TABLE fk_partitioned_fk_2 ADD CONSTRAINT fk_partitioned_fk_a_b_fkey FOREIGN KEY (a, b) REFERENCES fk_notpartitioned_pk NOT ENFORCED |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | b1d14b184e2108fe1fe61ff5 | CREATE TABLE of_tt_enum_type OF tt_enum_type |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | b1f696c028769cd88a097e22 | ALTER TABLE tt7 OF tt_t1 |
+| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_REINDEX_STMT | b266d312960a59cc42ac657a | -- no catalog relation REINDEX INDEX CONCURRENTLY pg_class_oid_index |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | b3355931d7524216733e7bdd | ALTER TABLE temporal_fk_rng2rng ADD CONSTRAINT temporal_fk_rng2rng_fk FOREIGN KEY (parent_id, PERIOD valid_at) REFERENCES temporal_rng |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | b360580603369b7efe5db60a | -- OK more than one equal column create table idxpart (a int4range, b int4range, exclude USING GIST (a with =, b with =)) partition by range (a, b) |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | b3685ad731412214ab9ef263 | -- PK with a range column/PERIOD that isn't there: CREATE TABLE temporal_rng ( id INTEGER, CONSTRAINT temporal_rng_pk PRIMARY KEY (id, valid_at WITHOUT OVERLAPS) ) |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | b379dcd9bcd856fc89df761a | alter view base_tab_def_view alter b set default 'View default' |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | b3c13fbaf6c796cd149403f5 | alter table inh_nn_parent add not null a no inherit |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | b43015e3f33f0f884d04874d | CREATE TABLE personsx OF person_type (myname WITH OPTIONS NOT NULL) |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | b46382a334c458a9e5ba92c6 | CREATE TABLE evttrig.part_10_15 PARTITION OF evttrig.part_10_20 (id) FOR VALUES FROM (10) TO (15) |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | b474c154cb01b958a79379bd | --ok -- SET EXPRESSION supports not null constraint ALTER TABLE gtest21ax ALTER COLUMN b SET EXPRESSION AS (nullif(a, 1)) |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | b582178a1247aadc2e2c8601 | alter index idxpart attach partition idxpart1 |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | b59ac750c94e7d6011e698ea | CREATE TABLE gtest_child3 PARTITION OF gtest_parent ( f3 GENERATED ALWAYS AS (f2 * 2) VIRTUAL -- error ) FOR VALUES FROM ('2016-09-01') TO ('2016-10-01') |
+| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_REINDEX_STMT | b68d6ef908fd66a509fcae23 | -- not allowed for SYSTEM REINDEX (CONCURRENTLY) SYSTEM postgres |
+| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CLUSTER_STMT | b6bf4887aa199fc30f9a965d | CLUSTER clustertest USING clustertest_pkey |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | b6fc881973005565e6d39132 | alter index idxpart_c attach partition idxpart1_c |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | b704e4f7404ea84c227e2bb6 | ALTER TABLE temporal_fk_rng2rng ALTER COLUMN parent_id SET DEFAULT '[-1,-1]', ADD CONSTRAINT temporal_fk_rng2rng_fk FOREIGN KEY (parent_id, PERIOD valid_at) REFERENCES temporal_rng ON DELETE SET DE... |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | b7831adc966f966c3e12a309 | -- Enforceability also changes the validate state, as data validation will be -- performed during this transformation. ALTER TABLE FKTABLE ALTER CONSTRAINT fk_con ENFORCED |
+| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_REINDEX_STMT | b818369e08eda6dd428446c3 | -- REINDEX for partitioned indexes -- REINDEX TABLE fails for partitioned indexes -- Top-most parent index REINDEX TABLE concur_reindex_part_index |
+| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_REFRESH_MAT_VIEW_STMT | b832d0988f55f10b569f09ee | REFRESH MATERIALIZED VIEW pgss_matv |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | b8a8efdcc16c8706b5e55114 | alter table inh_parent add constraint inh_parent_excl exclude ((1) with =) |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | b9a1be2a15ef9f02472f2d5f | ALTER TABLE regtest_ptable_4_ones ADD CONSTRAINT regtest_ptbl4_con EXCLUDE USING btree (z WITH =) |
+| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_REFRESH_MAT_VIEW_STMT | b9a75e934bb2fd92b24808e8 | refresh materialized view matview_visibility_test |
+| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_LOCK_STMT | ba3a569679d9158980d006fa | LOCK TABLE lock_tbl1 * IN ACCESS EXCLUSIVE MODE |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | ba59e3969ce8c337671b0f56 | -- able to specify column default, column constraint, and table constraint -- first check the "column specified more than once" error CREATE TABLE part_b PARTITION OF parted ( b NOT NULL, b DEFAULT... |
+| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_REINDEX_STMT | ba9b21fa20f3710c3a8e3b13 | REINDEX TABLE CONCURRENTLY concur_exprs_tab |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | bb2b5cb69145dd247c4b54bb | CREATE TABLE temporal_rng2 ( CONSTRAINT temporal_rng_pk PRIMARY KEY (id, valid_at WITHOUT OVERLAPS) ) INHERITS (temporal_rng) |
+| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_LOCK_STMT | bbfe632ab4f1e6bcf77ea93f | LOCK atestp1 |
+| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_LOCK_STMT | bc05f0847c2b2997d3aa56b9 | LOCK lock_tbl1 IN SHARE ROW EXCLUSIVE MODE |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | bc845f94c5cf4831ce511459 | -- change NO INHERIT status of inherited constraint: no dice, it's inherited alter table cc2 add not null a2 no inherit |
+| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_REFRESH_MAT_VIEW_STMT | bca09156ec4054df7c808113 | REFRESH MATERIALIZED VIEW CONCURRENTLY mvtest_mv_v |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | bca6bf4385beeb641639812b | ALTER INDEX gin_check_idx SET (fastupdate = false) |
+| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_REINDEX_STMT | bd0200cc25893fb2a1da6ae4 | -- No indexes REINDEX SCHEMA concur_reindex_schema |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | be928748aae7b3d425c0c462 | ALTER MATERIALIZED VIEW heapmv SET ACCESS METHOD heap2 |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | beac01c79c98d677cf79c884 | ALTER TABLE fktable ALTER CONSTRAINT fktable_fk_fkey NO INHERIT |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | bfb59dd8831a5aec6f3a962b | CREATE TABLE persons OF person_type |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | bfd419b079cb66153749b64b | ALTER TABLE cwi_test ADD PRIMARY KEY USING INDEX cwi_a_nnd |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | c06ad3a56e27ae102f36e8a6 | ALTER TABLE cwi_test DROP CONSTRAINT cwi_uniq_idx, ADD CONSTRAINT cwi_replaced_pkey PRIMARY KEY USING INDEX cwi_uniq2_idx |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | c0c62652e477ae7e3aea53fe | ALTER INDEX bloomidx SET (length=80) |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | c194637bdbeb411841ce85f0 | -- with mismatched PERIOD columns: -- (parent_id, PERIOD valid_at) REFERENCES (id, valid_at) -- REFERENCES part should specify PERIOD CREATE TABLE temporal_fk_rng2rng ( id int4range, valid_at dater... |
+| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CLUSTER_STMT | c1b09a78b8f489d770f1c20f | -- "CLUSTER <tablename>" on a table that hasn't been clustered CLUSTER clstr_2 |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | c1d3f869b2fa36a724587dcc | -- PK with two columns plus a range: CREATE TABLE temporal_rng2 ( id1 int4range, id2 int4range, valid_at daterange, CONSTRAINT temporal_rng2_pk PRIMARY KEY (id1, id2, valid_at WITHOUT OVERLAPS) ) |
+| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_LOCK_STMT | c1e83ae7c6dd3b10c6ba955c | LOCK atestc |
+| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_REFRESH_MAT_VIEW_STMT | c20f4c206ab978a525d67b6c | REFRESH MATERIALIZED VIEW testschema.amv |
+| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_REINDEX_STMT | c2b74f4efd4e4c6fac48ea5a | REINDEX TABLE CONCURRENTLY concur_temp_tab_1 |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | c2d1fc08b20ae31d7973f93d | -- with a UNIQUE constraint: CREATE TABLE temporal_mltrng3 ( id int4range, valid_at datemultirange, CONSTRAINT temporal_mltrng3_uq UNIQUE (id, valid_at WITHOUT OVERLAPS) ) |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | c3120532d2a3a679c82db4fa | ALTER INDEX tbl_idx ALTER COLUMN 3 SET STATISTICS 1000 |
+| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_REINDEX_STMT | c37c0c5fce8f776f50d4930f | REINDEX TABLE CONCURRENTLY concur_clustered |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | c3a876e00f10cbed6d02cd5e | ---- -- Make sure we detect ineligible indexes ---- -- fail, not unique ALTER TABLE test_replica_identity REPLICA IDENTITY USING INDEX test_replica_identity_keyab |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | c4058bb7449ca41162ce33ec | -- can't override ALTER TABLE ATACC1 ADD CONSTRAINT ditto NOT NULL a |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | c48f41dd88f6642ad81a242c | ALTER INDEX attmp_idx ALTER COLUMN 4 SET STATISTICS 1000 |
+| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_REFRESH_MAT_VIEW_STMT | c49af97a10b894ad2514323a | REFRESH MATERIALIZED VIEW matview_schema.mv_nodata2 |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | c49d95cd3bd9dc547ed9919b | CREATE TABLE part_b PARTITION OF parted ( b NOT NULL DEFAULT 1, CONSTRAINT check_a CHECK (length(a) > 0), CONSTRAINT check_b CHECK (b >= 0) ) FOR VALUES IN ('b') |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | c4cefb91a77fa605e88b03cc | ALTER INDEX attmp_idx ALTER COLUMN 2 SET STATISTICS 1000 |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | c4ea21032686d6dbbf7d44c0 | -- should fail because of duplicate referenced columns: CREATE TABLE temporal_fk_mltrng2mltrng ( id int4range, valid_at datemultirange, parent_id int4range, CONSTRAINT temporal_fk_mltrng2mltrng_pk ... |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | c6a0d6b7b02a590422933b0d | CREATE TABLE IF NOT EXISTS persons OF person_type |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | c6bec0baea71c10efacf52a8 | -- now it works alter index idxpart_pkey attach partition idxpart0_a_key |
+| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CLUSTER_STMT | c6fd08b04b952cf0447540d7 | cluster attbl using pk_attbl |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | c704cc1cd5437ea97f0f0ecb | alter view uv_iocu_view alter column bb set default 'view default' |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | c8622a537ce1a8ccdfed3e4d | -- Reverting it back to ENFORCED will result in failure because constraint validation will be triggered, -- as it was previously in a valid state. ALTER TABLE FKTABLE ALTER CONSTRAINT fktable_ftest... |
+| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_REINDEX_STMT | c88b1571224d1b9528e779f7 | REINDEX INDEX tbl_c1_c2_c3_c4_key |
+| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_REINDEX_STMT | ca433be3d219f7c357d9259d | REINDEX INDEX pg_class_oid_index |
+| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_REINDEX_STMT | cab13a3b0dcb36d547bf1534 | REINDEX (TABLESPACE pg_global) TABLE CONCURRENTLY pg_authid |
+| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_LOCK_STMT | cad70b902798f013f1b7a606 | LOCK atest2 IN ACCESS EXCLUSIVE MODE |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | caec240e30f6e298188000ec | alter table p1 add constraint inh_check_constraint6 check (f1 < 10) not enforced |
+| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_REFRESH_MAT_VIEW_STMT | cb9f717ce865bf3539ab8247 | REFRESH MATERIALIZED VIEW CONCURRENTLY drop_idx_matview |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | cbd1e51b3e3f8005e41c761c | create table notnull_tbl_fail (a int constraint foo not null, constraint foo not null a no inherit) |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | cc50f50895a77cdbd4fded3b | -- UNIQUE with a range column/PERIOD that isn't there: CREATE TABLE temporal_rng3 ( id INTEGER, CONSTRAINT temporal_rng3_uq UNIQUE (id, valid_at WITHOUT OVERLAPS) ) |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | ccc685a68ba1ad0cf92a2f4d | ALTER INDEX ptif_test_index ATTACH PARTITION ptif_test1_index |
+| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_REINDEX_STMT | ccd6178d19046dd5c1afabfe | REINDEX TABLE CONCURRENTLY sro_tab |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | cd5e3bdf111057ed424641a6 | ALTER TABLE ref ALTER CONSTRAINT ref_f1_f2_fkey_1 DEFERRABLE INITIALLY DEFERRED |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | ce85fa45dc82b3a3373657c6 | alter index idxpart_1_idx attach partition idxpart1_1b_idx |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | cec1585fdd4198bb6e1cf24c | CREATE TABLE inh_nn_lvl3 (CONSTRAINT foo NOT NULL a NO INHERIT) INHERITS (inh_nn_lvl2) |
+| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_REINDEX_STMT | cecfb7e52603b1d42c232cde | -- move to global tablespace, fail REINDEX (TABLESPACE pg_global) INDEX regress_tblspace_test_tbl_idx |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | cee9ae5e30f5dd198771f24a | ALTER VIEW rw_view15 ALTER COLUMN upper SET DEFAULT 'NOT SET' |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | cf50d100af26e4abf89c9370 | CREATE TABLE gtest28 OF gtest_type (f1 WITH OPTIONS GENERATED ALWAYS AS (f2 *2) STORED) |
+| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_REINDEX_STMT | cfb5f9507196642309b0a55f | REINDEX INDEX CONCURRENTLY concur_reindex_part_index |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | d03b40c04944ed9f9dddae4a | CREATE TABLE notnull_tbl4_lk3 (LIKE notnull_tbl4 INCLUDING INDEXES, NOT NULL a) |
+| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CLUSTER_STMT | d0a5824c1427795ed5e8321d | CLUSTER test_maint_search_path.test_maint USING test_maint_idx |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | d0dd19985745a1f4178242dd | alter view my_locks set (security_barrier=off) |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | d0e47bd33d589447415db8df | create table nv_parent (d date, check (false) no inherit not valid) |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | d10ca0a4a049615be8ae6c47 | -- failure: changing replica identity to FULL for partition fails, because -- of the column list on the parent ALTER TABLE testpub_tbl8_0 REPLICA IDENTITY FULL |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | d2251e1184bb31cc108a6e1e | ALTER TABLE pp_nn_1 ADD CONSTRAINT nn1 NOT NULL a NOT VALID |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | d277c80127b0711fe83054fc | ALTER TABLE rf_tbl_abcd_pk REPLICA IDENTITY USING INDEX idx_abcd_pk_c |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | d2f7c5fc9ffadccbceb7e5e1 | ALTER TABLE deferred_excl ADD EXCLUDE (f1 WITH =) |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | d4c97fa6d07665dd11df1ee0 | -- Case 3. REPLICA IDENTITY NOTHING ALTER TABLE rf_tbl_abcd_pk REPLICA IDENTITY NOTHING |
+| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_LOCK_STMT | d5224ab1080411c18da5e13f | LOCK TABLE lock_tbl1 IN ACCESS SHARE MODE NOWAIT |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | d5296fbf49f916c984a67134 | -- but reverse is not allowed alter table p1_c1 add constraint inh_check_constraint7 check (f1 < 10) not enforced |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | d586b00f9204fda83e76246c | ALTER TABLE temporal3 ADD COLUMN valid_at daterange, ADD CONSTRAINT temporal3_pk PRIMARY KEY (id, valid_at WITHOUT OVERLAPS) |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | d593733eb6c6037e217f8682 | ALTER INDEX attmp_idx ALTER COLUMN 1 SET STATISTICS 1000 |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | d5b03cbff2f78f01b85e338f | alter view my_locks reset (security_barrier) |
+| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_REINDEX_STMT | d626a1c2792929ace2658320 | REINDEX INDEX pg_class_tblspc_relfilenode_index |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | d64bec5a84483a4ac576deaf | ALTER TABLE temporal_rng3 ADD CONSTRAINT temporal_rng3_uq UNIQUE (id, valid_at WITHOUT OVERLAPS) |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | d64fe0afd4dacb310e0214af | CREATE TABLE ttable1 OF nothing |
+| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_LOCK_STMT | d65b3e98d17ef4f2de8076a6 | LOCK TABLE lock_view8 IN ACCESS EXCLUSIVE MODE |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | d66625128edae2e59da71496 | -- violates constraint ALTER TABLE gtest20 ALTER COLUMN b SET EXPRESSION AS (a * 100) |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | d6a242414c90307ab7be0aa4 | CREATE TABLE evttrig.part_15_20 PARTITION OF evttrig.part_10_20 (id) FOR VALUES FROM (15) TO (20) |
+| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_REINDEX_STMT | d6b02f99b14e1a1853118037 | REINDEX TABLE pg_database |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | d6ca0e2201607ceccdfd5a7b | ALTER INDEX dummy_test_idx SET (option_string_val = 3.5) |
+| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CLUSTER_STMT | d6d50075a629c75242df8fa7 | CLUSTER abbrev_abort_uuids USING abbrev_abort_uuids__noabort_decreasing_idx |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | d6f25e593fb67c2079f8a727 | ALTER TABLE FKTABLE ALTER CONSTRAINT fk_con DEFERRABLE INITIALLY DEFERRED |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | d78a2491b3709a00754e216e | -- -- test ALTER TABLE ADD CONSTRAINT -- CREATE TABLE temporal_fk_mltrng2mltrng ( id int4range, valid_at datemultirange, parent_id int4range, CONSTRAINT temporal_fk_mltrng2mltrng_pk PRIMARY KEY (id... |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | d9c7b16053dba1fc38424edb | alter table anothertab add exclude using btree (f4 with =) where (f5 > 0) |
+| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_REINDEX_STMT | daabb90b5ce2ce47b07d4879 | -- try reindexing an existing constraint REINDEX INDEX circles_c1_c2_excl |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | dabddb74f2623bf417ca75b8 | -- -- partitioned FK referenced deletes CASCADE -- -- -- partitioned FK referenced updates SET NULL -- ALTER TABLE temporal_partitioned_fk_rng2rng DROP CONSTRAINT temporal_partitioned_fk_rng2rng_fk... |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | dabe0703c57b59cc33690da1 | alter index idxpart_a_b_idx attach partition idxpart1_tst3 |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | db1230cc378331913785b456 | ALTER TABLE rf_tbl_abcd_nopk REPLICA IDENTITY FULL |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | db51a878ca8ad36a29c7f453 | alter index idxpart_a_b_idx attach partition idxpart1_2_a_b |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | db57a3c9547c83b375d50c47 | ALTER INDEX btree_part_idx ALTER COLUMN id SET (n_distinct=100) |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | db64ec2334f6dbb67fab04ad | -- -- partitioned FK referenced deletes SET NULL -- -- -- partitioned FK referenced updates SET DEFAULT -- ALTER TABLE temporal_partitioned_fk_mltrng2mltrng ALTER COLUMN parent_id SET DEFAULT '[0,1... |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | db6f46967a5bca7b287621bf | alter index idxpart_2_idx attach partition idxpart1_2b_idx |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | dbba17f1866801cd77b4f892 | ALTER TABLE notnull_part1_3_upg add CONSTRAINT nn3 NOT NULL a NOT VALID |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | dbbae83ff739842cbf00653c | -- try to drop a nonexistant constraint alter table inh_nn1 alter constraint foo inherit |
+| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_REINDEX_STMT | dc95762ace0b828d736094b8 | -- Reindexing concurrently this index fails with the same failure. -- The extra index created is itself invalid, and can be dropped. REINDEX INDEX CONCURRENTLY concur_reindex_ind5 |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | dccac0246aaa8fcf541744b7 | ALTER TABLE notnull_tbl1_3 add CONSTRAINT nn3 NOT NULL a NOT VALID |
+| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_REINDEX_STMT | dd30277f49ae5d04218e1547 | REINDEX INDEX pg_toast.pg_toast_1262_index |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | dd85529a4aae2ec5dd24f6a3 | -- Disallow specifying conflicting NO INHERIT flags for the same constraint CREATE TABLE inh_nn1 (a int primary key, b int, not null a no inherit) |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | ddc65e2ca1e53d86a1184f68 | alter index spgist_point_idx set (fillfactor = 90) |
+| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_REINDEX_STMT | de38935ba41e0c66cb500799 | -- ditto -- Warns about catalog relations REINDEX SCHEMA CONCURRENTLY pg_catalog |
+| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_REINDEX_STMT | de480098b94fa59af11a082a | REINDEX INDEX concur_reindex_partidx |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | de72c48f86fb38ac15adc2ca | ALTER TABLE pg_namespace ADD CONSTRAINT foo UNIQUE USING INDEX pg_namespace_nspname_index |
+| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_REFRESH_MAT_VIEW_STMT | deaa275a129292a3ab18ebdd | REFRESH MATERIALIZED VIEW mvtest_mv_v |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | dfaf51924c8ab5a6617f6bd3 | ALTER TABLE temporal_rng ADD CONSTRAINT temporal_rng_pk PRIMARY KEY (id, valid_at WITHOUT OVERLAPS) |
+| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_REFRESH_MAT_VIEW_STMT | dfb56e0d61cdccd5ad1fc339 | REFRESH MATERIALIZED VIEW mvtest_tvmm |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | dfc5e36ec9a1ebd3690f86fd | alter index idxpart_pkey attach partition idxpart1_a_idx |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | e074329dc758bf903a03af66 | CREATE TABLE NE_CHECK_TBL (x int, CONSTRAINT CHECK_CON CHECK (x > 3) NOT ENFORCED) |
+| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CLUSTER_STMT | e12a490c485acbe4349b6280 | -- and after clustering on clstr_expression_minus_a CLUSTER clstr_expression USING clstr_expression_minus_a |
+| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_LOCK_STMT | e17f902e6f1cdf5a98d69b2a | LOCK TABLE lock_table IN ACCESS EXCLUSIVE MODE |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | e182309d7401dc09eda3dad3 | -- PK with one column plus a multirange: CREATE TABLE temporal_mltrng ( id int4range, valid_at datemultirange, CONSTRAINT temporal_mltrng_pk PRIMARY KEY (id, valid_at WITHOUT OVERLAPS) ) |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | e1c61e5c7258fd8c4945aa6e | ALTER TABLE notnull_tbl1 ADD CONSTRAINT foobar NOT NULL a |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | e1cc04d4f7d8b3ef01b7f63e | -- UNIQUE with one column plus a range: CREATE TABLE temporal_rng3 ( id int4range, valid_at daterange, CONSTRAINT temporal_rng3_uq UNIQUE (id, valid_at WITHOUT OVERLAPS) ) |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | e1f15d40c842c36f816285ab | -- with inferred PK on the referenced table: -- (parent_id, PERIOD valid_at) REFERENCES [implicit] CREATE TABLE temporal_fk_rng2rng ( id int4range, valid_at daterange, parent_id int4range, CONSTRAI... |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | e1fe3b8df79ea8347a2e9346 | -- -- test input parser -- -- PK with no columns just WITHOUT OVERLAPS: CREATE TABLE temporal_rng ( valid_at daterange, CONSTRAINT temporal_rng_pk PRIMARY KEY (valid_at WITHOUT OVERLAPS) ) |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | e255b6aa0359586dc1629730 | alter view my_locks set (autovacuum_enabled = false) |
+| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_REFRESH_MAT_VIEW_STMT | e2acd58afe832a7d495bdb36 | REFRESH MATERIALIZED VIEW mvtest_tmm |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | e335af3e818f66cb412474e2 | -- -- test ALTER TABLE ADD CONSTRAINT -- CREATE TABLE temporal_fk_rng2rng ( id int4range, valid_at daterange, parent_id int4range, CONSTRAINT temporal_fk_rng2rng_pk PRIMARY KEY (id, valid_at WITHOU... |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | e35accb396808359e6c2f539 | create table rewritemetoo2 of rewritetype |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | e38858f92e613c81a4f982f1 | ALTER INDEX dummy_test_idx SET (option_enum = 'one') |
+| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_REINDEX_STMT | e3be1838d2fc098c5f889fcc | REINDEX TABLE CONCURRENTLY concur_temp_tab_2 |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | e3cdc32ffc30539b8e56ceb6 | -- on the partition key create table parted_collate_must_match1 partition of parted_collate_must_match (a collate "POSIX") for values from ('a') to ('m') |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | e406695eedf682f7c9a1b217 | -- (parent_id, PERIOD valid_at) REFERENCES (id) CREATE TABLE temporal_fk_rng2rng ( id int4range, valid_at daterange, parent_id int4range, CONSTRAINT temporal_fk_rng2rng_pk PRIMARY KEY (id, valid_at... |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | e47ae50454ece6ee7ab06543 | -- Check that comments on constraints and indexes are not lost at ALTER TABLE. CREATE TABLE comment_test ( id int, constraint id_notnull_constraint not null id, positive_col int CHECK (positive_col... |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | e485801b24502aa963fd3dd1 | -- fail alter index idxpart_2_idx attach partition idxpart1_2_idx |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | e4f3b8c4bc2fbe436aa37ba7 | create table idxpart0 partition of idxpart (i) for values with (modulus 2, remainder 0) |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | e5acb0edd3483f321c1e1a39 | -- error ALTER TABLE gtest23b ALTER COLUMN b SET EXPRESSION AS (a * 5) |
+| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_LOCK_STMT | e5ddaa90c3a3be69ce54eac4 | LOCK TABLE lock_tbl1 IN SHARE UPDATE EXCLUSIVE MODE NOWAIT |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | e612e81e944038f6a85d2bd1 | ALTER INDEX dummy_test_idx SET (option_string_val = 'val2') |
+| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_REINDEX_STMT | e626cc12633c441c391bb699 | REINDEX INDEX CONCURRENTLY reindex_inj.ind_expr |
+| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_REINDEX_STMT | e6686b2aafbce4e5c438da52 | -- -- REINDEX SCHEMA -- REINDEX SCHEMA schema_to_reindex |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | e6a2182ffdd766603232eabd | ALTER TABLE concur_replident REPLICA IDENTITY USING INDEX concur_replident_i_idx |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | e6a31992f581f66d1c213c2f | /* but works fine with FULL replica identity */ ALTER TABLE testpub_tbl5d REPLICA IDENTITY FULL |
+| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_LOCK_STMT | e7bc0ef67c9a8a92ca32a583 | LOCK TABLE lock_table IN ROW EXCLUSIVE MODE |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | e7fda49144b0bd2b12f930a8 | ALTER TABLE notnull_inhparent ADD CONSTRAINT nn NOT NULL i NOT VALID |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | e83b8ecaa00c8915fd3a33c5 | ALTER INDEX dummy_test_idx SET (option_bool = true) |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | e887911d735bb9cc81946bc3 | alter table p1_c1 add constraint inh_check_constraint3 check (f1 > 0) not enforced |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | e88ed6946937b3c0f66d6d89 | -- fail, expression index ALTER TABLE test_replica_identity REPLICA IDENTITY USING INDEX test_replica_identity_expr |
+| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_REINDEX_STMT | e8c26eecb06aa320f918a46f | REINDEX INDEX CONCURRENTLY concur_reindex_part_index_0_2 |
+| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_LOCK_STMT | e8f3daf44d21e4cc82981e93 | LOCK TABLE lock_view6 IN EXCLUSIVE MODE |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | e8f40404ebbd63a7d7a5f43c | ALTER TABLE testpub_tbl6 REPLICA IDENTITY FULL |
+| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_REINDEX_STMT | e96a8f714db0cb1024151f5f | REINDEX TABLE CONCURRENTLY concur_reindex_part |
+| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CLUSTER_STMT | e9b329b14dfa6b310588578a | -- order of "skipping" warnings may vary CLUSTER |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | e9d87e03e0053ce88d471bf1 | CREATE TABLE persons5 OF stuff |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | ea04f7b86fd3cb9784e6e2d0 | alter table constr_parent add not null a not valid |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | ea6248c73b6620229dc60839 | alter index idxpart1_a_idx attach partition idxpart11_a_idx |
+| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_REINDEX_STMT | ea847ba261dacfee4033b489 | REINDEX INDEX unlogged2_pkey |
+| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_REINDEX_STMT | ea997d03e0583d5478369777 | REINDEX (TABLESPACE regress_tblspace) TABLE CONCURRENTLY pg_am |
+| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CLUSTER_STMT | eaa7f0421c57651e60409022 | CLUSTER abbrev_abort_uuids USING abbrev_abort_uuids__noabort_increasing_idx |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | eb733060851afb500025855d | -- violates constraint ALTER TABLE gtest20 ALTER COLUMN b SET EXPRESSION AS (a * 3) |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | ebe6968349b5dbc1768287de | ALTER TABLE tbl_include_unique1 add UNIQUE USING INDEX tbl_include_unique1_idx_unique |
+| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_REFRESH_MAT_VIEW_STMT | ec5ef4c59b466d60c1684eb2 | REFRESH MATERIALIZED VIEW mvtest_mv_v_3 |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | ec819a211650e2b2a45ae15f | ALTER TABLE pub_test.testpub_addpk ADD PRIMARY KEY USING INDEX testpub_addpk_id_idx |
+| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_LOCK_STMT | ec92408edff8d6c8882eb4c3 | LOCK TABLE lock_table IN ACCESS SHARE MODE |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | ed1b1e14666e7cc4b720945e | ALTER TABLE attmp ALTER COLUMN i RESET (n_distinct_inherited) |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | edb266c4f21efffdbb03aba7 | CREATE TABLE notnull_chld0 (a int, CONSTRAINT nn_chld0 NOT NULL a) |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | eded3053553be030fb44c969 | -- ok ALTER VIEW gtest1v ALTER COLUMN b SET DEFAULT 100 |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | ef181a9c0e0f7ea5d400e442 | alter index idxpart_expr_idx attach partition idxpart1_expr_idx |
+| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_LOCK_STMT | ef248309b7e9bdc1ef625ae5 | LOCK TABLE lock_view2 IN EXCLUSIVE MODE |
+| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_REINDEX_STMT | efe75a9a9bb1b48afd479bcf | REINDEX TABLE CONCURRENTLY concur_replident |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | efec3493910630d8a78d1c30 | ALTER TABLE temporal_fk_rng2rng ADD CONSTRAINT temporal_fk_rng2rng_fk FOREIGN KEY (parent_id, PERIOD valid_at) REFERENCES temporal_rng ON DELETE CASCADE ON UPDATE CASCADE |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | f09cdeda341541d6056ea3ce | alter index idxpart_a_b_idx attach partition idxpart1 |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | f09ffbab58297e346fe281d0 | ALTER INDEX ptif_test0_index ATTACH PARTITION ptif_test01_index |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | f14fa241bb60e6d2a8324868 | ALTER TABLE tt4 OF tt_t0 |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | f1c5bd0ed2bd9569fc2c671d | ALTER TABLE temporal_mltrng3 ADD CONSTRAINT temporal_mltrng3_uq UNIQUE (id, valid_at WITHOUT OVERLAPS) |
+| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_REINDEX_STMT | f2039db675b87eec1c24525f | REINDEX (TABLESPACE regress_tblspace) TABLE CONCURRENTLY pg_authid |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | f285d892b81cb0c3e3ce61bb | CREATE TABLE temporal_fk_rng2rng ( id int4range, valid_at daterange, parent_id int4range, CONSTRAINT temporal_fk_rng2rng_pk PRIMARY KEY (id, valid_at WITHOUT OVERLAPS), CONSTRAINT temporal_fk_rng2r... |
+| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_REFRESH_MAT_VIEW_STMT | f2b5fec76f00fb0c920bfc4c | -- make sure invalid combination of options is prohibited REFRESH MATERIALIZED VIEW CONCURRENTLY mvtest_tvmm WITH NO DATA |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | f2c288f64205dc4ac53f00ac | -- partitions with their own identity columns are not allowed, even if the -- partitioned table does not have an identity column. CREATE TABLE pitest1_pfail PARTITION OF pitest1 ( f3 WITH OPTIONS G... |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | f2e1f7873987c237d4235341 | CREATE TABLE temporal_rng4 ( id int4range, valid_at int4range_d, CONSTRAINT temporal_rng4_pk UNIQUE (id, valid_at WITHOUT OVERLAPS) ) |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | f3056ff557d6ae7bcdfc4081 | -- Reindex concurrently of exclusion constraint currently not supported CREATE TABLE concur_reindex_tab3 (c1 int, c2 int4range, EXCLUDE USING gist (c2 WITH &&)) |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | f318db23984d00fd50b675df | -- Can change enforceability and deferrability together ALTER TABLE FKTABLE ALTER CONSTRAINT fk_con NOT ENFORCED NOT DEFERRABLE |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | f33ab2c90b229a8152a48165 | ALTER VIEW my_property_secure SET (security_barrier=false) |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | f3d147a774a673417530660e | ALTER INDEX dummy_test_idx SET (option_int = 3.3) |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | f453cc1eadeb42899a050cf8 | CREATE TABLE temporal_rng3 ( id int4range, valid_at textrange2, CONSTRAINT temporal_rng3_uq UNIQUE (id, valid_at WITHOUT OVERLAPS) ) |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | f476bb3135c960d69443c279 | ALTER INDEX tbl_idx ALTER COLUMN 1 SET STATISTICS 1000 |
+| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_REINDEX_STMT | f50975608d1b97eaa8bbe432 | -- error REINDEX TABLE CONCURRENTLY concur_reindex_part_index |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | f528f1bae131d62b4a0738ac | ALTER TABLE gtest25 ADD COLUMN b int GENERATED ALWAYS AS (a * 2) VIRTUAL, ALTER COLUMN b SET EXPRESSION AS (a * 3) |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | f627bff050abaa0ceb85ca40 | -- succeed unique index over nonnullable cols ALTER TABLE test_replica_identity REPLICA IDENTITY USING INDEX test_replica_identity_keyab_key |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | f635ebcc747c6c85b3333c9a | -- error ALTER TABLE gtestnn_parent ALTER COLUMN f3 SET EXPRESSION AS (nullif(f1, 2) + nullif(f2, 11)) |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | f64203351c54f46ab7f4bb27 | ALTER TABLE unique_tbl ALTER CONSTRAINT unique_tbl_i_key NOT ENFORCED |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | f66cc71e6dc8e1056b5369bf | ALTER INDEX tbl_idx ALTER COLUMN 2 SET STATISTICS 1000 |
+| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_REINDEX_STMT | f66f9498f0c992e249762cf0 | -- no catalog toast index REINDEX SYSTEM CONCURRENTLY postgres |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | f6cc57072a1aa6bb4d5451d4 | alter index gin_test_idx set (fastupdate = off) |
+| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_REINDEX_STMT | f6f9fce38b8680dbb40a1e5e | -- Both start and end triggers enabled. REINDEX INDEX concur_reindex_ind |
+| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_LOCK_STMT | f748664f41c53fce900fc629 | LOCK TABLE lock_view4 IN EXCLUSIVE MODE |
+| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_REINDEX_STMT | f7e4b7dd4e6e30bf5e73bc5d | -- ok -- REINDEX (TABLESPACE) -- catalogs and system tablespaces -- system catalog, fail REINDEX (TABLESPACE regress_tblspace) TABLE pg_am |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | f903d1068b9888f00ecc4a67 | create table inh_nn3 (f4 float, constraint nn3_f1 not null f1 no inherit) inherits (inh_nn1, inh_nn2) |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | f950d97b5bd831ed0917f5f8 | alter table p1 add constraint inh_check_constraint5 check (f1 < 10) not enforced |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | f9b760051fb47632c37ebd59 | ALTER TABLE ref22 ALTER CONSTRAINT ref_f1_f2_fkey DEFERRABLE INITIALLY IMMEDIATE |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | f9b7a0df44cac8d5d47af8f2 | ALTER INDEX dummy_test_idx SET (option_bool = 4) |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | fa00612ff20ea7a2cbfc4e38 | alter view my_locks reset (autovacuum_enabled) |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | fa3389a3b0dce9d2e2ec43cf | CREATE TABLE part_c PARTITION OF parted (b WITH OPTIONS NOT NULL DEFAULT 0) FOR VALUES IN ('c') PARTITION BY RANGE ((b)) |
+| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_REFRESH_MAT_VIEW_STMT | fa3a84d8429ec6fed6a9827e | REFRESH MATERIALIZED VIEW refresh_test |
+| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_REINDEX_STMT | fa78e492534264ed20b04c72 | REINDEX TABLE pg_index |
+| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_REINDEX_STMT | fb1d22e5bd3ea8186a45f269 | REINDEX TABLE reind_fdw_parent |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | fb6093628d03b0d9e0d31126 | alter table inh_nn1 -- test multicommand alter table while at it alter constraint inh_nn1_f1_not_null inherit, alter constraint inh_nn1_f1_not_null no inherit |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | fb88c0ad676e02e37f040f22 | -- should fail because of duplicate referenced columns: CREATE TABLE temporal_fk_rng2rng ( id int4range, valid_at daterange, parent_id int4range, CONSTRAINT temporal_fk_rng2rng_pk PRIMARY KEY (id, ... |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | fbd89346bbd340e555f5f58f | ALTER INDEX testschema.part_a_idx SET TABLESPACE regress_tblspace |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | fbe1c51df54b59822b831481 | ALTER TABLE gtest31_1 ALTER COLUMN b SET EXPRESSION AS ('hello1') |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | fbe75289877ee56f78c7737b | -- Try to use existing covering index as primary key ALTER TABLE covering_index_heap ADD CONSTRAINT covering_pkey PRIMARY KEY USING INDEX covering_pkey |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | fbf96ef5f7aaba0c1455742b | ALTER INDEX btree_tall_idx2 ALTER COLUMN id SET (n_distinct=100) |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | fc4852ad077ca0b3b857fe8e | ALTER INDEX ptif_test_index ATTACH PARTITION ptif_test0_index |
+| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_REINDEX_STMT | fc4d9e2e5b40e09e521ebb28 | -- REINDEX REINDEX TABLE sro_tab |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | fc9e733f289135904bf23d98 | ALTER TABLE notnull_part1_upg ADD CONSTRAINT notnull_con NOT NULL a NOT VALID |
+| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_REINDEX_STMT | fcb84b404e86ab9505872bab | REINDEX INDEX pg_index_indexrelid_index |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | fccaf1e428bd91f7506a7faa | CREATE TABLE gtest_child3 PARTITION OF gtest_parent ( f3 GENERATED ALWAYS AS (f2 * 2) STORED -- error ) FOR VALUES FROM ('2016-09-01') TO ('2016-10-01') |
+| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_REINDEX_STMT | fd60e10b60f4f21a67ea5dcd | REINDEX INDEX pg_shdescription_o_c_index |
+| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_LOCK_STMT | fd909b903de5bfb68e5eaff8 | LOCK TABLE lock_tbl1 IN ACCESS EXCLUSIVE MODE |
+| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_REINDEX_STMT | fdda325845e12f709b670c14 | -- concurrently REINDEX SCHEMA CONCURRENTLY schema_to_reindex |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | fdedcc6dbb6b49a2749c07b9 | CREATE TABLE notnull_part1_2_upg (a int, CONSTRAINT nn2 NOT NULL a, b int) |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | fdf983696a9f77268b467920 | -- -- test changing the PK's dependencies -- CREATE TABLE temporal3 ( id int4range, valid_at daterange, CONSTRAINT temporal3_pk PRIMARY KEY (id, valid_at WITHOUT OVERLAPS) ) |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | fe2473ec586eaebcd216a17d | alter view base_tab_view alter column c set default 'View default' |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | fe59ae761dafbe095a06825e | create table parttmp ( id int, valid_at daterange, exclude using gist (id with =, valid_at with &&) ) partition by range (id) |
+| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_ALTER_TABLE_STMT | fe7f771bbb15028584cf3eb5 | alter table p1_c1 add constraint inh_check_constraint10 check (f1 < 10) not valid enforced |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | fe8853e630eb99534adadcb4 | -- Two scalar columns: CREATE TABLE temporal_fk2_mltrng2mltrng ( id int4range, valid_at datemultirange, parent_id1 int4range, parent_id2 int4range, CONSTRAINT temporal_fk2_mltrng2mltrng_pk PRIMARY ... |
+| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_REFRESH_MAT_VIEW_STMT | fe95e40c921a196e72887327 | REFRESH MATERIALIZED VIEW test_maint_search_path.test_maint_mv |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | fea3d9d59a64f137f2e64e25 | CREATE TABLE gtest28 OF gtest_type (f1 WITH OPTIONS GENERATED ALWAYS AS (f2 *2) VIRTUAL) |
+| TYPE_MISMATCH | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_REINDEX_STMT | ff6ac5ad2de81b978ff4648a | REINDEX INDEX CONCURRENTLY reindex_inj.ind_pred |
 
 ## Regressed Baseline Transitions
 
