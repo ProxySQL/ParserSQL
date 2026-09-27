@@ -323,12 +323,14 @@ private:
             if constexpr (D == Dialect::PostgreSQL) {
                 if (!pg_column_label(alias_name)) return expr_parser_.syntax_error();
             }
-            AstNode* alias = make_node(arena_, NodeType::NODE_ALIAS, alias_name.source.empty() ? alias_name.text : alias_name.source);
+            AstNode* alias = make_node_from_token(arena_, NodeType::NODE_ALIAS, alias_name,
+                alias_name.source.ptr != alias_name.text.ptr ? FLAG_IDENT_DELIMITED : 0);
             item->add_child(alias);
         } else if (TableRefParser<D>::is_alias_token(next) && !TableRefParser<D>::starts_json_format(tok_)) {
             // Implicit alias (no AS keyword): SELECT expr alias_name
             tok_.skip();
-            AstNode* alias = make_node(arena_, NodeType::NODE_ALIAS, next.source.empty() ? next.text : next.source);
+            AstNode* alias = make_node_from_token(arena_, NodeType::NODE_ALIAS, next,
+                next.source.ptr != next.text.ptr ? FLAG_IDENT_DELIMITED : 0);
             item->add_child(alias);
         }
         return item;

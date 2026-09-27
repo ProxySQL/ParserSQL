@@ -215,6 +215,24 @@ for name resolution, types, privileges and semantic checks. Corpus acceptance
 alone does not establish grammar parity or round-trip equivalence for every
 accepted statement.
 
+## Local execution and review corrections
+
+PostgreSQL `LIMIT ALL` and `LIMIT NULL` preserve an unlimited local row count;
+`OFFSET NULL` is zero. The local planner rejects limit/offset expressions it
+cannot evaluate, including dynamic, negative and overflowing counts, rather
+than treating their text as a number. PostgreSQL binary `||` uses the existing
+concatenation evaluator while retaining PostgreSQL operator precedence.
+MySQL ROWS/RANGE frames are parsed and emitted, but remain unsupported by the
+local planner. Nested ordinary function calls no longer allocate discarded
+expression trees during speculative type-prefix parsing.
+
+Session transaction dispatch requires a successful, complete parse before any
+transaction-manager call. PostgreSQL SAVEPOINT, RELEASE and ROLLBACK TO use the
+named operand, including identifier case folding and quoted-name decoding.
+Prepared transactions, chaining and other options the local manager cannot
+execute are rejected. Basic MySQL controls retain optional WORK and named
+SAVEPOINT forms. Parsing transaction syntax alone does not execute it.
+
 ## Multiple statements
 
 ```cpp
@@ -231,6 +249,10 @@ for (const auto& statement : batch.statements) {
 All returned ASTs remain alive until the next `parse`, `parse_all`, or `reset`
 on that parser. Input SQL must remain alive too. Use `clone_ast` to retain a tree
 independently. The result vector owns records, not the ASTs or source bytes.
+
+Both `parse` and `parse_all` reject input longer than `UINT32_MAX` bytes before
+reading the buffer, preserving the 32-bit source-location contract. An oversized
+batch returns one ERROR record with an empty source span and a diagnostic.
 
 The tokenizer identifies boundaries, so semicolons in strings, quoted
 identifiers and comments do not split statements. Empty statements/comments are

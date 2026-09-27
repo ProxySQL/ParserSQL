@@ -81,6 +81,7 @@ inline bool supported_node(const AstNode& node) {
             return true;
         }
         case NodeType::NODE_TABLE_REF:
+            return !(node.flags & (FLAG_TABLE_ONLY | FLAG_TABLE_INHERIT));
         case NodeType::NODE_QUALIFIED_NAME:
         case NodeType::NODE_SELECT_STMT:
         case NodeType::NODE_SELECT_OPTIONS:
@@ -241,7 +242,8 @@ ParameterizeResult parameterize_ast(const AstNode* root, Arena& arena,
         comma_limit[ctx.depth] = (ctx.depth && comma_limit[ctx.depth - 1]) ||
             (node.type == NodeType::NODE_LIMIT_CLAUSE && (node.flags & FLAG_LIMIT_COMMA));
         if (!supported_node(node) ||
-            (D == Dialect::PostgreSQL && node.type == NodeType::NODE_ALIAS && !postgres_alias(node.value()))) {
+            (D == Dialect::PostgreSQL && node.type == NodeType::NODE_ALIAS &&
+             !(node.flags & FLAG_IDENT_DELIMITED) && !postgres_alias(node.value()))) {
             result.error = AstError::UnsupportedContext;
             return AstVisitAction::Stop;
         }

@@ -439,8 +439,10 @@ private:
             if (next.type == TokenType::TK_AS) {
                 tok_.skip();
                 Token alias_name = tok_.next_token();
-                ret->add_child(make_node(arena_, NodeType::NODE_ALIAS,
-                    alias_name.source.empty() ? alias_name.text : alias_name.source));
+                AstNode* alias = make_node_from_token(arena_, NodeType::NODE_ALIAS, alias_name);
+                if (alias && alias_name.source.ptr != alias_name.text.ptr)
+                    alias->flags |= FLAG_IDENT_DELIMITED;
+                ret->add_child(alias);
             }
 
             if (tok_.peek().type == TokenType::TK_COMMA) {

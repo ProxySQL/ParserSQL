@@ -240,21 +240,14 @@ private:
         if (!name || (parens && !take(")"))) return error();
         AstNode* relation = node(NodeType::NODE_TABLE_REF);
         if (!relation) return error();
-        if (only) name = clause("ONLY", name);
-        if (!name) return error();
-        if (!only && inheritance && take("*")) {
-            name = clause("", name);
-            if (!name) return error();
-            name->add_child(clause("*"));
-        }
+        if (only) relation->flags |= FLAG_TABLE_ONLY;
+        if (!only && inheritance && take("*")) relation->flags |= FLAG_TABLE_INHERIT;
         relation->add_child(name);
         bool alias = take("AS");
         if (alias || (!insert_target && pg_column_name(tok_.peek()) && !is("SET") && !is("USING"))) {
             AstNode* alias_name = identifier();
             if (!alias_name) return error();
-            // Existing alias nodes contain source spelling, including quotes.
             alias_name->type = NodeType::NODE_ALIAS;
-            alias_name->set_value(alias_name->source());
             relation->add_child(alias_name);
         }
         return relation;
@@ -444,14 +437,14 @@ private:
             if (take("AS")) {
                 Token alias = tok_.next_token();
                 if (!pg_column_label(alias)) return false;
-                AstNode* name = make_node(arena_, NodeType::NODE_ALIAS,
-                    alias.source.empty() ? alias.text : alias.source);
+                AstNode* name = make_node_from_token(arena_, NodeType::NODE_ALIAS, alias,
+                    alias.source.ptr != alias.text.ptr ? FLAG_IDENT_DELIMITED : 0);
                 if (!name) { error(); return false; }
                 result->add_child(name);
             } else if (tok_.peek().type == TokenType::TK_IDENTIFIER) {
                 Token alias = tok_.next_token();
-                AstNode* name = make_node(arena_, NodeType::NODE_ALIAS,
-                    alias.source.empty() ? alias.text : alias.source);
+                AstNode* name = make_node_from_token(arena_, NodeType::NODE_ALIAS, alias,
+                    alias.source.ptr != alias.text.ptr ? FLAG_IDENT_DELIMITED : 0);
                 if (!name) { error(); return false; }
                 result->add_child(name);
             }

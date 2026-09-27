@@ -61,7 +61,7 @@ coverage and remaining syntax gaps.
 ### Build
 
 ```bash
-make all                # Build library + run all 1,160 tests
+make all                # Build library + run the full test suite
 make lib                # Just the static library
 make bench              # Benchmarks (-O2); use scripts/run_benchmarks.sh for -O3 report
 make build-sqlengine    # Interactive SQL CLI
@@ -264,7 +264,7 @@ auto report = recovery.recover();
           │           ▼
           │   ┌──────────────┐
           │   │ Full AST in  │
-          │   │ arena (32 B  │
+          │   │ arena (48 B  │
           │   │ nodes)       │
           │   └──────┬───────┘
           │          │
@@ -403,11 +403,11 @@ owning copies, subtree replacement and context-aware parameterization.
 | `engine_stress_test` | `make engine-stress` | Direct-API engine stress test |
 | `bench_distributed` | `make bench-distributed` | Distributed query benchmark + pipeline breakdown |
 | `run_bench` | `make bench` | Google-Benchmark micro-benchmarks |
-| `run_tests` | `make test` | 1,160 Google-Test unit tests |
+| `run_tests` | `make test` | Google-Test unit tests |
 
 ## Testing
 
-- **1,160 unit tests** (Google Test, 50 test files)
+- **Unit tests** (Google Test; run `make test` for current totals)
 - **86,467 external corpus queries** validated via `scripts/run_benchmarks.sh`
 - **CI** — runs unit tests + a corpus-subset on every push/PR
 - **Integration tests** (MySQL/PgSQL) auto-skip when no live backend is reachable
@@ -448,7 +448,7 @@ src/sql_engine/               function_registry.cpp, in_memory_catalog.cpp,
                               pgsql_remote_executor.cpp, multi_remote_executor.cpp
 
 tools/    sqlengine.cpp  mysql_server.cpp  engine_stress_test.cpp  bench_distributed.cpp
-tests/    1,160 Google-Test tests across 50 files
+tests/    Google-Test unit and regression tests
 bench/    bench_parser.cpp  bench_engine.cpp  bench_comparison.cpp
 scripts/  run_benchmarks.sh  run_comparison.sh
 docs/benchmarks/  latest.md  comparison.md  distributed_comparison.md  REPRODUCING.md

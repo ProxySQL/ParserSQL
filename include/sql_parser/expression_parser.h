@@ -293,6 +293,32 @@ private:
         }
     }
 
+    // Only identify a possible type prefix here. Building modifier expressions
+    // before finding its string literal would parse ordinary function arguments
+    // twice at every nesting level and retain every discarded AST in the arena.
+    static bool scan_type_modifier(Tokenizer<Dialect::PostgreSQL>& tokenizer, void*) {
+        unsigned parentheses = 0, brackets = 0;
+        bool consumed = false;
+        while (true) {
+            const TokenType type = tokenizer.peek().type;
+            if (type == TokenType::TK_EOF || type == TokenType::TK_ERROR ||
+                type == TokenType::TK_SEMICOLON) return false;
+            if (!parentheses && !brackets &&
+                (type == TokenType::TK_COMMA || type == TokenType::TK_RPAREN)) return consumed;
+            if (type == TokenType::TK_LPAREN) ++parentheses;
+            else if (type == TokenType::TK_RPAREN) {
+                if (!parentheses) return false;
+                --parentheses;
+            } else if (type == TokenType::TK_LBRACKET) ++brackets;
+            else if (type == TokenType::TK_RBRACKET) {
+                if (!brackets) return false;
+                --brackets;
+            }
+            tokenizer.skip();
+            consumed = true;
+        }
+    }
+
     static bool parse_type_modifier(Tokenizer<Dialect::PostgreSQL>& tokenizer, void* context) {
         auto* owner = static_cast<ExpressionParser*>(context);
         ExpressionParser<Dialect::PostgreSQL> parser(tokenizer, owner->arena_, true);
@@ -366,8 +392,12 @@ private:
                     keyword(t, "TIME") || keyword(t, "DOUBLE") || keyword(t, "CHARACTER") ||
                     keyword(t, "CHAR") || keyword(t, "NCHAR") || keyword(t, "NATIONAL") || keyword(t, "BIT")) {
                     auto lookahead = tok_;
-                    StringRef type = PgTypeParser(lookahead, parse_type_modifier, this).parse(false, true, &t);
+                    StringRef type = PgTypeParser(lookahead, scan_type_modifier).parse(false, true, &t);
                     if (!type.empty() && lookahead.peek().type == TokenType::TK_STRING) {
+                        lookahead = tok_;
+                        type = PgTypeParser(lookahead, parse_type_modifier, this).parse(false, true, &t);
+                        if (type.empty() || lookahead.peek().type != TokenType::TK_STRING)
+                            return syntax_error();
                         Token literal = lookahead.next_token();
                         tok_ = lookahead;
                         AstNode* value = make_node_from_token(arena_, NodeType::NODE_LITERAL_STRING, literal);
@@ -1122,8 +1152,11 @@ private:
                 return parse_member_of(left, op, prec);
             default: {
                 // Standard binary operator
+                // Keep PostgreSQL's generic-operator precedence/tokenization,
+                // but allow its builtin concatenation through the evaluator.
                 const bool pg_operator = D == Dialect::PostgreSQL &&
-                    (op.type == TokenType::TK_PG_OPERATOR || op.type == TokenType::TK_CARET);
+                    ((op.type == TokenType::TK_PG_OPERATOR && !op.text.equals_ci("||", 2)) ||
+                     op.type == TokenType::TK_CARET);
                 AstNode* right = D == Dialect::PostgreSQL && quantifiable_operator(op.type) && quantifier(tok_.peek())
                     ? parse_quantified_operand() : D == Dialect::PostgreSQL ? parse_complete(prec) : parse(prec);
                 if (!right) return D == Dialect::PostgreSQL ? syntax_error() : (require_complete_operands_ ? nullptr : left);
@@ -1829,13 +1862,11 @@ public:
             }
             spec->add_child(ord);
         }
-        if constexpr (D == Dialect::PostgreSQL) {
-            if (keyword(tok_.peek(), "ROWS") || keyword(tok_.peek(), "RANGE") ||
-                keyword(tok_.peek(), "GROUPS")) {
-                AstNode* frame = parse_window_frame();
-                if (!frame) return nullptr;
-                spec->add_child(frame);
-            }
+        if (keyword(tok_.peek(), "ROWS") || keyword(tok_.peek(), "RANGE") ||
+            (D == Dialect::PostgreSQL && keyword(tok_.peek(), "GROUPS"))) {
+            AstNode* frame = parse_window_frame();
+            if (!frame) return nullptr;
+            spec->add_child(frame);
         }
         if (tok_.peek().type != TokenType::TK_RPAREN) return syntax_error();
         tok_.skip();
@@ -1889,7 +1920,7 @@ private:
             frame->add_child(end);
         }
         if (start_rank > end_rank) return syntax_error();
-        if (keyword(tok_.peek(), "EXCLUDE")) {
+        if (D == Dialect::PostgreSQL && keyword(tok_.peek(), "EXCLUDE")) {
             tok_.skip();
             Token exclusion = tok_.next_token();
             StringRef value;

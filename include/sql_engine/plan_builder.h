@@ -26,6 +26,7 @@
 #include "sql_parser/arena.h"
 #include <cstring>
 #include <vector>
+#include <limits>
 
 namespace sql_engine {
 
@@ -122,6 +123,14 @@ private:
             case NodeType::NODE_PG_DDL_SYNTAX:
                 return true;
             // PG_GAPS_QUERY_GUARD
+            case NodeType::NODE_LIMIT_CLAUSE: {
+                int64_t value;
+                const auto* count = node->first_child;
+                if (!read_limit_literal(count, -1, value)) return true;
+                const auto* offset = count->next_sibling;
+                if (offset && (!read_limit_literal(offset, 0, value) || offset->next_sibling)) return true;
+                break;
+            }
             case NodeType::NODE_TABLE_REF:
                 if (node->flags & (sql_parser::FLAG_TABLE_ONLY | sql_parser::FLAG_TABLE_INHERIT)) return true;
                 break;
@@ -481,41 +490,44 @@ private:
         return current;
     }
 
-    // Build a Limit plan node from LIMIT clause AST
-    PlanNode* build_limit_node(const sql_parser::AstNode* limit_clause, PlanNode* child) {
-        PlanNode* limit = make_plan_node(arena_, PlanNodeType::LIMIT);
-        limit->limit.count = -1;
-        limit->limit.offset = 0;
-
-        const sql_parser::AstNode* first = limit_clause->first_child;
-        if (first) {
-            // Parse the literal count value
-            limit->limit.count = parse_int_literal(first);
-
-            const sql_parser::AstNode* second = first->next_sibling;
-            if (second) {
-                // LIMIT count OFFSET offset_val  or  LIMIT offset, count (MySQL)
-                // In the AST, second child is always the offset value
-                limit->limit.offset = parse_int_literal(second);
+    // Local LIMIT execution supports integer constants and PostgreSQL NULL
+    // (including normalized ALL). Other expressions need runtime evaluation.
+    static bool read_limit_literal(const sql_parser::AstNode* node,
+                                   int64_t null_value, int64_t& value) {
+        if (!node) return false;
+        if constexpr (D == sql_parser::Dialect::PostgreSQL) {
+            if (node->type == sql_parser::NodeType::NODE_LITERAL_NULL) {
+                value = null_value;
+                return true;
             }
         }
-        limit->left = child;
-        return limit;
+        if (node->type != sql_parser::NodeType::NODE_LITERAL_INT) return false;
+        const auto text = node->value();
+        if (text.empty()) return false;
+        value = 0;
+        for (uint32_t i = 0; i < text.len; ++i) {
+            const char c = text.ptr[i];
+            if (c < '0' || c > '9') return false;
+            const int digit = c - '0';
+            if (value > (std::numeric_limits<int64_t>::max() - digit) / 10) return false;
+            value = value * 10 + digit;
+        }
+        return true;
     }
 
-    // Parse an integer literal from an AST node
-    static int64_t parse_int_literal(const sql_parser::AstNode* node) {
-        if (!node) return 0;
-        sql_parser::StringRef val = node->value();
-        if (val.len == 0) return 0;
-        int64_t result = 0;
-        for (uint32_t i = 0; i < val.len; ++i) {
-            char c = val.ptr[i];
-            if (c >= '0' && c <= '9') {
-                result = result * 10 + (c - '0');
-            }
-        }
-        return result;
+    // Build a Limit plan node without converting unsupported expressions to zero.
+    PlanNode* build_limit_node(const sql_parser::AstNode* limit_clause, PlanNode* child) {
+        int64_t count, offset = 0;
+        const auto* first = limit_clause->first_child;
+        if (!read_limit_literal(first, -1, count)) return nullptr;
+        const auto* second = first->next_sibling;
+        if (second && (!read_limit_literal(second, 0, offset) || second->next_sibling)) return nullptr;
+        PlanNode* limit = make_plan_node(arena_, PlanNodeType::LIMIT);
+        if (!limit) return nullptr;
+        limit->limit.count = count;
+        limit->limit.offset = offset;
+        limit->left = child;
+        return limit;
     }
 
     // Build plan for CTE (WITH clause)

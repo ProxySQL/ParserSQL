@@ -325,11 +325,13 @@ public:
                 if (!alias && !pg_column_name(t)) { expr_parser_.syntax_error(); return; }
             }
             if (!alias && !is_alias_start(t.type)) { expr_parser_.syntax_error(); return; }
-            if (!alias) alias = make_node(arena_, NodeType::NODE_ALIAS, t.source.empty() ? t.text : t.source);
+            if (!alias) alias = make_node_from_token(arena_, NodeType::NODE_ALIAS, t,
+                t.source.ptr != t.text.ptr ? FLAG_IDENT_DELIMITED : 0);
             if (!alias) { expr_parser_.syntax_error(); return; }
         } else if (is_alias_token(t) && (D != Dialect::PostgreSQL || pg_column_name(t))) {
             tok_.skip();
-            alias = make_node(arena_, NodeType::NODE_ALIAS, t.source.empty() ? t.text : t.source);
+            alias = make_node_from_token(arena_, NodeType::NODE_ALIAS, t,
+                t.source.ptr != t.text.ptr ? FLAG_IDENT_DELIMITED : 0);
             if (!alias) { expr_parser_.syntax_error(); return; }
         }
         if (!alias) return;
@@ -528,8 +530,9 @@ private:
                     if (take(TokenType::TK_AS)) {
                         auto alias = tok_.next_token();
                         if (!pg_column_name(alias)) return expr_parser_.syntax_error();
-                        auto value = alias.source.empty() ? alias.text : alias.source;
-                        qual->value_ptr = value.ptr; qual->value_len = value.len;
+                        qual->set_value(alias.text);
+                        qual->set_source(alias.source);
+                        if (alias.source.ptr != alias.text.ptr) qual->flags |= FLAG_IDENT_DELIMITED;
                     }
                 } else return expr_parser_.syntax_error();
             }

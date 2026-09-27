@@ -51,6 +51,19 @@ tree. Validation happens before mutation; errors leave input links unchanged.
 Nodes are never freed individually, and callers retain responsibility for the
 lifetimes of every participating arena.
 
+Identifier and alias values omit their surrounding delimiters; original spelling
+is retained separately in `source()`. Token text can still contain doubled
+identifier quotes; it is not a fully decoded SQL identifier. When editing a
+parsed value for re-emission,
+also clear its retained spelling with `node.set_source({})` (or replace it with
+matching source text). `set_value()` alone deliberately leaves `source()` intact.
+The emitter uses identifier flags to quote a changed delimited identifier when
+no retained spelling remains.
+
+Removing a required child can produce an incomplete SQL tree. Emission tolerates
+missing children, but callers must validate edited SQL before using it; tree
+link validation does not establish SQL grammar validity.
+
 Failed operations can consume arena space; they do not reset or roll back an
 arena that might contain other live nodes. Temporary STL allocation failures use
 the usual C++ exception behavior.

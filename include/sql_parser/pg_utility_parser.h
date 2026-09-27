@@ -4,6 +4,7 @@
 #include "sql_parser/compound_query_parser.h"
 #include "sql_parser/subquery_parse_callback.h"
 #include "sql_parser/parse_result.h"
+#include "sql_parser/pg_identifier.h"
 
 namespace sql_parser {
 
@@ -26,6 +27,7 @@ public:
         const bool begin = word(first, "BEGIN") || start;
         const bool rollback = word(first, "ROLLBACK") || word(first, "ABORT");
         const bool commit = word(first, "COMMIT") || word(first, "END");
+        const bool canonical_prepared = word(first, "ROLLBACK") || word(first, "COMMIT");
         const bool prepare = word(first, "PREPARE");
         const bool save = word(first, "SAVEPOINT");
         result.stmt_type = begin ? (start ? StmtType::START_TRANSACTION : StmtType::BEGIN)
@@ -67,7 +69,7 @@ public:
                 had_option = tok_.peek().type == TokenType::TK_COMMA;
                 if (had_option) tok_.skip();
             }
-        } else if (prepare || ((rollback || commit) && take("PREPARED"))) {
+        } else if (prepare || (canonical_prepared && take("PREPARED"))) {
             if (work) fail();
             if (!prepare) append(root, node(NodeType::NODE_TRANSACTION_OPTION, "PREPARED"));
             append(root, string_value());
@@ -109,7 +111,7 @@ public:
                 tok_.skip();
                 AstNode* qualified = node(NodeType::NODE_QUALIFIED_NAME, "");
                 append(qualified, name);
-                append(qualified, identifier());
+                append(qualified, identifier(true));
                 name = qualified;
             }
             append(table, name);
@@ -207,11 +209,9 @@ private:
         tok_.skip();
         return token_node(NodeType::NODE_LITERAL_STRING, value);
     }
-    AstNode* identifier() {
+    AstNode* identifier(bool label = false) {
         Token t = tok_.peek();
-        // Non-reserved keyword identifiers are accepted by the tokenizer as
-        // keywords; reserved structural words are intentionally excluded here.
-        bool valid = t.type == TokenType::TK_IDENTIFIER || t.type == TokenType::TK_KEY;
+        bool valid = label ? pg_column_label(t) : pg_column_name(t);
         if (!valid) { fail(); return nullptr; }
         tok_.skip();
         return token_node(NodeType::NODE_IDENTIFIER, t);

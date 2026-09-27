@@ -11,6 +11,7 @@
 #include "sql_parser/pg_ddl_parser.h"
 #include "sql_parser/pg_admin_parser.h"
 #include "sql_parser/pg_session_parser.h"
+#include <limits>
 
 namespace sql_parser {
 
@@ -27,6 +28,11 @@ void Parser<D>::reset() {
 template <Dialect D>
 ParseResult Parser<D>::parse(const char* sql, size_t len) {
     arena_.reset();
+    if (len > std::numeric_limits<uint32_t>::max()) {
+        ParseResult result;
+        result.error.message = {"SQL input exceeds 32-bit source span limit", 42};
+        return result;
+    }
     bool has_user_variables = false;
     if constexpr (D == Dialect::MySQL) {
         Tokenizer<D> detector;
@@ -44,6 +50,12 @@ template <Dialect D>
 BatchParseResult Parser<D>::parse_all(const char* sql, size_t len) {
     arena_.reset();
     BatchParseResult batch;
+    if (len > std::numeric_limits<uint32_t>::max()) {
+        ParsedStatement rejected;
+        rejected.result.error.message = {"SQL input exceeds 32-bit source span limit", 42};
+        batch.statements.push_back(rejected);
+        return batch;
+    }
     size_t cursor = 0;
     while (cursor < len) {
         Tokenizer<D> scanner;
@@ -1048,9 +1060,9 @@ ParseResult Parser<D>::extract_transaction(const Token& first) {
             break;
         case TokenType::TK_START:
             r.stmt_type = StmtType::START_TRANSACTION;
-            // consume TRANSACTION if present
             if (tokenizer_.peek().type == TokenType::TK_TRANSACTION)
                 tokenizer_.skip();
+            else r.status = ParseResult::ERROR;
             break;
         case TokenType::TK_COMMIT:
             r.stmt_type = StmtType::COMMIT;
@@ -1060,12 +1072,21 @@ ParseResult Parser<D>::extract_transaction(const Token& first) {
             break;
         case TokenType::TK_SAVEPOINT:
             r.stmt_type = StmtType::SAVEPOINT;
+            if (tokenizer_.peek().type == TokenType::TK_IDENTIFIER)
+                r.table_name = tokenizer_.next_token().text;
+            else r.status = ParseResult::ERROR;
             break;
         default:
             r.stmt_type = StmtType::UNKNOWN;
             break;
     }
 
+    if (r.stmt_type == StmtType::BEGIN || r.stmt_type == StmtType::COMMIT ||
+        r.stmt_type == StmtType::ROLLBACK) {
+        const Token next = tokenizer_.peek();
+        if (next.source.ptr == next.text.ptr && next.text.equals_ci("WORK", 4))
+            tokenizer_.skip();
+    }
     scan_to_end(r);
     return r;
 }
