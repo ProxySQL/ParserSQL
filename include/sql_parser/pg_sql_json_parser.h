@@ -16,9 +16,10 @@ public:
         : tok_(tok), arena_(arena), expr_(expr) {}
 
     static bool recognizes(const Token& name) {
-        for (const char* word : {"JSON", "JSON_SCALAR", "JSON_SERIALIZE", "JSON_ARRAY", "JSON_OBJECT",
+        static constexpr std::string_view words[] = {"JSON", "JSON_SCALAR", "JSON_SERIALIZE", "JSON_ARRAY", "JSON_OBJECT",
              "JSON_QUERY", "JSON_VALUE", "JSON_EXISTS", "JSON_ARRAYAGG", "JSON_OBJECTAGG", "XMLPARSE", "XMLSERIALIZE", "XMLCONCAT",
-             "XMLELEMENT", "XMLFOREST", "XMLPI", "XMLROOT", "XMLEXISTS"})
+             "XMLELEMENT", "XMLFOREST", "XMLPI", "XMLROOT", "XMLEXISTS"};
+        for (std::string_view word : words)
             if (Expr::keyword(name, word)) return true;
         return false;
     }

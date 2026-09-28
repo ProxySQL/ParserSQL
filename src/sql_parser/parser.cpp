@@ -112,6 +112,42 @@ ParseResult Parser<D>::classify_and_dispatch() {
         return r;
     }
 
+    // Common statements have unambiguous token kinds. Avoid probing the
+    // PostgreSQL utility grammars before dispatching these hot paths.
+    switch (first.type) {
+        case TokenType::TK_SELECT:   return parse_select();
+        case TokenType::TK_WITH:     return parse_with();
+        case TokenType::TK_TABLE:
+        case TokenType::TK_VALUES:
+            if constexpr (D == Dialect::PostgreSQL) {
+                return parse_query_expression(first.type);
+            }
+            return extract_unknown(first);
+        case TokenType::TK_LPAREN: {
+            // Parenthesized SELECT / compound query: (SELECT ...) UNION ...
+            Token next = tokenizer_.peek();
+            if (next.type == TokenType::TK_SELECT || next.type == TokenType::TK_LPAREN ||
+                (D == Dialect::PostgreSQL && (next.type == TokenType::TK_VALUES ||
+                                            next.type == TokenType::TK_TABLE))) {
+                return parse_query_expression(TokenType::TK_LPAREN);
+            }
+            return extract_unknown(first);
+        }
+        case TokenType::TK_SET:      return parse_set();
+        case TokenType::TK_INSERT:   return parse_insert(false);
+        case TokenType::TK_UPDATE:   return parse_update();
+        case TokenType::TK_DELETE:   return parse_delete();
+        case TokenType::TK_REPLACE:  return parse_insert(true);
+        case TokenType::TK_BEGIN:
+        case TokenType::TK_START:
+        case TokenType::TK_COMMIT:
+        case TokenType::TK_ROLLBACK:
+        case TokenType::TK_SAVEPOINT:return extract_transaction(first);
+        case TokenType::TK_USE:      return extract_use(first);
+        case TokenType::TK_SHOW:     return extract_show(first);
+        default: break;
+    }
+
     if constexpr (D == Dialect::PostgreSQL) {
         if (PgUtilityParser::word(first, "MERGE")) return parse_merge();
         if (PgAdminParser::handles(first, tokenizer_)) {
@@ -150,36 +186,6 @@ ParseResult Parser<D>::classify_and_dispatch() {
     }
 
     switch (first.type) {
-        case TokenType::TK_SELECT:   return parse_select();
-        case TokenType::TK_WITH:     return parse_with();
-        case TokenType::TK_TABLE:
-        case TokenType::TK_VALUES:
-            if constexpr (D == Dialect::PostgreSQL) {
-                return parse_query_expression(first.type);
-            }
-            return extract_unknown(first);
-        case TokenType::TK_LPAREN: {
-            // Parenthesized SELECT / compound query: (SELECT ...) UNION ...
-            Token next = tokenizer_.peek();
-            if (next.type == TokenType::TK_SELECT || next.type == TokenType::TK_LPAREN ||
-                (D == Dialect::PostgreSQL && (next.type == TokenType::TK_VALUES ||
-                                            next.type == TokenType::TK_TABLE))) {
-                return parse_query_expression(TokenType::TK_LPAREN);
-            }
-            return extract_unknown(first);
-        }
-        case TokenType::TK_SET:      return parse_set();
-        case TokenType::TK_INSERT:   return parse_insert(false);
-        case TokenType::TK_UPDATE:   return parse_update();
-        case TokenType::TK_DELETE:   return parse_delete();
-        case TokenType::TK_REPLACE:  return parse_insert(true);
-        case TokenType::TK_BEGIN:
-        case TokenType::TK_START:
-        case TokenType::TK_COMMIT:
-        case TokenType::TK_ROLLBACK:
-        case TokenType::TK_SAVEPOINT:return extract_transaction(first);
-        case TokenType::TK_USE:      return extract_use(first);
-        case TokenType::TK_SHOW:     return extract_show(first);
         case TokenType::TK_PREPARE:  return extract_prepare(first);
         case TokenType::TK_EXECUTE:  return extract_execute(first);
         case TokenType::TK_DEALLOCATE: return extract_deallocate(first);

@@ -13,7 +13,7 @@ public:
     PgAdminParser(Tokenizer<Dialect::PostgreSQL>& tok, Arena& arena)
         : tok_(tok), arena_(arena) {}
 
-    static bool word(const Token& token, const char* value) { return PgDdlParser::word(token, value); }
+    static bool word(const Token& token, std::string_view value) { return PgDdlParser::word(token, value); }
     static bool handles(const Token& first, Tokenizer<Dialect::PostgreSQL> look) {
         if (word(first, "COMMENT") || word(first, "SECURITY")) return true;
         if (!word(first, "CREATE") && !word(first, "ALTER") && !word(first, "DROP")) return false;

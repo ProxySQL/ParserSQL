@@ -14,9 +14,10 @@ public:
         : tok_(tok), arena_(arena) {}
 
     static bool handles(const Token& first) {
-        for (const char* keyword : {"DECLARE", "FETCH", "MOVE", "CLOSE", "PREPARE", "EXECUTE",
+        static constexpr std::string_view words[] = {"DECLARE", "FETCH", "MOVE", "CLOSE", "PREPARE", "EXECUTE",
                 "DEALLOCATE", "LISTEN", "NOTIFY", "UNLISTEN", "DISCARD", "CHECKPOINT",
-                "REINDEX", "CLUSTER", "REFRESH", "LOCK"})
+                "REINDEX", "CLUSTER", "REFRESH", "LOCK"};
+        for (std::string_view keyword : words)
             if (word(first, keyword)) return true;
         return false;
     }
@@ -75,9 +76,9 @@ private:
     Arena& arena_;
     bool failed_ = false;
 
-    static bool word(const Token& token, const char* value) {
+    static bool word(const Token& token, std::string_view value) {
         return token.source.ptr == token.text.ptr &&
-            token.text.equals_ci(value, static_cast<uint32_t>(std::strlen(value)));
+            token.text.equals_ci(value.data(), static_cast<uint32_t>(value.size()));
     }
     bool is(const char* value) { return word(tok_.peek(), value); }
     bool at(TokenType type) { return tok_.peek().type == type; }

@@ -8,7 +8,7 @@ class PgQueryClauses {
     Tokenizer<D>& tok_;
     Arena& arena_;
     ExpressionParser<D>& expr_;
-    bool word(const char* s) { return ExpressionParser<D>::keyword(tok_.peek(), s); }
+    bool word(std::string_view s) { return ExpressionParser<D>::keyword(tok_.peek(), s); }
     // SQL FETCH and OFFSET ... ROWS use c_expr plus signed numeric constants,
     // unlike LIMIT and an OFFSET without ROWS, which allow arbitrary a_expr.
     static bool fetch_value(const AstNode* node, const Token& start) {

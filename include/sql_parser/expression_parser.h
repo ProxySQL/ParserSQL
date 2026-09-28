@@ -65,9 +65,9 @@ public:
             (type == TokenType::TK_WITH || type == TokenType::TK_VALUES || type == TokenType::TK_TABLE));
     }
 
-    static bool keyword(const Token& token, const char* word) {
+    static bool keyword(const Token& token, std::string_view word) {
         return token.source.ptr == token.text.ptr &&
-               token.text.equals_ci(word, static_cast<uint32_t>(std::strlen(word)));
+               token.text.equals_ci(word.data(), static_cast<uint32_t>(word.size()));
     }
 
     AstNode* syntax_error() {
@@ -162,18 +162,23 @@ public:
             return nullptr;
         }
         if (require_complete_operands_ && operand_error_) return nullptr;
+        Token next = tok_.peek();
         if constexpr (D == Dialect::PostgreSQL) {
-            left = parse_postfix(left);
-            if (!left) { pattern_operand_ = pattern_operand; return nullptr; }
+            if (next.type == TokenType::TK_DOUBLE_COLON || next.type == TokenType::TK_DOT ||
+                next.type == TokenType::TK_LBRACKET) {
+                left = parse_postfix(left);
+                if (!left) { pattern_operand_ = pattern_operand; return nullptr; }
+                next = tok_.peek();
+            }
         }
         pattern_operand_ = pattern_operand;
 
         while (true) {
             if (json_xml_restricted_) {
-                const Token& next = tok_.peek();
                 bool stop = false;
-                for (const char* word : {"AND", "OR", "NOT", "IN", "BETWEEN", "LIKE", "ILIKE",
-                     "SIMILAR", "ISNULL", "NOTNULL", "COLLATE", "AT"})
+                static constexpr std::string_view words[] = {"AND", "OR", "NOT", "IN", "BETWEEN", "LIKE", "ILIKE",
+                     "SIMILAR", "ISNULL", "NOTNULL", "COLLATE", "AT"};
+                for (std::string_view word : words)
                     if (keyword(next, word)) { stop = true; break; }
                 if (keyword(next, "IS")) {
                     auto lookahead = tok_; lookahead.skip();
@@ -182,36 +187,39 @@ public:
                 }
                 if (stop) break;
             }
-            Precedence prec = infix_precedence(tok_.peek().type);
+            Precedence prec = infix_precedence(next.type);
             if constexpr (D == Dialect::PostgreSQL) {
-                if (keyword(tok_.peek(), "ILIKE")) {
-                    auto lookahead = tok_; lookahead.skip();
-                    prec = quantifier(lookahead.peek()) ? Precedence::PG_OPERATOR : Precedence::PG_PREDICATE;
+                bool like = next.type == TokenType::TK_LIKE;
+                // These PostgreSQL spellings are identifier tokens. Punctuation,
+                // literals and other keyword kinds cannot introduce them.
+                if (next.type == TokenType::TK_IDENTIFIER) {
+                    if (keyword(next, "ILIKE")) {
+                        auto lookahead = tok_; lookahead.skip();
+                        prec = quantifier(lookahead.peek()) ? Precedence::PG_OPERATOR : Precedence::PG_PREDICATE;
+                        like = true;
+                    } else if (keyword(next, "SIMILAR")) {
+                        auto lookahead = tok_; lookahead.skip();
+                        if (keyword(lookahead.peek(), "TO")) prec = Precedence::PG_PREDICATE;
+                    } else if (keyword(next, "AT") || keyword(next, "OPERATOR")) {
+                        auto lookahead = tok_; lookahead.skip();
+                        if (keyword(next, "AT") &&
+                            (keyword(lookahead.peek(), "TIME") || keyword(lookahead.peek(), "LOCAL")))
+                            prec = Precedence::TIME_ZONE;
+                        else if (keyword(next, "OPERATOR") && lookahead.peek().type == TokenType::TK_LPAREN)
+                            prec = Precedence::PG_OPERATOR;
+                    }
                 }
-                if (keyword(tok_.peek(), "SIMILAR")) {
-                    auto lookahead = tok_; lookahead.skip();
-                    if (keyword(lookahead.peek(), "TO")) prec = Precedence::PG_PREDICATE;
-                }
-                if (keyword(tok_.peek(), "LIKE") || keyword(tok_.peek(), "ILIKE")) {
+                if (like) {
                     auto lookahead = tok_; lookahead.skip();
                     // LIKE-family operators share a nonassociative grammar boundary,
                     // including quantified operators with a higher Pratt precedence.
                     if (pattern_operand_ && quantifier(lookahead.peek())) return syntax_error();
                     if (pattern_alias_boundary(lookahead.peek().type)) prec = Precedence::NONE;
                 }
-                if (quantifiable_operator(tok_.peek().type)) {
+                if (quantifiable_operator(next.type)) {
                     auto lookahead = tok_;
                     lookahead.skip();
                     if (quantifier(lookahead.peek())) prec = Precedence::PG_OPERATOR;
-                }
-                if (keyword(tok_.peek(), "AT") || keyword(tok_.peek(), "OPERATOR")) {
-                    auto lookahead = tok_;
-                    Token candidate = lookahead.next_token();
-                    if (keyword(candidate, "AT") &&
-                        (keyword(lookahead.peek(), "TIME") || keyword(lookahead.peek(), "LOCAL")))
-                        prec = Precedence::TIME_ZONE;
-                    else if (keyword(candidate, "OPERATOR") && lookahead.peek().type == TokenType::TK_LPAREN)
-                        prec = Precedence::PG_OPERATOR;
                 }
             }
             if (prec <= min_prec) break;
@@ -222,10 +230,12 @@ public:
                 return nullptr;
             }
             if (require_complete_operands_ && operand_error_) return nullptr;
+            next = tok_.peek();
             if constexpr (D == Dialect::PostgreSQL) {
-                if (tok_.peek().type == TokenType::TK_DOUBLE_COLON) {
+                if (next.type == TokenType::TK_DOUBLE_COLON) {
                     left = parse_postfix(left);
                     if (!left) return nullptr;
+                    next = tok_.peek();
                 }
             }
         }
@@ -360,7 +370,8 @@ private:
     AstNode* parse_atom() {
         Token t = tok_.peek();
         if constexpr (D == Dialect::PostgreSQL) {
-            if (keyword(t, "OPERATOR") || keyword(t, "INTERVAL")) {
+            if ((t.type == TokenType::TK_IDENTIFIER || t.type == TokenType::TK_INTERVAL) &&
+                (keyword(t, "OPERATOR") || keyword(t, "INTERVAL"))) {
                 auto lookahead = tok_;
                 lookahead.skip();
                 if (keyword(t, "OPERATOR") && lookahead.peek().type == TokenType::TK_LPAREN)
@@ -706,19 +717,20 @@ private:
 
     AstNode* parse_identifier_or_function(const Token& name_token) {
         if constexpr (D == Dialect::PostgreSQL) {
+            const bool has_arguments = tok_.peek().type == TokenType::TK_LPAREN;
             // PG_GAPS_JSON_XML_EXPRESSION_HOOK
-            if (tok_.peek().type == TokenType::TK_LPAREN &&
+            if (has_arguments &&
                 PgSqlJsonParser<D, ExpressionParser<D>>::recognizes(name_token))
                 return PgSqlJsonParser<D, ExpressionParser<D>>(tok_, arena_, *this).parse(name_token);
-            if (tok_.peek().type == TokenType::TK_LPAREN && keyword(name_token, "EXTRACT"))
+            if (has_arguments && keyword(name_token, "EXTRACT"))
                 return parse_extract();
-            if (tok_.peek().type == TokenType::TK_LPAREN && keyword(name_token, "TRIM"))
+            if (has_arguments && keyword(name_token, "TRIM"))
                 return parse_trim();
-            if (tok_.peek().type == TokenType::TK_LPAREN && keyword(name_token, "POSITION"))
+            if (has_arguments && keyword(name_token, "POSITION"))
                 return parse_position();
-            if (tok_.peek().type == TokenType::TK_LPAREN && keyword(name_token, "OVERLAY"))
+            if (has_arguments && keyword(name_token, "OVERLAY"))
                 return parse_overlay(name_token);
-            if (tok_.peek().type == TokenType::TK_LPAREN && keyword(name_token, "NORMALIZE")) {
+            if (has_arguments && keyword(name_token, "NORMALIZE")) {
                 tok_.skip();
                 AstNode* value = parse_complete();
                 if (!value || value->type == NodeType::NODE_ASTERISK) return syntax_error();
@@ -737,7 +749,7 @@ private:
                 node->add_child(value);
                 return node;
             }
-            if (tok_.peek().type == TokenType::TK_LPAREN &&
+            if (has_arguments &&
                 (keyword(name_token, "MERGE_ACTION") || keyword(name_token, "CURRENT_TIMESTAMP") ||
                  keyword(name_token, "CURRENT_TIME") || keyword(name_token, "LOCALTIMESTAMP") ||
                  keyword(name_token, "LOCALTIME"))) {
@@ -754,7 +766,7 @@ private:
                 tok_.skip();
                 return function;
             }
-            if (tok_.peek().type == TokenType::TK_LPAREN && keyword(name_token, "SUBSTRING")) {
+            if (has_arguments && keyword(name_token, "SUBSTRING")) {
                 // Plain comma-separated substring calls remain ordinary function calls.
                 auto saved = tok_;
                 tok_.skip();
@@ -766,7 +778,7 @@ private:
                 }
                 tok_ = saved;
             }
-            if (keyword(name_token, "CAST") && tok_.peek().type == TokenType::TK_LPAREN) {
+            if (keyword(name_token, "CAST") && has_arguments) {
                 tok_.skip();
                 AstNode* value = parse_complete();
                 if (!value || tok_.peek().type != TokenType::TK_AS) return syntax_error();
@@ -1011,9 +1023,11 @@ private:
 
     AstNode* parse_infix(AstNode* left, Precedence prec) {
         if constexpr (D == Dialect::PostgreSQL) {
-            if (keyword(tok_.peek(), "LIKE") || keyword(tok_.peek(), "ILIKE") || keyword(tok_.peek(), "SIMILAR"))
+            const Token next = tok_.peek();
+            if (next.type == TokenType::TK_LIKE ||
+                (next.type == TokenType::TK_IDENTIFIER && (keyword(next, "ILIKE") || keyword(next, "SIMILAR"))))
                 return parse_pattern_predicate(left, false);
-            if (keyword(tok_.peek(), "NOT")) {
+            if (next.type == TokenType::TK_NOT) {
                 auto lookahead = tok_; lookahead.skip();
                 if (keyword(lookahead.peek(), "LIKE") || keyword(lookahead.peek(), "ILIKE") ||
                     keyword(lookahead.peek(), "SIMILAR")) {
@@ -1021,8 +1035,8 @@ private:
                     return parse_pattern_predicate(left, true);
                 }
             }
-            if (keyword(tok_.peek(), "OPERATOR")) return parse_qualified_operator(left);
-            if (keyword(tok_.peek(), "AT")) {
+            if (next.type == TokenType::TK_IDENTIFIER && keyword(next, "OPERATOR")) return parse_qualified_operator(left);
+            if (next.type == TokenType::TK_IDENTIFIER && keyword(next, "AT")) {
                 if (left->type == NodeType::NODE_ASTERISK) return syntax_error();
                 tok_.skip();
                 AstNode* node = make_node(arena_, NodeType::NODE_PG_TIME_ZONE);

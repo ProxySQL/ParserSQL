@@ -18,9 +18,9 @@ public:
                 SubqueryParseCallback<Dialect::PostgreSQL> callback = nullptr)
         : tok_(tok), arena_(arena), callback_(callback ? callback : &parse_subquery_select<Dialect::PostgreSQL>) {}
 
-    static bool word(const Token& token, const char* value) {
+    static bool word(const Token& token, std::string_view value) {
         return token.source.ptr == token.text.ptr &&
-            token.text.equals_ci(value, static_cast<uint32_t>(std::strlen(value)));
+            token.text.equals_ci(value.data(), static_cast<uint32_t>(value.size()));
     }
     static bool handles(const Token& first) {
         return word(first, "CREATE") || word(first, "ALTER") || word(first, "DROP") ||

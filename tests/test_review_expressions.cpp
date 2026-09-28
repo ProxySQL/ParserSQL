@@ -6,8 +6,31 @@
 #include "sql_engine/expression_eval.h"
 #include <cstring>
 #include <string>
+#include <string_view>
 
 using namespace sql_parser;
+
+TEST(ReviewExpressions, KeywordMatchingRespectsBoundedSpelling) {
+    using Expr = ExpressionParser<Dialect::PostgreSQL>;
+    Tokenizer<Dialect::PostgreSQL> tokenizer;
+    const char sql[] = "sElEcT";
+    tokenizer.reset(sql, sizeof(sql) - 1);
+    const Token token = tokenizer.next_token();
+    const char spelling[] = {'S', 'E', 'L', 'E', 'C', 'T', 'X'};
+    EXPECT_TRUE(Expr::keyword(token, std::string_view(spelling, 6)));
+    EXPECT_FALSE(Expr::keyword(token, std::string_view(spelling, 7)));
+    EXPECT_FALSE(Expr::keyword(token, std::string_view(spelling, 5)));
+}
+
+TEST(ReviewExpressions, KeywordMatchingDoesNotRecognizeQuotedNamesOrValues) {
+    using Expr = ExpressionParser<Dialect::PostgreSQL>;
+    for (const char* sql : {"\"SELECT\"", "'SELECT'", "selectivity"}) {
+        SCOPED_TRACE(sql);
+        Tokenizer<Dialect::PostgreSQL> tokenizer;
+        tokenizer.reset(sql, std::strlen(sql));
+        EXPECT_FALSE(Expr::keyword(tokenizer.next_token(), "SELECT"));
+    }
+}
 
 TEST(ReviewExpressions, NestedOrdinaryCallsFitBoundedArena) {
     for (const char* name : {"f", "schema.f", "\"custom\""}) {

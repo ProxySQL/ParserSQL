@@ -14,9 +14,9 @@ public:
                           ModifierParser modifier_parser = nullptr, void* context = nullptr)
         : tok_(tok), modifier_parser_(modifier_parser), context_(context) {}
 
-    static bool word(const Token& token, const char* value) {
+    static bool word(const Token& token, std::string_view value) {
         return token.source.ptr == token.text.ptr &&
-            token.text.equals_ci(value, static_cast<uint32_t>(std::strlen(value)));
+            token.text.equals_ci(value.data(), static_cast<uint32_t>(value.size()));
     }
 
     static bool name_token(const Token& token) {

@@ -15,10 +15,10 @@ public:
     PgUtilityParser(Tokenizer<Dialect::PostgreSQL>& tok, Arena& arena)
         : tok_(tok), arena_(arena) {}
 
-    static bool word(const Token& token, const char* value) {
+    static bool word(const Token& token, std::string_view value) {
         if (token.type == TokenType::TK_STRING || token.type == TokenType::TK_EOF ||
             (token.source.len && token.source.ptr[0] == '"')) return false;
-        return token.text.equals_ci(value, static_cast<uint32_t>(std::strlen(value)));
+        return token.text.equals_ci(value.data(), static_cast<uint32_t>(value.size()));
     }
 
     ParseResult transaction(const Token& first) {
