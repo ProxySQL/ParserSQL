@@ -8,6 +8,7 @@ MYSQL_LIBS = $(shell mysql_config --libs 2>/dev/null)
 PG_CFLAGS = -I$(shell pg_config --includedir 2>/dev/null || echo /usr/include/postgresql)
 PG_LIBS = -L$(shell pg_config --libdir 2>/dev/null || echo /usr/lib/x86_64-linux-gnu) -lpq
 PG_COMPAT_CACHE ?= /tmp/parsersql-pg-compat
+MYSQL_COMPAT_CACHE ?= /tmp/parsersql-mysql-compat
 
 PROJECT_ROOT = .
 SRC_DIR = $(PROJECT_ROOT)/src/sql_parser
@@ -167,6 +168,12 @@ pg-compat: build-pg-compat
 
 pg-compat-refresh: build-pg-compat
 	python3 ./scripts/pg_compat/run_compat.py refresh --cache $(PG_COMPAT_CACHE)
+
+.PHONY: test-mysql-compat
+test-mysql-compat: lib
+	python3 scripts/mysql_compat/build_probe.py --output "$(MYSQL_COMPAT_CACHE)/probe"
+	python3 -m unittest discover -s tests/mysql_compat -p 'test_*.py' -v
+	python3 scripts/mysql_compat/run.py --probe "$(MYSQL_COMPAT_CACHE)/probe" --report "$(MYSQL_COMPAT_CACHE)/report.json"
 
 all: lib test
 

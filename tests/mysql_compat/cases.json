@@ -1,0 +1,1160 @@
+{
+  "schema": 1,
+  "pins": {
+    "8.4.8": "0896fcd61dec11a0904166911a0126f59daaa1bf",
+    "9.7.2": "008e09c2834b98143a8c067d4d225c90953050cf"
+  },
+  "scope": "Hand-reduced witnesses, not a representative sample or full MTR extraction",
+  "oracle": {
+    "state": "NOT VERIFIED",
+    "detail": "No native MySQL server has validated this corpus; grammar anchors support syntax intent only."
+  },
+  "sql_mode": {
+    "intended": "",
+    "native_applied": false,
+    "parsersql": "MySQL compile-time dialect; no sql_mode supplied or emulated"
+  },
+  "cases": [
+    {
+      "id": "json_arrow",
+      "sql": "SELECT data->'$.name', data->>'$.name' FROM t",
+      "validity": "valid",
+      "derivation": "hand-reduced syntax witness; source anchors identify relevant grammar, not verbatim MTR extraction",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 10472,
+          "excerpt": "| simple_ident JSON_SEPARATOR_SYM TEXT_STRING_literal",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 10793,
+          "excerpt": "| simple_ident JSON_SEPARATOR_SYM TEXT_STRING_literal",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected_sql": "SELECT data -> '$.name', data ->> '$.name' FROM t",
+      "expected": "CHECKED",
+      "known_gap": false,
+      "native_action": "execute"
+    },
+    {
+      "id": "json_table",
+      "sql": "SELECT * FROM JSON_TABLE('[1,2]', '$[*]' COLUMNS (n INT PATH '$')) AS jt",
+      "validity": "valid",
+      "derivation": "hand-reduced syntax witness; source anchors identify relevant grammar, not verbatim MTR extraction",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 12024,
+          "excerpt": "JSON_TABLE_SYM '(' expr ',' text_literal columns_clause ')'",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 12448,
+          "excerpt": "JSON_TABLE_SYM '(' expr ',' text_literal columns_clause ')'",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "TRAILING_INPUT",
+      "known_gap": true,
+      "gap_note": "Relevant syntax is not fully consumed; inspect remaining input in report.",
+      "native_action": "execute"
+    },
+    {
+      "id": "lateral",
+      "sql": "SELECT * FROM t, LATERAL (SELECT t.id) AS d",
+      "validity": "valid",
+      "derivation": "hand-reduced syntax witness; source anchors identify relevant grammar, not verbatim MTR extraction",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 12013,
+          "excerpt": "| LATERAL_SYM table_subquery opt_table_alias opt_derived_column_list",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 12437,
+          "excerpt": "| LATERAL_SYM table_subquery opt_table_alias opt_derived_column_list",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "TRAILING_INPUT",
+      "known_gap": true,
+      "gap_note": "Relevant syntax is not fully consumed; inspect remaining input in report.",
+      "native_action": "execute"
+    },
+    {
+      "id": "named_window",
+      "sql": "SELECT SUM(n) OVER w FROM t WINDOW w AS (PARTITION BY id ORDER BY n)",
+      "validity": "valid",
+      "derivation": "hand-reduced syntax witness; source anchors identify relevant grammar, not verbatim MTR extraction",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 12418,
+          "excerpt": "| WINDOW_SYM window_definition_list",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 12842,
+          "excerpt": "| WINDOW_SYM window_definition_list",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "CHECKED",
+      "known_gap": false,
+      "native_action": "execute",
+      "expected_sql": "SELECT SUM(n) OVER w FROM t WINDOW w AS (PARTITION BY id ORDER BY n)"
+    },
+    {
+      "id": "window_frame",
+      "sql": "SELECT SUM(n) OVER (ORDER BY id ROWS BETWEEN 2 PRECEDING AND CURRENT ROW) FROM t",
+      "validity": "valid",
+      "derivation": "hand-reduced syntax witness; source anchors identify relevant grammar, not verbatim MTR extraction",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 11343,
+          "excerpt": "opt_window_frame_clause:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 11767,
+          "excerpt": "opt_window_frame_clause:",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected_sql": "SELECT SUM(n) OVER (ORDER BY id ROWS BETWEEN 2 PRECEDING AND CURRENT ROW) FROM t",
+      "expected": "CHECKED",
+      "known_gap": false,
+      "native_action": "execute"
+    },
+    {
+      "id": "values_row",
+      "sql": "VALUES ROW(1, 'a'), ROW(2, 'b')",
+      "validity": "valid",
+      "derivation": "hand-reduced syntax witness; source anchors identify relevant grammar, not verbatim MTR extraction",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 9934,
+          "excerpt": "table_value_constructor:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 10248,
+          "excerpt": "table_value_constructor:",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "NO_AST",
+      "known_gap": true,
+      "gap_note": "Statement classification does not produce a structured AST.",
+      "native_action": "execute"
+    },
+    {
+      "id": "table_stmt",
+      "sql": "TABLE t ORDER BY id LIMIT 2",
+      "validity": "valid",
+      "derivation": "hand-reduced syntax witness; source anchors identify relevant grammar, not verbatim MTR extraction",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 7948,
+          "excerpt": "ALTER TABLE_SYM table_ident opt_alter_table_actions",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 8212,
+          "excerpt": "ALTER TABLE_SYM table_ident opt_alter_table_actions",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "NO_AST",
+      "known_gap": true,
+      "gap_note": "Statement classification does not produce a structured AST.",
+      "native_action": "execute"
+    },
+    {
+      "id": "insert_alias",
+      "sql": "INSERT INTO t (id,n) VALUES (1,2) AS new ON DUPLICATE KEY UPDATE n=new.n",
+      "validity": "valid",
+      "derivation": "hand-reduced syntax witness; source anchors identify relevant grammar, not verbatim MTR extraction",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 13357,
+          "excerpt": "opt_values_reference:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 13913,
+          "excerpt": "opt_values_reference:",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "TRAILING_INPUT",
+      "known_gap": true,
+      "gap_note": "Relevant syntax is not fully consumed; inspect remaining input in report.",
+      "native_action": "explain"
+    },
+    {
+      "id": "partition",
+      "sql": "SELECT * FROM t PARTITION (p0)",
+      "validity": "valid",
+      "derivation": "hand-reduced syntax witness; source anchors identify relevant grammar, not verbatim MTR extraction",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 11933,
+          "excerpt": "PARTITION_SYM '(' using_list ')'",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 12357,
+          "excerpt": "PARTITION_SYM '(' using_list ')'",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "TRAILING_INPUT",
+      "known_gap": true,
+      "gap_note": "Relevant syntax is not fully consumed; inspect remaining input in report.",
+      "native_action": "execute"
+    },
+    {
+      "id": "index_hint",
+      "sql": "SELECT * FROM t FORCE INDEX (idx) WHERE id=1",
+      "validity": "valid",
+      "derivation": "hand-reduced syntax witness; source anchors identify relevant grammar, not verbatim MTR extraction",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 12168,
+          "excerpt": "index_hint_definition:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 12592,
+          "excerpt": "index_hint_definition:",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "TRAILING_INPUT",
+      "known_gap": true,
+      "gap_note": "Relevant syntax is not fully consumed; inspect remaining input in report.",
+      "native_action": "execute"
+    },
+    {
+      "id": "group_concat",
+      "sql": "SELECT GROUP_CONCAT(DISTINCT n ORDER BY n DESC SEPARATOR ';') FROM t",
+      "validity": "valid",
+      "derivation": "hand-reduced syntax witness; source anchors identify relevant grammar, not verbatim MTR extraction",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 11077,
+          "excerpt": "| GROUP_CONCAT_SYM '(' opt_distinct",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 11486,
+          "excerpt": "| GROUP_CONCAT_SYM '(' opt_distinct",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "CHECKED",
+      "known_gap": false,
+      "native_action": "execute",
+      "expected_sql": "SELECT GROUP_CONCAT(DISTINCT n ORDER BY n DESC SEPARATOR ';') FROM t"
+    },
+    {
+      "id": "rollup",
+      "sql": "SELECT id, SUM(n) FROM t GROUP BY id WITH ROLLUP",
+      "validity": "valid",
+      "derivation": "hand-reduced syntax witness; source anchors identify relevant grammar, not verbatim MTR extraction",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 12490,
+          "excerpt": "| WITH_ROLLUP_SYM { $$= ROLLUP_TYPE; }",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 12960,
+          "excerpt": "| WITH_ROLLUP_SYM { $$= ROLLUP_TYPE; }",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "CHECKED",
+      "known_gap": false,
+      "native_action": "execute",
+      "expected_sql": "SELECT id, SUM(n) FROM t GROUP BY id WITH ROLLUP"
+    },
+    {
+      "id": "match",
+      "sql": "SELECT * FROM t WHERE MATCH(body) AGAINST ('mysql' IN BOOLEAN MODE)",
+      "validity": "valid",
+      "derivation": "hand-reduced syntax witness; source anchors identify relevant grammar, not verbatim MTR extraction",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 10414,
+          "excerpt": "| MATCH ident_list_arg AGAINST '(' bit_expr fulltext_options ')'",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 10734,
+          "excerpt": "| MATCH ident_list_arg AGAINST '(' bit_expr fulltext_options ')'",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "TRAILING_INPUT",
+      "known_gap": true,
+      "gap_note": "Relevant syntax is not fully consumed; inspect remaining input in report.",
+      "native_action": "execute"
+    },
+    {
+      "id": "cte_update",
+      "sql": "WITH c AS (SELECT 1 AS id) UPDATE t JOIN c ON t.id=c.id SET t.n=2",
+      "validity": "valid",
+      "derivation": "hand-reduced syntax witness; source anchors identify relevant grammar, not verbatim MTR extraction",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 13389,
+          "excerpt": "update_stmt:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 13945,
+          "excerpt": "update_stmt:",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "TRAILING_INPUT",
+      "known_gap": true,
+      "gap_note": "Relevant syntax is not fully consumed; inspect remaining input in report.",
+      "native_action": "explain"
+    },
+    {
+      "id": "cte_delete",
+      "sql": "WITH c AS (SELECT 1 AS id) DELETE FROM t WHERE id IN (SELECT id FROM c)",
+      "validity": "valid",
+      "derivation": "hand-reduced syntax witness; source anchors identify relevant grammar, not verbatim MTR extraction",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 13445,
+          "excerpt": "delete_stmt:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 14001,
+          "excerpt": "delete_stmt:",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "TRAILING_INPUT",
+      "known_gap": true,
+      "gap_note": "Relevant syntax is not fully consumed; inspect remaining input in report.",
+      "native_action": "explain"
+    },
+    {
+      "id": "cte_select",
+      "sql": "WITH c AS (SELECT 1 AS id) SELECT * FROM c",
+      "validity": "valid",
+      "derivation": "hand-reduced syntax witness; source anchors identify relevant grammar, not verbatim MTR extraction",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 12340,
+          "excerpt": "with_clause:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 12764,
+          "excerpt": "with_clause:",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected_sql": "WITH c AS (SELECT 1 AS id) SELECT * FROM c",
+      "expected": "CHECKED",
+      "known_gap": false,
+      "native_action": "execute"
+    },
+    {
+      "id": "cte_recursive",
+      "sql": "WITH RECURSIVE c(n) AS (SELECT 1 UNION ALL SELECT n+1 FROM c WHERE n<3) SELECT * FROM c",
+      "validity": "valid",
+      "derivation": "hand-reduced syntax witness; source anchors identify relevant grammar, not verbatim MTR extraction",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 12367,
+          "excerpt": "ident opt_derived_column_list AS table_subquery",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 12791,
+          "excerpt": "ident opt_derived_column_list AS table_subquery",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "TRAILING_INPUT",
+      "known_gap": true,
+      "gap_note": "Relevant syntax is not fully consumed; inspect remaining input in report.",
+      "native_action": "execute"
+    },
+    {
+      "id": "multi_update",
+      "sql": "UPDATE t JOIN u ON t.id=u.id SET t.n=u.n",
+      "validity": "valid",
+      "derivation": "hand-reduced syntax witness; source anchors identify relevant grammar, not verbatim MTR extraction",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 13389,
+          "excerpt": "update_stmt:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 13945,
+          "excerpt": "update_stmt:",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected_sql": "UPDATE t JOIN u ON t.id = u.id SET t.n = u.n",
+      "expected": "CHECKED",
+      "known_gap": false,
+      "native_action": "explain"
+    },
+    {
+      "id": "multi_delete",
+      "sql": "DELETE t FROM t JOIN u ON t.id=u.id",
+      "validity": "valid",
+      "derivation": "hand-reduced syntax witness; source anchors identify relevant grammar, not verbatim MTR extraction",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 13445,
+          "excerpt": "delete_stmt:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 14001,
+          "excerpt": "delete_stmt:",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected_sql": "DELETE t FROM t JOIN u ON t.id = u.id",
+      "expected": "CHECKED",
+      "known_gap": false,
+      "native_action": "explain"
+    },
+    {
+      "id": "create_table",
+      "sql": "CREATE TABLE t (id INT PRIMARY KEY, n INT, CHECK (n>0))",
+      "validity": "valid",
+      "derivation": "hand-reduced syntax witness; source anchors identify relevant grammar, not verbatim MTR extraction",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 3217,
+          "excerpt": "create_table_stmt:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 3317,
+          "excerpt": "create_table_stmt:",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "NO_AST",
+      "known_gap": true,
+      "gap_note": "Statement classification does not produce a structured AST.",
+      "native_action": "skip"
+    },
+    {
+      "id": "alter_table",
+      "sql": "ALTER TABLE t ADD COLUMN j JSON",
+      "validity": "valid",
+      "derivation": "hand-reduced syntax witness; source anchors identify relevant grammar, not verbatim MTR extraction",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 7948,
+          "excerpt": "ALTER TABLE_SYM table_ident opt_alter_table_actions",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 8212,
+          "excerpt": "ALTER TABLE_SYM table_ident opt_alter_table_actions",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "NO_AST",
+      "known_gap": true,
+      "gap_note": "Statement classification does not produce a structured AST.",
+      "native_action": "skip"
+    },
+    {
+      "id": "create_procedure",
+      "sql": "CREATE PROCEDURE p() BEGIN SELECT 1; END",
+      "validity": "valid",
+      "derivation": "hand-reduced syntax witness; source anchors identify relevant grammar, not verbatim MTR extraction",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 17938,
+          "excerpt": "sp_tail:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 18697,
+          "excerpt": "sp_tail:",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "NO_AST",
+      "known_gap": true,
+      "gap_note": "Statement classification does not produce a structured AST.",
+      "native_action": "skip"
+    },
+    {
+      "id": "explain_format",
+      "sql": "EXPLAIN FORMAT=JSON SELECT * FROM t",
+      "validity": "valid",
+      "derivation": "hand-reduced syntax witness; source anchors identify relevant grammar, not verbatim MTR extraction",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 13957,
+          "excerpt": "explain_stmt:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 14534,
+          "excerpt": "explain_stmt:",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected_sql": "EXPLAIN FORMAT = JSON SELECT * FROM t",
+      "expected": "CHECKED",
+      "known_gap": false,
+      "native_action": "execute"
+    },
+    {
+      "id": "optimizer_hint",
+      "sql": "SELECT /*+ MAX_EXECUTION_TIME(1000) */ * FROM t",
+      "validity": "valid",
+      "derivation": "hand-reduced syntax witness; source anchors identify relevant grammar, not verbatim MTR extraction",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 9952,
+          "excerpt": "select_options:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 10266,
+          "excerpt": "select_options:",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected_sql": "SELECT /*+ MAX_EXECUTION_TIME(1000) */ * FROM t",
+      "expected": "EMISSION_MISMATCH",
+      "known_gap": true,
+      "gap_note": "Optimizer hint is consumed but dropped from emitted SQL.",
+      "native_action": "execute"
+    },
+    {
+      "id": "charset_literal",
+      "sql": "SELECT _utf8mb4'hello' COLLATE utf8mb4_bin",
+      "validity": "valid",
+      "derivation": "hand-reduced syntax witness; source anchors identify relevant grammar, not verbatim MTR extraction",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 14693,
+          "excerpt": "| UNDERSCORE_CHARSET TEXT_STRING",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 15319,
+          "excerpt": "| UNDERSCORE_CHARSET TEXT_STRING",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "TRAILING_INPUT",
+      "known_gap": true,
+      "gap_note": "Relevant syntax is not fully consumed; inspect remaining input in report.",
+      "native_action": "execute"
+    },
+    {
+      "id": "cast_decimal",
+      "sql": "SELECT CAST(n AS DECIMAL(10,2)) FROM t",
+      "validity": "valid",
+      "derivation": "hand-reduced syntax witness; source anchors identify relevant grammar, not verbatim MTR extraction",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 11523,
+          "excerpt": "cast_type:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 11947,
+          "excerpt": "cast_type:",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "TRAILING_INPUT",
+      "known_gap": true,
+      "gap_note": "Relevant syntax is not fully consumed; inspect remaining input in report.",
+      "native_action": "execute"
+    },
+    {
+      "id": "interval",
+      "sql": "SELECT d + INTERVAL 1 DAY FROM t",
+      "validity": "valid",
+      "derivation": "hand-reduced syntax witness; source anchors identify relevant grammar, not verbatim MTR extraction",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 10278,
+          "excerpt": "| bit_expr '+' INTERVAL_SYM expr interval %prec '+'",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 10592,
+          "excerpt": "| bit_expr '+' INTERVAL_SYM expr interval %prec '+'",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected_sql": "SELECT d + INTERVAL 1 DAY FROM t",
+      "expected": "CHECKED",
+      "known_gap": false,
+      "native_action": "execute"
+    },
+    {
+      "id": "extract",
+      "sql": "SELECT EXTRACT(YEAR FROM d) FROM t",
+      "validity": "valid",
+      "derivation": "hand-reduced syntax witness; source anchors identify relevant grammar, not verbatim MTR extraction",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 10661,
+          "excerpt": "| EXTRACT_SYM '(' interval FROM expr ')'",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 11070,
+          "excerpt": "| EXTRACT_SYM '(' interval FROM expr ')'",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "TRAILING_INPUT",
+      "known_gap": true,
+      "gap_note": "Relevant syntax is not fully consumed; inspect remaining input in report.",
+      "native_action": "execute"
+    },
+    {
+      "id": "substring",
+      "sql": "SELECT SUBSTRING(n FROM 2 FOR 3) FROM t",
+      "validity": "valid",
+      "derivation": "hand-reduced syntax witness; source anchors identify relevant grammar, not verbatim MTR extraction",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 10702,
+          "excerpt": "| SUBSTRING '(' expr FROM expr FOR_SYM expr ')'",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 11111,
+          "excerpt": "| SUBSTRING '(' expr FROM expr FOR_SYM expr ')'",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "TRAILING_INPUT",
+      "known_gap": true,
+      "gap_note": "Relevant syntax is not fully consumed; inspect remaining input in report.",
+      "native_action": "execute"
+    },
+    {
+      "id": "bad_select",
+      "sql": "SELECT FROM",
+      "validity": "invalid",
+      "derivation": "hand-written malformed negative control: absent SELECT list and table reference",
+      "sources": [],
+      "expected": "REJECTED",
+      "known_gap": false,
+      "native_action": "execute"
+    },
+    {
+      "id": "group_concat_order",
+      "sql": "SELECT GROUP_CONCAT(n ORDER BY n DESC) FROM t",
+      "validity": "valid",
+      "derivation": "hand-reduced syntax witness; source anchors identify relevant grammar, not verbatim MTR extraction",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 11077,
+          "excerpt": "| GROUP_CONCAT_SYM '(' opt_distinct",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 11486,
+          "excerpt": "| GROUP_CONCAT_SYM '(' opt_distinct",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "CHECKED",
+      "known_gap": false,
+      "native_action": "execute",
+      "expected_sql": "SELECT GROUP_CONCAT(n ORDER BY n DESC) FROM t"
+    },
+    {
+      "id": "group_concat_separator",
+      "sql": "SELECT GROUP_CONCAT(n SEPARATOR ';') FROM t",
+      "validity": "valid",
+      "derivation": "hand-reduced syntax witness; source anchors identify relevant grammar, not verbatim MTR extraction",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 11077,
+          "excerpt": "| GROUP_CONCAT_SYM '(' opt_distinct",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 11486,
+          "excerpt": "| GROUP_CONCAT_SYM '(' opt_distinct",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "CHECKED",
+      "known_gap": false,
+      "native_action": "execute",
+      "expected_sql": "SELECT GROUP_CONCAT(n SEPARATOR ';') FROM t"
+    },
+    {
+      "id": "group_concat_distinct",
+      "sql": "SELECT GROUP_CONCAT(DISTINCT n) FROM t",
+      "validity": "valid",
+      "derivation": "hand-reduced syntax witness; source anchors identify relevant grammar, not verbatim MTR extraction",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 11077,
+          "excerpt": "| GROUP_CONCAT_SYM '(' opt_distinct",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 11486,
+          "excerpt": "| GROUP_CONCAT_SYM '(' opt_distinct",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "CHECKED",
+      "known_gap": false,
+      "native_action": "execute",
+      "expected_sql": "SELECT GROUP_CONCAT(DISTINCT n) FROM t"
+    },
+    {
+      "id": "select_control",
+      "sql": "SELECT 1",
+      "validity": "valid",
+      "expected": "CHECKED",
+      "expected_sql": "SELECT 1",
+      "known_gap": false,
+      "sources": [],
+      "derivation": "hand-written positive control",
+      "native_action": "execute"
+    },
+    {
+      "id": "inherited_window",
+      "sql": "SELECT SUM(n) OVER (w ORDER BY n ROWS 1 PRECEDING) FROM t WINDOW w AS (PARTITION BY id)",
+      "validity": "valid",
+      "derivation": "hand-reduced syntax witness; source anchors identify relevant grammar, not verbatim MTR extraction",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 12418,
+          "excerpt": "| WINDOW_SYM window_definition_list",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 12842,
+          "excerpt": "| WINDOW_SYM window_definition_list",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "CHECKED",
+      "known_gap": false,
+      "native_action": "execute",
+      "expected_sql": "SELECT SUM(n) OVER (w ORDER BY n ROWS 1 PRECEDING) FROM t WINDOW w AS (PARTITION BY id)"
+    },
+    {
+      "id": "bad_json_numeric_path",
+      "sql": "SELECT j -> 1 FROM t",
+      "validity": "invalid",
+      "derivation": "Hand-written negative control derived by violating the related grammar constraint.",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 10472,
+          "excerpt": "| simple_ident JSON_SEPARATOR_SYM TEXT_STRING_literal",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 10793,
+          "excerpt": "| simple_ident JSON_SEPARATOR_SYM TEXT_STRING_literal",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "REJECTED",
+      "known_gap": false,
+      "native_action": "execute"
+    },
+    {
+      "id": "bad_json_expression_lhs",
+      "sql": "SELECT (j) -> '$.x' FROM t",
+      "validity": "invalid",
+      "derivation": "Hand-written negative control derived by violating the related grammar constraint.",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 10472,
+          "excerpt": "| simple_ident JSON_SEPARATOR_SYM TEXT_STRING_literal",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 10793,
+          "excerpt": "| simple_ident JSON_SEPARATOR_SYM TEXT_STRING_literal",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "REJECTED",
+      "known_gap": false,
+      "native_action": "execute"
+    },
+    {
+      "id": "bad_json_chained",
+      "sql": "SELECT j -> '$.x' -> '$.y' FROM t",
+      "validity": "invalid",
+      "derivation": "Hand-written negative control derived by violating the related grammar constraint.",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 10472,
+          "excerpt": "| simple_ident JSON_SEPARATOR_SYM TEXT_STRING_literal",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 10793,
+          "excerpt": "| simple_ident JSON_SEPARATOR_SYM TEXT_STRING_literal",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "REJECTED",
+      "known_gap": false,
+      "native_action": "execute"
+    },
+    {
+      "id": "bad_parenthesis",
+      "sql": "SELECT (",
+      "validity": "invalid",
+      "derivation": "Hand-written negative control derived by violating the related grammar constraint.",
+      "sources": [],
+      "expected": "REJECTED",
+      "known_gap": false,
+      "native_action": "execute"
+    },
+    {
+      "id": "json_arrayagg_null_on_null",
+      "sql": "SELECT JSON_ARRAYAGG(n NULL ON NULL) FROM t",
+      "validity": "valid",
+      "derivation": "Hand-reduced MySQL 9.7.2 grammar witness; version-specific native validity is explicit.",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 10988,
+          "excerpt": "| JSON_ARRAYAGG '(' in_sum_expr ')' opt_windowing_clause",
+          "kind": "older_production_without_extension"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 11397,
+          "excerpt": "| JSON_ARRAYAGG '(' in_sum_expr opt_json_constructor_null_clause ')' opt_windowing_clause",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "TRAILING_INPUT",
+      "known_gap": true,
+      "gap_note": "MySQL 9.7.2 production is not fully parsed by ParserSQL.",
+      "native_action": "execute",
+      "native_validity": {
+        "8.4.8": "invalid",
+        "9.7.2": "valid"
+      },
+      "applicability": {
+        "8.4.8": "production absent",
+        "9.7.2": "production present; runtime availability is separate"
+      },
+      "native_observations": {
+        "8.4.8": {
+          "state": "SYNTAX_REJECTED",
+          "error_code": 1064
+        },
+        "9.7.2": {
+          "state": "ACCEPTED",
+          "error_code": null
+        }
+      }
+    },
+    {
+      "id": "json_arrayagg_absent_on_null",
+      "sql": "SELECT JSON_ARRAYAGG(n ABSENT ON NULL) FROM t",
+      "validity": "valid",
+      "derivation": "Hand-reduced MySQL 9.7.2 grammar witness; version-specific native validity is explicit.",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 10988,
+          "excerpt": "| JSON_ARRAYAGG '(' in_sum_expr ')' opt_windowing_clause",
+          "kind": "older_production_without_extension"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 11397,
+          "excerpt": "| JSON_ARRAYAGG '(' in_sum_expr opt_json_constructor_null_clause ')' opt_windowing_clause",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "TRAILING_INPUT",
+      "known_gap": true,
+      "gap_note": "MySQL 9.7.2 production is not fully parsed by ParserSQL.",
+      "native_action": "execute",
+      "native_validity": {
+        "8.4.8": "invalid",
+        "9.7.2": "valid"
+      },
+      "applicability": {
+        "8.4.8": "production absent",
+        "9.7.2": "production present; runtime availability is separate"
+      },
+      "native_observations": {
+        "8.4.8": {
+          "state": "SYNTAX_REJECTED",
+          "error_code": 1064
+        },
+        "9.7.2": {
+          "state": "SERVER_ERROR",
+          "error_code": 1235
+        }
+      }
+    },
+    {
+      "id": "explain_analyze_into",
+      "sql": "EXPLAIN ANALYZE FORMAT=JSON INTO @plan SELECT 1",
+      "validity": "valid",
+      "derivation": "Hand-reduced MySQL 9.7.2 grammar witness; version-specific native validity is explicit.",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 14035,
+          "excerpt": "ANALYZE_SYM opt_explain_format",
+          "kind": "older_production_without_extension"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 14612,
+          "excerpt": "ANALYZE_SYM opt_explain_format opt_explain_into",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "PARTIAL",
+      "known_gap": true,
+      "gap_note": "MySQL 9.7.2 production is not fully parsed by ParserSQL.",
+      "native_action": "execute",
+      "native_validity": {
+        "8.4.8": "invalid",
+        "9.7.2": "valid"
+      },
+      "applicability": {
+        "8.4.8": "production absent",
+        "9.7.2": "production present; runtime availability is separate"
+      },
+      "native_observations": {
+        "8.4.8": {
+          "state": "SYNTAX_REJECTED",
+          "error_code": 1064
+        },
+        "9.7.2": {
+          "state": "ACCEPTED",
+          "error_code": null
+        }
+      }
+    },
+    {
+      "id": "grouping_sets",
+      "sql": "SELECT id, COUNT(*) FROM t GROUP BY GROUPING SETS ((id),())",
+      "validity": "valid",
+      "derivation": "Hand-reduced MySQL 9.7.2 grammar witness; version-specific native validity is explicit.",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 12457,
+          "excerpt": "| GROUP_SYM BY group_list olap_opt",
+          "kind": "older_production_without_extension"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 12893,
+          "excerpt": "| GROUP_SYM BY GROUPING_SYM SETS_SYM '(' grouping_set_list ')'",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "TRAILING_INPUT",
+      "known_gap": true,
+      "gap_note": "MySQL 9.7.2 production is not fully parsed by ParserSQL.",
+      "native_action": "execute",
+      "native_validity": {
+        "8.4.8": "invalid",
+        "9.7.2": "valid"
+      },
+      "applicability": {
+        "8.4.8": "production absent",
+        "9.7.2": "production present; runtime availability is separate"
+      },
+      "native_observations": {
+        "8.4.8": {
+          "state": "SYNTAX_REJECTED",
+          "error_code": 1064
+        },
+        "9.7.2": {
+          "state": "SERVER_ERROR",
+          "error_code": 3889
+        }
+      }
+    }
+  ]
+}
