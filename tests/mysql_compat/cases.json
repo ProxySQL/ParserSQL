@@ -88,10 +88,10 @@
           "kind": "grammar_anchor"
         }
       ],
-      "expected": "TRAILING_INPUT",
-      "known_gap": true,
-      "gap_note": "Relevant syntax is not fully consumed; inspect remaining input in report.",
-      "native_action": "execute"
+      "expected": "CHECKED",
+      "known_gap": false,
+      "native_action": "execute",
+      "expected_sql": "SELECT * FROM t, LATERAL (SELECT t.id) AS d"
     },
     {
       "id": "named_window",
@@ -225,7 +225,7 @@
     },
     {
       "id": "partition",
-      "sql": "SELECT * FROM t PARTITION (p0)",
+      "sql": "SELECT * FROM pt PARTITION (p0)",
       "validity": "valid",
       "derivation": "hand-reduced syntax witness; source anchors identify relevant grammar, not verbatim MTR extraction",
       "sources": [
@@ -244,10 +244,10 @@
           "kind": "grammar_anchor"
         }
       ],
-      "expected": "TRAILING_INPUT",
-      "known_gap": true,
-      "gap_note": "Relevant syntax is not fully consumed; inspect remaining input in report.",
-      "native_action": "execute"
+      "expected": "CHECKED",
+      "known_gap": false,
+      "native_action": "execute",
+      "expected_sql": "SELECT * FROM pt PARTITION (p0)"
     },
     {
       "id": "index_hint",
@@ -270,10 +270,10 @@
           "kind": "grammar_anchor"
         }
       ],
-      "expected": "TRAILING_INPUT",
-      "known_gap": true,
-      "gap_note": "Relevant syntax is not fully consumed; inspect remaining input in report.",
-      "native_action": "execute"
+      "expected": "CHECKED",
+      "known_gap": false,
+      "native_action": "execute",
+      "expected_sql": "SELECT * FROM t FORCE INDEX (idx) WHERE id = 1"
     },
     {
       "id": "group_concat",
@@ -1155,6 +1155,796 @@
           "error_code": 3889
         }
       }
+    },
+    {
+      "id": "partition_multiple",
+      "sql": "SELECT * FROM pt PARTITION (p0,p1) AS p",
+      "validity": "valid",
+      "derivation": "Hand-reduced syntax witness; source anchors identify relevant grammar, not verbatim MTR extraction.",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 11933,
+          "excerpt": "PARTITION_SYM '(' using_list ')'",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 12357,
+          "excerpt": "PARTITION_SYM '(' using_list ')'",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "CHECKED",
+      "known_gap": false,
+      "native_action": "execute",
+      "expected_sql": "SELECT * FROM pt PARTITION (p0, p1) AS p"
+    },
+    {
+      "id": "partition_hint",
+      "sql": "SELECT p.id FROM pt PARTITION (p0) AS p USE INDEX (idx) WHERE p.n=2",
+      "validity": "valid",
+      "derivation": "Hand-reduced syntax witness; source anchors identify relevant grammar, not verbatim MTR extraction.",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 11933,
+          "excerpt": "PARTITION_SYM '(' using_list ')'",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 12357,
+          "excerpt": "PARTITION_SYM '(' using_list ')'",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "CHECKED",
+      "known_gap": false,
+      "native_action": "execute",
+      "expected_sql": "SELECT p.id FROM pt PARTITION (p0) AS p USE INDEX (idx) WHERE p.n = 2"
+    },
+    {
+      "id": "index_use_empty",
+      "sql": "SELECT * FROM t USE INDEX ()",
+      "validity": "valid",
+      "derivation": "Hand-reduced syntax witness; source anchors identify relevant grammar, not verbatim MTR extraction.",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 12168,
+          "excerpt": "index_hint_definition:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 12592,
+          "excerpt": "index_hint_definition:",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "CHECKED",
+      "known_gap": false,
+      "native_action": "execute",
+      "expected_sql": "SELECT * FROM t USE INDEX ()"
+    },
+    {
+      "id": "index_use_key",
+      "sql": "SELECT * FROM t USE KEY (idx, PRIMARY)",
+      "validity": "valid",
+      "derivation": "Hand-reduced syntax witness; source anchors identify relevant grammar, not verbatim MTR extraction.",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 12168,
+          "excerpt": "index_hint_definition:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 12592,
+          "excerpt": "index_hint_definition:",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "CHECKED",
+      "known_gap": false,
+      "native_action": "execute",
+      "expected_sql": "SELECT * FROM t USE KEY (idx, PRIMARY)"
+    },
+    {
+      "id": "index_force_join",
+      "sql": "SELECT * FROM t AS a FORCE KEY FOR JOIN (idx) WHERE a.n=2",
+      "validity": "valid",
+      "derivation": "Hand-reduced syntax witness; source anchors identify relevant grammar, not verbatim MTR extraction.",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 12168,
+          "excerpt": "index_hint_definition:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 12592,
+          "excerpt": "index_hint_definition:",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "CHECKED",
+      "known_gap": false,
+      "native_action": "execute",
+      "expected_sql": "SELECT * FROM t AS a FORCE KEY FOR JOIN (idx) WHERE a.n = 2"
+    },
+    {
+      "id": "index_ignore_order",
+      "sql": "SELECT n FROM t IGNORE INDEX FOR ORDER BY (idx) ORDER BY n",
+      "validity": "valid",
+      "derivation": "Hand-reduced syntax witness; source anchors identify relevant grammar, not verbatim MTR extraction.",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 12168,
+          "excerpt": "index_hint_definition:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 12592,
+          "excerpt": "index_hint_definition:",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "CHECKED",
+      "known_gap": false,
+      "native_action": "execute",
+      "expected_sql": "SELECT n FROM t IGNORE INDEX FOR ORDER BY (idx) ORDER BY n"
+    },
+    {
+      "id": "index_use_group",
+      "sql": "SELECT n FROM t USE KEY FOR GROUP BY (idx) GROUP BY n",
+      "validity": "valid",
+      "derivation": "Hand-reduced syntax witness; source anchors identify relevant grammar, not verbatim MTR extraction.",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 12168,
+          "excerpt": "index_hint_definition:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 12592,
+          "excerpt": "index_hint_definition:",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "CHECKED",
+      "known_gap": false,
+      "native_action": "execute",
+      "expected_sql": "SELECT n FROM t USE KEY FOR GROUP BY (idx) GROUP BY n"
+    },
+    {
+      "id": "index_multiple",
+      "sql": "SELECT n FROM t USE INDEX FOR JOIN (idx) IGNORE KEY FOR ORDER BY (PRIMARY) ORDER BY n",
+      "validity": "valid",
+      "derivation": "Hand-reduced syntax witness; source anchors identify relevant grammar, not verbatim MTR extraction.",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 12168,
+          "excerpt": "index_hint_definition:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 12592,
+          "excerpt": "index_hint_definition:",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "CHECKED",
+      "known_gap": false,
+      "native_action": "execute",
+      "expected_sql": "SELECT n FROM t USE INDEX FOR JOIN (idx) IGNORE KEY FOR ORDER BY (PRIMARY) ORDER BY n"
+    },
+    {
+      "id": "update_partition_hint",
+      "sql": "UPDATE pt PARTITION (p0) AS p FORCE INDEX (idx) SET n=4 WHERE p.n=2",
+      "validity": "valid",
+      "derivation": "Hand-reduced syntax witness; source anchors identify relevant grammar, not verbatim MTR extraction.",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 11933,
+          "excerpt": "PARTITION_SYM '(' using_list ')'",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 12357,
+          "excerpt": "PARTITION_SYM '(' using_list ')'",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "CHECKED",
+      "known_gap": false,
+      "native_action": "explain",
+      "expected_sql": "UPDATE pt PARTITION (p0) AS p FORCE INDEX (idx) SET n = 4 WHERE p.n = 2"
+    },
+    {
+      "id": "delete_partition",
+      "sql": "DELETE FROM pt AS p PARTITION (p0) WHERE p.id=1",
+      "validity": "valid",
+      "derivation": "Hand-reduced syntax witness; source anchors identify relevant grammar, not verbatim MTR extraction.",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 13445,
+          "excerpt": "delete_stmt:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 14001,
+          "excerpt": "delete_stmt:",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "CHECKED",
+      "known_gap": false,
+      "native_action": "explain",
+      "expected_sql": "DELETE FROM pt AS p PARTITION (p0) WHERE p.id = 1"
+    },
+    {
+      "id": "lateral_alias_columns",
+      "sql": "SELECT q.x FROM t JOIN LATERAL (SELECT t.id) AS q(x) ON TRUE",
+      "validity": "valid",
+      "derivation": "Hand-reduced syntax witness; source anchors identify relevant grammar, not verbatim MTR extraction.",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 12013,
+          "excerpt": "| LATERAL_SYM table_subquery opt_table_alias opt_derived_column_list",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 12437,
+          "excerpt": "| LATERAL_SYM table_subquery opt_table_alias opt_derived_column_list",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "CHECKED",
+      "known_gap": false,
+      "native_action": "execute",
+      "expected_sql": "SELECT q.x FROM t JOIN LATERAL (SELECT t.id) AS q(x) ON TRUE"
+    },
+    {
+      "id": "lateral_alias_no_as",
+      "sql": "SELECT q.x FROM t, LATERAL (SELECT t.id) q(x)",
+      "validity": "valid",
+      "derivation": "Hand-reduced syntax witness; source anchors identify relevant grammar, not verbatim MTR extraction.",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 12013,
+          "excerpt": "| LATERAL_SYM table_subquery opt_table_alias opt_derived_column_list",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 12437,
+          "excerpt": "| LATERAL_SYM table_subquery opt_table_alias opt_derived_column_list",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "CHECKED",
+      "known_gap": false,
+      "native_action": "execute",
+      "expected_sql": "SELECT q.x FROM t, LATERAL (SELECT t.id) AS q(x)"
+    },
+    {
+      "id": "lateral_union",
+      "sql": "SELECT q.x FROM LATERAL (SELECT 1 UNION ALL SELECT 2) AS q(x)",
+      "validity": "valid",
+      "derivation": "Hand-reduced syntax witness; source anchors identify relevant grammar, not verbatim MTR extraction.",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 12013,
+          "excerpt": "| LATERAL_SYM table_subquery opt_table_alias opt_derived_column_list",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 12437,
+          "excerpt": "| LATERAL_SYM table_subquery opt_table_alias opt_derived_column_list",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "CHECKED",
+      "known_gap": false,
+      "native_action": "execute",
+      "expected_sql": "SELECT q.x FROM LATERAL (SELECT 1 UNION ALL SELECT 2) AS q(x)"
+    },
+    {
+      "id": "lateral_nested",
+      "sql": "SELECT * FROM LATERAL ((SELECT 1)) AS q",
+      "validity": "valid",
+      "derivation": "Hand-reduced syntax witness; source anchors identify relevant grammar, not verbatim MTR extraction.",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 12013,
+          "excerpt": "| LATERAL_SYM table_subquery opt_table_alias opt_derived_column_list",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 12437,
+          "excerpt": "| LATERAL_SYM table_subquery opt_table_alias opt_derived_column_list",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "CHECKED",
+      "known_gap": false,
+      "native_action": "execute",
+      "expected_sql": "SELECT * FROM LATERAL ((SELECT 1)) AS q"
+    },
+    {
+      "id": "derived_alias_columns",
+      "sql": "SELECT q.x FROM (SELECT 1) AS q(x)",
+      "validity": "valid",
+      "derivation": "Hand-reduced syntax witness; source anchors identify relevant grammar, not verbatim MTR extraction.",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 11999,
+          "excerpt": "derived_table:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 12423,
+          "excerpt": "derived_table:",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "CHECKED",
+      "known_gap": false,
+      "native_action": "execute",
+      "expected_sql": "SELECT q.x FROM (SELECT 1) AS q(x)"
+    },
+    {
+      "id": "bad_partition_empty",
+      "sql": "SELECT * FROM pt PARTITION ()",
+      "validity": "invalid",
+      "derivation": "Hand-written negative control derived by violating the related grammar constraint.",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 11933,
+          "excerpt": "PARTITION_SYM '(' using_list ')'",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 12357,
+          "excerpt": "PARTITION_SYM '(' using_list ')'",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "REJECTED",
+      "known_gap": false,
+      "native_action": "execute"
+    },
+    {
+      "id": "bad_partition_trailing",
+      "sql": "SELECT * FROM pt PARTITION (p0,)",
+      "validity": "invalid",
+      "derivation": "Hand-written negative control derived by violating the related grammar constraint.",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 11933,
+          "excerpt": "PARTITION_SYM '(' using_list ')'",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 12357,
+          "excerpt": "PARTITION_SYM '(' using_list ')'",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "REJECTED",
+      "known_gap": false,
+      "native_action": "execute"
+    },
+    {
+      "id": "bad_partition_after_alias",
+      "sql": "SELECT * FROM pt AS p PARTITION (p0)",
+      "validity": "invalid",
+      "derivation": "Hand-written negative control derived by violating the related grammar constraint.",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 11933,
+          "excerpt": "PARTITION_SYM '(' using_list ')'",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 12357,
+          "excerpt": "PARTITION_SYM '(' using_list ')'",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "REJECTED",
+      "known_gap": false,
+      "native_action": "execute"
+    },
+    {
+      "id": "bad_partition_after_hint",
+      "sql": "SELECT * FROM pt USE INDEX (idx) PARTITION (p0)",
+      "validity": "invalid",
+      "derivation": "Hand-written negative control derived by violating the related grammar constraint.",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 11933,
+          "excerpt": "PARTITION_SYM '(' using_list ')'",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 12357,
+          "excerpt": "PARTITION_SYM '(' using_list ')'",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "REJECTED",
+      "known_gap": false,
+      "native_action": "execute"
+    },
+    {
+      "id": "bad_force_empty",
+      "sql": "SELECT * FROM t FORCE INDEX ()",
+      "validity": "invalid",
+      "derivation": "Hand-written negative control derived by violating the related grammar constraint.",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 12168,
+          "excerpt": "index_hint_definition:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 12592,
+          "excerpt": "index_hint_definition:",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "REJECTED",
+      "known_gap": false,
+      "native_action": "execute"
+    },
+    {
+      "id": "bad_ignore_empty",
+      "sql": "SELECT * FROM t IGNORE KEY ()",
+      "validity": "invalid",
+      "derivation": "Hand-written negative control derived by violating the related grammar constraint.",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 12168,
+          "excerpt": "index_hint_definition:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 12592,
+          "excerpt": "index_hint_definition:",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "REJECTED",
+      "known_gap": false,
+      "native_action": "execute"
+    },
+    {
+      "id": "bad_hint_target",
+      "sql": "SELECT * FROM t USE INDEX FOR WHERE (idx)",
+      "validity": "invalid",
+      "derivation": "Hand-written negative control derived by violating the related grammar constraint.",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 12168,
+          "excerpt": "index_hint_definition:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 12592,
+          "excerpt": "index_hint_definition:",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "REJECTED",
+      "known_gap": false,
+      "native_action": "execute"
+    },
+    {
+      "id": "bad_hint_trailing",
+      "sql": "SELECT * FROM t USE INDEX (idx,)",
+      "validity": "invalid",
+      "derivation": "Hand-written negative control derived by violating the related grammar constraint.",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 12168,
+          "excerpt": "index_hint_definition:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 12592,
+          "excerpt": "index_hint_definition:",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "REJECTED",
+      "known_gap": false,
+      "native_action": "execute"
+    },
+    {
+      "id": "bad_hint_missing_parens",
+      "sql": "SELECT * FROM t USE INDEX idx",
+      "validity": "invalid",
+      "derivation": "Hand-written negative control derived by violating the related grammar constraint.",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 12168,
+          "excerpt": "index_hint_definition:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 12592,
+          "excerpt": "index_hint_definition:",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "REJECTED",
+      "known_gap": false,
+      "native_action": "execute"
+    },
+    {
+      "id": "bad_hint_before_alias",
+      "sql": "SELECT * FROM t USE INDEX (idx) AS a",
+      "validity": "invalid",
+      "derivation": "Hand-written negative control derived by violating the related grammar constraint.",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 12168,
+          "excerpt": "index_hint_definition:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 12592,
+          "excerpt": "index_hint_definition:",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "REJECTED",
+      "known_gap": false,
+      "native_action": "execute"
+    },
+    {
+      "id": "bad_lateral_missing_alias",
+      "sql": "SELECT * FROM LATERAL (SELECT 1)",
+      "validity": "invalid",
+      "derivation": "Hand-written negative control derived by violating the related grammar constraint.",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 12013,
+          "excerpt": "| LATERAL_SYM table_subquery opt_table_alias opt_derived_column_list",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 12437,
+          "excerpt": "| LATERAL_SYM table_subquery opt_table_alias opt_derived_column_list",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "REJECTED",
+      "known_gap": false,
+      "native_action": "execute"
+    },
+    {
+      "id": "bad_lateral_function",
+      "sql": "SELECT * FROM LATERAL generate_series(1,2) AS q",
+      "validity": "invalid",
+      "derivation": "Hand-written negative control derived by violating the related grammar constraint.",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 12013,
+          "excerpt": "| LATERAL_SYM table_subquery opt_table_alias opt_derived_column_list",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 12437,
+          "excerpt": "| LATERAL_SYM table_subquery opt_table_alias opt_derived_column_list",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "REJECTED",
+      "known_gap": false,
+      "native_action": "execute"
+    },
+    {
+      "id": "bad_lateral_table",
+      "sql": "SELECT * FROM LATERAL t",
+      "validity": "invalid",
+      "derivation": "Hand-written negative control derived by violating the related grammar constraint.",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 12013,
+          "excerpt": "| LATERAL_SYM table_subquery opt_table_alias opt_derived_column_list",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 12437,
+          "excerpt": "| LATERAL_SYM table_subquery opt_table_alias opt_derived_column_list",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "REJECTED",
+      "known_gap": false,
+      "native_action": "execute"
+    },
+    {
+      "id": "bad_lateral_alias_columns",
+      "sql": "SELECT * FROM LATERAL (SELECT 1) AS q()",
+      "validity": "invalid",
+      "derivation": "Hand-written negative control derived by violating the related grammar constraint.",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 12013,
+          "excerpt": "| LATERAL_SYM table_subquery opt_table_alias opt_derived_column_list",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 12437,
+          "excerpt": "| LATERAL_SYM table_subquery opt_table_alias opt_derived_column_list",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "REJECTED",
+      "known_gap": false,
+      "native_action": "execute"
+    },
+    {
+      "id": "bad_delete_partition_before_alias",
+      "sql": "DELETE FROM pt PARTITION (p0) AS p WHERE p.id=1",
+      "validity": "invalid",
+      "derivation": "Hand-written negative control derived by violating the related grammar constraint.",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 13445,
+          "excerpt": "delete_stmt:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 14001,
+          "excerpt": "delete_stmt:",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "REJECTED",
+      "known_gap": false,
+      "native_action": "explain"
+    },
+    {
+      "id": "bad_delete_hint",
+      "sql": "DELETE FROM pt USE INDEX (idx) WHERE id=1",
+      "validity": "invalid",
+      "derivation": "Hand-written negative control derived by violating the related grammar constraint.",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 13445,
+          "excerpt": "delete_stmt:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 14001,
+          "excerpt": "delete_stmt:",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "REJECTED",
+      "known_gap": false,
+      "native_action": "explain"
     }
   ]
 }

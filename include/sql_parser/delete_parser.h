@@ -75,8 +75,18 @@ private:
             AstNode* first_table = parse_simple_table_ref();
             if (!first_table) return root;
 
+            table_ref_parser_.parse_optional_alias(first_table);
+            const bool has_partition = tok_.peek().type == TokenType::TK_PARTITION;
+            if (has_partition) {
+                auto* partition = table_ref_parser_.parse_mysql_partition_selection();
+                if (!partition) return expr_parser_.syntax_error();
+                first_table->add_child(partition);
+            }
+
             // Check if comma follows (target list) or if USING follows
             if (tok_.peek().type == TokenType::TK_COMMA || tok_.peek().type == TokenType::TK_USING) {
+                if (has_partition || (first_table->first_child &&
+                    first_table->first_child->next_sibling)) return expr_parser_.syntax_error();
                 // Could be multi-table form 2: DELETE FROM t1[, t2] USING ...
                 // Or single-table with comma would be unusual. Check for USING after table list.
                 // Collect all target tables

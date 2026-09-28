@@ -70,6 +70,15 @@ private:
                                                bool dml_values = false) {
         using sql_parser::NodeType;
         switch (node->type) {
+            case NodeType::NODE_ALIAS:
+                if constexpr (D == sql_parser::Dialect::MySQL) {
+                    if (node->first_child) return true; // Derived column renaming needs engine support.
+                }
+                break;
+            case NodeType::NODE_MYSQL_LOCK_TARGETS:
+            case NodeType::NODE_MYSQL_PARTITION_SELECTION:
+            case NodeType::NODE_MYSQL_INDEX_HINT:
+                return true;
             case NodeType::NODE_QUALIFIED_NAME:
                 // The local resolver combines only table.column; it would
                 // otherwise silently drop the final part of db.table.column.

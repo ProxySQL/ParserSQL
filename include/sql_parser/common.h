@@ -347,6 +347,9 @@ enum class NodeType : uint16_t {
     NODE_MYSQL_JSON_EXTRACT, // value=-> or ->>; column reference, literal path
     NODE_MYSQL_GROUP_CONCAT, // arguments, optional aggregate ORDER BY and separator
     NODE_MYSQL_SEPARATOR, // literal string child
+    NODE_MYSQL_PARTITION_SELECTION, // nonempty identifier list on a table reference
+    NODE_MYSQL_LOCK_TARGETS, // OF table identifiers on a locking clause
+    NODE_MYSQL_INDEX_HINT, // value=USE/FORCE/IGNORE; flags KEY=1, JOIN=2, ORDER=4, GROUP=8; index children
 
 };
 

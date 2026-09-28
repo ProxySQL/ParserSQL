@@ -67,10 +67,8 @@ public:
         // GROUP BY clause
         if (tok_.peek().type == TokenType::TK_GROUP) {
             tok_.skip();
-            if constexpr (D == Dialect::PostgreSQL) {
-                if (tok_.peek().type != TokenType::TK_BY) return expr_parser_.syntax_error();
-            }
-            if (tok_.peek().type == TokenType::TK_BY) tok_.skip();
+            if (tok_.peek().type != TokenType::TK_BY) return expr_parser_.syntax_error();
+            tok_.skip();
             AstNode* group_by = parse_group_by();
             if (group_by) root->add_child(group_by);
         }
@@ -199,7 +197,7 @@ private:
         AstNode* list = make_node(arena_, NodeType::NODE_SELECT_ITEM_LIST);
         if (!list) return nullptr;
 
-        if (require_complete_operands_) {
+        if (D == Dialect::PostgreSQL && require_complete_operands_) {
             // PostgreSQL permits SELECT with an empty target list. Do not turn
             // its clause boundary into a failed expression operand.
             Token t = tok_.peek();
@@ -471,43 +469,72 @@ private:
         return limit;
     }
 
-    // ---- FOR UPDATE / FOR SHARE ----
-
+public:
+    // Shared by standalone SELECT and compound-query tails.
     AstNode* parse_locking() {
-        AstNode* lock = make_node(arena_, NodeType::NODE_LOCKING_CLAUSE);
-        if (!lock) return nullptr;
-
-        tok_.skip(); // consume FOR
-        Token strength = tok_.next_token(); // UPDATE or SHARE
-        lock->add_child(make_node(arena_, NodeType::NODE_IDENTIFIER, strength.text));
-
-        // Optional: OF table_list
+        if (tok_.next_token().type != TokenType::TK_FOR) return expr_parser_.syntax_error();
+        Token strength = tok_.next_token();
+        if (strength.type != TokenType::TK_UPDATE && strength.type != TokenType::TK_SHARE)
+            return expr_parser_.syntax_error();
+        auto* lock = make_node(arena_, NodeType::NODE_LOCKING_CLAUSE);
+        auto* mode = make_node(arena_, NodeType::NODE_IDENTIFIER, strength.text);
+        if (!lock || !mode) return expr_parser_.syntax_error();
+        lock->add_child(mode);
         if (tok_.peek().type == TokenType::TK_OF) {
             tok_.skip();
-            while (true) {
-                Token table = tok_.next_token();
-                lock->add_child(make_node(arena_, NodeType::NODE_IDENTIFIER, table.text));
-                if (tok_.peek().type == TokenType::TK_COMMA) {
+            auto* targets = make_node(arena_, NodeType::NODE_MYSQL_LOCK_TARGETS);
+            if (!targets) return expr_parser_.syntax_error();
+            do {
+                Token name = tok_.next_token();
+                if (!mysql_identifier_token(name)) return expr_parser_.syntax_error();
+                auto* target = make_node_from_token(arena_, NodeType::NODE_IDENTIFIER, name,
+                    name.source.ptr != name.text.ptr ? FLAG_IDENT_DELIMITED : 0);
+                if (!target) return expr_parser_.syntax_error();
+                if (tok_.peek().type == TokenType::TK_DOT) {
+                    auto* qualified = make_node(arena_, NodeType::NODE_QUALIFIED_NAME);
+                    if (!qualified) return expr_parser_.syntax_error();
+                    qualified->add_child(target);
                     tok_.skip();
-                } else {
-                    break;
+                    Token part = tok_.next_token();
+                    if (!mysql_identifier_word(part) && part.type != TokenType::TK_ASTERISK)
+                        return expr_parser_.syntax_error();
+                    auto* item = make_node_from_token(arena_, part.type == TokenType::TK_ASTERISK ?
+                        NodeType::NODE_ASTERISK : NodeType::NODE_IDENTIFIER, part,
+                        part.source.ptr != part.text.ptr ? FLAG_IDENT_DELIMITED : 0);
+                    if (!item) return expr_parser_.syntax_error();
+                    qualified->add_child(item);
+                    if (part.type != TokenType::TK_ASTERISK && tok_.peek().type == TokenType::TK_DOT) {
+                        tok_.skip();
+                        if (tok_.next_token().type != TokenType::TK_ASTERISK) return expr_parser_.syntax_error();
+                        auto* star = make_node(arena_, NodeType::NODE_ASTERISK, StringRef{"*", 1});
+                        if (!star) return expr_parser_.syntax_error();
+                        qualified->add_child(star);
+                    }
+                    target = qualified;
                 }
-            }
+                targets->add_child(target);
+                if (tok_.peek().type != TokenType::TK_COMMA) break;
+                tok_.skip();
+            } while (true);
+            lock->add_child(targets);
         }
-
-        // Optional: NOWAIT or SKIP LOCKED
+        StringRef action;
         if (tok_.peek().type == TokenType::TK_NOWAIT) {
-            tok_.skip();
-            lock->add_child(make_node(arena_, NodeType::NODE_IDENTIFIER, StringRef{"NOWAIT", 6}));
+            tok_.skip(); action = {"NOWAIT", 6};
         } else if (tok_.peek().type == TokenType::TK_SKIP) {
             tok_.skip();
-            if (tok_.peek().type == TokenType::TK_LOCKED) tok_.skip();
-            lock->add_child(make_node(arena_, NodeType::NODE_IDENTIFIER, StringRef{"SKIP LOCKED", 11}));
+            if (tok_.next_token().type != TokenType::TK_LOCKED) return expr_parser_.syntax_error();
+            action = {"SKIP LOCKED", 11};
         }
-
+        if (!action.empty()) {
+            auto* node = make_node(arena_, NodeType::NODE_IDENTIFIER, action);
+            if (!node) return expr_parser_.syntax_error();
+            lock->add_child(node);
+        }
         return lock;
     }
 
+private:
     // ---- INTO (MySQL: INTO OUTFILE/DUMPFILE/@var) ----
 
     AstNode* parse_into() {

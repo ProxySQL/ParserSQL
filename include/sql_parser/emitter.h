@@ -143,6 +143,17 @@ private:
 
             // ---- Table references ----
             case NodeType::NODE_TABLE_REF:       emit_table_ref(node); break;
+            case NodeType::NODE_MYSQL_LOCK_TARGETS:
+                sb_.append("OF "); emit_list(node, ", "); break;
+            case NodeType::NODE_MYSQL_PARTITION_SELECTION:
+                sb_.append(" PARTITION ("); emit_list(node, ", "); sb_.append_char(')'); break;
+            case NodeType::NODE_MYSQL_INDEX_HINT:
+                sb_.append_char(' '); emit_value(node);
+                sb_.append((node->flags & 1) ? " KEY" : " INDEX");
+                if (node->flags & 2) sb_.append(" FOR JOIN");
+                else if (node->flags & 4) sb_.append(" FOR ORDER BY");
+                else if (node->flags & 8) sb_.append(" FOR GROUP BY");
+                sb_.append(" ("); emit_list(node, ", "); sb_.append_char(')'); break;
             case NodeType::NODE_ALIAS:           emit_alias(node); break;
             case NodeType::NODE_QUALIFIED_NAME:  emit_qualified_name(node); break;
 

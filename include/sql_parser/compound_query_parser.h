@@ -53,11 +53,9 @@ public:
         }
         if (D == Dialect::MySQL && result->type == NodeType::NODE_SELECT_STMT &&
             tok_.peek().type == TokenType::TK_FOR) {
-            tok_.skip();
-            AstNode* lock = make_node(arena_, NodeType::NODE_LOCKING_CLAUSE);
+            SelectParser<D> select(tok_, arena_, false, require_operands);
+            AstNode* lock = select.parse_locking();
             if (!lock) return nullptr;
-            Token strength = tok_.next_token();
-            lock->add_child(make_node(arena_, NodeType::NODE_IDENTIFIER, strength.text));
             result->add_child(lock);
         }
         return result;

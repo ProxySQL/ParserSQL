@@ -1,8 +1,8 @@
 // subquery_parse_callback.h -- Implementation of the subquery parse callback
 //
 // Shared query callback for expression and derived-table contexts. PostgreSQL
-// supports compound SELECT/TABLE/VALUES queries and WITH; MySQL retains its
-// existing simple SELECT callback.
+// supports compound SELECT/TABLE/VALUES queries and WITH; MySQL supports
+// compound SELECT queries through the same query parser.
 
 #ifndef SQL_PARSER_SUBQUERY_PARSE_CALLBACK_H
 #define SQL_PARSER_SUBQUERY_PARSE_CALLBACK_H
@@ -200,10 +200,12 @@ AstNode* parse_subquery_select(Tokenizer<D>& tok, Arena& arena) {
         query.set_subquery_callback(&parse_subquery_select<D>);
         return query.parse(TokenType::TK_EOF);
     } else {
-        if (tok.peek().type == TokenType::TK_SELECT) tok.skip();
-        SelectParser<D> sp(tok, arena, false);
-        sp.set_subquery_callback(&parse_subquery_select<D>);
-        return sp.parse();
+        if (tok.peek().type != TokenType::TK_SELECT && tok.peek().type != TokenType::TK_LPAREN)
+            return ExpressionParser<D>(tok, arena).syntax_error();
+        CompoundQueryParser<D> query(tok, arena, true);
+        query.set_subquery_callback(&parse_subquery_select<D>);
+        AstNode* result = query.parse(TokenType::TK_EOF);
+        return result ? result : ExpressionParser<D>(tok, arena).syntax_error();
     }
 }
 

@@ -7,6 +7,7 @@
 #include "sql_parser/ast.h"
 #include "sql_parser/arena.h"
 #include "sql_parser/expression_parser.h"
+#include "sql_parser/mysql_identifier.h"
 
 namespace sql_parser {
 
@@ -55,6 +56,25 @@ public:
     AstNode* parse_table_reference(bool from_context = false) {
         Token t = tok_.peek();
 
+        if constexpr (D == Dialect::MySQL) {
+            if (from_context && ExpressionParser<D>::keyword(t, "LATERAL")) {
+                tok_.skip();
+                if (!take(TokenType::TK_LPAREN) || !subquery_cb_)
+                    return expr_parser_.syntax_error();
+                auto* query = subquery_cb_(tok_, arena_);
+                if (!query || !take(TokenType::TK_RPAREN)) return expr_parser_.syntax_error();
+                auto* subquery = make_node(arena_, NodeType::NODE_SUBQUERY);
+                auto* ref = make_node(arena_, NodeType::NODE_TABLE_REF);
+                auto* lateral = make_node(arena_, NodeType::NODE_LATERAL);
+                if (!subquery || !ref || !lateral) return expr_parser_.syntax_error();
+                subquery->add_child(query);
+                ref->add_child(subquery);
+                if (!parse_mysql_derived_alias(ref)) return expr_parser_.syntax_error();
+                lateral->add_child(ref);
+                return lateral;
+            }
+        }
+
         if constexpr (D == Dialect::PostgreSQL) {
             if (from_context && ExpressionParser<D>::keyword(t, "ROWS")) {
                 auto look = tok_; look.skip();
@@ -96,10 +116,8 @@ public:
                     subq = make_node(arena_, NodeType::NODE_SUBQUERY);
                     if (!subq) return expr_parser_.syntax_error();
                     AstNode* inner = subquery_cb_(tok_, arena_);
-                    if constexpr (D == Dialect::PostgreSQL) {
-                        if (!inner || tok_.peek().type != TokenType::TK_RPAREN)
-                            return expr_parser_.syntax_error();
-                    }
+                    if (!inner || tok_.peek().type != TokenType::TK_RPAREN)
+                        return expr_parser_.syntax_error();
                     if (inner) subq->add_child(inner);
                     if (tok_.peek().type == TokenType::TK_RPAREN) tok_.skip();
                 } else {
@@ -117,7 +135,9 @@ public:
                 AstNode* ref = make_node(arena_, NodeType::NODE_TABLE_REF);
                 if (!ref) return expr_parser_.syntax_error();
                 ref->add_child(subq);
-                parse_optional_alias(ref, from_context);
+                if constexpr (D == Dialect::MySQL) {
+                    if (!parse_mysql_derived_alias(ref)) return expr_parser_.syntax_error();
+                } else parse_optional_alias(ref, from_context);
                 return ref;
             }
             // Parenthesized table reference -- parse inner
@@ -156,6 +176,10 @@ public:
             }
             if (!pg_column_name(tok_.peek()) || starts_json_format(tok_)) return expr_parser_.syntax_error();
         }
+        if constexpr (D == Dialect::MySQL) {
+            if (!mysql_identifier_token(tok_.peek()) && !ExpressionParser<D>::keyword(tok_.peek(), "DUAL"))
+                return expr_parser_.syntax_error();
+        }
         Token name = tok_.next_token();
         unsigned name_parts = 1;
 
@@ -163,6 +187,9 @@ public:
             // Qualified: schema.table
             tok_.skip();
             Token table_name = tok_.next_token();
+            if constexpr (D == Dialect::MySQL) {
+                if (!mysql_identifier_word(table_name)) return expr_parser_.syntax_error();
+            }
             if constexpr (D == Dialect::PostgreSQL) {
                 if (!pg_column_label(table_name)) return expr_parser_.syntax_error();
             }
@@ -229,8 +256,24 @@ public:
             }
         }
 
+        if constexpr (D == Dialect::MySQL) {
+            if (from_context && tok_.peek().type == TokenType::TK_PARTITION) {
+                auto* partition = parse_mysql_partition_selection();
+                if (!partition) return expr_parser_.syntax_error();
+                ref->add_child(partition);
+            }
+        }
         // Optional alias
         parse_optional_alias(ref, from_context);
+        if constexpr (D == Dialect::MySQL) {
+            if (from_context) {
+                while (mysql_index_hint_start(tok_.peek())) {
+                    auto* hint = parse_mysql_index_hint();
+                    if (!hint) return expr_parser_.syntax_error();
+                    ref->add_child(hint);
+                }
+            }
+        }
         if constexpr (D == Dialect::PostgreSQL) {
             if (from_context && ExpressionParser<D>::keyword(tok_.peek(), "TABLESAMPLE")) {
                 if (!ref->first_child || (ref->first_child->type != NodeType::NODE_IDENTIFIER &&
@@ -241,6 +284,15 @@ public:
             }
         }
         return ref;
+    }
+
+    // Shared with single-table DELETE, whose PARTITION clause follows its alias.
+    AstNode* parse_mysql_partition_selection() {
+        if (!take(TokenType::TK_PARTITION) || !take(TokenType::TK_LPAREN))
+            return expr_parser_.syntax_error();
+        auto* partition = make_node(arena_, NodeType::NODE_MYSQL_PARTITION_SELECTION);
+        if (!partition || !parse_mysql_name_list(partition, false)) return expr_parser_.syntax_error();
+        return partition;
     }
 
     // Parse a JOIN clause
@@ -323,12 +375,15 @@ public:
             if (!alias) t = tok_.next_token();
             if constexpr (D == Dialect::PostgreSQL) {
                 if (!alias && !pg_column_name(t)) { expr_parser_.syntax_error(); return; }
+            } else {
+                if (!mysql_identifier_token(t)) { expr_parser_.syntax_error(); return; }
             }
             if (!alias && !is_alias_start(t.type)) { expr_parser_.syntax_error(); return; }
             if (!alias) alias = make_node_from_token(arena_, NodeType::NODE_ALIAS, t,
                 t.source.ptr != t.text.ptr ? FLAG_IDENT_DELIMITED : 0);
             if (!alias) { expr_parser_.syntax_error(); return; }
-        } else if (is_alias_token(t) && (D != Dialect::PostgreSQL || pg_column_name(t))) {
+        } else if (is_alias_token(t) && (D != Dialect::PostgreSQL || pg_column_name(t)) &&
+                   (D != Dialect::MySQL || mysql_identifier_token(t))) {
             tok_.skip();
             alias = make_node_from_token(arena_, NodeType::NODE_ALIAS, t,
                 t.source.ptr != t.text.ptr ? FLAG_IDENT_DELIMITED : 0);
@@ -388,7 +443,8 @@ public:
 
     static bool is_alias_token(const Token& token) {
         if constexpr (D == Dialect::MySQL) {
-            if (ExpressionParser<D>::keyword(token, "WINDOW")) return false;
+            if (ExpressionParser<D>::keyword(token, "WINDOW") ||
+                ExpressionParser<D>::keyword(token, "LATERAL") || mysql_index_hint_start(token)) return false;
         }
         if constexpr (D == Dialect::PostgreSQL) {
             if (!pg_column_label(token)) return false;
@@ -456,6 +512,60 @@ public:
     }
 
 private:
+    static bool mysql_index_hint_start(const Token& token) {
+        return ExpressionParser<D>::keyword(token, "USE") ||
+            ExpressionParser<D>::keyword(token, "FORCE") || ExpressionParser<D>::keyword(token, "IGNORE");
+    }
+
+    bool parse_mysql_name_list(AstNode* parent, bool allow_empty) {
+        if (tok_.peek().type == TokenType::TK_RPAREN) {
+            if (!allow_empty) return false;
+            tok_.skip();
+            return true;
+        }
+        do {
+            Token name = tok_.next_token();
+            if (!mysql_identifier_token(name) &&
+                !(parent->type == NodeType::NODE_MYSQL_INDEX_HINT && ExpressionParser<D>::keyword(name, "PRIMARY")))
+                return false;
+            auto* item = make_identifier(name);
+            if (!item) return false;
+            parent->add_child(item);
+            if (!take(TokenType::TK_COMMA)) break;
+        } while (true);
+        return take(TokenType::TK_RPAREN);
+    }
+
+    bool parse_mysql_derived_alias(AstNode* ref) {
+        parse_optional_alias(ref, true);
+        auto* alias = ref->first_child ? ref->first_child->next_sibling : nullptr;
+        if (!alias || alias->type != NodeType::NODE_ALIAS) return false;
+        if (take(TokenType::TK_LPAREN) && !parse_mysql_name_list(alias, false)) return false;
+        return true;
+    }
+
+    AstNode* parse_mysql_index_hint() {
+        Token action = tok_.next_token();
+        StringRef kind = ExpressionParser<D>::keyword(action, "USE") ? StringRef{"USE", 3} :
+            ExpressionParser<D>::keyword(action, "FORCE") ? StringRef{"FORCE", 5} : StringRef{"IGNORE", 6};
+        auto* hint = make_node(arena_, NodeType::NODE_MYSQL_INDEX_HINT, kind);
+        if (!hint) return expr_parser_.syntax_error();
+        if (take(TokenType::TK_KEY)) hint->flags |= 1;
+        else if (!take(TokenType::TK_INDEX)) return expr_parser_.syntax_error();
+        if (take(TokenType::TK_FOR)) {
+            if (take(TokenType::TK_JOIN)) hint->flags |= 2;
+            else {
+                if (take(TokenType::TK_ORDER)) hint->flags |= 4;
+                else if (take(TokenType::TK_GROUP)) hint->flags |= 8;
+                else return expr_parser_.syntax_error();
+                if (!take(TokenType::TK_BY)) return expr_parser_.syntax_error();
+            }
+        }
+        if (!take(TokenType::TK_LPAREN) || !parse_mysql_name_list(hint, kind.equals_ci("USE", 3)))
+            return expr_parser_.syntax_error();
+        return hint;
+    }
+
     bool take(TokenType type) {
         if (tok_.peek().type != type) return false;
         tok_.skip(); return true;
