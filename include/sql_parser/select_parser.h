@@ -82,27 +82,27 @@ public:
             if (having) root->add_child(having);
         }
 
-        if constexpr (D == Dialect::PostgreSQL) {
-            if (ExpressionParser<D>::keyword(tok_.peek(), "WINDOW")) {
+        if (ExpressionParser<D>::keyword(tok_.peek(), "WINDOW")) {
+            tok_.skip();
+            AstNode* windows = make_node(arena_, NodeType::NODE_WINDOW_CLAUSE);
+            if (!windows) return expr_parser_.syntax_error();
+            while (true) {
+                Token name = tok_.peek();
+                if (!ExpressionParser<D>::window_name_token(name)) return expr_parser_.syntax_error();
                 tok_.skip();
-                AstNode* windows = make_node(arena_, NodeType::NODE_WINDOW_CLAUSE);
-                while (true) {
-                    Token name = tok_.peek();
-                    if (name.type != TokenType::TK_IDENTIFIER) return expr_parser_.syntax_error();
-                    tok_.skip();
-                    if (tok_.peek().type != TokenType::TK_AS) return expr_parser_.syntax_error();
-                    tok_.skip();
-                    AstNode* spec = expr_parser_.parse_window_spec();
-                    if (!spec) return nullptr;
-                    AstNode* definition = make_node(arena_, NodeType::NODE_WINDOW_DEFINITION,
-                        name.source.empty() ? name.text : name.source);
-                    definition->add_child(spec);
-                    windows->add_child(definition);
-                    if (tok_.peek().type != TokenType::TK_COMMA) break;
-                    tok_.skip();
-                }
-                root->add_child(windows);
+                if (tok_.peek().type != TokenType::TK_AS) return expr_parser_.syntax_error();
+                tok_.skip();
+                AstNode* spec = expr_parser_.parse_window_spec();
+                if (!spec) return nullptr;
+                AstNode* definition = make_node(arena_, NodeType::NODE_WINDOW_DEFINITION,
+                    name.source.empty() ? name.text : name.source);
+                if (!definition) return expr_parser_.syntax_error();
+                definition->add_child(spec);
+                windows->add_child(definition);
+                if (tok_.peek().type != TokenType::TK_COMMA) break;
+                tok_.skip();
             }
+            root->add_child(windows);
         }
 
         // In compound_mode, stop before ORDER BY / LIMIT so the compound
@@ -219,7 +219,10 @@ private:
         }
         while (true) {
             AstNode* item = parse_select_item();
-            if (!item) break;
+            if (!item) {
+                if constexpr (D == Dialect::MySQL) return expr_parser_.syntax_error();
+                break;
+            }
             list->add_child(item);
             if (tok_.peek().type == TokenType::TK_COMMA) {
                 tok_.skip();
@@ -359,14 +362,21 @@ private:
             AstNode* expr;
             if constexpr (D == Dialect::PostgreSQL)
                 expr = PgQueryClauses<D>(tok_, arena_, expr_parser_).grouping();
-            else expr = expr_parser_.parse();
+            else expr = expr_parser_.parse_complete();
             if (!expr) {
-                if constexpr (D == Dialect::PostgreSQL) return expr_parser_.syntax_error();
-                break;
+                return expr_parser_.syntax_error();
             }
             group_by->add_child(expr);
             if (tok_.peek().type != TokenType::TK_COMMA) break;
             tok_.skip();
+        }
+        if constexpr (D == Dialect::MySQL) {
+            if (tok_.peek().type == TokenType::TK_WITH) {
+                tok_.skip();
+                if (!ExpressionParser<D>::keyword(tok_.peek(), "ROLLUP")) return expr_parser_.syntax_error();
+                tok_.skip();
+                group_by->set_value({"WITH ROLLUP", 11});
+            }
         }
         return group_by;
     }

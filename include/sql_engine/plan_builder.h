@@ -70,6 +70,14 @@ private:
                                                bool dml_values = false) {
         using sql_parser::NodeType;
         switch (node->type) {
+            case NodeType::NODE_QUALIFIED_NAME:
+                // The local resolver combines only table.column; it would
+                // otherwise silently drop the final part of db.table.column.
+                if constexpr (D == sql_parser::Dialect::MySQL) {
+                    if (node->first_child && node->first_child->next_sibling &&
+                        node->first_child->next_sibling->next_sibling) return true;
+                }
+                break;
             // PG_CONT_EXPRESSION_GUARD
             case NodeType::NODE_LITERAL_BIT:
             case NodeType::NODE_LITERAL_HEX:
@@ -168,6 +176,9 @@ private:
                 break;
             case NodeType::NODE_NAMED_ARGUMENT:
             case NodeType::NODE_TYPE_CAST:
+            case NodeType::NODE_MYSQL_JSON_EXTRACT:
+            case NodeType::NODE_MYSQL_GROUP_CONCAT:
+            case NodeType::NODE_MYSQL_SEPARATOR:
             case NodeType::NODE_DISTINCT_ON:
             case NodeType::NODE_AGGREGATE_ORDER_BY:
             case NodeType::NODE_AGGREGATE_FILTER:

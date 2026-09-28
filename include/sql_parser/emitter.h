@@ -161,8 +161,15 @@ private:
                 break;
             // ---- Expressions ----
             case NodeType::NODE_BINARY_OP:       emit_binary_op(node); break;
+            case NodeType::NODE_MYSQL_JSON_EXTRACT:
+                emit_node(node->first_child); sb_.append_char(' '); emit_value(node); sb_.append_char(' ');
+                emit_mysql_syntax_string(node->first_child ? node->first_child->next_sibling : nullptr);
+                break;
             case NodeType::NODE_UNARY_OP:        emit_unary_op(node); break;
             case NodeType::NODE_FUNCTION_CALL:   emit_function_call(node); break;
+            case NodeType::NODE_MYSQL_GROUP_CONCAT: emit_function_call(node); break;
+            case NodeType::NODE_MYSQL_SEPARATOR:
+                sb_.append(" SEPARATOR "); emit_mysql_syntax_string(node->first_child); break;
             case NodeType::NODE_IS_NULL:         emit_is_null(node); break;
             case NodeType::NODE_IS_NOT_NULL:     emit_is_not_null(node); break;
             case NodeType::NODE_BETWEEN:         emit_between(node); break;
@@ -836,12 +843,17 @@ private:
 
     void emit_group_by(const AstNode* node) {
         sb_.append(" GROUP BY ");
-        if (!node->value().empty()) { emit_value(node); sb_.append_char(' '); }
+        if constexpr (D == Dialect::PostgreSQL) {
+            if (!node->value().empty()) { emit_value(node); sb_.append_char(' '); }
+        }
         bool first = true;
         for (const AstNode* child = node->first_child; child; child = child->next_sibling) {
             if (!first) sb_.append(", ");
             first = false;
             emit_node(child);
+        }
+        if constexpr (D == Dialect::MySQL) {
+            if (!node->value().empty()) { sb_.append_char(' '); emit_value(node); }
         }
     }
 
@@ -1535,6 +1547,14 @@ private:
 
     // ---- Expressions ----
 
+    void emit_mysql_syntax_string(const AstNode* node) {
+        // A double-quoted literal can contain unescaped apostrophes. Preserve
+        // its delimiter instead of turning a valid path/separator into bad SQL.
+        if (node && mode_ == EmitMode::NORMAL && !node->source().empty())
+            sb_.append(node->source_ptr, node->source_len);
+        else emit_node(node);
+    }
+
     void emit_binary_op(const AstNode* node) {
         const AstNode* left = node->first_child;
         const AstNode* right = left ? left->next_sibling : nullptr;
@@ -1617,7 +1637,12 @@ private:
         else if (node->flags & FLAG_FUNCTION_ALL) sb_.append("ALL ");
         bool first = true;
         const AstNode* order = nullptr;
+        const AstNode* separator = nullptr;
         for (; arg; arg = arg->next_sibling) {
+            if (arg->type == NodeType::NODE_MYSQL_SEPARATOR) {
+                separator = arg;
+                continue;
+            }
             if (arg->type == NodeType::NODE_AGGREGATE_ORDER_BY) {
                 order = arg;
                 continue;
@@ -1627,6 +1652,7 @@ private:
             emit_node(arg);
         }
         if (order && !(node->flags & FLAG_FUNCTION_WITHIN_GROUP)) emit_node(order);
+        if (separator) emit_node(separator);
         sb_.append_char(')');
         if (order && (node->flags & FLAG_FUNCTION_WITHIN_GROUP)) {
             sb_.append(" WITHIN GROUP (ORDER BY ");

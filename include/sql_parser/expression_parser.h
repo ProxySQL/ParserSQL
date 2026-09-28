@@ -70,6 +70,39 @@ public:
                token.text.equals_ci(word.data(), static_cast<uint32_t>(word.size()));
     }
 
+    // Window names are identifiers, including nonreserved MySQL keyword tokens.
+    // Token classification checked against MySQL 8.4.8 and 9.7.2 KEYWORDS.
+    static bool window_name_token(const Token& token) {
+        if (token.type == TokenType::TK_IDENTIFIER) return true;
+        if constexpr (D == Dialect::MySQL) {
+            switch (token.type) {
+                case TokenType::TK_ARRAY: case TokenType::TK_AVG: case TokenType::TK_BEGIN:
+                case TokenType::TK_BUFFERS: case TokenType::TK_CHARSET: case TokenType::TK_COLUMNS:
+                case TokenType::TK_COMMIT: case TokenType::TK_COMMITTED: case TokenType::TK_CONCURRENT:
+                case TokenType::TK_CONFLICT: case TokenType::TK_COSTS: case TokenType::TK_COUNT:
+                case TokenType::TK_DATA: case TokenType::TK_DEALLOCATE: case TokenType::TK_DO:
+                case TokenType::TK_DUMPFILE: case TokenType::TK_DUPLICATE: case TokenType::TK_END:
+                case TokenType::TK_EXECUTE: case TokenType::TK_FIELDS: case TokenType::TK_FORMAT:
+                case TokenType::TK_FULL: case TokenType::TK_GLOBAL: case TokenType::TK_ISOLATION:
+                case TokenType::TK_LEVEL: case TokenType::TK_LOCAL: case TokenType::TK_LOCKED:
+                case TokenType::TK_MAX: case TokenType::TK_MEMBER: case TokenType::TK_MIN:
+                case TokenType::TK_NAMES: case TokenType::TK_NOTHING: case TokenType::TK_NOWAIT:
+                case TokenType::TK_OFFSET: case TokenType::TK_ONLY: case TokenType::TK_PERSIST:
+                case TokenType::TK_PREPARE: case TokenType::TK_QUICK: case TokenType::TK_REPEATABLE:
+                case TokenType::TK_RESET: case TokenType::TK_RETURNING: case TokenType::TK_ROLLBACK:
+                case TokenType::TK_SAVEPOINT: case TokenType::TK_SERIALIZABLE: case TokenType::TK_SESSION:
+                case TokenType::TK_SETTINGS: case TokenType::TK_SHARE: case TokenType::TK_SKIP:
+                case TokenType::TK_SOUNDS: case TokenType::TK_START: case TokenType::TK_SUM:
+                case TokenType::TK_SUMMARY: case TokenType::TK_TIMING: case TokenType::TK_TRANSACTION:
+                case TokenType::TK_TRUNCATE: case TokenType::TK_UNCOMMITTED: case TokenType::TK_VERBOSE:
+                case TokenType::TK_VIEW: case TokenType::TK_WAL:
+                    return true;
+                default: break;
+            }
+        }
+        return false;
+    }
+
     AstNode* syntax_error() {
         StringRef source = tok_.peek().source;
         if (source.empty() && tok_.input_end() > tok_.input_begin())
@@ -697,7 +730,7 @@ private:
                     item->add_child(ordering);
                 }
             }
-            if (keyword(tok_.peek(), "NULLS")) {
+            if (D == Dialect::PostgreSQL && keyword(tok_.peek(), "NULLS")) {
                 tok_.skip();
                 Token placement = tok_.peek();
                 if (!keyword(placement, "FIRST") && !keyword(placement, "LAST")) return syntax_error();
@@ -716,6 +749,10 @@ private:
     }
 
     AstNode* parse_identifier_or_function(const Token& name_token) {
+        if constexpr (D == Dialect::MySQL) {
+            if (tok_.peek().type == TokenType::TK_LPAREN && keyword(name_token, "GROUP_CONCAT"))
+                return parse_mysql_group_concat();
+        }
         if constexpr (D == Dialect::PostgreSQL) {
             const bool has_arguments = tok_.peek().type == TokenType::TK_LPAREN;
             // PG_GAPS_JSON_XML_EXPRESSION_HOOK
@@ -936,6 +973,10 @@ private:
             Token col = tok_.next_token();
             if constexpr (D == Dialect::PostgreSQL) {
                 if (!pg_column_label(col) && col.type != TokenType::TK_ASTERISK) return syntax_error();
+            } else {
+                if (!(col.type == TokenType::TK_IDENTIFIER || col.type == TokenType::TK_ASTERISK ||
+                      (col.type >= TokenType::TK_SELECT && col.type <= TokenType::TK_RECURSIVE)))
+                    return syntax_error();
             }
             AstNode* qname = make_node(arena_, NodeType::NODE_QUALIFIED_NAME);
             AstNode* schema_node = make_node_from_token(arena_, NodeType::NODE_IDENTIFIER, name_token);
@@ -947,13 +988,91 @@ private:
                 col_node->flags |= FLAG_IDENT_DELIMITED;
             qname->add_child(schema_node);
             qname->add_child(col_node);
+            if constexpr (D == Dialect::MySQL) {
+                // MySQL simple_ident permits column, table.column and db.table.column.
+                if (tok_.peek().type == TokenType::TK_DOT) {
+                    tok_.skip();
+                    Token field = tok_.next_token();
+                    if (col.type == TokenType::TK_ASTERISK ||
+                        !(field.type == TokenType::TK_IDENTIFIER || field.type == TokenType::TK_ASTERISK ||
+                          (field.type >= TokenType::TK_SELECT && field.type <= TokenType::TK_RECURSIVE)))
+                        return syntax_error();
+                    auto* field_node = make_node_from_token(arena_, NodeType::NODE_IDENTIFIER, field,
+                        token_was_delimited_(field) ? FLAG_IDENT_DELIMITED : 0);
+                    if (!field_node) return syntax_error();
+                    qname->add_child(field_node);
+                }
+                return parse_mysql_json_extract(qname);
+            }
             return qname;
         }
 
         AstNode* col_ref = make_node_from_token(arena_, NodeType::NODE_COLUMN_REF, name_token);
         if (col_ref && token_was_delimited_(name_token))
             col_ref->flags |= FLAG_IDENT_DELIMITED;
+        if constexpr (D == Dialect::MySQL) return parse_mysql_json_extract(col_ref);
         return col_ref;
+    }
+
+    AstNode* parse_mysql_group_concat() {
+        tok_.skip(); // (
+        auto* node = make_node(arena_, NodeType::NODE_MYSQL_GROUP_CONCAT, {"GROUP_CONCAT", 12});
+        if (!node) return syntax_error();
+        if (tok_.peek().type == TokenType::TK_DISTINCT) {
+            tok_.skip();
+            node->flags |= FLAG_FUNCTION_DISTINCT;
+        }
+        do {
+            auto* arg = parse_complete();
+            if (!arg || arg->type == NodeType::NODE_ASTERISK) return syntax_error();
+            if (arg->type == NodeType::NODE_QUALIFIED_NAME) {
+                for (auto* part = arg->first_child; part; part = part->next_sibling)
+                    if (!(part->flags & FLAG_IDENT_DELIMITED) && part->value().equals_ci("*", 1))
+                        return syntax_error();
+            }
+            node->add_child(arg);
+            if (tok_.peek().type != TokenType::TK_COMMA) break;
+            tok_.skip();
+        } while (true);
+        if (tok_.peek().type == TokenType::TK_ORDER) {
+            auto* order = parse_aggregate_order();
+            if (!order) return syntax_error();
+            node->add_child(order);
+        }
+        if (keyword(tok_.peek(), "SEPARATOR")) {
+            tok_.skip();
+            const Token text = tok_.next_token();
+            NodeType literal_type;
+            if (text.type == TokenType::TK_STRING) literal_type = NodeType::NODE_LITERAL_STRING;
+            else if (text.type == TokenType::TK_HEX_LITERAL) literal_type = NodeType::NODE_LITERAL_HEX;
+            else if (text.type == TokenType::TK_BIT_LITERAL) literal_type = NodeType::NODE_LITERAL_BIT;
+            else return syntax_error();
+            auto* separator = make_node(arena_, NodeType::NODE_MYSQL_SEPARATOR);
+            auto* literal = make_node_from_token(arena_, literal_type, text);
+            if (!separator || !literal) return syntax_error();
+            separator->add_child(literal);
+            node->add_child(separator);
+        }
+        if (tok_.peek().type != TokenType::TK_RPAREN) return syntax_error();
+        tok_.skip();
+        return tok_.peek().type == TokenType::TK_OVER ? parse_window_function(node) : node;
+    }
+
+    AstNode* parse_mysql_json_extract(AstNode* column) {
+        if (tok_.peek().type != TokenType::TK_MYSQL_JSON_ARROW) return column;
+        Token op = tok_.next_token();
+        if (!column || tok_.peek().type != TokenType::TK_STRING) return syntax_error();
+        if (column->type == NodeType::NODE_QUALIFIED_NAME) {
+            for (auto* part = column->first_child; part; part = part->next_sibling)
+                if (!(part->flags & FLAG_IDENT_DELIMITED) && part->value().equals_ci("*", 1)) return syntax_error();
+        }
+        Token path = tok_.next_token();
+        AstNode* node = make_node(arena_, NodeType::NODE_MYSQL_JSON_EXTRACT, op.text);
+        AstNode* literal = make_node_from_token(arena_, NodeType::NODE_LITERAL_STRING, path);
+        if (!node || !literal) return syntax_error();
+        node->add_child(column);
+        node->add_child(literal);
+        return node;
     }
 
     // True iff `t` is a TK_IDENTIFIER token whose source bytes were
@@ -1788,11 +1907,13 @@ private:
         AstNode* win = make_node(arena_, NodeType::NODE_WINDOW_FUNCTION);
         if (!win) return syntax_error();
         win->add_child(func);
-        if constexpr (D == Dialect::PostgreSQL) {
-            if (tok_.peek().type == TokenType::TK_IDENTIFIER) {
+        {
+            if (window_name_token(tok_.peek())) {
                 Token name = tok_.next_token();
-                win->add_child(make_node(arena_, NodeType::NODE_WINDOW_REFERENCE,
-                    name.source.empty() ? name.text : name.source));
+                auto* reference = make_node(arena_, NodeType::NODE_WINDOW_REFERENCE,
+                    name.source.empty() ? name.text : name.source);
+                if (!reference) return syntax_error();
+                win->add_child(reference);
                 return win;
             }
         }
@@ -1809,13 +1930,15 @@ public:
         if (!spec) return syntax_error();
         if (tok_.peek().type != TokenType::TK_LPAREN) return syntax_error();
         tok_.skip();
-        if constexpr (D == Dialect::PostgreSQL) {
+        {
             Token name = tok_.peek();
-            if (name.type == TokenType::TK_IDENTIFIER &&
+            if (window_name_token(name) &&
                 !keyword(name, "ROWS") && !keyword(name, "RANGE") && !keyword(name, "GROUPS")) {
                 tok_.skip();
-                spec->add_child(make_node(arena_, NodeType::NODE_WINDOW_REFERENCE,
-                    name.source.empty() ? name.text : name.source));
+                auto* reference = make_node(arena_, NodeType::NODE_WINDOW_REFERENCE,
+                    name.source.empty() ? name.text : name.source);
+                if (!reference) return syntax_error();
+                spec->add_child(reference);
             }
         }
         if (tok_.peek().type == TokenType::TK_PARTITION) {
@@ -1858,7 +1981,7 @@ public:
                         item->add_child(ordering);
                     }
                 }
-                if (keyword(tok_.peek(), "NULLS")) {
+                if (D == Dialect::PostgreSQL && keyword(tok_.peek(), "NULLS")) {
                     tok_.skip();
                     item->flags |= FLAG_ORDER_NULLS;
                     Token placement = tok_.peek();

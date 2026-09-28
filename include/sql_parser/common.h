@@ -344,6 +344,9 @@ enum class NodeType : uint16_t {
     NODE_PG_SELECT_INTO,
     NODE_PG_ROW_LOCK,
     NODE_PG_COMMAND_STMT, // validated command with structural operands/clauses
+    NODE_MYSQL_JSON_EXTRACT, // value=-> or ->>; column reference, literal path
+    NODE_MYSQL_GROUP_CONCAT, // arguments, optional aggregate ORDER BY and separator
+    NODE_MYSQL_SEPARATOR, // literal string child
 
 };
 

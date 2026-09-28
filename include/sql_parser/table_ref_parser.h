@@ -387,6 +387,9 @@ public:
     }
 
     static bool is_alias_token(const Token& token) {
+        if constexpr (D == Dialect::MySQL) {
+            if (ExpressionParser<D>::keyword(token, "WINDOW")) return false;
+        }
         if constexpr (D == Dialect::PostgreSQL) {
             if (!pg_column_label(token)) return false;
             if (ExpressionParser<D>::keyword(token, "WINDOW") ||

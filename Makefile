@@ -64,6 +64,7 @@ TEST_SRCS = $(TEST_DIR)/test_main.cpp \
             $(TEST_DIR)/test_pg_table_constraints.cpp \
             $(TEST_DIR)/test_pg_maintenance.cpp \
             $(TEST_DIR)/test_review_expressions.cpp \
+            $(TEST_DIR)/test_mysql_grammar.cpp \
             $(TEST_DIR)/test_review_ast.cpp \
             $(TEST_DIR)/test_review_transactions.cpp \
             $(TEST_DIR)/test_review_runtime.cpp \
