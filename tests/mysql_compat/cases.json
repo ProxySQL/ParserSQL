@@ -374,10 +374,10 @@
           "kind": "grammar_anchor"
         }
       ],
-      "expected": "ERROR",
-      "known_gap": true,
-      "gap_note": "Query-only WITH parsing rejects a DML main statement; CTE-prefixed UPDATE/DELETE remain unsupported.",
-      "native_action": "explain"
+      "expected": "CHECKED",
+      "known_gap": false,
+      "native_action": "explain",
+      "expected_sql": "WITH c AS (SELECT 1 AS id) UPDATE t JOIN c ON t.id = c.id SET t.n = 2"
     },
     {
       "id": "cte_delete",
@@ -400,10 +400,10 @@
           "kind": "grammar_anchor"
         }
       ],
-      "expected": "ERROR",
-      "known_gap": true,
-      "gap_note": "Query-only WITH parsing rejects a DML main statement; CTE-prefixed UPDATE/DELETE remain unsupported.",
-      "native_action": "explain"
+      "expected": "CHECKED",
+      "known_gap": false,
+      "native_action": "explain",
+      "expected_sql": "WITH c AS (SELECT 1 AS id) DELETE FROM t WHERE id IN (SELECT id FROM c)"
     },
     {
       "id": "cte_select",
@@ -2949,6 +2949,614 @@
       "expected": "REJECTED",
       "known_gap": false,
       "native_action": "execute"
+    },
+    {
+      "id": "cte_update_recursive",
+      "sql": "WITH RECURSIVE c(id) AS (SELECT 1 UNION ALL SELECT id+1 FROM c WHERE id<3) UPDATE t SET n=2 WHERE id IN (SELECT id FROM c)",
+      "validity": "valid",
+      "derivation": "hand-reduced syntax witness; source anchors identify relevant grammar, not verbatim MTR extraction",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 13389,
+          "excerpt": "update_stmt:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 13945,
+          "excerpt": "update_stmt:",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "CHECKED",
+      "known_gap": false,
+      "native_action": "explain",
+      "expected_sql": "WITH RECURSIVE c(id) AS (SELECT 1 UNION ALL SELECT id + 1 FROM c WHERE id < 3) UPDATE t SET n = 2 WHERE id IN (SELECT id FROM c)"
+    },
+    {
+      "id": "cte_update_quoted_options_partition",
+      "sql": "WITH `select`(`key`) AS (SELECT 1) UPDATE LOW_PRIORITY IGNORE pt PARTITION (p0) AS p SET p.n=3 WHERE p.id IN (SELECT `key` FROM `select`) ORDER BY p.id LIMIT 1",
+      "validity": "valid",
+      "derivation": "hand-reduced syntax witness; source anchors identify relevant grammar, not verbatim MTR extraction",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 13389,
+          "excerpt": "update_stmt:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 13945,
+          "excerpt": "update_stmt:",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "CHECKED",
+      "known_gap": false,
+      "native_action": "explain",
+      "expected_sql": "WITH `select`(`key`) AS (SELECT 1) UPDATE LOW_PRIORITY IGNORE pt PARTITION (p0) AS p SET p.n = 3 WHERE p.id IN (SELECT `key` FROM `select`) ORDER BY p.id LIMIT 1"
+    },
+    {
+      "id": "cte_update_comma",
+      "sql": "WITH c AS (SELECT 1 AS id) UPDATE t, u SET t.n=3, u.n=4 WHERE t.id=u.id AND t.id IN (SELECT id FROM c)",
+      "validity": "valid",
+      "derivation": "hand-reduced syntax witness; source anchors identify relevant grammar, not verbatim MTR extraction",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 13389,
+          "excerpt": "update_stmt:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 13945,
+          "excerpt": "update_stmt:",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "CHECKED",
+      "known_gap": false,
+      "native_action": "explain",
+      "expected_sql": "WITH c AS (SELECT 1 AS id) UPDATE t, u SET t.n = 3, u.n = 4 WHERE t.id = u.id AND t.id IN (SELECT id FROM c)"
+    },
+    {
+      "id": "cte_update_colon_default",
+      "sql": "WITH c AS (SELECT 1 AS id) UPDATE t SET n:=DEFAULT WHERE id IN (SELECT id FROM c)",
+      "validity": "valid",
+      "derivation": "hand-reduced syntax witness; source anchors identify relevant grammar, not verbatim MTR extraction",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 13305,
+          "excerpt": "equal:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 13861,
+          "excerpt": "equal:",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "CHECKED",
+      "known_gap": false,
+      "native_action": "explain",
+      "expected_sql": "WITH c AS (SELECT 1 AS id) UPDATE t SET n = DEFAULT WHERE id IN (SELECT id FROM c)"
+    },
+    {
+      "id": "cte_delete_targets_from",
+      "sql": "WITH c AS (SELECT 1 AS id) DELETE t.*, u.* FROM t JOIN u ON t.id=u.id JOIN c ON c.id=t.id",
+      "validity": "valid",
+      "derivation": "hand-reduced syntax witness; source anchors identify relevant grammar, not verbatim MTR extraction",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 14941,
+          "excerpt": "table_ident_opt_wild:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 15601,
+          "excerpt": "table_ident_opt_wild:",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "CHECKED",
+      "known_gap": false,
+      "native_action": "explain",
+      "expected_sql": "WITH c AS (SELECT 1 AS id) DELETE t.*, u.* FROM t JOIN u ON t.id = u.id JOIN c ON c.id = t.id"
+    },
+    {
+      "id": "cte_delete_targets_using",
+      "sql": "WITH c AS (SELECT 1 AS id) DELETE FROM t, u USING t JOIN u ON t.id=u.id JOIN c ON c.id=t.id",
+      "validity": "valid",
+      "derivation": "hand-reduced syntax witness; source anchors identify relevant grammar, not verbatim MTR extraction",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 13445,
+          "excerpt": "delete_stmt:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 14001,
+          "excerpt": "delete_stmt:",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "CHECKED",
+      "known_gap": false,
+      "native_action": "explain",
+      "expected_sql": "WITH c AS (SELECT 1 AS id) DELETE FROM t, u USING t JOIN u ON t.id = u.id JOIN c ON c.id = t.id"
+    },
+    {
+      "id": "cte_delete_recursive",
+      "sql": "WITH RECURSIVE c(id) AS (SELECT 1 UNION ALL SELECT id+1 FROM c WHERE id<3) DELETE FROM t WHERE id IN (SELECT id FROM c)",
+      "validity": "valid",
+      "derivation": "hand-reduced syntax witness; source anchors identify relevant grammar, not verbatim MTR extraction",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 13445,
+          "excerpt": "delete_stmt:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 14001,
+          "excerpt": "delete_stmt:",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "CHECKED",
+      "known_gap": false,
+      "native_action": "explain",
+      "expected_sql": "WITH RECURSIVE c(id) AS (SELECT 1 UNION ALL SELECT id + 1 FROM c WHERE id < 3) DELETE FROM t WHERE id IN (SELECT id FROM c)"
+    },
+    {
+      "id": "cte_delete_partition_options",
+      "sql": "WITH c AS (SELECT 1 AS id) DELETE IGNORE QUICK LOW_PRIORITY QUICK FROM pt AS p PARTITION (p0) WHERE p.id IN (SELECT id FROM c) ORDER BY p.id DESC LIMIT 1",
+      "validity": "valid",
+      "derivation": "hand-reduced syntax witness; source anchors identify relevant grammar, not verbatim MTR extraction",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 13487,
+          "excerpt": "opt_delete_options:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 14043,
+          "excerpt": "opt_delete_options:",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "CHECKED",
+      "known_gap": false,
+      "native_action": "explain",
+      "expected_sql": "WITH c AS (SELECT 1 AS id) DELETE IGNORE QUICK LOW_PRIORITY QUICK FROM pt AS p PARTITION (p0) WHERE p.id IN (SELECT id FROM c) ORDER BY p.id DESC LIMIT 1"
+    },
+    {
+      "id": "bad_cte_update_missing_set",
+      "sql": "WITH c AS (SELECT 1 AS id) UPDATE t WHERE id=1",
+      "validity": "invalid",
+      "derivation": "hand-written malformed control based on the cited grammar production",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 13389,
+          "excerpt": "update_stmt:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 13945,
+          "excerpt": "update_stmt:",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "REJECTED",
+      "known_gap": false,
+      "native_action": "explain"
+    },
+    {
+      "id": "bad_cte_update_empty_set",
+      "sql": "WITH c AS (SELECT 1 AS id) UPDATE t SET WHERE id=1",
+      "validity": "invalid",
+      "derivation": "hand-written malformed control based on the cited grammar production",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 13411,
+          "excerpt": "update_list:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 13967,
+          "excerpt": "update_list:",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "REJECTED",
+      "known_gap": false,
+      "native_action": "explain"
+    },
+    {
+      "id": "bad_cte_update_expression_lhs",
+      "sql": "WITH c AS (SELECT 1 AS id) UPDATE t SET n+1=2",
+      "validity": "invalid",
+      "derivation": "hand-written malformed control based on the cited grammar production",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 13430,
+          "excerpt": "update_elem:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 13986,
+          "excerpt": "update_elem:",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "REJECTED",
+      "known_gap": false,
+      "native_action": "explain"
+    },
+    {
+      "id": "bad_cte_update_tuple_lhs",
+      "sql": "WITH c AS (SELECT 1 AS id) UPDATE t SET (id,n)=(1,2)",
+      "validity": "invalid",
+      "derivation": "hand-written malformed control based on the cited grammar production",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 13430,
+          "excerpt": "update_elem:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 13986,
+          "excerpt": "update_elem:",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "REJECTED",
+      "known_gap": false,
+      "native_action": "explain"
+    },
+    {
+      "id": "bad_cte_update_wildcard_lhs",
+      "sql": "WITH c AS (SELECT 1 AS id) UPDATE t SET t.*=2",
+      "validity": "invalid",
+      "derivation": "hand-written malformed control based on the cited grammar production",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 14903,
+          "excerpt": "simple_ident_nospvar:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 15563,
+          "excerpt": "simple_ident_nospvar:",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "REJECTED",
+      "known_gap": false,
+      "native_action": "explain"
+    },
+    {
+      "id": "bad_cte_update_four_part_lhs",
+      "sql": "WITH c AS (SELECT 1 AS id) UPDATE t SET a.b.t.n=2",
+      "validity": "invalid",
+      "derivation": "hand-written malformed control based on the cited grammar production",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 14911,
+          "excerpt": "simple_ident_q:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 15571,
+          "excerpt": "simple_ident_q:",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "REJECTED",
+      "known_gap": false,
+      "native_action": "explain"
+    },
+    {
+      "id": "bad_cte_update_empty_where",
+      "sql": "WITH c AS (SELECT 1 AS id) UPDATE t SET n=2 WHERE",
+      "validity": "invalid",
+      "derivation": "hand-written malformed control based on the cited grammar production",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 13389,
+          "excerpt": "update_stmt:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 13945,
+          "excerpt": "update_stmt:",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "REJECTED",
+      "known_gap": false,
+      "native_action": "explain"
+    },
+    {
+      "id": "bad_cte_update_option_order",
+      "sql": "WITH c AS (SELECT 1 AS id) UPDATE IGNORE LOW_PRIORITY t SET n=2",
+      "validity": "invalid",
+      "derivation": "hand-written malformed control based on the cited grammar production",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 13389,
+          "excerpt": "update_stmt:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 13945,
+          "excerpt": "update_stmt:",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "REJECTED",
+      "known_gap": false,
+      "native_action": "explain"
+    },
+    {
+      "id": "bad_cte_delete_missing_from",
+      "sql": "WITH c AS (SELECT 1 AS id) DELETE t WHERE id=1",
+      "validity": "invalid",
+      "derivation": "hand-written malformed control based on the cited grammar production",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 13445,
+          "excerpt": "delete_stmt:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 14001,
+          "excerpt": "delete_stmt:",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "REJECTED",
+      "known_gap": false,
+      "native_action": "explain"
+    },
+    {
+      "id": "bad_cte_delete_empty_where",
+      "sql": "WITH c AS (SELECT 1 AS id) DELETE FROM t WHERE",
+      "validity": "invalid",
+      "derivation": "hand-written malformed control based on the cited grammar production",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 13445,
+          "excerpt": "delete_stmt:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 14001,
+          "excerpt": "delete_stmt:",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "REJECTED",
+      "known_gap": false,
+      "native_action": "explain"
+    },
+    {
+      "id": "bad_cte_delete_multi_limit",
+      "sql": "WITH c AS (SELECT 1 AS id) DELETE t FROM t JOIN c ON t.id=c.id LIMIT 1",
+      "validity": "invalid",
+      "derivation": "hand-written malformed control based on the cited grammar production",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 13445,
+          "excerpt": "delete_stmt:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 14001,
+          "excerpt": "delete_stmt:",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "REJECTED",
+      "known_gap": false,
+      "native_action": "explain"
+    },
+    {
+      "id": "bad_cte_body_update",
+      "sql": "WITH c AS (UPDATE t SET n=2) SELECT * FROM c",
+      "validity": "invalid",
+      "derivation": "hand-written malformed control based on the cited grammar production",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 12366,
+          "excerpt": "common_table_expr:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 12790,
+          "excerpt": "common_table_expr:",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "REJECTED",
+      "known_gap": false,
+      "native_action": "explain"
+    },
+    {
+      "id": "bad_cte_body_delete",
+      "sql": "WITH c AS (DELETE FROM t) SELECT * FROM c",
+      "validity": "invalid",
+      "derivation": "hand-written malformed control based on the cited grammar production",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 12366,
+          "excerpt": "common_table_expr:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 12790,
+          "excerpt": "common_table_expr:",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "REJECTED",
+      "known_gap": false,
+      "native_action": "explain"
+    },
+    {
+      "id": "bad_subquery_with_update",
+      "sql": "SELECT (WITH c AS (SELECT 1 AS id) UPDATE t SET n=2)",
+      "validity": "invalid",
+      "derivation": "hand-written malformed control based on the cited grammar production",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 17351,
+          "excerpt": "table_subquery:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 18038,
+          "excerpt": "table_subquery:",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "REJECTED",
+      "known_gap": false,
+      "native_action": "explain"
+    },
+    {
+      "id": "bad_subquery_with_delete",
+      "sql": "SELECT * FROM (WITH c AS (SELECT 1 AS id) DELETE FROM t) AS d",
+      "validity": "invalid",
+      "derivation": "hand-written malformed control based on the cited grammar production",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 17351,
+          "excerpt": "table_subquery:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 18038,
+          "excerpt": "table_subquery:",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "REJECTED",
+      "known_gap": false,
+      "native_action": "explain"
+    },
+    {
+      "id": "bad_with_insert",
+      "sql": "WITH c AS (SELECT 1 AS id) INSERT INTO u (id) SELECT id FROM c",
+      "validity": "invalid",
+      "derivation": "hand-written malformed control based on the cited grammar production",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 13064,
+          "excerpt": "insert_stmt:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 13620,
+          "excerpt": "insert_stmt:",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "REJECTED",
+      "known_gap": false,
+      "native_action": "explain"
     }
   ]
 }

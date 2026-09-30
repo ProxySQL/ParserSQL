@@ -315,7 +315,8 @@ public:
             t = tok_.peek();
         }
 
-        // Expect JOIN keyword
+        // Every modifier sequence must end in JOIN.
+        if (t.type != TokenType::TK_JOIN) return expr_parser_.syntax_error();
         if (t.type == TokenType::TK_JOIN) {
             join_type_end = t.text;
             tok_.skip();
@@ -329,30 +330,34 @@ public:
 
         // Right table reference
         AstNode* right_ref = parse_table_reference(true);
-        if (right_ref) join->add_child(right_ref);
+        if (!right_ref) return expr_parser_.syntax_error();
+        join->add_child(right_ref);
 
         // Join condition: ON expr or USING (col_list)
         if (tok_.peek().type == TokenType::TK_ON) {
             tok_.skip();
             AstNode* on_expr = expr_parser_.parse();
-            if (on_expr) join->add_child(on_expr);
+            if (!on_expr) return expr_parser_.syntax_error();
+            join->add_child(on_expr);
         } else if (tok_.peek().type == TokenType::TK_USING) {
             tok_.skip();
-            if (tok_.peek().type == TokenType::TK_LPAREN) {
+            if (tok_.peek().type != TokenType::TK_LPAREN) return expr_parser_.syntax_error();
+            tok_.skip();
+            auto* using_list = make_node(arena_, NodeType::NODE_IDENTIFIER, StringRef{"USING", 5});
+            if (!using_list) return expr_parser_.syntax_error();
+            while (true) {
+                Token col = tok_.next_token();
+                if (!mysql_identifier_token(col)) return expr_parser_.syntax_error();
+                auto* name = make_node_from_token(arena_, NodeType::NODE_IDENTIFIER, col,
+                    col.source.ptr != col.text.ptr ? FLAG_IDENT_DELIMITED : 0);
+                if (!name) return expr_parser_.syntax_error();
+                using_list->add_child(name);
+                if (tok_.peek().type != TokenType::TK_COMMA) break;
                 tok_.skip();
-                AstNode* using_list = make_node(arena_, NodeType::NODE_IDENTIFIER, StringRef{"USING", 5});
-                while (true) {
-                    Token col = tok_.next_token();
-                    using_list->add_child(make_node(arena_, NodeType::NODE_IDENTIFIER, col.text));
-                    if (tok_.peek().type == TokenType::TK_COMMA) {
-                        tok_.skip();
-                    } else {
-                        break;
-                    }
-                }
-                if (tok_.peek().type == TokenType::TK_RPAREN) tok_.skip();
-                join->add_child(using_list);
             }
+            if (tok_.peek().type != TokenType::TK_RPAREN) return expr_parser_.syntax_error();
+            tok_.skip();
+            join->add_child(using_list);
         }
 
         return join;

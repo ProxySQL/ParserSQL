@@ -90,7 +90,7 @@ TEST_F(MySQLUpdateTest, UpdateLowPriorityIgnore) {
 // ========== MySQL ORDER BY + LIMIT ==========
 
 TEST_F(MySQLUpdateTest, UpdateOrderByLimit) {
-    const char* sql = "UPDATE users SET rank = rank + 1 WHERE active = 1 ORDER BY score DESC LIMIT 10";
+    const char* sql = "UPDATE users SET `rank` = `rank` + 1 WHERE active = 1 ORDER BY score DESC LIMIT 10";
     auto r = parser.parse(sql, strlen(sql));
     EXPECT_EQ(r.status, ParseResult::OK);
     ASSERT_NE(r.ast, nullptr);

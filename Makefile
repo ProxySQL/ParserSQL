@@ -68,6 +68,7 @@ TEST_SRCS = $(TEST_DIR)/test_main.cpp \
             $(TEST_DIR)/test_mysql_grammar.cpp \
             $(TEST_DIR)/test_mysql_tables.cpp \
             $(TEST_DIR)/test_mysql_query_expressions.cpp \
+            $(TEST_DIR)/test_mysql_cte_dml.cpp \
             $(TEST_DIR)/test_review_ast.cpp \
             $(TEST_DIR)/test_review_transactions.cpp \
             $(TEST_DIR)/test_review_runtime.cpp \

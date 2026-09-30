@@ -13,6 +13,8 @@
 #include "sql_parser/arena.h"
 #include "sql_parser/compound_query_parser.h"
 #include "sql_parser/pg_merge_parser.h"
+#include "sql_parser/update_parser.h"
+#include "sql_parser/delete_parser.h"
 
 namespace sql_parser {
 
@@ -22,8 +24,9 @@ template <Dialect D>
 AstNode* parse_subquery_select(Tokenizer<D>& tok, Arena& arena);
 
 // WITH was consumed by the caller. MySQL query bodies share the strict
-// compound parser; modifying CTEs and WITH-prefixed DML remain unsupported.
-inline AstNode* parse_mysql_with(Tokenizer<Dialect::MySQL>& tok, Arena& arena) {
+// compound parser. Only a top-level WITH may end in UPDATE or DELETE.
+inline AstNode* parse_mysql_with(Tokenizer<Dialect::MySQL>& tok, Arena& arena,
+                                  bool allow_dml = false) {
     using Expr = ExpressionParser<Dialect::MySQL>;
     Expr error(tok, arena);
     auto* cte = make_node(arena, NodeType::NODE_CTE);
@@ -64,7 +67,16 @@ inline AstNode* parse_mysql_with(Tokenizer<Dialect::MySQL>& tok, Arena& arena) {
     } while (take(TokenType::TK_COMMA));
     // A second WITH at the same level is not a query expression body.
     if (tok.peek().type == TokenType::TK_WITH) return error.syntax_error();
-    auto* query = parse_subquery_select<Dialect::MySQL>(tok, arena);
+    AstNode* query = nullptr;
+    if (allow_dml && take(TokenType::TK_UPDATE)) {
+        UpdateParser<Dialect::MySQL> update(tok, arena);
+        update.set_subquery_callback(&parse_subquery_select<Dialect::MySQL>);
+        query = update.parse();
+    } else if (allow_dml && take(TokenType::TK_DELETE)) {
+        DeleteParser<Dialect::MySQL> remove(tok, arena);
+        remove.set_subquery_callback(&parse_subquery_select<Dialect::MySQL>);
+        query = remove.parse();
+    } else query = parse_subquery_select<Dialect::MySQL>(tok, arena);
     if (!query) return error.syntax_error();
     cte->add_child(query);
     return cte;
