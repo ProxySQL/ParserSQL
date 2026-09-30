@@ -62,10 +62,10 @@
           "kind": "grammar_anchor"
         }
       ],
-      "expected": "TRAILING_INPUT",
-      "known_gap": true,
-      "gap_note": "Relevant syntax is not fully consumed; inspect remaining input in report.",
-      "native_action": "execute"
+      "expected": "CHECKED",
+      "known_gap": false,
+      "native_action": "execute",
+      "expected_sql": "SELECT * FROM JSON_TABLE('[1,2]', '$[*]' COLUMNS (n INT PATH '$')) AS jt"
     },
     {
       "id": "lateral",
@@ -530,10 +530,10 @@
           "kind": "grammar_anchor"
         }
       ],
-      "expected": "NO_AST",
-      "known_gap": true,
-      "gap_note": "Statement classification does not produce a structured AST.",
-      "native_action": "skip"
+      "expected": "CHECKED",
+      "known_gap": false,
+      "native_action": "ddl",
+      "expected_sql": "CREATE TABLE t (id INT PRIMARY KEY, n INT, CHECK (n > 0))"
     },
     {
       "id": "alter_table",
@@ -556,10 +556,11 @@
           "kind": "grammar_anchor"
         }
       ],
-      "expected": "NO_AST",
-      "known_gap": true,
-      "gap_note": "Statement classification does not produce a structured AST.",
-      "native_action": "skip"
+      "expected": "CHECKED",
+      "known_gap": false,
+      "native_action": "ddl",
+      "expected_sql": "ALTER TABLE t ADD COLUMN j JSON",
+      "native_fixture_sql": "CREATE TABLE t(id INT PRIMARY KEY, n INT);"
     },
     {
       "id": "create_procedure",
@@ -582,10 +583,10 @@
           "kind": "grammar_anchor"
         }
       ],
-      "expected": "NO_AST",
-      "known_gap": true,
-      "gap_note": "Statement classification does not produce a structured AST.",
-      "native_action": "skip"
+      "expected": "CHECKED",
+      "known_gap": false,
+      "native_action": "ddl",
+      "expected_sql": "CREATE PROCEDURE p() BEGIN SELECT 1; END"
     },
     {
       "id": "explain_format",
@@ -635,9 +636,8 @@
         }
       ],
       "expected_sql": "SELECT /*+ MAX_EXECUTION_TIME(1000) */ * FROM t",
-      "expected": "EMISSION_MISMATCH",
-      "known_gap": true,
-      "gap_note": "Optimizer hint is consumed but dropped from emitted SQL.",
+      "expected": "CHECKED",
+      "known_gap": false,
       "native_action": "execute"
     },
     {
@@ -9524,6 +9524,1954 @@
         "9.7.2": "valid"
       },
       "expected_sql": "DESCRIBE t 0b01101001"
+    },
+    {
+      "id": "json_table_ordinal_exists",
+      "sql": "SELECT * FROM JSON_TABLE('[{\"n\":2}]', '$[*]' COLUMNS (`ord` FOR ORDINALITY, n INT EXISTS PATH '$.n')) AS `jt`",
+      "validity": "valid",
+      "derivation": "hand-reduced syntax witness; source anchors identify relevant grammar, not verbatim MTR extraction",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 12023,
+          "excerpt": "table_function:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 12061,
+          "excerpt": "jt_column:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 12447,
+          "excerpt": "table_function:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 12485,
+          "excerpt": "jt_column:",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "CHECKED",
+      "known_gap": false,
+      "native_action": "execute",
+      "expected_sql": "SELECT * FROM JSON_TABLE('[{\"n\":2}]', '$[*]' COLUMNS (`ord` FOR ORDINALITY, n INT EXISTS PATH '$.n')) AS `jt`"
+    },
+    {
+      "id": "json_table_nested",
+      "sql": "SELECT * FROM JSON_TABLE('{\"items\":[1,2]}', '$' COLUMNS (NESTED PATH '$.items[*]' COLUMNS (ord FOR ORDINALITY, n INT PATH '$'))) AS jt",
+      "validity": "valid",
+      "derivation": "hand-reduced syntax witness; source anchors identify relevant grammar, not verbatim MTR extraction",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 12061,
+          "excerpt": "jt_column:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 12039,
+          "excerpt": "columns_clause:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 12485,
+          "excerpt": "jt_column:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 12463,
+          "excerpt": "columns_clause:",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "CHECKED",
+      "known_gap": false,
+      "native_action": "execute",
+      "expected_sql": "SELECT * FROM JSON_TABLE('{\"items\":[1,2]}', '$' COLUMNS (NESTED PATH '$.items[*]' COLUMNS (ord FOR ORDINALITY, n INT PATH '$'))) AS jt"
+    },
+    {
+      "id": "json_table_responses",
+      "sql": "SELECT * FROM JSON_TABLE('[{}]', '$[*]' COLUMNS (n INT PATH '$.n' DEFAULT '1' ON EMPTY ERROR ON ERROR)) AS jt",
+      "validity": "valid",
+      "derivation": "hand-reduced syntax witness; source anchors identify relevant grammar, not verbatim MTR extraction",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 12120,
+          "excerpt": "opt_on_empty_or_error_json_table:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 12138,
+          "excerpt": "json_on_response:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 12544,
+          "excerpt": "opt_on_empty_or_error_json_table:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 12562,
+          "excerpt": "json_on_response:",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "CHECKED",
+      "known_gap": false,
+      "native_action": "execute",
+      "expected_sql": "SELECT * FROM JSON_TABLE('[{}]', '$[*]' COLUMNS (n INT PATH '$.n' DEFAULT '1' ON EMPTY ERROR ON ERROR)) AS jt"
+    },
+    {
+      "id": "json_table_reverse_responses",
+      "sql": "SELECT * FROM JSON_TABLE('[{}]', '$[*]' COLUMNS (n INT PATH '$.n' NULL ON ERROR DEFAULT '1' ON EMPTY)) AS jt",
+      "validity": "valid",
+      "derivation": "hand-reduced syntax witness; source anchors identify relevant grammar, not verbatim MTR extraction",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 12120,
+          "excerpt": "opt_on_empty_or_error_json_table:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 12544,
+          "excerpt": "opt_on_empty_or_error_json_table:",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "CHECKED",
+      "known_gap": false,
+      "native_action": "execute",
+      "expected_sql": "SELECT * FROM JSON_TABLE('[{}]', '$[*]' COLUMNS (n INT PATH '$.n' NULL ON ERROR DEFAULT '1' ON EMPTY)) AS jt"
+    },
+    {
+      "id": "json_table_text_paths",
+      "sql": "SELECT * FROM JSON_TABLE('{}', _utf8mb4 '$' COLUMNS (n INT PATH N'$.n' DEFAULT '0' ON EMPTY, s VARCHAR(20) PATH '$.' 's' NULL ON EMPTY)) AS jt",
+      "validity": "valid",
+      "derivation": "hand-reduced syntax witness; source anchors identify relevant grammar, not verbatim MTR extraction",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 14681,
+          "excerpt": "text_literal:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 12061,
+          "excerpt": "jt_column:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 15307,
+          "excerpt": "text_literal:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 12485,
+          "excerpt": "jt_column:",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "CHECKED",
+      "known_gap": false,
+      "native_action": "execute",
+      "expected_sql": "SELECT * FROM JSON_TABLE('{}', _utf8mb4 '$' COLUMNS (n INT PATH N'$.n' DEFAULT '0' ON EMPTY, s VARCHAR(20) PATH '$.' 's' NULL ON EMPTY)) AS jt"
+    },
+    {
+      "id": "json_table_invalid_empty_columns",
+      "sql": "SELECT * FROM JSON_TABLE('{}', '$' COLUMNS ()) AS jt",
+      "validity": "invalid",
+      "derivation": "hand-written malformed control; source anchors identify relevant grammar, not verbatim MTR extraction",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 12023,
+          "excerpt": "table_function:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 12061,
+          "excerpt": "jt_column:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 12138,
+          "excerpt": "json_on_response:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 12447,
+          "excerpt": "table_function:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 12485,
+          "excerpt": "jt_column:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 12562,
+          "excerpt": "json_on_response:",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "REJECTED",
+      "known_gap": false,
+      "native_action": "execute"
+    },
+    {
+      "id": "json_table_invalid_missing_alias",
+      "sql": "SELECT * FROM JSON_TABLE('{}', '$' COLUMNS (n INT PATH '$'))",
+      "validity": "invalid",
+      "derivation": "hand-written malformed control; source anchors identify relevant grammar, not verbatim MTR extraction",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 12023,
+          "excerpt": "table_function:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 12061,
+          "excerpt": "jt_column:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 12138,
+          "excerpt": "json_on_response:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 12447,
+          "excerpt": "table_function:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 12485,
+          "excerpt": "jt_column:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 12562,
+          "excerpt": "json_on_response:",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "REJECTED",
+      "known_gap": false,
+      "native_action": "execute"
+    },
+    {
+      "id": "json_table_invalid_alias_columns",
+      "sql": "SELECT * FROM JSON_TABLE('{}', '$' COLUMNS (n INT PATH '$')) AS jt(n)",
+      "validity": "invalid",
+      "derivation": "hand-written malformed control; source anchors identify relevant grammar, not verbatim MTR extraction",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 12023,
+          "excerpt": "table_function:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 12061,
+          "excerpt": "jt_column:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 12138,
+          "excerpt": "json_on_response:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 12447,
+          "excerpt": "table_function:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 12485,
+          "excerpt": "jt_column:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 12562,
+          "excerpt": "json_on_response:",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "REJECTED",
+      "known_gap": false,
+      "native_action": "execute"
+    },
+    {
+      "id": "json_table_invalid_nested_missing_path",
+      "sql": "SELECT * FROM JSON_TABLE('{}', '$' COLUMNS (NESTED '$.a' COLUMNS (n INT PATH '$'))) AS jt",
+      "validity": "invalid",
+      "derivation": "hand-written malformed control; source anchors identify relevant grammar, not verbatim MTR extraction",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 12023,
+          "excerpt": "table_function:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 12061,
+          "excerpt": "jt_column:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 12138,
+          "excerpt": "json_on_response:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 12447,
+          "excerpt": "table_function:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 12485,
+          "excerpt": "jt_column:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 12562,
+          "excerpt": "json_on_response:",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "REJECTED",
+      "known_gap": false,
+      "native_action": "execute"
+    },
+    {
+      "id": "json_table_invalid_duplicate_response",
+      "sql": "SELECT * FROM JSON_TABLE('{}', '$' COLUMNS (n INT PATH '$' NULL ON EMPTY ERROR ON EMPTY)) AS jt",
+      "validity": "invalid",
+      "derivation": "hand-written malformed control; source anchors identify relevant grammar, not verbatim MTR extraction",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 12023,
+          "excerpt": "table_function:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 12061,
+          "excerpt": "jt_column:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 12138,
+          "excerpt": "json_on_response:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 12447,
+          "excerpt": "table_function:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 12485,
+          "excerpt": "jt_column:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 12562,
+          "excerpt": "json_on_response:",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "REJECTED",
+      "known_gap": false,
+      "native_action": "execute"
+    },
+    {
+      "id": "json_table_invalid_expression_default",
+      "sql": "SELECT * FROM JSON_TABLE('{}', '$' COLUMNS (n INT PATH '$' DEFAULT 1 + 2 ON EMPTY)) AS jt",
+      "validity": "invalid",
+      "derivation": "hand-written malformed control; source anchors identify relevant grammar, not verbatim MTR extraction",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 12023,
+          "excerpt": "table_function:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 12061,
+          "excerpt": "jt_column:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 12138,
+          "excerpt": "json_on_response:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 12447,
+          "excerpt": "table_function:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 12485,
+          "excerpt": "jt_column:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 12562,
+          "excerpt": "json_on_response:",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "REJECTED",
+      "known_gap": false,
+      "native_action": "execute"
+    },
+    {
+      "id": "json_table_invalid_incomplete_document",
+      "sql": "SELECT * FROM JSON_TABLE('{}' +, '$' COLUMNS (n INT PATH '$')) AS jt",
+      "validity": "invalid",
+      "derivation": "hand-written malformed control; source anchors identify relevant grammar, not verbatim MTR extraction",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 12023,
+          "excerpt": "table_function:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 12061,
+          "excerpt": "jt_column:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 12138,
+          "excerpt": "json_on_response:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 12447,
+          "excerpt": "table_function:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 12485,
+          "excerpt": "jt_column:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 12562,
+          "excerpt": "json_on_response:",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "REJECTED",
+      "known_gap": false,
+      "native_action": "execute"
+    },
+    {
+      "id": "table_columns_keys",
+      "sql": "CREATE TABLE t (id INT PRIMARY KEY, n VARCHAR(30) NOT NULL, UNIQUE KEY uq (n)) ENGINE=InnoDB",
+      "validity": "valid",
+      "derivation": "hand-reduced syntax witness; source anchors identify relevant grammar, not verbatim MTR extraction",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 3217,
+          "excerpt": "create_table_stmt:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 6786,
+          "excerpt": "column_def:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 6802,
+          "excerpt": "table_constraint_def:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 6538,
+          "excerpt": "create_table_option:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 3317,
+          "excerpt": "create_table_stmt:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 7034,
+          "excerpt": "column_def:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 7054,
+          "excerpt": "table_constraint_def:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 6685,
+          "excerpt": "create_table_option:",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "CHECKED",
+      "known_gap": false,
+      "native_action": "ddl",
+      "expected_sql": "CREATE TABLE t (id INT PRIMARY KEY, n VARCHAR(30) NOT NULL, UNIQUE KEY uq (n)) ENGINE InnoDB"
+    },
+    {
+      "id": "table_generated_check",
+      "sql": "CREATE TABLE t (id INT, n INT GENERATED ALWAYS AS (id + 1) STORED, CONSTRAINT ck CHECK (id > 0))",
+      "validity": "valid",
+      "derivation": "hand-reduced syntax witness; source anchors identify relevant grammar, not verbatim MTR extraction",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 6868,
+          "excerpt": "field_def:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 6802,
+          "excerpt": "table_constraint_def:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 7120,
+          "excerpt": "field_def:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 7054,
+          "excerpt": "table_constraint_def:",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "CHECKED",
+      "known_gap": false,
+      "native_action": "ddl",
+      "expected_sql": "CREATE TABLE t (id INT, n INT GENERATED ALWAYS AS (id + 1) STORED, CONSTRAINT ck CHECK (id > 0))"
+    },
+    {
+      "id": "alter_add_modify",
+      "sql": "ALTER TABLE t ADD COLUMN label VARCHAR(20) DEFAULT 'x', MODIFY COLUMN n BIGINT",
+      "validity": "valid",
+      "derivation": "hand-reduced syntax witness; source anchors identify relevant grammar, not verbatim MTR extraction",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 8821,
+          "excerpt": "alter_list_item:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 9126,
+          "excerpt": "alter_list_item:",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "CHECKED",
+      "known_gap": false,
+      "native_action": "ddl",
+      "expected_sql": "ALTER TABLE t ADD COLUMN label VARCHAR(20) DEFAULT 'x', MODIFY COLUMN n BIGINT",
+      "native_fixture_sql": "CREATE TABLE t(id INT PRIMARY KEY, n INT);"
+    },
+    {
+      "id": "alter_change_rename",
+      "sql": "ALTER TABLE t CHANGE COLUMN n amount DECIMAL(12,2) DEFAULT 0, RENAME COLUMN id TO item_id",
+      "validity": "valid",
+      "derivation": "hand-reduced syntax witness; source anchors identify relevant grammar, not verbatim MTR extraction",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 8821,
+          "excerpt": "alter_list_item:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 9126,
+          "excerpt": "alter_list_item:",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "CHECKED",
+      "known_gap": false,
+      "native_action": "ddl",
+      "expected_sql": "ALTER TABLE t CHANGE COLUMN n amount DECIMAL(12,2) DEFAULT 0, RENAME COLUMN id TO item_id",
+      "native_fixture_sql": "CREATE TABLE t(id INT PRIMARY KEY, n INT);"
+    },
+    {
+      "id": "invalid_table_missing_type",
+      "sql": "CREATE TABLE t (id)",
+      "validity": "invalid",
+      "derivation": "hand-written malformed control; source anchors identify relevant grammar, not verbatim MTR extraction",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 3217,
+          "excerpt": "create_table_stmt:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 8821,
+          "excerpt": "alter_list_item:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 3317,
+          "excerpt": "create_table_stmt:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 9126,
+          "excerpt": "alter_list_item:",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "REJECTED",
+      "known_gap": false,
+      "native_action": "ddl"
+    },
+    {
+      "id": "invalid_table_trailing_comma",
+      "sql": "CREATE TABLE t (id INT,)",
+      "validity": "invalid",
+      "derivation": "hand-written malformed control; source anchors identify relevant grammar, not verbatim MTR extraction",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 3217,
+          "excerpt": "create_table_stmt:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 8821,
+          "excerpt": "alter_list_item:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 3317,
+          "excerpt": "create_table_stmt:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 9126,
+          "excerpt": "alter_list_item:",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "REJECTED",
+      "known_gap": false,
+      "native_action": "ddl"
+    },
+    {
+      "id": "invalid_table_missing_length",
+      "sql": "CREATE TABLE t (id VARCHAR)",
+      "validity": "invalid",
+      "derivation": "hand-written malformed control; source anchors identify relevant grammar, not verbatim MTR extraction",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 3217,
+          "excerpt": "create_table_stmt:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 8821,
+          "excerpt": "alter_list_item:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 3317,
+          "excerpt": "create_table_stmt:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 9126,
+          "excerpt": "alter_list_item:",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "REJECTED",
+      "known_gap": false,
+      "native_action": "ddl"
+    },
+    {
+      "id": "invalid_alter_missing_column",
+      "sql": "ALTER TABLE t ADD COLUMN",
+      "validity": "invalid",
+      "derivation": "hand-written malformed control; source anchors identify relevant grammar, not verbatim MTR extraction",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 3217,
+          "excerpt": "create_table_stmt:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 8821,
+          "excerpt": "alter_list_item:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 3317,
+          "excerpt": "create_table_stmt:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 9126,
+          "excerpt": "alter_list_item:",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "REJECTED",
+      "known_gap": false,
+      "native_action": "ddl",
+      "native_fixture_sql": "CREATE TABLE t(id INT PRIMARY KEY, n INT);"
+    },
+    {
+      "id": "invalid_alter_rename_missing_to",
+      "sql": "ALTER TABLE t RENAME COLUMN n x",
+      "validity": "invalid",
+      "derivation": "hand-written malformed control; source anchors identify relevant grammar, not verbatim MTR extraction",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 3217,
+          "excerpt": "create_table_stmt:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 8821,
+          "excerpt": "alter_list_item:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 3317,
+          "excerpt": "create_table_stmt:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 9126,
+          "excerpt": "alter_list_item:",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "REJECTED",
+      "known_gap": false,
+      "native_action": "ddl",
+      "native_fixture_sql": "CREATE TABLE t(id INT PRIMARY KEY, n INT);"
+    },
+    {
+      "id": "procedure_parameters",
+      "sql": "CREATE PROCEDURE p(IN a INT, OUT b DECIMAL(10,2)) READS SQL DATA BEGIN SET b = a + 1; SELECT b; END",
+      "validity": "valid",
+      "derivation": "hand-reduced syntax witness; source anchors identify relevant grammar, not verbatim MTR extraction",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 17938,
+          "excerpt": "sp_tail:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 3908,
+          "excerpt": "sp_pdparam:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 3803,
+          "excerpt": "sp_c_chistic:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 5518,
+          "excerpt": "sp_block_content:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 18697,
+          "excerpt": "sp_tail:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 4055,
+          "excerpt": "sp_pdparam:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 3921,
+          "excerpt": "sp_c_chistic:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 5665,
+          "excerpt": "sp_block_content:",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "CHECKED",
+      "known_gap": false,
+      "native_action": "ddl",
+      "expected_sql": "CREATE PROCEDURE p(IN a INT, OUT b DECIMAL(10,2)) READS SQL DATA BEGIN SET b = a + 1; SELECT b; END"
+    },
+    {
+      "id": "procedure_nested_block",
+      "sql": "CREATE PROCEDURE p() BEGIN BEGIN SELECT 1; END; SELECT 2; END",
+      "validity": "valid",
+      "derivation": "hand-reduced syntax witness; source anchors identify relevant grammar, not verbatim MTR extraction",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 17938,
+          "excerpt": "sp_tail:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 3908,
+          "excerpt": "sp_pdparam:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 3803,
+          "excerpt": "sp_c_chistic:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 5518,
+          "excerpt": "sp_block_content:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 18697,
+          "excerpt": "sp_tail:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 4055,
+          "excerpt": "sp_pdparam:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 3921,
+          "excerpt": "sp_c_chistic:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 5665,
+          "excerpt": "sp_block_content:",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "CHECKED",
+      "known_gap": false,
+      "native_action": "ddl",
+      "expected_sql": "CREATE PROCEDURE p() BEGIN BEGIN SELECT 1; END; SELECT 2; END"
+    },
+    {
+      "id": "procedure_empty_block",
+      "sql": "CREATE PROCEDURE p() BEGIN END",
+      "validity": "valid",
+      "derivation": "hand-reduced syntax witness; source anchors identify relevant grammar, not verbatim MTR extraction",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 17938,
+          "excerpt": "sp_tail:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 3908,
+          "excerpt": "sp_pdparam:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 3803,
+          "excerpt": "sp_c_chistic:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 5518,
+          "excerpt": "sp_block_content:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 18697,
+          "excerpt": "sp_tail:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 4055,
+          "excerpt": "sp_pdparam:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 3921,
+          "excerpt": "sp_c_chistic:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 5665,
+          "excerpt": "sp_block_content:",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "CHECKED",
+      "known_gap": false,
+      "native_action": "ddl",
+      "expected_sql": "CREATE PROCEDURE p() BEGIN END"
+    },
+    {
+      "id": "procedure_invalid_parameter_type",
+      "sql": "CREATE PROCEDURE p(IN) BEGIN END",
+      "validity": "invalid",
+      "derivation": "hand-written malformed control; source anchors identify relevant grammar, not verbatim MTR extraction",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 17938,
+          "excerpt": "sp_tail:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 3908,
+          "excerpt": "sp_pdparam:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 5518,
+          "excerpt": "sp_block_content:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 18697,
+          "excerpt": "sp_tail:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 4055,
+          "excerpt": "sp_pdparam:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 5665,
+          "excerpt": "sp_block_content:",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "REJECTED",
+      "known_gap": false,
+      "native_action": "ddl"
+    },
+    {
+      "id": "procedure_invalid_parameter_comma",
+      "sql": "CREATE PROCEDURE p(a INT,) BEGIN END",
+      "validity": "invalid",
+      "derivation": "hand-written malformed control; source anchors identify relevant grammar, not verbatim MTR extraction",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 17938,
+          "excerpt": "sp_tail:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 3908,
+          "excerpt": "sp_pdparam:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 5518,
+          "excerpt": "sp_block_content:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 18697,
+          "excerpt": "sp_tail:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 4055,
+          "excerpt": "sp_pdparam:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 5665,
+          "excerpt": "sp_block_content:",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "REJECTED",
+      "known_gap": false,
+      "native_action": "ddl"
+    },
+    {
+      "id": "procedure_invalid_missing_semicolon",
+      "sql": "CREATE PROCEDURE p() BEGIN SELECT 1 END",
+      "validity": "invalid",
+      "derivation": "hand-written malformed control; source anchors identify relevant grammar, not verbatim MTR extraction",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 17938,
+          "excerpt": "sp_tail:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 3908,
+          "excerpt": "sp_pdparam:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 5518,
+          "excerpt": "sp_block_content:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 18697,
+          "excerpt": "sp_tail:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 4055,
+          "excerpt": "sp_pdparam:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 5665,
+          "excerpt": "sp_block_content:",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "REJECTED",
+      "known_gap": false,
+      "native_action": "ddl"
+    },
+    {
+      "id": "procedure_invalid_assignment_operator",
+      "sql": "CREATE PROCEDURE p() BEGIN SET n 1; END",
+      "validity": "invalid",
+      "derivation": "hand-written malformed control; source anchors identify relevant grammar, not verbatim MTR extraction",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 17938,
+          "excerpt": "sp_tail:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 3908,
+          "excerpt": "sp_pdparam:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 5518,
+          "excerpt": "sp_block_content:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 18697,
+          "excerpt": "sp_tail:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 4055,
+          "excerpt": "sp_pdparam:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 5665,
+          "excerpt": "sp_block_content:",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "REJECTED",
+      "known_gap": false,
+      "native_action": "ddl"
+    },
+    {
+      "id": "hint_unknown_preserved",
+      "sql": "SELECT /*+ UNKNOWN_NATIVE_HINT(1) */ 1",
+      "validity": "valid",
+      "derivation": "hand-reduced syntax witness; source anchors identify relevant grammar, not verbatim MTR extraction",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 9952,
+          "excerpt": "select_options:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 10266,
+          "excerpt": "select_options:",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "CHECKED",
+      "known_gap": false,
+      "native_action": "execute",
+      "expected_sql": "SELECT /*+ UNKNOWN_NATIVE_HINT(1) */ 1"
+    },
+    {
+      "id": "hint_update",
+      "sql": "UPDATE /*+ NO_ICP(t) */ t SET n = 2 WHERE id = 1",
+      "validity": "valid",
+      "derivation": "hand-reduced syntax witness; source anchors identify relevant grammar, not verbatim MTR extraction",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 13389,
+          "excerpt": "update_stmt:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 13945,
+          "excerpt": "update_stmt:",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "CHECKED",
+      "known_gap": false,
+      "native_action": "explain",
+      "expected_sql": "UPDATE /*+ NO_ICP(t) */ t SET n = 2 WHERE id = 1"
+    },
+    {
+      "id": "hint_delete",
+      "sql": "DELETE /*+ NO_ICP(t) */ FROM t WHERE id = 1",
+      "validity": "valid",
+      "derivation": "hand-reduced syntax witness; source anchors identify relevant grammar, not verbatim MTR extraction",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 13445,
+          "excerpt": "delete_stmt:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 14001,
+          "excerpt": "delete_stmt:",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "CHECKED",
+      "known_gap": false,
+      "native_action": "explain",
+      "expected_sql": "DELETE /*+ NO_ICP(t) */ FROM t WHERE id = 1"
+    },
+    {
+      "id": "hint_insert",
+      "sql": "INSERT /*+ SET_VAR(foreign_key_checks=OFF) */ INTO t (id, n) VALUES (2, 3)",
+      "validity": "valid",
+      "derivation": "hand-reduced syntax witness; source anchors identify relevant grammar, not verbatim MTR extraction",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 13064,
+          "excerpt": "insert_stmt:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 13620,
+          "excerpt": "insert_stmt:",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "CHECKED",
+      "known_gap": false,
+      "native_action": "explain",
+      "expected_sql": "INSERT /*+ SET_VAR(foreign_key_checks=OFF) */ INTO t (id, n) VALUES (2, 3)"
+    },
+    {
+      "id": "hint_replace",
+      "sql": "REPLACE /*+ SET_VAR(foreign_key_checks=OFF) */ INTO t (id, n) VALUES (2, 3)",
+      "validity": "valid",
+      "derivation": "hand-reduced syntax witness; source anchors identify relevant grammar, not verbatim MTR extraction",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 13122,
+          "excerpt": "replace_stmt:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 13678,
+          "excerpt": "replace_stmt:",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "CHECKED",
+      "known_gap": false,
+      "native_action": "explain",
+      "expected_sql": "REPLACE /*+ SET_VAR(foreign_key_checks=OFF) */ INTO t (id, n) VALUES (2, 3)"
+    },
+    {
+      "id": "hint_invalid_unterminated",
+      "sql": "SELECT /*+ MAX_EXECUTION_TIME(1000) 1",
+      "validity": "invalid",
+      "derivation": "hand-written malformed control; source anchors identify relevant grammar, not verbatim MTR extraction",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 9952,
+          "excerpt": "select_options:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 10266,
+          "excerpt": "select_options:",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "REJECTED",
+      "known_gap": false,
+      "native_action": "execute"
+    },
+    {
+      "id": "procedure_invalid_set_star",
+      "sql": "CREATE PROCEDURE p() BEGIN SET x = *; END",
+      "validity": "invalid",
+      "derivation": "hand-written malformed control; source anchors identify relevant grammar, not verbatim MTR extraction",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 3908,
+          "excerpt": "sp_pdparam:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 7470,
+          "excerpt": "collation_name:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 5518,
+          "excerpt": "sp_block_content:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 4055,
+          "excerpt": "sp_pdparam:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 7734,
+          "excerpt": "collation_name:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 5665,
+          "excerpt": "sp_block_content:",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "REJECTED",
+      "known_gap": false,
+      "native_action": "ddl"
+    },
+    {
+      "id": "procedure_invalid_collation_introducer",
+      "sql": "CREATE PROCEDURE p(IN x CHAR(1) COLLATE _utf8mb4) BEGIN END",
+      "validity": "invalid",
+      "derivation": "hand-written malformed control; source anchors identify relevant grammar, not verbatim MTR extraction",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 3908,
+          "excerpt": "sp_pdparam:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 7470,
+          "excerpt": "collation_name:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 5518,
+          "excerpt": "sp_block_content:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 4055,
+          "excerpt": "sp_pdparam:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 7734,
+          "excerpt": "collation_name:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 5665,
+          "excerpt": "sp_block_content:",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "REJECTED",
+      "known_gap": false,
+      "native_action": "ddl"
+    },
+    {
+      "id": "procedure_binary_collation",
+      "sql": "CREATE PROCEDURE p(IN x CHAR(1) COLLATE BINARY) BEGIN END",
+      "validity": "valid",
+      "derivation": "hand-reduced syntax witness; source anchors identify relevant grammar, not verbatim MTR extraction",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 3908,
+          "excerpt": "sp_pdparam:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 7470,
+          "excerpt": "collation_name:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 5518,
+          "excerpt": "sp_block_content:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 4055,
+          "excerpt": "sp_pdparam:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 7734,
+          "excerpt": "collation_name:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 5665,
+          "excerpt": "sp_block_content:",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "CHECKED",
+      "known_gap": false,
+      "native_action": "ddl",
+      "expected_sql": "CREATE PROCEDURE p(IN x CHAR(1) COLLATE BINARY) BEGIN END"
+    },
+    {
+      "id": "table_current_time_defaults",
+      "sql": "CREATE TABLE t(a TIMESTAMP DEFAULT NOW() ON UPDATE NOW())",
+      "validity": "valid",
+      "derivation": "hand-reduced syntax witness; source anchors identify relevant grammar, not verbatim MTR extraction",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 7301,
+          "excerpt": "column_attribute:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 7415,
+          "excerpt": "now:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 7557,
+          "excerpt": "column_attribute:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 7679,
+          "excerpt": "now:",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "CHECKED",
+      "known_gap": false,
+      "native_action": "ddl",
+      "expected_sql": "CREATE TABLE t (a TIMESTAMP DEFAULT NOW() ON UPDATE NOW())"
+    },
+    {
+      "id": "table_invalid_spaced_now",
+      "sql": "CREATE TABLE t(a TIMESTAMP DEFAULT NOW ())",
+      "validity": "invalid",
+      "derivation": "hand-written malformed control; source anchors identify relevant grammar, not verbatim MTR extraction",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 7301,
+          "excerpt": "column_attribute:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 6868,
+          "excerpt": "field_def:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 7557,
+          "excerpt": "column_attribute:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 7120,
+          "excerpt": "field_def:",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "REJECTED",
+      "known_gap": false,
+      "native_action": "ddl"
+    },
+    {
+      "id": "table_invalid_check_star",
+      "sql": "CREATE TABLE t(a INT, CHECK(t.*))",
+      "validity": "invalid",
+      "derivation": "hand-written malformed control; source anchors identify relevant grammar, not verbatim MTR extraction",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 7301,
+          "excerpt": "column_attribute:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 6868,
+          "excerpt": "field_def:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 7557,
+          "excerpt": "column_attribute:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 7120,
+          "excerpt": "field_def:",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "REJECTED",
+      "known_gap": false,
+      "native_action": "ddl"
+    },
+    {
+      "id": "table_invalid_default_keyword",
+      "sql": "CREATE TABLE t(a INT DEFAULT(DEFAULT))",
+      "validity": "invalid",
+      "derivation": "hand-written malformed control; source anchors identify relevant grammar, not verbatim MTR extraction",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 7301,
+          "excerpt": "column_attribute:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 6868,
+          "excerpt": "field_def:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 7557,
+          "excerpt": "column_attribute:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 7120,
+          "excerpt": "field_def:",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "REJECTED",
+      "known_gap": false,
+      "native_action": "ddl"
+    },
+    {
+      "id": "table_invalid_generated_star",
+      "sql": "CREATE TABLE t(a INT, b INT AS(t.*))",
+      "validity": "invalid",
+      "derivation": "hand-written malformed control; source anchors identify relevant grammar, not verbatim MTR extraction",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 7301,
+          "excerpt": "column_attribute:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 6868,
+          "excerpt": "field_def:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 7557,
+          "excerpt": "column_attribute:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 7120,
+          "excerpt": "field_def:",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "REJECTED",
+      "known_gap": false,
+      "native_action": "ddl"
+    },
+    {
+      "id": "table_invalid_default_expression_star",
+      "sql": "CREATE TABLE t(a INT DEFAULT(1+*))",
+      "validity": "invalid",
+      "derivation": "hand-written malformed control; source anchors identify relevant grammar, not verbatim MTR extraction",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 7301,
+          "excerpt": "column_attribute:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 6868,
+          "excerpt": "field_def:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 7557,
+          "excerpt": "column_attribute:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 7120,
+          "excerpt": "field_def:",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "REJECTED",
+      "known_gap": false,
+      "native_action": "ddl"
+    },
+    {
+      "id": "hint_after_qualified_keyword_is_comment",
+      "sql": "SELECT t.select /*+ BKA(t) */ FROM (SELECT 1 AS `select`) t",
+      "validity": "valid",
+      "derivation": "hand-reduced syntax witness; source anchors identify relevant grammar, not verbatim MTR extraction",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 14895,
+          "excerpt": "simple_ident:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 9952,
+          "excerpt": "select_options:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 15555,
+          "excerpt": "simple_ident:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 10266,
+          "excerpt": "select_options:",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "CHECKED",
+      "known_gap": false,
+      "native_action": "execute",
+      "expected_sql": "SELECT t.select FROM (SELECT 1 AS `select`) AS t"
+    },
+    {
+      "id": "hint_after_replace_function_is_comment",
+      "sql": "SELECT REPLACE /*+ MAX_EXECUTION_TIME(1) */ ('abc','a','x')",
+      "validity": "valid",
+      "derivation": "hand-reduced syntax witness; source anchors identify relevant grammar, not verbatim MTR extraction",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 10500,
+          "excerpt": "function_call_keyword:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 10821,
+          "excerpt": "function_call_keyword:",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "CHECKED",
+      "known_gap": false,
+      "native_action": "execute",
+      "expected_sql": "SELECT REPLACE('abc', 'a', 'x')"
     }
   ]
 }

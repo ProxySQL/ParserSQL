@@ -63,15 +63,47 @@ def run_native(cases, client, socket, user):
             action = case.get('native_action', 'skip')
             if action == 'skip':
                 report['cases'].append(dict(id=case['id'], state='NOT VERIFIED',
-                                            reason='No native action configured; DDL/procedures excluded'))
+                                            reason='No native action configured'))
                 continue
-            if action not in ('execute', 'explain'):
+            if action not in ('execute', 'explain', 'ddl'):
                 raise ValueError('Unknown native action: ' + action)
             sql = ('EXPLAIN ' if action == 'explain' else '') + case['sql']
             # Reapply the captured mode for each connection, keeping every witness comparable.
             escaped_mode = mode.replace("'", "''")
-            result = query(f"SET SESSION sql_mode='{escaped_mode}';\n" + sql, schema)
+            session = f"SET SESSION sql_mode='{escaped_mode}';\n"
+            ddl_metadata = {}
+            if action == 'ddl':
+                # DDL commits implicitly. A separate owned schema avoids both
+                # fixture-name collisions and cross-case changes to shared tables.
+                ddl_schema = 'parsersql_compat_' + uuid.uuid4().hex
+                created = query(f'CREATE DATABASE `{ddl_schema}`;')
+                if created.returncode:
+                    raise RuntimeError('Cannot create isolated DDL schema: ' + created.stderr.strip())
+                fixture_sql = case.get('native_fixture_sql', '')
+                ddl_metadata = dict(fixture_schema=ddl_schema, fixture_sql=fixture_sql,
+                                    schema_cleaned_up=False)
+                try:
+                    if fixture_sql:
+                        setup = query(session + fixture_sql, ddl_schema)
+                        if setup.returncode:
+                            raise RuntimeError('Native DDL fixture setup failed: ' + setup.stderr.strip())
+                    # mysql's client delimiter must not split procedure bodies;
+                    # choose a marker absent from this exact witness.
+                    delimiter = '$$'
+                    while delimiter in sql:
+                        delimiter = '$' + delimiter + '$'
+                    client_input = session + 'DELIMITER ' + delimiter + '\n' + sql + '\n' + delimiter + '\nDELIMITER ;\n'
+                    result = query(client_input, ddl_schema)
+                    ddl_metadata['client_input'] = client_input
+                finally:
+                    cleaned = query(f'DROP DATABASE `{ddl_schema}`;')
+                    ddl_metadata['schema_cleaned_up'] = cleaned.returncode == 0
+                    if cleaned.returncode:
+                        raise RuntimeError(f'Native DDL schema cleanup failed for {ddl_schema}: ' + cleaned.stderr.strip())
+            else:
+                result = query(session + sql, schema)
             record = classify_native(result.returncode, result.stderr)
+            record.update(ddl_metadata)
             intended_validity = case.get('native_validity', {}).get(version.split('-')[0], case['validity'])
             record['intended_validity'] = intended_validity
             record['matches_intended_validity'] = (
