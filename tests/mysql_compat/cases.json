@@ -348,10 +348,10 @@
           "kind": "grammar_anchor"
         }
       ],
-      "expected": "TRAILING_INPUT",
-      "known_gap": true,
-      "gap_note": "Relevant syntax is not fully consumed; inspect remaining input in report.",
-      "native_action": "execute"
+      "expected": "CHECKED",
+      "known_gap": false,
+      "native_action": "execute",
+      "expected_sql": "SELECT * FROM t WHERE MATCH(body) AGAINST ('mysql' IN BOOLEAN MODE)"
     },
     {
       "id": "cte_update",
@@ -739,10 +739,10 @@
           "kind": "grammar_anchor"
         }
       ],
-      "expected": "TRAILING_INPUT",
-      "known_gap": true,
-      "gap_note": "Relevant syntax is not fully consumed; inspect remaining input in report.",
-      "native_action": "execute"
+      "expected": "CHECKED",
+      "known_gap": false,
+      "native_action": "execute",
+      "expected_sql": "SELECT EXTRACT(YEAR FROM d) FROM t"
     },
     {
       "id": "substring",
@@ -765,10 +765,10 @@
           "kind": "grammar_anchor"
         }
       ],
-      "expected": "TRAILING_INPUT",
-      "known_gap": true,
-      "gap_note": "Relevant syntax is not fully consumed; inspect remaining input in report.",
-      "native_action": "execute"
+      "expected": "CHECKED",
+      "known_gap": false,
+      "native_action": "execute",
+      "expected_sql": "SELECT SUBSTRING(n FROM 2 FOR 3) FROM t"
     },
     {
       "id": "bad_select",
@@ -3557,6 +3557,846 @@
       "expected": "REJECTED",
       "known_gap": false,
       "native_action": "explain"
+    },
+    {
+      "id": "extract_simple_units",
+      "sql": "SELECT EXTRACT(DAY FROM d), EXTRACT(WEEK FROM d), EXTRACT(HOUR FROM d), EXTRACT(MINUTE FROM d), EXTRACT(MONTH FROM d), EXTRACT(QUARTER FROM d), EXTRACT(SECOND FROM d), EXTRACT(MICROSECOND FROM d), EXTRACT(YEAR FROM d) FROM t",
+      "validity": "valid",
+      "derivation": "hand-reduced syntax witness; source anchors identify relevant grammar, not verbatim MTR extraction",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 12266,
+          "excerpt": "interval:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 12690,
+          "excerpt": "interval:",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "CHECKED",
+      "known_gap": false,
+      "native_action": "execute",
+      "expected_sql": "SELECT EXTRACT(DAY FROM d), EXTRACT(WEEK FROM d), EXTRACT(HOUR FROM d), EXTRACT(MINUTE FROM d), EXTRACT(MONTH FROM d), EXTRACT(QUARTER FROM d), EXTRACT(SECOND FROM d), EXTRACT(MICROSECOND FROM d), EXTRACT(YEAR FROM d) FROM t"
+    },
+    {
+      "id": "extract_compound_units",
+      "sql": "SELECT EXTRACT(DAY_HOUR FROM d), EXTRACT(DAY_MICROSECOND FROM d), EXTRACT(DAY_MINUTE FROM d), EXTRACT(DAY_SECOND FROM d), EXTRACT(HOUR_MICROSECOND FROM d), EXTRACT(HOUR_MINUTE FROM d), EXTRACT(HOUR_SECOND FROM d), EXTRACT(MINUTE_MICROSECOND FROM d), EXTRACT(MINUTE_SECOND FROM d), EXTRACT(SECOND_MICROSECOND FROM d), EXTRACT(YEAR_MONTH FROM d) FROM t",
+      "validity": "valid",
+      "derivation": "hand-reduced syntax witness; source anchors identify relevant grammar, not verbatim MTR extraction",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 12266,
+          "excerpt": "interval:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 12690,
+          "excerpt": "interval:",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "CHECKED",
+      "known_gap": false,
+      "native_action": "execute",
+      "expected_sql": "SELECT EXTRACT(DAY_HOUR FROM d), EXTRACT(DAY_MICROSECOND FROM d), EXTRACT(DAY_MINUTE FROM d), EXTRACT(DAY_SECOND FROM d), EXTRACT(HOUR_MICROSECOND FROM d), EXTRACT(HOUR_MINUTE FROM d), EXTRACT(HOUR_SECOND FROM d), EXTRACT(MINUTE_MICROSECOND FROM d), EXTRACT(MINUTE_SECOND FROM d), EXTRACT(SECOND_MICROSECOND FROM d), EXTRACT(YEAR_MONTH FROM d) FROM t"
+    },
+    {
+      "id": "extract_expression",
+      "sql": "SELECT EXTRACT(YEAR_MONTH FROM COALESCE(d, '2026-02-03')) FROM t",
+      "validity": "valid",
+      "derivation": "hand-reduced syntax witness; source anchors identify relevant grammar, not verbatim MTR extraction",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 10661,
+          "excerpt": "| EXTRACT_SYM '(' interval FROM expr ')'",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 11070,
+          "excerpt": "| EXTRACT_SYM '(' interval FROM expr ')'",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "CHECKED",
+      "known_gap": false,
+      "native_action": "execute",
+      "expected_sql": "SELECT EXTRACT(YEAR_MONTH FROM COALESCE(d, '2026-02-03')) FROM t"
+    },
+    {
+      "id": "extract_quoted_identifier",
+      "sql": "SELECT EXTRACT(`YEAR` FROM d) FROM t",
+      "validity": "invalid",
+      "derivation": "hand-written malformed control; source anchors identify the related required grammar",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 10661,
+          "excerpt": "| EXTRACT_SYM '(' interval FROM expr ')'",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 11070,
+          "excerpt": "| EXTRACT_SYM '(' interval FROM expr ')'",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "REJECTED",
+      "known_gap": false,
+      "native_action": "execute"
+    },
+    {
+      "id": "extract_quoted_string",
+      "sql": "SELECT EXTRACT('YEAR' FROM d) FROM t",
+      "validity": "invalid",
+      "derivation": "hand-written malformed control; source anchors identify the related required grammar",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 10661,
+          "excerpt": "| EXTRACT_SYM '(' interval FROM expr ')'",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 11070,
+          "excerpt": "| EXTRACT_SYM '(' interval FROM expr ')'",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "REJECTED",
+      "known_gap": false,
+      "native_action": "execute"
+    },
+    {
+      "id": "extract_unknown_unit",
+      "sql": "SELECT EXTRACT(FORTNIGHT FROM d) FROM t",
+      "validity": "invalid",
+      "derivation": "hand-written malformed control; source anchors identify the related required grammar",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 10661,
+          "excerpt": "| EXTRACT_SYM '(' interval FROM expr ')'",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 11070,
+          "excerpt": "| EXTRACT_SYM '(' interval FROM expr ')'",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "REJECTED",
+      "known_gap": false,
+      "native_action": "execute"
+    },
+    {
+      "id": "extract_missing_source",
+      "sql": "SELECT EXTRACT(YEAR FROM)",
+      "validity": "invalid",
+      "derivation": "hand-written malformed control; source anchors identify the related required grammar",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 10661,
+          "excerpt": "| EXTRACT_SYM '(' interval FROM expr ')'",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 11070,
+          "excerpt": "| EXTRACT_SYM '(' interval FROM expr ')'",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "REJECTED",
+      "known_gap": false,
+      "native_action": "execute"
+    },
+    {
+      "id": "substring_from_only",
+      "sql": "SELECT SUBSTRING('mysql' FROM 2)",
+      "validity": "valid",
+      "derivation": "hand-reduced syntax witness; source anchors identify relevant grammar, not verbatim MTR extraction",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 10706,
+          "excerpt": "| SUBSTRING '(' expr FROM expr ')'",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 11115,
+          "excerpt": "| SUBSTRING '(' expr FROM expr ')'",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "CHECKED",
+      "known_gap": false,
+      "native_action": "execute",
+      "expected_sql": "SELECT SUBSTRING('mysql' FROM 2)"
+    },
+    {
+      "id": "substr_from_for",
+      "sql": "SELECT SUBSTR('mysql' FROM 1 + 1 FOR 3)",
+      "validity": "valid",
+      "derivation": "hand-reduced syntax witness; source anchors identify relevant grammar, not verbatim MTR extraction",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 10702,
+          "excerpt": "| SUBSTRING '(' expr FROM expr FOR_SYM expr ')'",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 11111,
+          "excerpt": "| SUBSTRING '(' expr FROM expr FOR_SYM expr ')'",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "CHECKED",
+      "known_gap": false,
+      "native_action": "execute",
+      "expected_sql": "SELECT SUBSTR('mysql' FROM 1 + 1 FOR 3)"
+    },
+    {
+      "id": "substring_comma_forms",
+      "sql": "SELECT SUBSTRING('mysql', 2), SUBSTRING('mysql', 2, 3)",
+      "validity": "valid",
+      "derivation": "hand-reduced syntax witness; source anchors identify relevant grammar, not verbatim MTR extraction",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 10694,
+          "excerpt": "| SUBSTRING '(' expr ',' expr ',' expr ')'",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 11103,
+          "excerpt": "| SUBSTRING '(' expr ',' expr ',' expr ')'",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "CHECKED",
+      "known_gap": false,
+      "native_action": "execute",
+      "expected_sql": "SELECT SUBSTRING('mysql', 2), SUBSTRING('mysql', 2, 3)"
+    },
+    {
+      "id": "substr_comma_forms",
+      "sql": "SELECT SUBSTR('mysql', 2), SUBSTR('mysql', 2, 3)",
+      "validity": "valid",
+      "derivation": "hand-reduced syntax witness; source anchors identify relevant grammar, not verbatim MTR extraction",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 10698,
+          "excerpt": "| SUBSTRING '(' expr ',' expr ')'",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 11107,
+          "excerpt": "| SUBSTRING '(' expr ',' expr ')'",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "CHECKED",
+      "known_gap": false,
+      "native_action": "execute",
+      "expected_sql": "SELECT SUBSTR('mysql', 2), SUBSTR('mysql', 2, 3)"
+    },
+    {
+      "id": "substring_mixed_delimiters",
+      "sql": "SELECT SUBSTRING('mysql', 2 FOR 3)",
+      "validity": "invalid",
+      "derivation": "hand-written malformed control; source anchors identify the related required grammar",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 10702,
+          "excerpt": "| SUBSTRING '(' expr FROM expr FOR_SYM expr ')'",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 11111,
+          "excerpt": "| SUBSTRING '(' expr FROM expr FOR_SYM expr ')'",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "REJECTED",
+      "known_gap": false,
+      "native_action": "execute"
+    },
+    {
+      "id": "substring_missing_position",
+      "sql": "SELECT SUBSTRING('mysql' FROM)",
+      "validity": "invalid",
+      "derivation": "hand-written malformed control; source anchors identify the related required grammar",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 10702,
+          "excerpt": "| SUBSTRING '(' expr FROM expr FOR_SYM expr ')'",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 11111,
+          "excerpt": "| SUBSTRING '(' expr FROM expr FOR_SYM expr ')'",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "REJECTED",
+      "known_gap": false,
+      "native_action": "execute"
+    },
+    {
+      "id": "substring_missing_length",
+      "sql": "SELECT SUBSTR('mysql' FROM 2 FOR)",
+      "validity": "invalid",
+      "derivation": "hand-written malformed control; source anchors identify the related required grammar",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 10702,
+          "excerpt": "| SUBSTRING '(' expr FROM expr FOR_SYM expr ')'",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 11111,
+          "excerpt": "| SUBSTRING '(' expr FROM expr FOR_SYM expr ')'",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "REJECTED",
+      "known_gap": false,
+      "native_action": "execute"
+    },
+    {
+      "id": "substring_wrong_arity",
+      "sql": "SELECT SUBSTRING('mysql')",
+      "validity": "invalid",
+      "derivation": "hand-written malformed control; source anchors identify the related required grammar",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 10702,
+          "excerpt": "| SUBSTRING '(' expr FROM expr FOR_SYM expr ')'",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 11111,
+          "excerpt": "| SUBSTRING '(' expr FROM expr FOR_SYM expr ')'",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "REJECTED",
+      "known_gap": false,
+      "native_action": "execute"
+    },
+    {
+      "id": "match_natural_language",
+      "sql": "SELECT MATCH(body) AGAINST ('mysql' IN NATURAL LANGUAGE MODE) FROM t",
+      "validity": "valid",
+      "derivation": "hand-reduced syntax witness; source anchors identify relevant grammar, not verbatim MTR extraction",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 10911,
+          "excerpt": "fulltext_options:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 11320,
+          "excerpt": "fulltext_options:",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "CHECKED",
+      "known_gap": false,
+      "native_action": "execute",
+      "expected_sql": "SELECT MATCH(body) AGAINST ('mysql' IN NATURAL LANGUAGE MODE) FROM t"
+    },
+    {
+      "id": "match_natural_expansion",
+      "sql": "SELECT MATCH(body) AGAINST ('mysql' IN NATURAL LANGUAGE MODE WITH QUERY EXPANSION) FROM t",
+      "validity": "valid",
+      "derivation": "hand-reduced syntax witness; source anchors identify relevant grammar, not verbatim MTR extraction",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 10911,
+          "excerpt": "fulltext_options:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 11320,
+          "excerpt": "fulltext_options:",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "CHECKED",
+      "known_gap": false,
+      "native_action": "execute",
+      "expected_sql": "SELECT MATCH(body) AGAINST ('mysql' IN NATURAL LANGUAGE MODE WITH QUERY EXPANSION) FROM t"
+    },
+    {
+      "id": "match_query_expansion",
+      "sql": "SELECT MATCH(`t`.`body`) AGAINST ('mysql' WITH QUERY EXPANSION) FROM t",
+      "validity": "valid",
+      "derivation": "hand-reduced syntax witness; source anchors identify relevant grammar, not verbatim MTR extraction",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 14911,
+          "excerpt": "simple_ident_q:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 15571,
+          "excerpt": "simple_ident_q:",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "CHECKED",
+      "known_gap": false,
+      "native_action": "execute",
+      "expected_sql": "SELECT MATCH(`t`.`body`) AGAINST ('mysql' WITH QUERY EXPANSION) FROM t"
+    },
+    {
+      "id": "match_unparenthesized_columns",
+      "sql": "SELECT MATCH t.body, t.body AGAINST ('mysql' IN BOOLEAN MODE) FROM t",
+      "validity": "valid",
+      "derivation": "hand-reduced syntax witness; source anchors identify relevant grammar, not verbatim MTR extraction",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 11717,
+          "excerpt": "ident_list_arg:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 12141,
+          "excerpt": "ident_list_arg:",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "CHECKED",
+      "known_gap": false,
+      "native_action": "execute",
+      "expected_sql": "SELECT MATCH(t.body, t.body) AGAINST ('mysql' IN BOOLEAN MODE) FROM t"
+    },
+    {
+      "id": "match_default_mode",
+      "sql": "SELECT MATCH(t.body) AGAINST ('mysql') FROM t",
+      "validity": "valid",
+      "derivation": "hand-reduced syntax witness; source anchors identify relevant grammar, not verbatim MTR extraction",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 10414,
+          "excerpt": "| MATCH ident_list_arg AGAINST '(' bit_expr fulltext_options ')'",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 10734,
+          "excerpt": "| MATCH ident_list_arg AGAINST '(' bit_expr fulltext_options ')'",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "CHECKED",
+      "known_gap": false,
+      "native_action": "execute",
+      "expected_sql": "SELECT MATCH(t.body) AGAINST ('mysql') FROM t"
+    },
+    {
+      "id": "match_bit_expression",
+      "sql": "SELECT MATCH(body) AGAINST (1 + 2 IN BOOLEAN MODE) FROM t",
+      "validity": "valid",
+      "derivation": "hand-reduced syntax witness; source anchors identify relevant grammar, not verbatim MTR extraction",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 10414,
+          "excerpt": "| MATCH ident_list_arg AGAINST '(' bit_expr fulltext_options ')'",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 10734,
+          "excerpt": "| MATCH ident_list_arg AGAINST '(' bit_expr fulltext_options ')'",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "CHECKED",
+      "known_gap": false,
+      "native_action": "execute",
+      "expected_sql": "SELECT MATCH(body) AGAINST (1 + 2 IN BOOLEAN MODE) FROM t"
+    },
+    {
+      "id": "match_parenthesized_predicate",
+      "sql": "SELECT MATCH(body) AGAINST ((1 = 2) IN BOOLEAN MODE) FROM t",
+      "validity": "valid",
+      "derivation": "hand-reduced syntax witness; source anchors identify relevant grammar, not verbatim MTR extraction",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 10414,
+          "excerpt": "| MATCH ident_list_arg AGAINST '(' bit_expr fulltext_options ')'",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 10734,
+          "excerpt": "| MATCH ident_list_arg AGAINST '(' bit_expr fulltext_options ')'",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "CHECKED",
+      "known_gap": false,
+      "native_action": "execute",
+      "expected_sql": "SELECT MATCH(body) AGAINST ((1 = 2) IN BOOLEAN MODE) FROM t"
+    },
+    {
+      "id": "match_missing_against",
+      "sql": "SELECT MATCH(body) FROM t",
+      "validity": "invalid",
+      "derivation": "hand-written malformed control; source anchors identify the related required grammar",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 10414,
+          "excerpt": "| MATCH ident_list_arg AGAINST '(' bit_expr fulltext_options ')'",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 10734,
+          "excerpt": "| MATCH ident_list_arg AGAINST '(' bit_expr fulltext_options ')'",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "REJECTED",
+      "known_gap": false,
+      "native_action": "execute"
+    },
+    {
+      "id": "match_expression_column",
+      "sql": "SELECT MATCH(CONCAT(body, body)) AGAINST ('mysql') FROM t",
+      "validity": "invalid",
+      "derivation": "hand-written malformed control; source anchors identify the related required grammar",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 11717,
+          "excerpt": "ident_list_arg:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 12141,
+          "excerpt": "ident_list_arg:",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "REJECTED",
+      "known_gap": false,
+      "native_action": "execute"
+    },
+    {
+      "id": "match_boolean_expansion",
+      "sql": "SELECT MATCH(body) AGAINST ('mysql' IN BOOLEAN MODE WITH QUERY EXPANSION) FROM t",
+      "validity": "invalid",
+      "derivation": "hand-written malformed control; source anchors identify the related required grammar",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 10911,
+          "excerpt": "fulltext_options:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 11320,
+          "excerpt": "fulltext_options:",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "REJECTED",
+      "known_gap": false,
+      "native_action": "execute"
+    },
+    {
+      "id": "match_bare_comparison",
+      "sql": "SELECT MATCH(body) AGAINST (1 = 2 IN BOOLEAN MODE) FROM t",
+      "validity": "invalid",
+      "derivation": "hand-written malformed control; source anchors identify the related required grammar",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 10414,
+          "excerpt": "| MATCH ident_list_arg AGAINST '(' bit_expr fulltext_options ')'",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 10734,
+          "excerpt": "| MATCH ident_list_arg AGAINST '(' bit_expr fulltext_options ')'",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "REJECTED",
+      "known_gap": false,
+      "native_action": "execute"
+    },
+    {
+      "id": "match_bare_in_predicate",
+      "sql": "SELECT MATCH(body) AGAINST ('mysql' IN ('mysql')) FROM t",
+      "validity": "invalid",
+      "derivation": "hand-written malformed control; source anchors identify the related required grammar",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 10414,
+          "excerpt": "| MATCH ident_list_arg AGAINST '(' bit_expr fulltext_options ')'",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 10734,
+          "excerpt": "| MATCH ident_list_arg AGAINST '(' bit_expr fulltext_options ')'",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "REJECTED",
+      "known_gap": false,
+      "native_action": "execute"
+    },
+    {
+      "id": "mid_from_for",
+      "sql": "SELECT MID('mysql' FROM 2 FOR 3)",
+      "validity": "valid",
+      "derivation": "hand-reduced syntax witness; source anchors identify relevant grammar, not verbatim MTR extraction",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 10702,
+          "excerpt": "| SUBSTRING '(' expr FROM expr FOR_SYM expr ')'",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 11111,
+          "excerpt": "| SUBSTRING '(' expr FROM expr FOR_SYM expr ')'",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "CHECKED",
+      "known_gap": false,
+      "native_action": "execute",
+      "expected_sql": "SELECT MID('mysql' FROM 2 FOR 3)"
+    },
+    {
+      "id": "substring_space_keyword",
+      "sql": "SELECT SUBSTRING ('mysql' FROM 2 FOR 3)",
+      "validity": "invalid",
+      "derivation": "hand-written malformed control; the native function token requires adjacent parentheses with IGNORE_SPACE off",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 10702,
+          "excerpt": "| SUBSTRING '(' expr FROM expr FOR_SYM expr ')'",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 11111,
+          "excerpt": "| SUBSTRING '(' expr FROM expr FOR_SYM expr ')'",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "REJECTED",
+      "known_gap": false,
+      "native_action": "execute"
+    },
+    {
+      "id": "extract_empty_operand",
+      "sql": "SELECT EXTRACT(YEAR FROM ())",
+      "validity": "invalid",
+      "derivation": "hand-written malformed control; source anchors identify the related required grammar",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 10661,
+          "excerpt": "| EXTRACT_SYM '(' interval FROM expr ')'",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 11070,
+          "excerpt": "| EXTRACT_SYM '(' interval FROM expr ')'",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "REJECTED",
+      "known_gap": false,
+      "native_action": "execute"
+    },
+    {
+      "id": "substring_empty_operand",
+      "sql": "SELECT SUBSTRING(() FROM 1)",
+      "validity": "invalid",
+      "derivation": "hand-written malformed control; source anchors identify the related required grammar",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 10706,
+          "excerpt": "| SUBSTRING '(' expr FROM expr ')'",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 11115,
+          "excerpt": "| SUBSTRING '(' expr FROM expr ')'",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "REJECTED",
+      "known_gap": false,
+      "native_action": "execute"
+    },
+    {
+      "id": "match_empty_operand",
+      "sql": "SELECT MATCH(body) AGAINST (() IN BOOLEAN MODE) FROM t",
+      "validity": "invalid",
+      "derivation": "hand-written malformed control; source anchors identify the related required grammar",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 10414,
+          "excerpt": "| MATCH ident_list_arg AGAINST '(' bit_expr fulltext_options ')'",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 10734,
+          "excerpt": "| MATCH ident_list_arg AGAINST '(' bit_expr fulltext_options ')'",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "REJECTED",
+      "known_gap": false,
+      "native_action": "execute"
+    },
+    {
+      "id": "extract_empty_exists",
+      "sql": "SELECT EXTRACT(YEAR FROM EXISTS())",
+      "validity": "invalid",
+      "derivation": "hand-written malformed control; source anchors identify the related required grammar",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 10661,
+          "excerpt": "| EXTRACT_SYM '(' interval FROM expr ')'",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 11070,
+          "excerpt": "| EXTRACT_SYM '(' interval FROM expr ')'",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "REJECTED",
+      "known_gap": false,
+      "native_action": "execute"
     }
   ]
 }

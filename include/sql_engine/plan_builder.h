@@ -191,6 +191,9 @@ private:
                 break;
             case NodeType::NODE_NAMED_ARGUMENT:
             case NodeType::NODE_TYPE_CAST:
+            case NodeType::NODE_MYSQL_EXTRACT:
+            case NodeType::NODE_MYSQL_SUBSTRING:
+            case NodeType::NODE_MYSQL_MATCH:
             case NodeType::NODE_MYSQL_JSON_EXTRACT:
             case NodeType::NODE_MYSQL_GROUP_CONCAT:
             case NodeType::NODE_MYSQL_SEPARATOR:

@@ -93,6 +93,7 @@ private:
 
             // ---- INSERT statement ----
             case NodeType::NODE_INSERT_STMT:     emit_insert_stmt(node); break;
+            case NodeType::NODE_MYSQL_MATCH_COLUMNS:
             case NodeType::NODE_INSERT_COLUMNS:  emit_insert_columns(node); break;
             case NodeType::NODE_VALUES_CLAUSE:   emit_values_clause(node); break;
             case NodeType::NODE_VALUES_ROW:      emit_values_row(node); break;
@@ -178,6 +179,9 @@ private:
                 break;
             case NodeType::NODE_UNARY_OP:        emit_unary_op(node); break;
             case NodeType::NODE_FUNCTION_CALL:   emit_function_call(node); break;
+            case NodeType::NODE_MYSQL_EXTRACT:
+            case NodeType::NODE_MYSQL_SUBSTRING:
+            case NodeType::NODE_MYSQL_MATCH: emit_mysql_special(node); break;
             case NodeType::NODE_MYSQL_GROUP_CONCAT: emit_function_call(node); break;
             case NodeType::NODE_MYSQL_SEPARATOR:
                 sb_.append(" SEPARATOR "); emit_mysql_syntax_string(node->first_child); break;
@@ -433,6 +437,29 @@ private:
             sb_.append_char(')');
         }
     }
+    void emit_mysql_special(const AstNode* node) {
+        const auto* first = node->first_child;
+        if (node->type == NodeType::NODE_MYSQL_EXTRACT) {
+            sb_.append("EXTRACT("); emit_value(node); sb_.append(" FROM ");
+            emit_node(first); sb_.append_char(')');
+        } else if (node->type == NodeType::NODE_MYSQL_SUBSTRING) {
+            emit_value(node); sb_.append_char('('); emit_node(first);
+            const auto* position = first ? first->next_sibling : nullptr;
+            sb_.append(" FROM "); emit_node(position);
+            if (position && position->next_sibling) {
+                sb_.append(" FOR "); emit_node(position->next_sibling);
+            }
+            sb_.append_char(')');
+        } else {
+            sb_.append("MATCH(");
+            if (first) emit_list(first, ", ");
+            sb_.append(") AGAINST (");
+            emit_node(first ? first->next_sibling : nullptr);
+            if (!node->value().empty()) { sb_.append_char(' '); emit_value(node); }
+            sb_.append_char(')');
+        }
+    }
+
     // PG_GAPS_DML_EMITTER
     void emit_pg_dml_clause(const AstNode* node) {
         emit_value(node);

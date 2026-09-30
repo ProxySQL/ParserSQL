@@ -353,6 +353,11 @@ enum class NodeType : uint16_t {
     NODE_MYSQL_LOCK_TARGETS, // OF table identifiers on a locking clause
     NODE_MYSQL_INDEX_HINT, // value=USE/FORCE/IGNORE; flags KEY=1, JOIN=2, ORDER=4, GROUP=8; index children
 
+    NODE_MYSQL_EXTRACT, // value=validated interval unit; expression child
+    NODE_MYSQL_SUBSTRING, // value=SUBSTRING/SUBSTR/MID; source, position, optional length
+    NODE_MYSQL_MATCH_COLUMNS, // nonempty list of simple or qualified columns
+    NODE_MYSQL_MATCH, // value=validated search mode; column list, search expression
+
 };
 
 } // namespace sql_parser

@@ -10,6 +10,7 @@
 #include "sql_parser/pg_type_parser.h"
 #include "sql_parser/pg_identifier.h"
 #include "sql_parser/pg_sql_json_parser.h"
+#include "sql_parser/mysql_value_syntax.h"
 
 namespace sql_parser {
 
@@ -422,7 +423,7 @@ private:
             // It should consume everything up to but NOT including ')'.
             AstNode* inner = subquery_cb_(tok_, arena_);
             if (!inner && (D == Dialect::PostgreSQL || require_complete_operands_)) return syntax_error();
-            if constexpr (D == Dialect::PostgreSQL) {
+            if (D == Dialect::PostgreSQL || require_complete_operands_) {
                 if (tok_.peek().type != TokenType::TK_RPAREN) return syntax_error();
             }
             if (inner) node->add_child(inner);
@@ -632,14 +633,14 @@ private:
                         node->flags = 1; // 1 = EXISTS context
                         return node;
                     }
-                    if constexpr (D == Dialect::PostgreSQL) return syntax_error();
+                    if (D == Dialect::PostgreSQL || require_complete_operands_) return syntax_error();
                     // Legacy MySQL fallback.
                     AstNode* node = make_node(arena_, NodeType::NODE_SUBQUERY);
                     node->flags = 1;
                     skip_to_matching_paren();
                     return node;
                 }
-                if constexpr (D == Dialect::PostgreSQL) return syntax_error();
+                if (D == Dialect::PostgreSQL || require_complete_operands_) return syntax_error();
                 AstNode* node = make_node(arena_, NodeType::NODE_SUBQUERY);
                 node->flags = 1;
                 return node;
@@ -658,14 +659,21 @@ private:
                     if (tok_.peek().type != TokenType::TK_RPAREN) {
                         while (true) {
                             AstNode* elem = parse();
+                            if (D == Dialect::MySQL && !elem && require_complete_operands_) return syntax_error();
                             if (elem) tuple->add_child(elem);
                             if (tok_.peek().type == TokenType::TK_COMMA) tok_.skip();
                             else break;
                         }
                     }
+                    if constexpr (D == Dialect::MySQL) {
+                        if (require_complete_operands_ && (!tuple->first_child ||
+                            !tuple->first_child->next_sibling || tok_.peek().type != TokenType::TK_RPAREN))
+                            return syntax_error();
+                    }
                     if (tok_.peek().type == TokenType::TK_RPAREN) tok_.skip();
                     return parse_postfix(tuple);
                 }
+                if (D == Dialect::MySQL && require_complete_operands_) return syntax_error();
                 return make_node(arena_, NodeType::NODE_IDENTIFIER, t.text);
             }
             case TokenType::TK_CASE: {
@@ -681,13 +689,14 @@ private:
                 }
                 // Empty tuple: ()
                 if (tok_.peek().type == TokenType::TK_RPAREN) {
-                    if constexpr (D == Dialect::PostgreSQL) return syntax_error();
+                    if (D == Dialect::PostgreSQL || require_complete_operands_) return syntax_error();
                     tok_.skip();
                     AstNode* tuple = make_node(arena_, NodeType::NODE_TUPLE);
                     if (!tuple) return syntax_error();
                     return parse_postfix(tuple);
                 }
                 AstNode* expr = parse();
+                if (D == Dialect::MySQL && !expr && require_complete_operands_) return syntax_error();
                 if (tok_.peek().type == TokenType::TK_COMMA) {
                     // Tuple: (expr, expr, ...)
                     AstNode* tuple = make_node(arena_, NodeType::NODE_TUPLE);
@@ -696,8 +705,11 @@ private:
                     while (tok_.peek().type == TokenType::TK_COMMA) {
                         tok_.skip();
                         AstNode* elem = parse();
+                        if (D == Dialect::MySQL && !elem && require_complete_operands_) return syntax_error();
                         if (elem) tuple->add_child(elem);
                     }
+                    if (D == Dialect::MySQL && require_complete_operands_ && tok_.peek().type != TokenType::TK_RPAREN)
+                        return syntax_error();
                     if (tok_.peek().type == TokenType::TK_RPAREN) tok_.skip();
                     return parse_postfix(tuple);
                 }
@@ -710,6 +722,7 @@ private:
                     wrapper->add_child(expr);
                     return parse_postfix(wrapper);
                 }
+                if (D == Dialect::MySQL && require_complete_operands_) return syntax_error();
                 // Check for postfix: (expr).field or (expr)[index]
                 return parse_postfix(expr);
             }
@@ -791,6 +804,15 @@ private:
 
     AstNode* parse_identifier_or_function(const Token& name_token) {
         if constexpr (D == Dialect::MySQL) {
+            if (keyword(name_token, "MATCH")) return parse_mysql_match();
+            if (tok_.peek().type == TokenType::TK_LPAREN && keyword(name_token, "EXTRACT") &&
+                name_token.source.ptr + name_token.source.len == tok_.peek().source.ptr)
+                return parse_mysql_extract();
+            // Native SUBSTRING aliases require adjacency unless IGNORE_SPACE is enabled.
+            if (tok_.peek().type == TokenType::TK_LPAREN &&
+                name_token.source.ptr + name_token.source.len == tok_.peek().source.ptr &&
+                (keyword(name_token, "SUBSTRING") || keyword(name_token, "SUBSTR") || keyword(name_token, "MID")))
+                return parse_mysql_substring(name_token);
             if (tok_.peek().type == TokenType::TK_LPAREN && keyword(name_token, "GROUP_CONCAT"))
                 return parse_mysql_group_concat();
         }
@@ -1053,6 +1075,125 @@ private:
             col_ref->flags |= FLAG_IDENT_DELIMITED;
         if constexpr (D == Dialect::MySQL) return parse_mysql_json_extract(col_ref);
         return col_ref;
+    }
+
+    AstNode* parse_mysql_extract() {
+        tok_.skip(); // (
+        Token unit = tok_.next_token();
+        static constexpr std::string_view units[] = {
+            "YEAR", "QUARTER", "MONTH", "WEEK", "DAY", "HOUR", "MINUTE", "SECOND", "MICROSECOND",
+            "YEAR_MONTH", "DAY_HOUR", "DAY_MINUTE", "DAY_SECOND", "DAY_MICROSECOND",
+            "HOUR_MINUTE", "HOUR_SECOND", "HOUR_MICROSECOND", "MINUTE_SECOND",
+            "MINUTE_MICROSECOND", "SECOND_MICROSECOND"
+        };
+        bool valid = false;
+        for (auto name : units) if (keyword(unit, name)) { valid = true; break; }
+        if (!valid || tok_.peek().type != TokenType::TK_FROM) return syntax_error();
+        tok_.skip();
+        auto* value = parse_complete();
+        if (!value || !mysql_value_expression(value) || tok_.peek().type != TokenType::TK_RPAREN)
+            return syntax_error();
+        tok_.skip();
+        auto* node = make_node(arena_, NodeType::NODE_MYSQL_EXTRACT, unit.source);
+        if (!node) return syntax_error();
+        node->add_child(value);
+        return node;
+    }
+
+    AstNode* parse_mysql_substring(const Token& name) {
+        tok_.skip(); // (
+        auto* source = parse_complete();
+        if (!source || !mysql_value_expression(source)) return syntax_error();
+        const bool comma = tok_.peek().type == TokenType::TK_COMMA;
+        if (!comma && tok_.peek().type != TokenType::TK_FROM) return syntax_error();
+        tok_.skip();
+        auto* position = parse_complete();
+        if (!position || !mysql_value_expression(position)) return syntax_error();
+        auto* node = make_node(arena_, comma ? NodeType::NODE_FUNCTION_CALL : NodeType::NODE_MYSQL_SUBSTRING,
+                               name.source);
+        if (!node) return syntax_error();
+        node->add_child(source); node->add_child(position);
+        if (tok_.peek().type == (comma ? TokenType::TK_COMMA : TokenType::TK_FOR)) {
+            tok_.skip();
+            auto* length = parse_complete();
+            if (!length || !mysql_value_expression(length)) return syntax_error();
+            node->add_child(length);
+        }
+        if (tok_.peek().type != TokenType::TK_RPAREN) return syntax_error();
+        tok_.skip();
+        return node;
+    }
+
+    AstNode* parse_mysql_match() {
+        const bool grouped = tok_.peek().type == TokenType::TK_LPAREN;
+        if (grouped) tok_.skip();
+        auto* columns = make_node(arena_, NodeType::NODE_MYSQL_MATCH_COLUMNS);
+        if (!columns) return syntax_error();
+        do {
+            Token name = tok_.next_token();
+            if (!mysql_identifier_token(name)) return syntax_error();
+            auto* column = make_node_from_token(arena_, NodeType::NODE_COLUMN_REF, name,
+                token_was_delimited_(name) ? FLAG_IDENT_DELIMITED : 0);
+            if (!column) return syntax_error();
+            if (tok_.peek().type == TokenType::TK_DOT) {
+                auto* qualified = make_node(arena_, NodeType::NODE_QUALIFIED_NAME);
+                if (!qualified) return syntax_error();
+                qualified->add_child(column);
+                unsigned parts = 1;
+                do {
+                    tok_.skip();
+                    Token part = tok_.next_token();
+                    if (++parts > 3 || !mysql_identifier_word(part)) return syntax_error();
+                    auto* item = make_node_from_token(arena_, NodeType::NODE_IDENTIFIER, part,
+                        token_was_delimited_(part) ? FLAG_IDENT_DELIMITED : 0);
+                    if (!item) return syntax_error();
+                    qualified->add_child(item);
+                } while (tok_.peek().type == TokenType::TK_DOT);
+                column = qualified;
+            }
+            columns->add_child(column);
+            if (tok_.peek().type != TokenType::TK_COMMA) break;
+            tok_.skip();
+        } while (true);
+        if (grouped) {
+            if (tok_.peek().type != TokenType::TK_RPAREN) return syntax_error();
+            tok_.skip();
+        }
+        if (!keyword(tok_.peek(), "AGAINST")) return syntax_error();
+        tok_.skip();
+        if (tok_.peek().type != TokenType::TK_LPAREN) return syntax_error();
+        tok_.skip();
+        // MySQL bit_expr stops before IN, comparisons and boolean operators.
+        // Parenthesized expressions still admit those operators internally.
+        auto* search = parse_complete(Precedence::COMPARISON);
+        if (!search || !mysql_value_expression(search) || !restricted_scalar(search)) return syntax_error();
+        StringRef mode;
+        bool boolean = false;
+        auto take = [&](std::string_view word) {
+            if (!keyword(tok_.peek(), word)) return false;
+            tok_.skip(); return true;
+        };
+        if (take("IN")) {
+            if (take("BOOLEAN")) {
+                boolean = true;
+                mode = {"IN BOOLEAN MODE", 15};
+            } else {
+                if (!take("NATURAL") || !take("LANGUAGE")) return syntax_error();
+                mode = {"IN NATURAL LANGUAGE MODE", 24};
+            }
+            if (!take("MODE")) return syntax_error();
+        }
+        if (!boolean && take("WITH")) {
+            if (!take("QUERY") || !take("EXPANSION")) return syntax_error();
+            mode = mode.empty() ? StringRef{"WITH QUERY EXPANSION", 20} :
+                                  StringRef{"IN NATURAL LANGUAGE MODE WITH QUERY EXPANSION", 45};
+        }
+        if (tok_.peek().type != TokenType::TK_RPAREN) return syntax_error();
+        tok_.skip();
+        auto* node = make_node(arena_, NodeType::NODE_MYSQL_MATCH, mode);
+        if (!node) return syntax_error();
+        node->add_child(columns); node->add_child(search);
+        return node;
     }
 
     AstNode* parse_mysql_group_concat() {
@@ -1792,34 +1933,34 @@ private:
         if (tok_.peek().type != TokenType::TK_WHEN) {
             node->flags = 1;  // simple CASE (has case_expr)
             AstNode* case_expr = D == Dialect::PostgreSQL ? parse_complete() : parse();
-            if constexpr (D == Dialect::PostgreSQL) { if (!case_expr) return syntax_error(); }
+            if (D == Dialect::PostgreSQL || require_complete_operands_) { if (!case_expr) return syntax_error(); }
             if (case_expr) node->add_child(case_expr);
         }
-        if constexpr (D == Dialect::PostgreSQL) {
+        if (D == Dialect::PostgreSQL || require_complete_operands_) {
             if (tok_.peek().type != TokenType::TK_WHEN) return syntax_error();
         }
         // WHEN ... THEN ... pairs
         while (tok_.peek().type == TokenType::TK_WHEN) {
             tok_.skip();
             AstNode* when_expr = D == Dialect::PostgreSQL ? parse_complete() : parse();
-            if constexpr (D == Dialect::PostgreSQL) {
+            if (D == Dialect::PostgreSQL || require_complete_operands_) {
                 if (!when_expr || tok_.peek().type != TokenType::TK_THEN) return syntax_error();
             }
             if (when_expr) node->add_child(when_expr);
             if (tok_.peek().type == TokenType::TK_THEN) tok_.skip();
             AstNode* then_expr = D == Dialect::PostgreSQL ? parse_complete() : parse();
-            if constexpr (D == Dialect::PostgreSQL) { if (!then_expr) return syntax_error(); }
+            if (D == Dialect::PostgreSQL || require_complete_operands_) { if (!then_expr) return syntax_error(); }
             if (then_expr) node->add_child(then_expr);
         }
         // Optional ELSE
         if (tok_.peek().type == TokenType::TK_ELSE) {
             tok_.skip();
             AstNode* else_expr = D == Dialect::PostgreSQL ? parse_complete() : parse();
-            if constexpr (D == Dialect::PostgreSQL) { if (!else_expr) return syntax_error(); }
+            if (D == Dialect::PostgreSQL || require_complete_operands_) { if (!else_expr) return syntax_error(); }
             if (else_expr) node->add_child(else_expr);
         }
         // END
-        if constexpr (D == Dialect::PostgreSQL) {
+        if (D == Dialect::PostgreSQL || require_complete_operands_) {
             if (tok_.peek().type != TokenType::TK_END) return syntax_error();
         }
         if (tok_.peek().type == TokenType::TK_END) tok_.skip();

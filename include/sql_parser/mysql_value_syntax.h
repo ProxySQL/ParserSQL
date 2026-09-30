@@ -13,7 +13,7 @@ namespace sql_parser {
 // Qualified identifier components can themselves be reserved words.
 inline bool mysql_value_expression(const AstNode* node, bool allow_default = false,
                                    bool allow_star = false) {
-    if (node->type == NodeType::NODE_SUBQUERY) return true; // validated by its query parser
+    if (node->type == NodeType::NODE_SUBQUERY) return node->first_child != nullptr; // query parser validated it
     if (node->type == NodeType::NODE_ASTERISK) return allow_star;
     if (node->type == NodeType::NODE_IDENTIFIER && !(node->flags & FLAG_IDENT_DELIMITED) &&
         node->value().equals_ci("DEFAULT", 7)) return allow_default;
