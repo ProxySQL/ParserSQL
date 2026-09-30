@@ -170,6 +170,14 @@ private:
             n->type == NodeType::NODE_IS_NOT_NULL || n->type == NodeType::NODE_IN_LIST ||
             n->type == NodeType::NODE_BETWEEN || n->type == NodeType::NODE_PG_TIME_ZONE ||
             n->type == NodeType::NODE_PG_QUANTIFIED_OPERAND) return false;
+        // DEFAULT belongs to a_expr, not b_expr. Do not descend into independent
+        // full expressions in parentheses/functions, where the native grammar
+        // accepts it and leaves context validation to parse analysis.
+        if (n->type == NodeType::NODE_IDENTIFIER && !(n->flags & FLAG_IDENT_DELIMITED) &&
+            n->value().equals_ci("DEFAULT", 7)) return false;
+        // Functional CAST stores its complete source span and takes a_expr;
+        // the source-less postfix :: form instead continues the b_expr chain.
+        if (n->type == NodeType::NODE_TYPE_CAST && !n->source().empty()) return true;
         if (n->type == NodeType::NODE_BINARY_OP || n->type == NodeType::NODE_UNARY_OP || n->type == NodeType::NODE_TYPE_CAST) {
             for (const char* op : {"NOT", "AND", "OR", "COLLATE", "LIKE", "ILIKE", "SIMILAR TO"})
                 if (n->value().equals_ci(op, static_cast<uint32_t>(std::strlen(op)))) return false;

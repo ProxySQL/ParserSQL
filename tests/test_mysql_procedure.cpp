@@ -18,18 +18,18 @@ std::string procedure_emit(const AstNode* ast, Arena& arena) {
 
 TEST(MySQLProcedure, StructuredBodiesAndCharacteristicsRoundTrip) {
     for (const char* sql : {
-         "CREATE PROCEDURE p() BEGIN SELECT 1; END",
-         "CREATE PROCEDURE p() BEGIN END",
-         "CREATE PROCEDURE p(IN a INT, OUT b DECIMAL(10,2), INOUT c VARCHAR(20)) BEGIN SET b = a + 1; SELECT c; END",
-         "CREATE PROCEDURE `db`.`p`(a INT) LANGUAGE SQL NOT DETERMINISTIC SQL SECURITY INVOKER COMMENT 'can''t' READS SQL DATA BEGIN SELECT a; END",
-         "CREATE PROCEDURE p() DETERMINISTIC CONTAINS SQL BEGIN BEGIN SELECT 1; END; SELECT 2; END",
-         "CREATE PROCEDURE p() MODIFIES SQL DATA BEGIN INSERT INTO t (n) VALUES (1); UPDATE t SET n = 2 WHERE n = 1; DELETE FROM t WHERE n = 2; END",
-         "CREATE PROCEDURE p() NO SQL SELECT 1",
-         "CREATE PROCEDURE p(OUT n INT) SQL SECURITY DEFINER SET n = 1",
-         "CREATE PROCEDURE p(IN `select` INT) BEGIN SET `select` = 2, @answer = 3; SELECT `select`; END",
-         "CREATE PROCEDURE p(s VARCHAR(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_bin) BEGIN SELECT s; END",
-         "CREATE PROCEDURE p() BEGIN WITH c AS (SELECT 1 AS n) SELECT n FROM c; END",
-         "CREATE PROCEDURE p(s VARCHAR(20) COLLATE BINARY) SELECT s"}) {
+         "CREATE PROCEDURE p () BEGIN SELECT 1; END",
+         "CREATE PROCEDURE p () BEGIN END",
+         "CREATE PROCEDURE p (IN a INT, OUT b DECIMAL(10,2), INOUT c VARCHAR(20)) BEGIN SET b = a + 1; SELECT c; END",
+         "CREATE PROCEDURE `db`.`p` (a INT) LANGUAGE SQL NOT DETERMINISTIC SQL SECURITY INVOKER COMMENT 'can''t' READS SQL DATA BEGIN SELECT a; END",
+         "CREATE PROCEDURE p () DETERMINISTIC CONTAINS SQL BEGIN BEGIN SELECT 1; END; SELECT 2; END",
+         "CREATE PROCEDURE p () MODIFIES SQL DATA BEGIN INSERT INTO t (n) VALUES (1); UPDATE t SET n = 2 WHERE n = 1; DELETE FROM t WHERE n = 2; END",
+         "CREATE PROCEDURE p () NO SQL SELECT 1",
+         "CREATE PROCEDURE p (OUT n INT) SQL SECURITY DEFINER SET n = 1",
+         "CREATE PROCEDURE p (IN `select` INT) BEGIN SET `select` = 2, @answer = 3; SELECT `select`; END",
+         "CREATE PROCEDURE p (s VARCHAR(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_bin) BEGIN SELECT s; END",
+         "CREATE PROCEDURE p () BEGIN WITH c AS (SELECT 1 AS n) SELECT n FROM c; END",
+         "CREATE PROCEDURE p (s VARCHAR(20) COLLATE BINARY) SELECT s"}) {
         SCOPED_TRACE(sql);
         Parser<Dialect::MySQL> parser;
         auto result = parser.parse(sql, std::strlen(sql));
@@ -76,7 +76,7 @@ TEST(MySQLProcedure, RejectsMalformedParametersCharacteristicsAndBodies) {
 TEST(MySQLProcedure, CloneOwnsParametersAndBodyAndTraversalReachesStatements) {
     Arena destination;
     AstNode* copied = nullptr;
-    const char* expected = "CREATE PROCEDURE p(IN a INT) COMMENT 'hello' BEGIN SET a = a + 1; SELECT a; END";
+    const char* expected = "CREATE PROCEDURE p (IN a INT) COMMENT 'hello' BEGIN SET a = a + 1; SELECT a; END";
     {
         std::string sql = expected;
         Parser<Dialect::MySQL> parser;
@@ -103,7 +103,7 @@ TEST(MySQLProcedure, CloneOwnsParametersAndBodyAndTraversalReachesStatements) {
 
 TEST(MySQLProcedure, BatchKeepsNestedBodiesAndCaseExpressionsTogether) {
     const std::string routine =
-        "CREATE PROCEDURE p() BEGIN SELECT CASE WHEN 1 THEN ';END;' ELSE 'x' END; "
+        "CREATE PROCEDURE p () BEGIN SELECT CASE WHEN 1 THEN ';END;' ELSE 'x' END; "
         "BEGIN SELECT 2; END; END";
     const std::string sql = "SELECT 0; " + routine + "; SELECT 3;";
     Parser<Dialect::MySQL> parser;

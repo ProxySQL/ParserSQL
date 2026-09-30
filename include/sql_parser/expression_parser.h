@@ -271,8 +271,7 @@ public:
                 // literals and other keyword kinds cannot introduce them.
                 if (next.type == TokenType::TK_IDENTIFIER) {
                     if (keyword(next, "ILIKE")) {
-                        auto lookahead = tok_; lookahead.skip();
-                        prec = quantifier(lookahead.peek()) ? Precedence::PG_OPERATOR : Precedence::PG_PREDICATE;
+                        prec = Precedence::PG_PREDICATE;
                         like = true;
                     } else if (keyword(next, "SIMILAR")) {
                         auto lookahead = tok_; lookahead.skip();
@@ -289,15 +288,15 @@ public:
                 if (like) {
                     auto lookahead = tok_; lookahead.skip();
                     // LIKE-family operators share a nonassociative grammar boundary,
-                    // including quantified operators with a higher Pratt precedence.
+                    // including an incoming quantified operator.
                     if (pattern_operand_ && quantifier(lookahead.peek())) return syntax_error();
                     if (pattern_alias_boundary(lookahead.peek().type)) prec = Precedence::NONE;
                 }
-                if (quantifiable_operator(next.type)) {
-                    auto lookahead = tok_;
-                    lookahead.skip();
-                    if (quantifier(lookahead.peek())) prec = Precedence::PG_OPERATOR;
-                }
+                // ANY/ALL/SOME does not change the incoming operator's binding.
+                // PostgreSQL reduces a preceding expression using the operator
+                // token's precedence before recognizing subquery_Op. Its later
+                // %prec Op reduction must not pull "= ANY" into a LIKE operand
+                // or move "* ANY" outside an addition.
             }
             if (prec <= min_prec) break;
 
@@ -1721,7 +1720,9 @@ private:
             if (!escape || escape->type == NodeType::NODE_ASTERISK) return syntax_error();
         }
         // Retain the established locally executable LIKE representation when no new syntax is present.
-        if (!similar && !insensitive && !escape) {
+        // Negating the operator inside ANY/ALL differs from negating the whole
+        // comparison. Keep quantified NOT LIKE in its explicit predicate node.
+        if (!similar && !insensitive && !escape && !(negated && quantified)) {
             AstNode* node = make_node(arena_, NodeType::NODE_BINARY_OP, {"LIKE", 4});
             if (!node) return syntax_error();
             node->add_child(left); node->add_child(pattern);
@@ -2304,6 +2305,7 @@ public:
 private:
     AstNode* parse_window_bound(int& rank) {
         AstNode* bound = make_node(arena_, NodeType::NODE_WINDOW_BOUND);
+        if (!bound) return syntax_error();
         if (keyword(tok_.peek(), "CURRENT")) {
             tok_.skip();
             if (!keyword(tok_.peek(), "ROW")) return syntax_error();
@@ -2334,6 +2336,7 @@ private:
     AstNode* parse_window_frame() {
         Token unit = tok_.next_token();
         AstNode* frame = make_node(arena_, NodeType::NODE_WINDOW_FRAME, unit.text);
+        if (!frame) return syntax_error();
         bool between = tok_.peek().type == TokenType::TK_BETWEEN;
         if (between) { tok_.skip(); frame->flags = FLAG_WINDOW_BETWEEN; }
         int start_rank = 0, end_rank = 2;
@@ -2361,7 +2364,9 @@ private:
             } else if (keyword(exclusion, "GROUP") || keyword(exclusion, "TIES")) {
                 value = exclusion.text;
             } else return syntax_error();
-            frame->add_child(make_node(arena_, NodeType::NODE_WINDOW_EXCLUSION, value));
+            AstNode* clause = make_node(arena_, NodeType::NODE_WINDOW_EXCLUSION, value);
+            if (!clause) return syntax_error();
+            frame->add_child(clause);
         }
         return frame;
     }

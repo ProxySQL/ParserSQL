@@ -85,6 +85,10 @@ TEST_SRCS = $(TEST_DIR)/test_main.cpp \
             $(TEST_DIR)/test_review_ast.cpp \
             $(TEST_DIR)/test_review_transactions.cpp \
             $(TEST_DIR)/test_review_runtime.cpp \
+            $(TEST_DIR)/test_pr67_expressions.cpp \
+            $(TEST_DIR)/test_pr67_engine.cpp \
+            $(TEST_DIR)/test_pr67_ddl.cpp \
+            $(TEST_DIR)/test_pr67_metadata.cpp \
             $(TEST_DIR)/test_pg_admin_commands.cpp \
             $(TEST_DIR)/test_pg_session_commands.cpp \
             $(TEST_DIR)/test_pg_dml_extensions.cpp \

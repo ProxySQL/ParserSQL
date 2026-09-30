@@ -586,7 +586,7 @@
       "expected": "CHECKED",
       "known_gap": false,
       "native_action": "ddl",
-      "expected_sql": "CREATE PROCEDURE p() BEGIN SELECT 1; END"
+      "expected_sql": "CREATE PROCEDURE p () BEGIN SELECT 1; END"
     },
     {
       "id": "explain_format",
@@ -10507,7 +10507,7 @@
       "expected": "CHECKED",
       "known_gap": false,
       "native_action": "ddl",
-      "expected_sql": "CREATE PROCEDURE p(IN a INT, OUT b DECIMAL(10,2)) READS SQL DATA BEGIN SET b = a + 1; SELECT b; END"
+      "expected_sql": "CREATE PROCEDURE p (IN a INT, OUT b DECIMAL(10,2)) READS SQL DATA BEGIN SET b = a + 1; SELECT b; END"
     },
     {
       "id": "procedure_nested_block",
@@ -10575,7 +10575,7 @@
       "expected": "CHECKED",
       "known_gap": false,
       "native_action": "ddl",
-      "expected_sql": "CREATE PROCEDURE p() BEGIN BEGIN SELECT 1; END; SELECT 2; END"
+      "expected_sql": "CREATE PROCEDURE p () BEGIN BEGIN SELECT 1; END; SELECT 2; END"
     },
     {
       "id": "procedure_empty_block",
@@ -10643,7 +10643,7 @@
       "expected": "CHECKED",
       "known_gap": false,
       "native_action": "ddl",
-      "expected_sql": "CREATE PROCEDURE p() BEGIN END"
+      "expected_sql": "CREATE PROCEDURE p () BEGIN END"
     },
     {
       "id": "procedure_invalid_parameter_type",
@@ -11170,7 +11170,7 @@
       "expected": "CHECKED",
       "known_gap": false,
       "native_action": "ddl",
-      "expected_sql": "CREATE PROCEDURE p(IN x CHAR(1) COLLATE BINARY) BEGIN END"
+      "expected_sql": "CREATE PROCEDURE p (IN x CHAR(1) COLLATE BINARY) BEGIN END"
     },
     {
       "id": "table_current_time_defaults",

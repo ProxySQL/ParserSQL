@@ -203,28 +203,16 @@ public:
 
 private:
     static bool supported(const sql_parser::AstNode* ast) {
-        if (!ast) return false;
-        if constexpr (D == sql_parser::Dialect::MySQL)
-            if (has_mysql_metadata(ast)) return false;
+        if (!ast || !PlanBuilder<D>::supports_dml_features(ast)) return false;
         if constexpr (D == sql_parser::Dialect::PostgreSQL) {
-            if (!PlanBuilder<D>::supports_dml_features(ast) || unsupported_dml(ast)) return false;
+            if (unsupported_dml(ast)) return false;
         } else if (ast->type == sql_parser::NodeType::NODE_INSERT_STMT) {
             // INSERT plans must not discard newly parsed aliases or sources.
-            // UPDATE/DELETE retain their existing original-AST routing paths.
-            if (!PlanBuilder<D>::supports_dml_features(ast) || unsupported_dml(ast)) return false;
+            // Qualified UPDATE targets and multi-table UPDATE/DELETE retain
+            // their existing original-AST routing paths.
+            if (unsupported_dml(ast)) return false;
         }
         return true;
-    }
-
-    // These newly structured nodes have no local execution semantics. Keep
-    // the existing multi-table UPDATE/DELETE routing policy otherwise intact.
-    static bool has_mysql_metadata(const sql_parser::AstNode* ast) {
-        using sql_parser::NodeType;
-        if (ast->type == NodeType::NODE_MYSQL_OPTIMIZER_HINT ||
-            ast->type == NodeType::NODE_MYSQL_JSON_TABLE) return true;
-        for (auto* child = ast->first_child; child; child = child->next_sibling)
-            if (has_mysql_metadata(child)) return true;
-        return false;
     }
 
     static bool unsupported_dml(const sql_parser::AstNode* ast) {

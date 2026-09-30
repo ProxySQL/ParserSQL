@@ -413,6 +413,7 @@ ParseResult Parser<D>::parse_merge() {
     if constexpr (D == Dialect::PostgreSQL) {
         r.ast = PgDmlParser(tokenizer_, arena_, &parse_subquery_select<D>).merge();
         r.status = r.ast ? ParseResult::OK : ParseResult::ERROR;
+        if (r.ast) extract_dml_target(r.ast, r);
         scan_to_end(r);
     }
     return r;
@@ -1269,6 +1270,7 @@ ParseResult Parser<D>::parse_with() {
                     case NodeType::NODE_MERGE_STMT: r.stmt_type = StmtType::MERGE; break;
                     default: break;
                 }
+                if (r.stmt_type != StmtType::SELECT) extract_dml_target(main, r);
             }
         }
         scan_to_end(r);

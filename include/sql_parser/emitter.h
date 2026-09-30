@@ -256,6 +256,8 @@ private:
             case NodeType::NODE_MYSQL_CREATE_PROCEDURE: {
                 sb_.append("CREATE PROCEDURE ");
                 auto* c = node->first_child; emit_node(c);
+                // COUNT (..) is a routine identifier; COUNT(..) is a native function token.
+                sb_.append_char(' ');
                 c = c ? c->next_sibling : nullptr; emit_node(c);
                 for (c = c ? c->next_sibling : nullptr; c; c = c->next_sibling) {
                     sb_.append_char(' '); emit_node(c);
@@ -1733,8 +1735,13 @@ private:
             if (child->type == NodeType::NODE_BINARY_OP &&
                 (child->value().equals_ci("LIKE", 4) ||
                  child->value().equals_ci("REGEXP", 6))) {
-                emit_not_binary_op(child);
-                return;
+                const auto* left = child->first_child;
+                const auto* right = left ? left->next_sibling : nullptr;
+                // NOT (x LIKE ANY(...)) differs from x NOT LIKE ANY(...).
+                if (!right || right->type != NodeType::NODE_PG_QUANTIFIED_OPERAND) {
+                    emit_not_binary_op(child);
+                    return;
+                }
             }
         }
 

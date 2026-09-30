@@ -88,6 +88,15 @@ private:
                 }
                 break;
             // PG_CONT_EXPRESSION_GUARD
+            case NodeType::NODE_LITERAL_STRING:
+                if constexpr (D == sql_parser::Dialect::PostgreSQL) {
+                    // AST strings retain lexical escapes. Until evaluation
+                    // decodes E literals, their raw contents are not SQL values.
+                    const auto source = node->source();
+                    if (source.len >= 2 && (source.ptr[0] == 'E' || source.ptr[0] == 'e') &&
+                        source.ptr[1] == '\'') return true;
+                }
+                break;
             case NodeType::NODE_LITERAL_BIT:
             case NodeType::NODE_LITERAL_HEX:
                 if constexpr (D == sql_parser::Dialect::PostgreSQL) return true;
