@@ -3,6 +3,7 @@
 
 #include "sql_parser/select_parser.h"
 #include "sql_parser/pg_query_clauses.h"
+#include <limits>
 
 namespace sql_parser {
 
@@ -51,12 +52,13 @@ public:
             if (!limit || !limit->first_child) return nullptr;
             result->add_child(limit);
         }
-        if (D == Dialect::MySQL && result->type == NodeType::NODE_SELECT_STMT &&
-            tok_.peek().type == TokenType::TK_FOR) {
-            SelectParser<D> select(tok_, arena_, false, require_operands);
-            AstNode* lock = select.parse_locking();
-            if (!lock) return nullptr;
-            result->add_child(lock);
+        if constexpr (D == Dialect::MySQL) {
+            while (tok_.peek().type == TokenType::TK_FOR || tok_.peek().type == TokenType::TK_LOCK) {
+                SelectParser<D> select(tok_, arena_, false, require_operands);
+                AstNode* lock = select.parse_locking();
+                if (!lock) return nullptr;
+                result->add_child(lock);
+            }
         }
         return result;
     }
@@ -107,11 +109,9 @@ private:
         if (first == TokenType::TK_EOF) first = tok_.next_token().type;
         if (first == TokenType::TK_LPAREN) {
             AstNode* inner = nullptr;
-            if constexpr (D == Dialect::PostgreSQL) {
-                if (tok_.peek().type == TokenType::TK_WITH && subquery_cb_)
-                    inner = subquery_cb_(tok_, arena_);
-                else inner = parse(TokenType::TK_EOF);
-            } else inner = parse(TokenType::TK_EOF);
+            if (tok_.peek().type == TokenType::TK_WITH && subquery_cb_)
+                inner = subquery_cb_(tok_, arena_);
+            else inner = parse(TokenType::TK_EOF);
             if (!inner || tok_.peek().type != TokenType::TK_RPAREN) return nullptr;
             tok_.skip();
             AstNode* group = make_node(arena_, NodeType::NODE_COMPOUND_QUERY,
@@ -125,10 +125,8 @@ private:
             select.set_subquery_callback(subquery_cb_);
             return select.parse();
         }
-        if constexpr (D == Dialect::PostgreSQL) {
-            if (first == TokenType::TK_VALUES) return parse_values();
-            if (first == TokenType::TK_TABLE) return parse_table();
-        }
+        if (first == TokenType::TK_VALUES) return parse_values();
+        if (first == TokenType::TK_TABLE) return parse_table();
         return nullptr;
     }
 
@@ -139,25 +137,31 @@ private:
         if (!values) return nullptr;
         AstNode* last_row = nullptr;
         do {
+            if constexpr (D == Dialect::MySQL) {
+                if (tok_.next_token().type != TokenType::TK_ROW) return nullptr;
+            }
             if (tok_.next_token().type != TokenType::TK_LPAREN) return nullptr;
             AstNode* row = make_node(arena_, NodeType::NODE_VALUES_ROW);
             if (!row) return nullptr;
+            if constexpr (D == Dialect::MySQL) row->flags |= FLAG_VALUES_EXPLICIT_ROW;
             AstNode* last_value = nullptr;
-            do {
+            bool empty_row = D == Dialect::MySQL && tok_.peek().type == TokenType::TK_RPAREN;
+            while (!empty_row) {
                 TokenType next = tok_.peek().type;
                 if (next == TokenType::TK_RPAREN || next == TokenType::TK_COMMA ||
                     next == TokenType::TK_EOF) return nullptr;
                 AstNode* value = expressions.parse();
                 if (!value) return nullptr;
-                if constexpr (D == Dialect::PostgreSQL) {
-                    if (value->type == NodeType::NODE_ASTERISK) return expressions.syntax_error();
+                if (value->type == NodeType::NODE_ASTERISK) return expressions.syntax_error();
+                if constexpr (D == Dialect::MySQL) {
+                    if (!mysql_value_expression(value, true)) return expressions.syntax_error();
                 }
                 if (last_value) last_value->next_sibling = value;
                 else row->first_child = value;
                 last_value = value;
                 if (tok_.peek().type != TokenType::TK_COMMA) break;
                 tok_.skip();
-            } while (true);
+            }
             if (tok_.next_token().type != TokenType::TK_RPAREN) return nullptr;
             if (last_row) last_row->next_sibling = row;
             else values->first_child = row;
@@ -171,25 +175,37 @@ private:
     AstNode* parse_table() {
         AstNode* table = make_node(arena_, NodeType::NODE_TABLE_QUERY);
         if (!table) return nullptr;
-        if (tok_.peek().type == TokenType::TK_ONLY) {
-            tok_.skip();
-            table->flags |= FLAG_TABLE_ONLY;
+        if constexpr (D == Dialect::PostgreSQL) {
+            if (tok_.peek().type == TokenType::TK_ONLY) {
+                tok_.skip(); table->flags |= FLAG_TABLE_ONLY;
+            }
         }
         AstNode* name = make_node(arena_, NodeType::NODE_QUALIFIED_NAME);
         if (!name) return nullptr;
+        unsigned parts = 0;
         do {
             Token part = tok_.next_token();
-            if (part.type != TokenType::TK_IDENTIFIER) return nullptr;
-            // Keep source delimiters: quoted PostgreSQL identifiers are case sensitive.
-            StringRef spelling = part.source.empty() ? part.text : part.source;
-            AstNode* ident = make_node(arena_, NodeType::NODE_IDENTIFIER, spelling);
+            ++parts;
+            if constexpr (D == Dialect::MySQL) {
+                if (parts > 2 || (parts == 1 ? !mysql_identifier_token(part) : !mysql_identifier_word(part)))
+                    return nullptr;
+            } else if (part.type != TokenType::TK_IDENTIFIER) return nullptr;
+            // Keep identifier values and original delimiters independently.
+            AstNode* ident = nullptr;
+            if constexpr (D == Dialect::MySQL) {
+                ident = make_node_from_token(arena_, NodeType::NODE_IDENTIFIER, part,
+                    part.source.ptr != part.text.ptr ? FLAG_IDENT_DELIMITED : 0);
+            } else {
+                ident = make_node(arena_, NodeType::NODE_IDENTIFIER,
+                    part.source.empty() ? part.text : part.source);
+            }
             if (!ident) return nullptr;
             name->add_child(ident);
             if (tok_.peek().type != TokenType::TK_DOT) break;
             tok_.skip();
         } while (true);
         table->add_child(name);
-        if (!(table->flags & FLAG_TABLE_ONLY) &&
+        if (D == Dialect::PostgreSQL && !(table->flags & FLAG_TABLE_ONLY) &&
             tok_.peek().type == TokenType::TK_ASTERISK) {
             tok_.skip();
             table->flags |= FLAG_TABLE_INHERIT;
@@ -207,6 +223,9 @@ private:
         while (true) {
             AstNode* expr = expressions.parse();
             if (!expr) return nullptr;
+            if constexpr (D == Dialect::MySQL) {
+                if (!mysql_value_expression(expr)) return expressions.syntax_error();
+            }
 
             AstNode* item = make_node(arena_, NodeType::NODE_ORDER_BY_ITEM);
             if (!item) return nullptr;
@@ -249,6 +268,47 @@ private:
         return order_by;
     }
 
+    // DEFAULT is a complete row value, not an arbitrary expression operand.
+    // Qualified identifier components can themselves be reserved words.
+    static bool mysql_value_expression(const AstNode* node, bool allow_default = false,
+                                       bool allow_star = false) {
+        if (node->type == NodeType::NODE_SUBQUERY) return true; // validated by its query parser
+        if (node->type == NodeType::NODE_ASTERISK) return allow_star;
+        if (node->type == NodeType::NODE_IDENTIFIER && !(node->flags & FLAG_IDENT_DELIMITED) &&
+            node->value().equals_ci("DEFAULT", 7)) return allow_default;
+        if (node->type == NodeType::NODE_QUALIFIED_NAME) {
+            for (const auto* child = node->first_child; child; child = child->next_sibling)
+                if (!(child->flags & FLAG_IDENT_DELIMITED) && child->value().equals_ci("*", 1)) return false;
+            return true;
+        }
+        bool count = node->type == NodeType::NODE_FUNCTION_CALL && node->value().equals_ci("COUNT", 5);
+        for (const auto* child = node->first_child; child; child = child->next_sibling)
+            if (!mysql_value_expression(child, false, count)) return false;
+        return true;
+    }
+
+    AstNode* parse_mysql_limit_value() {
+        Token token = tok_.next_token();
+        NodeType kind;
+        uint16_t flags = 0;
+        if (token.type == TokenType::TK_INTEGER) {
+            uint64_t value = 0;
+            for (uint32_t i = 0; i < token.text.len; ++i) {
+                unsigned digit = static_cast<unsigned char>(token.text.ptr[i]) - '0';
+                if (digit > 9 || value > (std::numeric_limits<uint64_t>::max() - digit) / 10)
+                    return expr_parser_.syntax_error();
+                value = value * 10 + digit;
+            }
+            kind = NodeType::NODE_LITERAL_INT;
+        } else if (token.type == TokenType::TK_QUESTION) kind = NodeType::NODE_PLACEHOLDER;
+        else if (mysql_identifier_token(token)) {
+            kind = NodeType::NODE_COLUMN_REF;
+            if (token.source.ptr != token.text.ptr) flags |= FLAG_IDENT_DELIMITED;
+        } else return expr_parser_.syntax_error();
+        auto* value = make_node_from_token(arena_, kind, token, flags);
+        return value ? value : expr_parser_.syntax_error();
+    }
+
     // Parse trailing LIMIT for compound result
     AstNode* parse_limit(bool require_operands) {
         ExpressionParser<D> expressions(tok_, arena_, require_operands);
@@ -256,20 +316,24 @@ private:
         AstNode* limit = make_node(arena_, NodeType::NODE_LIMIT_CLAUSE);
         if (!limit) return nullptr;
 
-        AstNode* first = expressions.parse();
+        auto operand = [&]() -> AstNode* {
+            if constexpr (D == Dialect::MySQL) return parse_mysql_limit_value();
+            else return expressions.parse();
+        };
+        AstNode* first = operand();
         if (!first) return nullptr;
         limit->add_child(first);
 
         if (tok_.peek().type == TokenType::TK_OFFSET) {
             tok_.skip();
-            AstNode* offset = expressions.parse();
+            AstNode* offset = operand();
             if (!offset) return nullptr;
             limit->add_child(offset);
         } else if (tok_.peek().type == TokenType::TK_COMMA) {
             if constexpr (D == Dialect::PostgreSQL) return nullptr;
             // MySQL: LIMIT offset, count
             tok_.skip();
-            AstNode* count = expressions.parse();
+            AstNode* count = operand();
             if (!count) return nullptr;
             limit->flags |= FLAG_LIMIT_COMMA;
             limit->first_child = count;

@@ -119,16 +119,13 @@ ParseResult Parser<D>::classify_and_dispatch() {
         case TokenType::TK_WITH:     return parse_with();
         case TokenType::TK_TABLE:
         case TokenType::TK_VALUES:
-            if constexpr (D == Dialect::PostgreSQL) {
-                return parse_query_expression(first.type);
-            }
-            return extract_unknown(first);
+            return parse_query_expression(first.type);
         case TokenType::TK_LPAREN: {
             // Parenthesized SELECT / compound query: (SELECT ...) UNION ...
             Token next = tokenizer_.peek();
             if (next.type == TokenType::TK_SELECT || next.type == TokenType::TK_LPAREN ||
-                (D == Dialect::PostgreSQL && (next.type == TokenType::TK_VALUES ||
-                                            next.type == TokenType::TK_TABLE))) {
+                next.type == TokenType::TK_VALUES || next.type == TokenType::TK_TABLE ||
+                (D == Dialect::MySQL && next.type == TokenType::TK_WITH)) {
                 return parse_query_expression(TokenType::TK_LPAREN);
             }
             return extract_unknown(first);
@@ -234,7 +231,7 @@ template <Dialect D>
 ParseResult Parser<D>::parse_query_expression(TokenType first) {
     ParseResult r;
     r.stmt_type = StmtType::SELECT;
-    CompoundQueryParser<D> parser(tokenizer_, arena_);
+    CompoundQueryParser<D> parser(tokenizer_, arena_, D == Dialect::MySQL);
     parser.set_subquery_callback(&parse_subquery_select<D>);
     r.ast = parser.parse(first);
     r.status = r.ast ? ParseResult::OK : ParseResult::PARTIAL;
@@ -1287,63 +1284,9 @@ ParseResult Parser<D>::parse_with() {
         scan_to_end(r);
         return r;
     }
-    AstNode* cte = make_node(arena_, NodeType::NODE_CTE);
-    if (!cte) { r.status = ParseResult::ERROR; return r; }
-
-    // Skip optional RECURSIVE (for future use)
-    if (tokenizer_.peek().type == TokenType::TK_RECURSIVE) {
-        tokenizer_.skip();
-        cte->flags = 1; // mark as recursive for future
-    }
-
-    // Parse CTE definitions: name AS (SELECT ...)
-    while (true) {
-        Token name = tokenizer_.next_token();
-        AstNode* def = make_node(arena_, NodeType::NODE_CTE_DEFINITION, name.text);
-        if (!def) break;
-
-        // Expect AS
-        if (tokenizer_.peek().type == TokenType::TK_AS) tokenizer_.skip();
-
-        // Expect (
-        if (tokenizer_.peek().type == TokenType::TK_LPAREN) tokenizer_.skip();
-
-        // Parse the inner SELECT
-        if (tokenizer_.peek().type == TokenType::TK_SELECT) {
-            tokenizer_.skip(); // consume SELECT
-            CompoundQueryParser<D> inner_parser(tokenizer_, arena_);
-            inner_parser.set_subquery_callback(&parse_subquery_select<D>);
-            AstNode* inner = inner_parser.parse();
-            if (inner) def->add_child(inner);
-        }
-
-        // Expect )
-        if (tokenizer_.peek().type == TokenType::TK_RPAREN) tokenizer_.skip();
-
-        cte->add_child(def);
-
-        // More CTEs?
-        if (tokenizer_.peek().type == TokenType::TK_COMMA) {
-            tokenizer_.skip();
-        } else {
-            break;
-        }
-    }
-
-    // Now parse the main SELECT
-    if (tokenizer_.peek().type == TokenType::TK_SELECT) {
-        tokenizer_.skip();
-        CompoundQueryParser<D> main_parser(tokenizer_, arena_);
-        main_parser.set_subquery_callback(&parse_subquery_select<D>);
-        AstNode* main_select = main_parser.parse();
-        if (main_select) cte->add_child(main_select);
-    }
-
-    if (cte) {
-        r.status = ParseResult::OK;
-        r.ast = cte;
-    } else {
-        r.status = ParseResult::PARTIAL;
+    if constexpr (D == Dialect::MySQL) {
+        r.ast = parse_mysql_with(tokenizer_, arena_);
+        r.status = r.ast ? ParseResult::OK : ParseResult::ERROR;
     }
 
     scan_to_end(r);

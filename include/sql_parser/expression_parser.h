@@ -61,8 +61,49 @@ public:
     void set_subquery_callback(SubqueryParseCallback<D> cb) { subquery_cb_ = cb; }
 
     static bool starts_query(TokenType type) {
-        return type == TokenType::TK_SELECT || (D == Dialect::PostgreSQL &&
-            (type == TokenType::TK_WITH || type == TokenType::TK_VALUES || type == TokenType::TK_TABLE));
+        return type == TokenType::TK_SELECT || type == TokenType::TK_WITH ||
+            type == TokenType::TK_VALUES || type == TokenType::TK_TABLE;
+    }
+
+    static bool starts_query(Tokenizer<D>& tokens) {
+        if constexpr (D == Dialect::MySQL) {
+            if (tokens.peek().type == TokenType::TK_LPAREN) {
+                auto look = tokens;
+                unsigned leading_groups = 0;
+                do { look.skip(); ++leading_groups; } while (look.peek().type == TokenType::TK_LPAREN);
+                if (!starts_query(look)) return false;
+                // Check each leading group's boundary in one linear scan.
+                // ((SELECT 1) + 2) contains a scalar subquery, not a query body.
+                look = tokens;
+                unsigned depth = 0;
+                do {
+                    Token token = look.next_token();
+                    if (token.type == TokenType::TK_EOF) return false;
+                    if (token.type == TokenType::TK_LPAREN) ++depth;
+                    else if (token.type == TokenType::TK_RPAREN) {
+                        --depth;
+                        if (depth + 1 == leading_groups) {
+                            --leading_groups;
+                            switch (look.peek().type) {
+                                case TokenType::TK_RPAREN: case TokenType::TK_EOF:
+                                case TokenType::TK_UNION: case TokenType::TK_EXCEPT:
+                                case TokenType::TK_INTERSECT: case TokenType::TK_ORDER:
+                                case TokenType::TK_LIMIT: case TokenType::TK_FOR:
+                                case TokenType::TK_LOCK: break;
+                                default: return false;
+                            }
+                        }
+                    }
+                } while (depth);
+                return true;
+            }
+            if (tokens.peek().type == TokenType::TK_VALUES) {
+                auto look = tokens; look.skip();
+                // VALUES(col) is also a MySQL function in INSERT updates.
+                return look.peek().type == TokenType::TK_ROW;
+            }
+        }
+        return starts_query(tokens.peek().type);
     }
 
     static bool keyword(const Token& token, std::string_view word) {
@@ -157,7 +198,7 @@ public:
     }
 
     AstNode* parse_json_array_query() {
-        if (!subquery_cb_ || !starts_query(tok_.peek().type)) return syntax_error();
+        if (!subquery_cb_ || !starts_query(tok_)) return syntax_error();
         return subquery_cb_(tok_, arena_);
     }
 
@@ -584,7 +625,7 @@ private:
                 if (tok_.peek().type == TokenType::TK_LPAREN) {
                     tok_.skip();
                     // We expect SELECT inside
-                    if (starts_query(tok_.peek().type)) {
+                    if (starts_query(tok_)) {
                         AstNode* node = parse_subquery_inner();
                         if (!node) return nullptr;
                         // Mark as EXISTS subquery via flags
@@ -634,7 +675,7 @@ private:
             case TokenType::TK_LPAREN: {
                 tok_.skip();
                 // Could be subquery: (SELECT ...)
-                if (starts_query(tok_.peek().type)) {
+                if (starts_query(tok_)) {
                     AstNode* node = parse_subquery_inner();
                     return parse_postfix(node);
                 }
@@ -1310,7 +1351,7 @@ private:
         node->add_child(left);
         if (tok_.peek().type == TokenType::TK_LPAREN) {
             tok_.skip();
-            if (starts_query(tok_.peek().type)) {
+            if (starts_query(tok_)) {
                 AstNode* sq = parse_subquery_inner();
                 if (!sq) return nullptr;
                 node->add_child(sq);
@@ -1710,7 +1751,7 @@ private:
         Token kind = tok_.next_token();
         if (tok_.peek().type != TokenType::TK_LPAREN) return syntax_error();
         tok_.skip();
-        bool query = starts_query(tok_.peek().type);
+        bool query = starts_query(tok_);
         AstNode* value = nullptr;
         if (query) {
             if (!subquery_cb_) return syntax_error();
@@ -1732,7 +1773,7 @@ private:
         tok_.skip();
         if (tok_.peek().type == TokenType::TK_LPAREN) {
             tok_.skip();
-            if (starts_query(tok_.peek().type)) {
+            if (starts_query(tok_)) {
                 const char* close = skip_to_matching_paren();
                 const char* end = close ? close + 1 : tok_.input_end();
                 return make_node(arena_, NodeType::NODE_IDENTIFIER,
@@ -1790,7 +1831,7 @@ private:
         if constexpr (D == Dialect::PostgreSQL) {
             if (tok_.peek().type == TokenType::TK_LPAREN) {
                 tok_.skip();
-                if (!starts_query(tok_.peek().type) || !subquery_cb_) return syntax_error();
+                if (!starts_query(tok_) || !subquery_cb_) return syntax_error();
                 AstNode* query = parse_subquery_inner();
                 if (!query) return syntax_error();
                 AstNode* array = make_node(arena_, NodeType::NODE_PG_ARRAY_QUERY);

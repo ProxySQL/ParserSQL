@@ -2,7 +2,7 @@
 //
 // Shared query callback for expression and derived-table contexts. PostgreSQL
 // supports compound SELECT/TABLE/VALUES queries and WITH; MySQL supports
-// compound SELECT queries through the same query parser.
+// SELECT/TABLE/VALUES ROW queries and query-only WITH through the same callback.
 
 #ifndef SQL_PARSER_SUBQUERY_PARSE_CALLBACK_H
 #define SQL_PARSER_SUBQUERY_PARSE_CALLBACK_H
@@ -20,6 +20,55 @@ namespace sql_parser {
 // operands stop before their closing parenthesis; the caller consumes it.
 template <Dialect D>
 AstNode* parse_subquery_select(Tokenizer<D>& tok, Arena& arena);
+
+// WITH was consumed by the caller. MySQL query bodies share the strict
+// compound parser; modifying CTEs and WITH-prefixed DML remain unsupported.
+inline AstNode* parse_mysql_with(Tokenizer<Dialect::MySQL>& tok, Arena& arena) {
+    using Expr = ExpressionParser<Dialect::MySQL>;
+    Expr error(tok, arena);
+    auto* cte = make_node(arena, NodeType::NODE_CTE);
+    if (!cte) return error.syntax_error();
+    if (tok.peek().type == TokenType::TK_RECURSIVE) {
+        tok.skip(); cte->flags |= FLAG_CTE_RECURSIVE;
+    }
+    auto take = [&](TokenType type) {
+        if (tok.peek().type != type) return false;
+        tok.skip(); return true;
+    };
+    do {
+        Token name = tok.next_token();
+        if (!mysql_identifier_token(name)) return error.syntax_error();
+        auto* definition = make_node_from_token(arena, NodeType::NODE_CTE_DEFINITION, name,
+            name.source.ptr != name.text.ptr ? FLAG_IDENT_DELIMITED : 0);
+        if (!definition) return error.syntax_error();
+        AstNode* columns = nullptr;
+        if (take(TokenType::TK_LPAREN)) {
+            columns = make_node(arena, NodeType::NODE_CTE_COLUMNS);
+            if (!columns) return error.syntax_error();
+            do {
+                Token column = tok.next_token();
+                if (!mysql_identifier_token(column)) return error.syntax_error();
+                auto* item = make_node_from_token(arena, NodeType::NODE_IDENTIFIER, column,
+                    column.source.ptr != column.text.ptr ? FLAG_IDENT_DELIMITED : 0);
+                if (!item) return error.syntax_error();
+                columns->add_child(item);
+            } while (take(TokenType::TK_COMMA));
+            if (!take(TokenType::TK_RPAREN)) return error.syntax_error();
+        }
+        if (!take(TokenType::TK_AS) || !take(TokenType::TK_LPAREN)) return error.syntax_error();
+        auto* body = parse_subquery_select<Dialect::MySQL>(tok, arena);
+        if (!body || !take(TokenType::TK_RPAREN)) return error.syntax_error();
+        definition->add_child(body);
+        if (columns) definition->add_child(columns);
+        cte->add_child(definition);
+    } while (take(TokenType::TK_COMMA));
+    // A second WITH at the same level is not a query expression body.
+    if (tok.peek().type == TokenType::TK_WITH) return error.syntax_error();
+    auto* query = parse_subquery_select<Dialect::MySQL>(tok, arena);
+    if (!query) return error.syntax_error();
+    cte->add_child(query);
+    return cte;
+}
 
 inline AstNode* parse_pg_statement(Tokenizer<Dialect::PostgreSQL>& tok, Arena& arena,
                                    bool allow_dml);
@@ -200,7 +249,10 @@ AstNode* parse_subquery_select(Tokenizer<D>& tok, Arena& arena) {
         query.set_subquery_callback(&parse_subquery_select<D>);
         return query.parse(TokenType::TK_EOF);
     } else {
-        if (tok.peek().type != TokenType::TK_SELECT && tok.peek().type != TokenType::TK_LPAREN)
+        if (tok.peek().type == TokenType::TK_WITH) {
+            tok.skip(); return parse_mysql_with(tok, arena);
+        }
+        if (!ExpressionParser<D>::starts_query(tok) && tok.peek().type != TokenType::TK_LPAREN)
             return ExpressionParser<D>(tok, arena).syntax_error();
         CompoundQueryParser<D> query(tok, arena, true);
         query.set_subquery_callback(&parse_subquery_select<D>);

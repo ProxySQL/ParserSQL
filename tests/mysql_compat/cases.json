@@ -166,10 +166,10 @@
           "kind": "grammar_anchor"
         }
       ],
-      "expected": "NO_AST",
-      "known_gap": true,
-      "gap_note": "Statement classification does not produce a structured AST.",
-      "native_action": "execute"
+      "expected": "CHECKED",
+      "known_gap": false,
+      "native_action": "execute",
+      "expected_sql": "VALUES ROW(1, 'a'), ROW(2, 'b')"
     },
     {
       "id": "table_stmt",
@@ -180,22 +180,22 @@
         {
           "version": "8.4.8",
           "path": "sql/sql_yacc.yy",
-          "line": 7948,
-          "excerpt": "ALTER TABLE_SYM table_ident opt_alter_table_actions",
+          "line": 9942,
+          "excerpt": "TABLE_SYM table_ident",
           "kind": "grammar_anchor"
         },
         {
           "version": "9.7.2",
           "path": "sql/sql_yacc.yy",
-          "line": 8212,
-          "excerpt": "ALTER TABLE_SYM table_ident opt_alter_table_actions",
+          "line": 10256,
+          "excerpt": "TABLE_SYM table_ident",
           "kind": "grammar_anchor"
         }
       ],
-      "expected": "NO_AST",
-      "known_gap": true,
-      "gap_note": "Statement classification does not produce a structured AST.",
-      "native_action": "execute"
+      "expected": "CHECKED",
+      "known_gap": false,
+      "native_action": "execute",
+      "expected_sql": "TABLE t ORDER BY id LIMIT 2"
     },
     {
       "id": "insert_alias",
@@ -374,9 +374,9 @@
           "kind": "grammar_anchor"
         }
       ],
-      "expected": "TRAILING_INPUT",
+      "expected": "ERROR",
       "known_gap": true,
-      "gap_note": "Relevant syntax is not fully consumed; inspect remaining input in report.",
+      "gap_note": "Query-only WITH parsing rejects a DML main statement; CTE-prefixed UPDATE/DELETE remain unsupported.",
       "native_action": "explain"
     },
     {
@@ -400,9 +400,9 @@
           "kind": "grammar_anchor"
         }
       ],
-      "expected": "TRAILING_INPUT",
+      "expected": "ERROR",
       "known_gap": true,
-      "gap_note": "Relevant syntax is not fully consumed; inspect remaining input in report.",
+      "gap_note": "Query-only WITH parsing rejects a DML main statement; CTE-prefixed UPDATE/DELETE remain unsupported.",
       "native_action": "explain"
     },
     {
@@ -452,10 +452,10 @@
           "kind": "grammar_anchor"
         }
       ],
-      "expected": "TRAILING_INPUT",
-      "known_gap": true,
-      "gap_note": "Relevant syntax is not fully consumed; inspect remaining input in report.",
-      "native_action": "execute"
+      "expected": "CHECKED",
+      "known_gap": false,
+      "native_action": "execute",
+      "expected_sql": "WITH RECURSIVE c(n) AS (SELECT 1 UNION ALL SELECT n + 1 FROM c WHERE n < 3) SELECT * FROM c"
     },
     {
       "id": "multi_update",
@@ -1945,6 +1945,1010 @@
       "expected": "REJECTED",
       "known_gap": false,
       "native_action": "explain"
+    },
+    {
+      "id": "values_order_limit",
+      "sql": "VALUES ROW(1), ROW(2) ORDER BY 1 DESC LIMIT 1",
+      "validity": "valid",
+      "derivation": "hand-reduced syntax witness; source anchors identify relevant grammar, not verbatim MTR extraction",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 9769,
+          "excerpt": "query_expression:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 10083,
+          "excerpt": "query_expression:",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "CHECKED",
+      "known_gap": false,
+      "native_action": "execute",
+      "expected_sql": "VALUES ROW(1), ROW(2) ORDER BY 1 DESC LIMIT 1"
+    },
+    {
+      "id": "table_limit_offset",
+      "sql": "TABLE u ORDER BY id LIMIT 1 OFFSET 1",
+      "validity": "valid",
+      "derivation": "hand-reduced syntax witness; source anchors identify relevant grammar, not verbatim MTR extraction",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 9769,
+          "excerpt": "query_expression:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 10083,
+          "excerpt": "query_expression:",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "CHECKED",
+      "known_gap": false,
+      "native_action": "execute",
+      "expected_sql": "TABLE u ORDER BY id LIMIT 1 OFFSET 1"
+    },
+    {
+      "id": "table_for_update",
+      "sql": "TABLE t FOR UPDATE",
+      "validity": "valid",
+      "derivation": "hand-reduced syntax witness; source anchors identify relevant grammar, not verbatim MTR extraction",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 9677,
+          "excerpt": "| query_expression locking_clause_list",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 9991,
+          "excerpt": "| query_expression locking_clause_list",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "CHECKED",
+      "known_gap": false,
+      "native_action": "execute",
+      "expected_sql": "TABLE t FOR UPDATE"
+    },
+    {
+      "id": "values_for_update",
+      "sql": "VALUES ROW(1) LIMIT 1 FOR UPDATE",
+      "validity": "valid",
+      "derivation": "hand-reduced syntax witness; source anchors identify relevant grammar, not verbatim MTR extraction",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 9677,
+          "excerpt": "| query_expression locking_clause_list",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 9991,
+          "excerpt": "| query_expression locking_clause_list",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "CHECKED",
+      "known_gap": false,
+      "native_action": "execute",
+      "expected_sql": "VALUES ROW(1) LIMIT 1 FOR UPDATE"
+    },
+    {
+      "id": "values_set_precedence",
+      "sql": "VALUES ROW(1) UNION VALUES ROW(2) INTERSECT VALUES ROW(2)",
+      "validity": "valid",
+      "derivation": "hand-reduced syntax witness; source anchors identify relevant grammar, not verbatim MTR extraction",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 9810,
+          "excerpt": "| query_expression_body INTERSECT_SYM union_option query_expression_body",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 10124,
+          "excerpt": "| query_expression_body INTERSECT_SYM union_option query_expression_body",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "CHECKED",
+      "known_gap": false,
+      "native_action": "execute",
+      "expected_sql": "VALUES ROW(1) UNION VALUES ROW(2) INTERSECT VALUES ROW(2)"
+    },
+    {
+      "id": "values_parenthesized_set",
+      "sql": "(VALUES ROW(1) UNION VALUES ROW(2)) INTERSECT VALUES ROW(2)",
+      "validity": "valid",
+      "derivation": "hand-reduced syntax witness; source anchors identify relevant grammar, not verbatim MTR extraction",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 9810,
+          "excerpt": "| query_expression_body INTERSECT_SYM union_option query_expression_body",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 10124,
+          "excerpt": "| query_expression_body INTERSECT_SYM union_option query_expression_body",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "CHECKED",
+      "known_gap": false,
+      "native_action": "execute",
+      "expected_sql": "(VALUES ROW(1) UNION VALUES ROW(2)) INTERSECT VALUES ROW(2)"
+    },
+    {
+      "id": "values_except_union",
+      "sql": "VALUES ROW(1) EXCEPT VALUES ROW(2) UNION VALUES ROW(3)",
+      "validity": "valid",
+      "derivation": "hand-reduced syntax witness; source anchors identify relevant grammar, not verbatim MTR extraction",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 9802,
+          "excerpt": "| query_expression_body EXCEPT_SYM union_option query_expression_body",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 10116,
+          "excerpt": "| query_expression_body EXCEPT_SYM union_option query_expression_body",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "CHECKED",
+      "known_gap": false,
+      "native_action": "execute",
+      "expected_sql": "VALUES ROW(1) EXCEPT VALUES ROW(2) UNION VALUES ROW(3)"
+    },
+    {
+      "id": "table_values_union",
+      "sql": "TABLE u UNION ALL VALUES ROW(1,2)",
+      "validity": "valid",
+      "derivation": "hand-reduced syntax witness; source anchors identify relevant grammar, not verbatim MTR extraction",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 9794,
+          "excerpt": "| query_expression_body UNION_SYM union_option query_expression_body",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 10108,
+          "excerpt": "| query_expression_body UNION_SYM union_option query_expression_body",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "CHECKED",
+      "known_gap": false,
+      "native_action": "execute",
+      "expected_sql": "TABLE u UNION ALL VALUES ROW(1, 2)"
+    },
+    {
+      "id": "table_branch_limit",
+      "sql": "(TABLE u ORDER BY id LIMIT 1) UNION ALL VALUES ROW(1,2)",
+      "validity": "valid",
+      "derivation": "hand-reduced syntax witness; source anchors identify relevant grammar, not verbatim MTR extraction",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 9794,
+          "excerpt": "| query_expression_body UNION_SYM union_option query_expression_body",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 10108,
+          "excerpt": "| query_expression_body UNION_SYM union_option query_expression_body",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "CHECKED",
+      "known_gap": false,
+      "native_action": "execute",
+      "expected_sql": "(TABLE u ORDER BY id LIMIT 1) UNION ALL VALUES ROW(1, 2)"
+    },
+    {
+      "id": "cte_values_table",
+      "sql": "WITH q AS (VALUES ROW(1)) TABLE q",
+      "validity": "valid",
+      "derivation": "hand-reduced syntax witness; source anchors identify relevant grammar, not verbatim MTR extraction",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 12366,
+          "excerpt": "common_table_expr:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 12790,
+          "excerpt": "common_table_expr:",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "CHECKED",
+      "known_gap": false,
+      "native_action": "execute",
+      "expected_sql": "WITH q AS (VALUES ROW(1)) TABLE q"
+    },
+    {
+      "id": "cte_table_select",
+      "sql": "WITH q AS (TABLE u) SELECT * FROM q",
+      "validity": "valid",
+      "derivation": "hand-reduced syntax witness; source anchors identify relevant grammar, not verbatim MTR extraction",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 12366,
+          "excerpt": "common_table_expr:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 12790,
+          "excerpt": "common_table_expr:",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "CHECKED",
+      "known_gap": false,
+      "native_action": "execute",
+      "expected_sql": "WITH q AS (TABLE u) SELECT * FROM q"
+    },
+    {
+      "id": "derived_values_rows",
+      "sql": "SELECT * FROM (VALUES ROW(1), ROW(2)) AS q(x)",
+      "validity": "valid",
+      "derivation": "hand-reduced syntax witness; source anchors identify relevant grammar, not verbatim MTR extraction",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 12000,
+          "excerpt": "table_subquery opt_table_alias opt_derived_column_list",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 12424,
+          "excerpt": "table_subquery opt_table_alias opt_derived_column_list",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "CHECKED",
+      "known_gap": false,
+      "native_action": "execute",
+      "expected_sql": "SELECT * FROM (VALUES ROW(1), ROW(2)) AS q(x)"
+    },
+    {
+      "id": "lateral_table_query",
+      "sql": "SELECT * FROM LATERAL (TABLE u) AS q",
+      "validity": "valid",
+      "derivation": "hand-reduced syntax witness; source anchors identify relevant grammar, not verbatim MTR extraction",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 12013,
+          "excerpt": "| LATERAL_SYM table_subquery opt_table_alias opt_derived_column_list",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 12437,
+          "excerpt": "| LATERAL_SYM table_subquery opt_table_alias opt_derived_column_list",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "CHECKED",
+      "known_gap": false,
+      "native_action": "execute",
+      "expected_sql": "SELECT * FROM LATERAL (TABLE u) AS q"
+    },
+    {
+      "id": "lateral_values_correlated",
+      "sql": "SELECT * FROM t, LATERAL (VALUES ROW(t.id)) AS q(x)",
+      "validity": "valid",
+      "derivation": "hand-reduced syntax witness; source anchors identify relevant grammar, not verbatim MTR extraction",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 12013,
+          "excerpt": "| LATERAL_SYM table_subquery opt_table_alias opt_derived_column_list",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 12437,
+          "excerpt": "| LATERAL_SYM table_subquery opt_table_alias opt_derived_column_list",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "CHECKED",
+      "known_gap": false,
+      "native_action": "execute",
+      "expected_sql": "SELECT * FROM t, LATERAL (VALUES ROW(t.id)) AS q(x)"
+    },
+    {
+      "id": "scalar_values_query",
+      "sql": "SELECT (VALUES ROW(1))",
+      "validity": "valid",
+      "derivation": "hand-reduced syntax witness; source anchors identify relevant grammar, not verbatim MTR extraction",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 10389,
+          "excerpt": "| row_subquery",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 10709,
+          "excerpt": "| row_subquery",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "CHECKED",
+      "known_gap": false,
+      "native_action": "execute",
+      "expected_sql": "SELECT (VALUES ROW(1))"
+    },
+    {
+      "id": "scalar_table_query",
+      "sql": "WITH q AS (VALUES ROW(1)) SELECT (TABLE q)",
+      "validity": "valid",
+      "derivation": "hand-reduced syntax witness; source anchors identify relevant grammar, not verbatim MTR extraction",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 10389,
+          "excerpt": "| row_subquery",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 10709,
+          "excerpt": "| row_subquery",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "CHECKED",
+      "known_gap": false,
+      "native_action": "execute",
+      "expected_sql": "WITH q AS (VALUES ROW(1)) SELECT (TABLE q)"
+    },
+    {
+      "id": "in_values_query",
+      "sql": "SELECT 1 IN (VALUES ROW(1), ROW(2))",
+      "validity": "valid",
+      "derivation": "hand-reduced syntax witness; source anchors identify relevant grammar, not verbatim MTR extraction",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 10158,
+          "excerpt": "bit_expr IN_SYM table_subquery",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 10472,
+          "excerpt": "bit_expr IN_SYM table_subquery",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "CHECKED",
+      "known_gap": false,
+      "native_action": "execute",
+      "expected_sql": "SELECT 1 IN (VALUES ROW(1), ROW(2))"
+    },
+    {
+      "id": "in_table_query",
+      "sql": "WITH q AS (VALUES ROW(1)) SELECT 1 IN (TABLE q)",
+      "validity": "valid",
+      "derivation": "hand-reduced syntax witness; source anchors identify relevant grammar, not verbatim MTR extraction",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 10158,
+          "excerpt": "bit_expr IN_SYM table_subquery",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 10472,
+          "excerpt": "bit_expr IN_SYM table_subquery",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "CHECKED",
+      "known_gap": false,
+      "native_action": "execute",
+      "expected_sql": "WITH q AS (VALUES ROW(1)) SELECT 1 IN (TABLE q)"
+    },
+    {
+      "id": "exists_table_query",
+      "sql": "SELECT EXISTS (TABLE u)",
+      "validity": "valid",
+      "derivation": "hand-reduced syntax witness; source anchors identify relevant grammar, not verbatim MTR extraction",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 10406,
+          "excerpt": "| EXISTS table_subquery",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 10726,
+          "excerpt": "| EXISTS table_subquery",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "CHECKED",
+      "known_gap": false,
+      "native_action": "execute",
+      "expected_sql": "SELECT EXISTS (TABLE u)"
+    },
+    {
+      "id": "exists_values_query",
+      "sql": "SELECT EXISTS (VALUES ROW(1))",
+      "validity": "valid",
+      "derivation": "hand-reduced syntax witness; source anchors identify relevant grammar, not verbatim MTR extraction",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 10406,
+          "excerpt": "| EXISTS table_subquery",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 10726,
+          "excerpt": "| EXISTS table_subquery",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "CHECKED",
+      "known_gap": false,
+      "native_action": "execute",
+      "expected_sql": "SELECT EXISTS (VALUES ROW(1))"
+    },
+    {
+      "id": "bad_values_missing_row",
+      "sql": "VALUES (1)",
+      "validity": "invalid",
+      "derivation": "hand-written malformed control based on the cited grammar production",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 13320,
+          "excerpt": "ROW_SYM '(' opt_values ')' { $$= $3; }",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 13876,
+          "excerpt": "ROW_SYM '(' opt_values ')' { $$= $3; }",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "REJECTED",
+      "known_gap": false,
+      "native_action": "execute"
+    },
+    {
+      "id": "bad_values_singular",
+      "sql": "VALUE ROW(1)",
+      "validity": "invalid",
+      "derivation": "hand-written malformed control based on the cited grammar production",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 9935,
+          "excerpt": "VALUES values_row_list",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 10249,
+          "excerpt": "VALUES values_row_list",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "REJECTED",
+      "known_gap": false,
+      "native_action": "execute"
+    },
+    {
+      "id": "bad_values_trailing_comma",
+      "sql": "VALUES ROW(1),",
+      "validity": "invalid",
+      "derivation": "hand-written malformed control based on the cited grammar production",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 13290,
+          "excerpt": "values_row_list:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 13846,
+          "excerpt": "values_row_list:",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "REJECTED",
+      "known_gap": false,
+      "native_action": "execute"
+    },
+    {
+      "id": "bad_values_leading_comma",
+      "sql": "VALUES ROW(,1)",
+      "validity": "invalid",
+      "derivation": "hand-written malformed control based on the cited grammar production",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 13320,
+          "excerpt": "ROW_SYM '(' opt_values ')' { $$= $3; }",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 13876,
+          "excerpt": "ROW_SYM '(' opt_values ')' { $$= $3; }",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "REJECTED",
+      "known_gap": false,
+      "native_action": "execute"
+    },
+    {
+      "id": "bad_table_missing_name",
+      "sql": "TABLE",
+      "validity": "invalid",
+      "derivation": "hand-written malformed control based on the cited grammar production",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 9942,
+          "excerpt": "TABLE_SYM table_ident",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 10256,
+          "excerpt": "TABLE_SYM table_ident",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "REJECTED",
+      "known_gap": false,
+      "native_action": "execute"
+    },
+    {
+      "id": "bad_table_alias",
+      "sql": "TABLE t AS q",
+      "validity": "invalid",
+      "derivation": "hand-written malformed control based on the cited grammar production",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 9942,
+          "excerpt": "TABLE_SYM table_ident",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 10256,
+          "excerpt": "TABLE_SYM table_ident",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "REJECTED",
+      "known_gap": false,
+      "native_action": "execute"
+    },
+    {
+      "id": "bad_table_partition",
+      "sql": "TABLE pt PARTITION(p0)",
+      "validity": "invalid",
+      "derivation": "hand-written malformed control based on the cited grammar production",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 9942,
+          "excerpt": "TABLE_SYM table_ident",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 10256,
+          "excerpt": "TABLE_SYM table_ident",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "REJECTED",
+      "known_gap": false,
+      "native_action": "execute"
+    },
+    {
+      "id": "bad_table_index_hint",
+      "sql": "TABLE t USE INDEX(idx)",
+      "validity": "invalid",
+      "derivation": "hand-written malformed control based on the cited grammar production",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 9942,
+          "excerpt": "TABLE_SYM table_ident",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 10256,
+          "excerpt": "TABLE_SYM table_ident",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "REJECTED",
+      "known_gap": false,
+      "native_action": "execute"
+    },
+    {
+      "id": "bad_table_where",
+      "sql": "TABLE t WHERE id=1",
+      "validity": "invalid",
+      "derivation": "hand-written malformed control based on the cited grammar production",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 9942,
+          "excerpt": "TABLE_SYM table_ident",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 10256,
+          "excerpt": "TABLE_SYM table_ident",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "REJECTED",
+      "known_gap": false,
+      "native_action": "execute"
+    },
+    {
+      "id": "bad_derived_table_alias",
+      "sql": "SELECT * FROM (TABLE u)",
+      "validity": "invalid",
+      "derivation": "hand-written malformed control based on the cited grammar production",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 12000,
+          "excerpt": "table_subquery opt_table_alias opt_derived_column_list",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 12424,
+          "excerpt": "table_subquery opt_table_alias opt_derived_column_list",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "REJECTED",
+      "known_gap": false,
+      "native_action": "execute"
+    },
+    {
+      "id": "values_empty_row",
+      "sql": "VALUES ROW()",
+      "validity": "valid",
+      "derivation": "hand-reduced syntax witness; source anchors identify relevant grammar, not verbatim MTR extraction",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 13323,
+          "excerpt": "opt_values:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 13879,
+          "excerpt": "opt_values:",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "CHECKED",
+      "known_gap": false,
+      "native_action": "execute",
+      "expected_sql": "VALUES ROW()",
+      "native_note": "Grammar accepts an empty row; both native versions return semantic server error 3942 outside INSERT."
+    },
+    {
+      "id": "values_default",
+      "sql": "VALUES ROW(DEFAULT)",
+      "validity": "valid",
+      "derivation": "hand-reduced syntax witness; source anchors identify relevant grammar, not verbatim MTR extraction",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 13349,
+          "excerpt": "expr_or_default:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 13905,
+          "excerpt": "expr_or_default:",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "CHECKED",
+      "known_gap": false,
+      "native_action": "execute",
+      "expected_sql": "VALUES ROW(DEFAULT)",
+      "native_note": "Grammar accepts DEFAULT; both native versions return semantic server error 3943 outside INSERT."
+    },
+    {
+      "id": "values_compound_lock",
+      "sql": "VALUES ROW(1) UNION VALUES ROW(2) FOR UPDATE",
+      "validity": "valid",
+      "derivation": "hand-reduced syntax witness; source anchors identify relevant grammar, not verbatim MTR extraction",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 9677,
+          "excerpt": "| query_expression locking_clause_list",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 9991,
+          "excerpt": "| query_expression locking_clause_list",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "CHECKED",
+      "known_gap": false,
+      "native_action": "execute",
+      "expected_sql": "VALUES ROW(1) UNION VALUES ROW(2) FOR UPDATE"
+    },
+    {
+      "id": "table_share_lock",
+      "sql": "TABLE t LOCK IN SHARE MODE",
+      "validity": "valid",
+      "derivation": "hand-reduced syntax witness; source anchors identify relevant grammar, not verbatim MTR extraction",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 10006,
+          "excerpt": "| LOCK_SYM IN_SYM SHARE_SYM MODE_SYM",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 10320,
+          "excerpt": "| LOCK_SYM IN_SYM SHARE_SYM MODE_SYM",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "CHECKED",
+      "known_gap": false,
+      "native_action": "execute",
+      "expected_sql": "TABLE t LOCK IN SHARE MODE"
+    },
+    {
+      "id": "table_repeated_locks",
+      "sql": "TABLE t FOR UPDATE FOR SHARE",
+      "validity": "valid",
+      "derivation": "hand-reduced syntax witness; source anchors identify relevant grammar, not verbatim MTR extraction",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 9982,
+          "excerpt": "locking_clause_list:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 10296,
+          "excerpt": "locking_clause_list:",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "CHECKED",
+      "known_gap": false,
+      "native_action": "execute",
+      "expected_sql": "TABLE t FOR UPDATE FOR SHARE",
+      "native_note": "Grammar permits repeated locking clauses; both native versions return semantic server error 3569 for overlapping table locks."
+    },
+    {
+      "id": "cte_recursive_values_table",
+      "sql": "WITH RECURSIVE q(x) AS (VALUES ROW(1) UNION ALL SELECT x+1 FROM q WHERE x<3) TABLE q",
+      "validity": "valid",
+      "derivation": "hand-reduced syntax witness; source anchors identify relevant grammar, not verbatim MTR extraction",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 12366,
+          "excerpt": "common_table_expr:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 12790,
+          "excerpt": "common_table_expr:",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "CHECKED",
+      "known_gap": false,
+      "native_action": "execute",
+      "expected_sql": "WITH RECURSIVE q(x) AS (VALUES ROW(1) UNION ALL SELECT x + 1 FROM q WHERE x < 3) TABLE q"
+    },
+    {
+      "id": "bad_cte_values_missing_as",
+      "sql": "WITH q(x) (VALUES ROW(1)) TABLE q",
+      "validity": "invalid",
+      "derivation": "hand-written malformed control based on the cited grammar production",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 12366,
+          "excerpt": "common_table_expr:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 12790,
+          "excerpt": "common_table_expr:",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "REJECTED",
+      "known_gap": false,
+      "native_action": "execute"
+    },
+    {
+      "id": "bad_cte_values_empty_columns",
+      "sql": "WITH q() AS (VALUES ROW(1)) TABLE q",
+      "validity": "invalid",
+      "derivation": "hand-written malformed control based on the cited grammar production",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 12366,
+          "excerpt": "common_table_expr:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 12790,
+          "excerpt": "common_table_expr:",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "REJECTED",
+      "known_gap": false,
+      "native_action": "execute"
+    },
+    {
+      "id": "bad_cte_values_trailing_comma",
+      "sql": "WITH q(x) AS (VALUES ROW(1)), TABLE q",
+      "validity": "invalid",
+      "derivation": "hand-written malformed control based on the cited grammar production",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 12366,
+          "excerpt": "common_table_expr:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 12790,
+          "excerpt": "common_table_expr:",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "REJECTED",
+      "known_gap": false,
+      "native_action": "execute"
     }
   ]
 }

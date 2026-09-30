@@ -110,7 +110,7 @@ public:
         // Subquery: (SELECT ...)
         if (t.type == TokenType::TK_LPAREN) {
             tok_.skip();
-            if (ExpressionParser<D>::starts_query(tok_.peek().type)) {
+            if (ExpressionParser<D>::starts_query(tok_)) {
                 AstNode* subq = nullptr;
                 if (subquery_cb_) {
                     subq = make_node(arena_, NodeType::NODE_SUBQUERY);

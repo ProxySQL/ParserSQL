@@ -176,6 +176,12 @@ private:
             case NodeType::NODE_CTE_COLUMNS:
             case NodeType::NODE_TABLE_QUERY:
                 return true;
+            case NodeType::NODE_VALUES_ROW:
+                if (node->flags & sql_parser::FLAG_VALUES_EXPLICIT_ROW) return true;
+                break;
+            case NodeType::NODE_LOCKING_CLAUSE:
+                if (!node->value().empty()) return true;
+                break;
             case NodeType::NODE_VALUES_CLAUSE:
                 if (!dml_values) return true;
                 break;

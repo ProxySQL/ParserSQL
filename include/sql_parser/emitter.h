@@ -905,6 +905,7 @@ private:
     }
 
     void emit_locking(const AstNode* node) {
+        if (!node->value().empty()) { sb_.append_char(' '); emit_value(node); return; }
         sb_.append(" FOR ");
         bool first = true;
         for (const AstNode* child = node->first_child; child; child = child->next_sibling) {
@@ -1021,6 +1022,7 @@ private:
     }
 
     void emit_values_row(const AstNode* node) {
+        if (node->flags & FLAG_VALUES_EXPLICIT_ROW) sb_.append("ROW");
         sb_.append_char('(');
         bool first = true;
         for (const AstNode* child = node->first_child; child; child = child->next_sibling) {

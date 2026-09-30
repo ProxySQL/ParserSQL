@@ -73,6 +73,8 @@ static constexpr uint16_t FLAG_PG_OPERATOR = 0x01;
 static constexpr uint16_t FLAG_WINDOW_BETWEEN = 0x01;
 static constexpr uint16_t FLAG_ORDER_NULLS = 0x01;
 static constexpr uint16_t FLAG_LIMIT_COMMA = 0x01;
+// MySQL table-value constructors spell each NODE_VALUES_ROW as ROW(...).
+static constexpr uint16_t FLAG_VALUES_EXPLICIT_ROW = 0x01;
 static constexpr uint16_t FLAG_CTE_RECURSIVE = 0x01;
 static constexpr uint16_t FLAG_CTE_MATERIALIZED = 0x02;
 static constexpr uint16_t FLAG_CTE_NOT_MATERIALIZED = 0x04;

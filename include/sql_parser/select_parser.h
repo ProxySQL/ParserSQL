@@ -472,6 +472,14 @@ private:
 public:
     // Shared by standalone SELECT and compound-query tails.
     AstNode* parse_locking() {
+        if (tok_.peek().type == TokenType::TK_LOCK) {
+            tok_.skip();
+            if (tok_.next_token().type != TokenType::TK_IN ||
+                tok_.next_token().type != TokenType::TK_SHARE ||
+                !ExpressionParser<D>::keyword(tok_.next_token(), "MODE")) return expr_parser_.syntax_error();
+            auto* lock = make_node(arena_, NodeType::NODE_LOCKING_CLAUSE, StringRef{"LOCK IN SHARE MODE", 18});
+            return lock ? lock : expr_parser_.syntax_error();
+        }
         if (tok_.next_token().type != TokenType::TK_FOR) return expr_parser_.syntax_error();
         Token strength = tok_.next_token();
         if (strength.type != TokenType::TK_UPDATE && strength.type != TokenType::TK_SHARE)
