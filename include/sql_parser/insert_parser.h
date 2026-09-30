@@ -36,6 +36,15 @@ public:
             auto* root = make_node(arena_, NodeType::NODE_INSERT_STMT, {},
                                    is_replace_ ? FLAG_REPLACE : uint16_t(0));
             if (!root) return error();
+            if constexpr (D == Dialect::MySQL) {
+                if (tok_.peek().type == TokenType::TK_MYSQL_OPTIMIZER_HINT) {
+                    auto token = tok_.next_token();
+                    auto* hint = make_node_from_token(arena_, NodeType::NODE_MYSQL_OPTIMIZER_HINT, token);
+                    if (!hint) return nullptr;
+                    root->add_child(hint);
+                }
+            }
+
             if (auto* options = parse_stmt_options()) root->add_child(options);
             take(TokenType::TK_INTO);
 

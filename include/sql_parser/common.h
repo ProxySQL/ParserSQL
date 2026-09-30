@@ -367,6 +367,27 @@ enum class NodeType : uint16_t {
     NODE_MYSQL_JSON_AGG_ARGUMENT, // explicit ALL argument; expression child
     NODE_MYSQL_EXPLAIN_INTO, // user-variable destination child
 
+    // Structured MySQL table, routine, JSON_TABLE and hint syntax.
+    NODE_MYSQL_CREATE_TABLE, // command value; validated syntax, name, definition list, options
+    NODE_MYSQL_ALTER_TABLE, // command value; TABLE, name, comma-separated actions
+    NODE_MYSQL_COLUMN_DEF, // name, type, structured attributes
+    NODE_MYSQL_DDL_CLAUSE, // optional keyword prefix; space-separated operands
+    NODE_MYSQL_DDL_LIST, // parenthesized comma-separated operands
+    NODE_MYSQL_DDL_SYNTAX, // grammar-validated fixed token, not an arbitrary SQL tail
+    NODE_MYSQL_ALTER_ACTIONS, // comma-separated action clauses
+    NODE_MYSQL_JSON_TABLE, // document expression, path literal, columns
+    NODE_MYSQL_JSON_TABLE_COLUMNS, // nonempty column/nested definitions
+    NODE_MYSQL_JSON_TABLE_COLUMN, // name/type/path/responses; flags 1=ordinality, 2=exists
+    NODE_MYSQL_JSON_TABLE_NESTED, // path literal, nested columns
+    NODE_MYSQL_JSON_TABLE_RESPONSE, // validated action phrase; DEFAULT has literal child
+    NODE_MYSQL_JSON_TABLE_LITERAL, // validated native literal source spelling
+    NODE_MYSQL_CREATE_PROCEDURE, // name, parameters, characteristics, structured body
+    NODE_MYSQL_PROCEDURE_PARAMS, // possibly empty typed parameter list
+    NODE_MYSQL_PROCEDURE_PARAM, // direction value; name and validated type children
+    NODE_MYSQL_PROCEDURE_CHARACTERISTIC, // validated phrase; COMMENT has string child
+    NODE_MYSQL_PROCEDURE_BLOCK, // statement children; owns their semicolons
+    NODE_MYSQL_OPTIMIZER_HINT, // lossless hint comment metadata; no hint semantic analysis
+
 };
 
 } // namespace sql_parser

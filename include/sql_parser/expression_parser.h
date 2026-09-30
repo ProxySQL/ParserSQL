@@ -809,6 +809,10 @@ private:
 
     AstNode* parse_identifier_or_function(const Token& name_token) {
         if constexpr (D == Dialect::MySQL) {
+            // REPLACE is both a hintable statement keyword and a native
+            // string function. MySQL discards its hint payload in the latter.
+            if (name_token.type == TokenType::TK_REPLACE &&
+                tok_.peek().type == TokenType::TK_MYSQL_OPTIMIZER_HINT) tok_.skip();
             if (tok_.peek().type == TokenType::TK_LPAREN &&
                 (keyword(name_token, "CAST") || keyword(name_token, "CONVERT")))
                 return parse_mysql_conversion(keyword(name_token, "CONVERT"));

@@ -34,6 +34,15 @@ public:
         if (!root) return nullptr;
 
         if constexpr (D == Dialect::MySQL) {
+            if (tok_.peek().type == TokenType::TK_MYSQL_OPTIMIZER_HINT) {
+                auto token = tok_.next_token();
+                auto* hint = make_node_from_token(arena_, NodeType::NODE_MYSQL_OPTIMIZER_HINT, token);
+                if (!hint) return nullptr;
+                root->add_child(hint);
+            }
+        }
+
+        if constexpr (D == Dialect::MySQL) {
             return parse_mysql(root);
         } else {
             return parse_pgsql(root);

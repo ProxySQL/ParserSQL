@@ -8,6 +8,7 @@
 #include "sql_parser/arena.h"
 #include "sql_parser/expression_parser.h"
 #include "sql_parser/mysql_identifier.h"
+#include "sql_parser/mysql_json_table_parser.h"
 
 namespace sql_parser {
 
@@ -57,6 +58,18 @@ public:
         Token t = tok_.peek();
 
         if constexpr (D == Dialect::MySQL) {
+            if (from_context && ExpressionParser<D>::keyword(t, "JSON_TABLE")) {
+                auto* function = MySQLJsonTableParser<ExpressionParser<D>>(tok_, arena_, expr_parser_).parse();
+                if (!function) return expr_parser_.syntax_error();
+                auto* ref = make_node(arena_, NodeType::NODE_TABLE_REF);
+                if (!ref) return expr_parser_.syntax_error();
+                ref->add_child(function);
+                parse_optional_alias(ref, true);
+                auto* alias = function->next_sibling;
+                if (!alias || alias->type != NodeType::NODE_ALIAS || tok_.peek().type == TokenType::TK_LPAREN)
+                    return expr_parser_.syntax_error();
+                return ref;
+            }
             if (from_context && ExpressionParser<D>::keyword(t, "LATERAL")) {
                 tok_.skip();
                 if (!take(TokenType::TK_LPAREN) || !subquery_cb_)

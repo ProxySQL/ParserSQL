@@ -18,6 +18,8 @@ public:
         has_error_ = false;
         has_fatal_error_ = false;
         has_user_variables_ = false;
+        hint_allowed_ = false;
+        after_dot_ = false;
         paren_depth_ = 0;
         first_open_paren_ = nullptr;
         error_source_ = {};
@@ -82,6 +84,8 @@ private:
     const char* end_ = nullptr;
     Token peeked_;
     bool has_peeked_ = false;
+    bool hint_allowed_ = false;
+    bool after_dot_ = false;
     bool has_error_ = false;
     bool has_fatal_error_ = false;
     bool has_user_variables_ = false;
@@ -122,6 +126,7 @@ private:
                   (static_cast<unsigned char>(peek_char(2)) <= 0x20 ||
                    static_cast<unsigned char>(peek_char(2)) == 0x7f)));
             if (dash_comment) {
+                hint_allowed_ = false;
                 cursor_ += 2;
                 while (cursor_ < end_ && *cursor_ != '\n') ++cursor_;
                 continue;
@@ -130,6 +135,7 @@ private:
             // # line comment (MySQL only)
             if constexpr (D == Dialect::MySQL) {
                 if (c == '#') {
+                    hint_allowed_ = false;
                     ++cursor_;
                     while (cursor_ < end_ && *cursor_ != '\n') ++cursor_;
                     continue;
@@ -138,6 +144,10 @@ private:
 
             // /* block comment */
             if (c == '/' && peek_char(1) == '*') {
+                if constexpr (D == Dialect::MySQL) {
+                    if (hint_allowed_ && peek_char(2) == '+') return;
+                }
+                hint_allowed_ = false;
                 const char* comment_start = cursor_;
                 cursor_ += 2;
                 if constexpr (D == Dialect::PostgreSQL) {
@@ -214,6 +224,13 @@ private:
                 static_cast<uint32_t>(end_ - first_open_paren_)});
         }
         if (type == TokenType::TK_USER_VARIABLE) has_user_variables_ = true;
+        if constexpr (D == Dialect::MySQL) {
+            // MySQL lexes qualified components as identifiers, even when
+            // spelled SELECT/UPDATE/etc.; they do not introduce hints.
+            hint_allowed_ = !after_dot_ && (type == TokenType::TK_SELECT || type == TokenType::TK_INSERT ||
+                type == TokenType::TK_UPDATE || type == TokenType::TK_DELETE || type == TokenType::TK_REPLACE);
+            after_dot_ = type == TokenType::TK_DOT;
+        }
         return Token{type, StringRef{text_start, text_len},
                      StringRef{source_start, source_len},
                      static_cast<uint32_t>(source_start - start_)};
@@ -565,6 +582,17 @@ private:
         char c = *cursor_;
 
         if constexpr (D == Dialect::MySQL) {
+            if (hint_allowed_ && c == '/' && peek_char(1) == '*' && peek_char(2) == '+') {
+                const char* begin = cursor_;
+                cursor_ += 3;
+                while (cursor_ < end_ && !(*cursor_ == '*' && peek_char(1) == '/')) ++cursor_;
+                if (cursor_ == end_) {
+                    flag_fatal_error_at({begin, static_cast<uint32_t>(cursor_ - begin)});
+                    return make_token(TokenType::TK_ERROR, begin, static_cast<uint32_t>(cursor_ - begin));
+                }
+                cursor_ += 2;
+                return make_token(TokenType::TK_MYSQL_OPTIMIZER_HINT, begin, static_cast<uint32_t>(cursor_ - begin));
+            }
             if ((c == 'x' || c == 'X') && peek_char(1) == '\'') {
                 return scan_quoted_base_literal(true);
             }

@@ -34,6 +34,15 @@ public:
         AstNode* root = make_node(arena_, NodeType::NODE_SELECT_STMT);
         if (!root) return nullptr;
 
+        if constexpr (D == Dialect::MySQL) {
+            if (tok_.peek().type == TokenType::TK_MYSQL_OPTIMIZER_HINT) {
+                auto token = tok_.next_token();
+                auto* hint = make_node_from_token(arena_, NodeType::NODE_MYSQL_OPTIMIZER_HINT, token);
+                if (!hint) return nullptr;
+                root->add_child(hint);
+            }
+        }
+
         // SELECT options: DISTINCT, ALL, SQL_CALC_FOUND_ROWS
         AstNode* opts = parse_select_options();
         if (opts) root->add_child(opts);

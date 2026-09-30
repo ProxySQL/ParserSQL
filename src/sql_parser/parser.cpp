@@ -9,6 +9,8 @@
 #include "sql_parser/delete_parser.h"
 #include "sql_parser/pg_utility_parser.h"
 #include "sql_parser/pg_ddl_parser.h"
+#include "sql_parser/mysql_ddl_parser.h"
+#include "sql_parser/mysql_procedure_parser.h"
 #include "sql_parser/pg_admin_parser.h"
 #include "sql_parser/pg_session_parser.h"
 #include <limits>
@@ -71,6 +73,18 @@ BatchParseResult Parser<D>::parse_all(const char* sql, size_t len) {
             ? scanner.error_source().ptr : first.source.ptr;
         if (!start) start = sql + cursor;
         Token last = first;
+        if constexpr (D == Dialect::MySQL) {
+            if (first.type == TokenType::TK_CREATE && MySQLProcedureParser::handles(scanner.peek())) {
+                auto routine_scanner = scanner;
+                Arena boundary_arena;
+                auto* routine = MySQLProcedureParser(routine_scanner, boundary_arena,
+                    &parse_subquery_select<D>).parse();
+                if (routine && !routine_scanner.has_error()) {
+                    scanner = routine_scanner;
+                    last = scanner.next_token();
+                }
+            }
+        }
         while (last.type != TokenType::TK_EOF && last.type != TokenType::TK_SEMICOLON)
             last = scanner.next_token();
         const char* end = last.type == TokenType::TK_SEMICOLON
@@ -179,6 +193,22 @@ ParseResult Parser<D>::classify_and_dispatch() {
             ParseResult r = utility.transaction(first);
             scan_to_end(r);
             return r;
+        }
+    }
+
+    if constexpr (D == Dialect::MySQL) {
+        if (first.type == TokenType::TK_CREATE && MySQLProcedureParser::handles(tokenizer_.peek())) {
+            ParseResult r;
+            r.stmt_type = StmtType::CREATE;
+            r.ast = MySQLProcedureParser(tokenizer_, arena_, &parse_subquery_select<D>).parse();
+            r.status = r.ast ? ParseResult::OK : ParseResult::PARTIAL;
+            scan_to_end(r); return r;
+        }
+        if ((first.type == TokenType::TK_CREATE || first.type == TokenType::TK_ALTER) &&
+            (tokenizer_.peek().type == TokenType::TK_TABLE ||
+             (first.type == TokenType::TK_CREATE && ExpressionParser<D>::keyword(tokenizer_.peek(), "TEMPORARY")))) {
+            ParseResult r = MySQLDdlParser(tokenizer_, arena_, &parse_subquery_select<D>).parse(first);
+            scan_to_end(r); return r;
         }
     }
 

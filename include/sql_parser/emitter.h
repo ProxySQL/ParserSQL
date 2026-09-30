@@ -201,6 +201,67 @@ private:
                 sb_.append_char(')'); break;
             case NodeType::NODE_MYSQL_JSON_AGG_ARGUMENT:
                 sb_.append("ALL "); emit_node(node->first_child); break;
+            case NodeType::NODE_MYSQL_CREATE_TABLE:
+            case NodeType::NODE_MYSQL_ALTER_TABLE:
+            case NodeType::NODE_MYSQL_COLUMN_DEF:
+            case NodeType::NODE_MYSQL_DDL_CLAUSE:
+            case NodeType::NODE_MYSQL_PROCEDURE_PARAM:
+            case NodeType::NODE_MYSQL_PROCEDURE_CHARACTERISTIC:
+                emit_value(node);
+                if (!node->value().empty() && node->first_child) sb_.append_char(' ');
+                emit_list(node, " "); break;
+            case NodeType::NODE_MYSQL_DDL_SYNTAX:
+            case NodeType::NODE_MYSQL_JSON_TABLE_LITERAL:
+            case NodeType::NODE_MYSQL_OPTIMIZER_HINT:
+                emit_value(node); break;
+            case NodeType::NODE_MYSQL_DDL_LIST:
+            case NodeType::NODE_MYSQL_PROCEDURE_PARAMS:
+                sb_.append_char('('); emit_list(node, ", "); sb_.append_char(')'); break;
+            case NodeType::NODE_MYSQL_ALTER_ACTIONS:
+                emit_list(node, ", "); break;
+            case NodeType::NODE_MYSQL_JSON_TABLE: {
+                sb_.append("JSON_TABLE(");
+                const auto* c = node->first_child;
+                emit_node(c); sb_.append(", ");
+                c = c ? c->next_sibling : nullptr; emit_node(c); sb_.append_char(' ');
+                emit_node(c ? c->next_sibling : nullptr); sb_.append_char(')'); break;
+            }
+            case NodeType::NODE_MYSQL_JSON_TABLE_COLUMNS:
+                sb_.append("COLUMNS ("); emit_list(node, ", "); sb_.append_char(')'); break;
+            case NodeType::NODE_MYSQL_JSON_TABLE_COLUMN: {
+                const auto* c = node->first_child; emit_node(c);
+                if (node->flags & 1) { sb_.append(" FOR ORDINALITY"); break; }
+                c = c ? c->next_sibling : nullptr; sb_.append_char(' '); emit_node(c);
+                sb_.append(node->flags & 2 ? " EXISTS PATH " : " PATH ");
+                for (c = c ? c->next_sibling : nullptr; c; c = c->next_sibling) {
+                    emit_node(c); if (c->next_sibling) sb_.append_char(' ');
+                }
+                break;
+            }
+            case NodeType::NODE_MYSQL_JSON_TABLE_NESTED:
+                sb_.append("NESTED PATH "); emit_list(node, " "); break;
+            case NodeType::NODE_MYSQL_JSON_TABLE_RESPONSE:
+                if (node->first_child) {
+                    sb_.append("DEFAULT "); emit_node(node->first_child);
+                    auto v = node->value();
+                    if (v.len >= 7) sb_.append(v.ptr + 7, v.len - 7);
+                } else emit_value(node);
+                break;
+            case NodeType::NODE_MYSQL_CREATE_PROCEDURE: {
+                sb_.append("CREATE PROCEDURE ");
+                auto* c = node->first_child; emit_node(c);
+                c = c ? c->next_sibling : nullptr; emit_node(c);
+                for (c = c ? c->next_sibling : nullptr; c; c = c->next_sibling) {
+                    sb_.append_char(' '); emit_node(c);
+                }
+                break;
+            }
+            case NodeType::NODE_MYSQL_PROCEDURE_BLOCK:
+                sb_.append("BEGIN ");
+                for (auto* c = node->first_child; c; c = c->next_sibling) {
+                    emit_node(c); sb_.append("; ");
+                }
+                sb_.append("END"); break;
             case NodeType::NODE_MYSQL_EXPLAIN_INTO:
                 sb_.append("INTO "); emit_node(node->first_child); break;
             case NodeType::NODE_MYSQL_CHARSET_LITERAL:
@@ -817,6 +878,7 @@ private:
         sb_.append("SELECT ");
         for (const AstNode* child = node->first_child; child; child = child->next_sibling) {
             emit_node(child);
+            if (child->type == NodeType::NODE_MYSQL_OPTIMIZER_HINT) sb_.append_char(' ');
         }
     }
 

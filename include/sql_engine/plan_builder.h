@@ -197,6 +197,25 @@ private:
             case NodeType::NODE_MYSQL_INSERT_ALIAS:
             case NodeType::NODE_MYSQL_JSON_AGGREGATE:
             case NodeType::NODE_MYSQL_JSON_AGG_ARGUMENT:
+            case NodeType::NODE_MYSQL_CREATE_TABLE:
+            case NodeType::NODE_MYSQL_ALTER_TABLE:
+            case NodeType::NODE_MYSQL_COLUMN_DEF:
+            case NodeType::NODE_MYSQL_DDL_CLAUSE:
+            case NodeType::NODE_MYSQL_DDL_LIST:
+            case NodeType::NODE_MYSQL_DDL_SYNTAX:
+            case NodeType::NODE_MYSQL_ALTER_ACTIONS:
+            case NodeType::NODE_MYSQL_JSON_TABLE:
+            case NodeType::NODE_MYSQL_JSON_TABLE_COLUMNS:
+            case NodeType::NODE_MYSQL_JSON_TABLE_COLUMN:
+            case NodeType::NODE_MYSQL_JSON_TABLE_NESTED:
+            case NodeType::NODE_MYSQL_JSON_TABLE_RESPONSE:
+            case NodeType::NODE_MYSQL_JSON_TABLE_LITERAL:
+            case NodeType::NODE_MYSQL_CREATE_PROCEDURE:
+            case NodeType::NODE_MYSQL_PROCEDURE_PARAMS:
+            case NodeType::NODE_MYSQL_PROCEDURE_PARAM:
+            case NodeType::NODE_MYSQL_PROCEDURE_CHARACTERISTIC:
+            case NodeType::NODE_MYSQL_PROCEDURE_BLOCK:
+            case NodeType::NODE_MYSQL_OPTIMIZER_HINT:
             case NodeType::NODE_MYSQL_EXPLAIN_INTO:
             case NodeType::NODE_MYSQL_EXTRACT:
             case NodeType::NODE_MYSQL_SUBSTRING:
