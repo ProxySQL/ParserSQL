@@ -52,7 +52,6 @@ TEST(MySQLTableDdl, RejectsMalformedAndUnsupportedForms) {
         "CREATE TABLE t (id INT DEFAULT arbitrary)", "CREATE TABLE t (id INT DEFAULT 1+2)",
         "CREATE TABLE t (id INT ON UPDATE 1)", "CREATE TABLE t (CHECK ())", "CREATE TABLE t (UNIQUE ())",
         "CREATE TABLE t (FOREIGN KEY (x) REFERENCES p)", "CREATE TABLE t (x INT) ENGINE=", "CREATE TABLE t (x INT) arbitrary tail",
-        "CREATE TABLE t (x INT) PARTITION BY HASH(x)",
         "CREATE TABLE t (x INT ENFORCED)", "CREATE TABLE t (x INT NOT NULL AS (1))",
         "CREATE TABLE t (x INT COLLATE DEFAULT)", "CREATE TABLE t (x INT) ENGINE=DEFAULT",
         "CREATE TABLE t (x INT DEFAULT NOW)", "CREATE TABLE t (FULLTEXT KEY ix USING HASH (x))",

@@ -77,6 +77,8 @@ TEST_SRCS = $(TEST_DIR)/test_main.cpp \
             $(TEST_DIR)/test_mysql_optimizer_hints.cpp \
             $(TEST_DIR)/test_mysql_json_table.cpp \
             $(TEST_DIR)/test_mysql_table_ddl.cpp \
+            $(TEST_DIR)/test_mysql_partition.cpp \
+            $(TEST_DIR)/test_mysql_partition_alter.cpp \
             $(TEST_DIR)/test_mysql_procedure.cpp \
             $(TEST_DIR)/test_mysql_grouping.cpp \
             $(TEST_DIR)/test_mysql_explain.cpp \

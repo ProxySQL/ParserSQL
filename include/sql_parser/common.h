@@ -391,6 +391,11 @@ enum class NodeType : uint16_t {
     NODE_MYSQL_CREATE_LIKE, // LIKE; structured source relation child
     NODE_MYSQL_CREATE_QUERY, // AS / IGNORE AS / REPLACE AS; query AST child
 
+    NODE_MYSQL_PARTITION_CLAUSE, // PARTITION BY; method, counts and partition definitions
+    NODE_MYSQL_PARTITION_DEF, // PARTITION/SUBPARTITION; name, values, options and subpartitions
+    NODE_MYSQL_PARTITION_ACTION, // standalone ALTER partition command; structured operands
+    NODE_MYSQL_PARTITION_NAMES, // comma-separated partition identifiers
+
 };
 
 } // namespace sql_parser

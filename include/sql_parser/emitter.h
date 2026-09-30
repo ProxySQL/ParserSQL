@@ -203,6 +203,9 @@ private:
                 sb_.append("ALL "); emit_node(node->first_child); break;
             case NodeType::NODE_MYSQL_CREATE_LIKE:
             case NodeType::NODE_MYSQL_CREATE_QUERY:
+            case NodeType::NODE_MYSQL_PARTITION_CLAUSE:
+            case NodeType::NODE_MYSQL_PARTITION_DEF:
+            case NodeType::NODE_MYSQL_PARTITION_ACTION:
             case NodeType::NODE_MYSQL_CREATE_TABLE:
             case NodeType::NODE_MYSQL_ALTER_TABLE:
             case NodeType::NODE_MYSQL_COLUMN_DEF:
@@ -219,6 +222,7 @@ private:
             case NodeType::NODE_MYSQL_DDL_LIST:
             case NodeType::NODE_MYSQL_PROCEDURE_PARAMS:
                 sb_.append_char('('); emit_list(node, ", "); sb_.append_char(')'); break;
+            case NodeType::NODE_MYSQL_PARTITION_NAMES:
             case NodeType::NODE_MYSQL_ALTER_ACTIONS:
                 emit_list(node, ", "); break;
             case NodeType::NODE_MYSQL_JSON_TABLE: {

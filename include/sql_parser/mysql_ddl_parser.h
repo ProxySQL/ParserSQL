@@ -3,14 +3,15 @@
 
 #include "sql_parser/expression_parser.h"
 #include "sql_parser/mysql_type_parser.h"
+#include "sql_parser/mysql_partition_parser.h"
 #include "sql_parser/mysql_value_syntax.h"
 #include "sql_parser/parse_result.h"
 #include "sql_parser/subquery_parse_callback.h"
 
 namespace sql_parser {
 
-// Bounded native CREATE/ALTER TABLE grammar. Unsupported partitioning and
-// specialized index options remain explicit errors.
+// Bounded native CREATE/ALTER TABLE grammar. Unsupported specialized table
+// and index options remain explicit errors.
 // Lists, columns, expressions, constraints and options have separate AST nodes;
 // syntax leaves are only emitted after matching their native production.
 class MySQLDdlParser {
@@ -36,9 +37,7 @@ public:
         if (create) {
             create_body(root);
         } else {
-            auto* actions = node(NodeType::NODE_MYSQL_ALTER_ACTIONS);
-            do { add(actions, action()); } while (!failed_ && take(TokenType::TK_COMMA));
-            add(root, actions);
+            alter_body(root);
         }
         if (!terminal()) fail();
         ParseResult result;
@@ -144,11 +143,13 @@ private:
             require(TokenType::TK_RPAREN);
             add(root, definitions);
         }
-        while (!failed_ && !terminal() && !query_suffix()) {
+        while (!failed_ && !terminal() && !query_suffix() && !is("PARTITION")) {
             add(root, table_option());
             // A comma separates table options, never the following query.
-            if (take(TokenType::TK_COMMA) && (terminal() || query_suffix())) fail();
+            if (take(TokenType::TK_COMMA) && (terminal() || query_suffix() || is("PARTITION"))) fail();
         }
+        if (!failed_ && is("PARTITION"))
+            add(root, MySQLPartitionParser(tok_, arena_, callback_).parse());
         if (failed_ || terminal()) return;
         const char* prefix = "AS";
         if (take("IGNORE")) prefix = "IGNORE AS";
@@ -163,6 +164,87 @@ private:
         auto callback = callback_ ? callback_ : &parse_subquery_select<Dialect::MySQL>;
         add(source, callback(tok_, arena_));
         add(root, source);
+    }
+
+    bool partition_tail() { return is("PARTITION") || is("REMOVE"); }
+    bool partition_action_start() {
+        if (!one_of({"ADD", "DROP", "REBUILD", "OPTIMIZE", "ANALYZE", "CHECK",
+                     "REPAIR", "COALESCE", "TRUNCATE", "REORGANIZE", "EXCHANGE"})) return false;
+        auto look = tok_; look.skip();
+        return word(look.peek(), "PARTITION");
+    }
+    bool alter_modifier() { return one_of({"ALGORITHM", "LOCK", "WITH", "WITHOUT"}); }
+    AstNode* validation() {
+        auto* result = clause();
+        if (!take("WITH", result) && !take("WITHOUT", result)) fail();
+        require("VALIDATION", result); return result;
+    }
+    AstNode* partition_names(bool allow_all) {
+        if (allow_all && is("ALL")) return token_node(NodeType::NODE_MYSQL_DDL_SYNTAX);
+        auto* names = node(NodeType::NODE_MYSQL_PARTITION_NAMES);
+        do { add(names, identifier()); } while (!failed_ && take(TokenType::TK_COMMA));
+        return names;
+    }
+    AstNode* partition_action() {
+        const Token first = tok_.peek();
+        auto* result = token_node(NodeType::NODE_MYSQL_PARTITION_ACTION);
+        require("PARTITION", result);
+        const bool binlog = word(first, "ADD") || word(first, "REBUILD") || word(first, "OPTIMIZE") ||
+            word(first, "ANALYZE") || word(first, "REPAIR") || word(first, "COALESCE") ||
+            word(first, "REORGANIZE");
+        if (binlog && !take("NO_WRITE_TO_BINLOG", result)) take("LOCAL", result);
+        MySQLPartitionParser partition(tok_, arena_, callback_);
+        if (word(first, "ADD")) {
+            if (take("PARTITIONS", result)) add(result, partition.number());
+            else if (at(TokenType::TK_LPAREN)) add(result, partition.definitions());
+        } else if (word(first, "COALESCE")) add(result, partition.number());
+        else if (word(first, "REORGANIZE")) {
+            if (!terminal()) {
+                add(result, partition_names(false)); require("INTO", result);
+                add(result, partition.definitions());
+            }
+        } else if (word(first, "EXCHANGE")) {
+            add(result, identifier()); require("WITH", result); require("TABLE", result);
+            add(result, name());
+            if (one_of({"WITH", "WITHOUT"})) add(result, validation());
+        } else {
+            add(result, partition_names(!word(first, "DROP")));
+            if (word(first, "CHECK")) {
+                while (!failed_ && one_of({"QUICK", "FAST", "MEDIUM", "EXTENDED", "CHANGED", "FOR"})) {
+                    if (take("FOR", result)) require("UPGRADE", result); else syntax(result);
+                }
+            } else if (word(first, "REPAIR")) {
+                while (!failed_ && one_of({"QUICK", "EXTENDED", "USE_FRM"})) syntax(result);
+            }
+        }
+        return result;
+    }
+    void alter_body(AstNode* root) {
+        auto* actions = node(NodeType::NODE_MYSQL_ALTER_ACTIONS);
+        bool modifiers_only = true;
+        while (!failed_ && !partition_tail()) {
+            if (partition_action_start()) {
+                if (!modifiers_only) { fail(); break; }
+                add(actions, partition_action());
+                // Standalone partition actions cannot have trailing modifiers
+                // or ordinary column/index actions.
+                if (!terminal()) fail();
+                break;
+            }
+            const bool modifier = alter_modifier();
+            add(actions, one_of({"WITH", "WITHOUT"}) ? validation() : action());
+            modifiers_only = modifiers_only && modifier;
+            if (!take(TokenType::TK_COMMA)) break;
+            if (partition_tail()) { fail(); break; }
+        }
+        if (actions && actions->first_child) add(root, actions);
+        if (failed_) return;
+        // Native repartition/removal follows ordinary actions without a comma.
+        if (is("PARTITION")) add(root, MySQLPartitionParser(tok_, arena_, callback_).parse());
+        else if (is("REMOVE")) {
+            auto* remove = clause(); require("REMOVE", remove); require("PARTITIONING", remove);
+            add(root, remove);
+        }
     }
 
     AstNode* expression() {

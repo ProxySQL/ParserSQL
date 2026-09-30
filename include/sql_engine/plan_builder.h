@@ -199,6 +199,10 @@ private:
             case NodeType::NODE_MYSQL_JSON_AGG_ARGUMENT:
             case NodeType::NODE_MYSQL_CREATE_LIKE:
             case NodeType::NODE_MYSQL_CREATE_QUERY:
+            case NodeType::NODE_MYSQL_PARTITION_CLAUSE:
+            case NodeType::NODE_MYSQL_PARTITION_DEF:
+            case NodeType::NODE_MYSQL_PARTITION_ACTION:
+            case NodeType::NODE_MYSQL_PARTITION_NAMES:
             case NodeType::NODE_MYSQL_CREATE_TABLE:
             case NodeType::NODE_MYSQL_ALTER_TABLE:
             case NodeType::NODE_MYSQL_COLUMN_DEF:

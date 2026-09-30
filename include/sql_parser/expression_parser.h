@@ -652,6 +652,8 @@ private:
             }
             case TokenType::TK_ARRAY: {
                 tok_.skip();
+                // ARRAY is a nonreserved MySQL identifier/function name.
+                if constexpr (D == Dialect::MySQL) return parse_identifier_or_function(t);
                 return parse_array_constructor();
             }
             case TokenType::TK_ROW: {
