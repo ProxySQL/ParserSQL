@@ -361,6 +361,7 @@ enum class NodeType : uint16_t {
     NODE_MYSQL_CHARSET_LITERAL, // value=charset introducer; string/hex/bit literal children
     NODE_MYSQL_COLLATE, // value=collation source spelling; one expression child
     NODE_MYSQL_CONVERT, // expression, type/charset metadata; flag 1=USING form
+    NODE_MYSQL_INSERT_ALIAS, // row identifier, optional nonempty column identifier list
 
 };
 

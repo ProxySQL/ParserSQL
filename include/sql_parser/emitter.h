@@ -98,6 +98,21 @@ private:
             case NodeType::NODE_VALUES_CLAUSE:   emit_values_clause(node); break;
             case NodeType::NODE_VALUES_ROW:      emit_values_row(node); break;
             case NodeType::NODE_INSERT_SET_CLAUSE: emit_insert_set_clause(node); break;
+            case NodeType::NODE_MYSQL_INSERT_ALIAS: {
+                sb_.append("AS ");
+                const auto* name = node->first_child;
+                if (name) emit_node(name);
+                if (name && name->next_sibling) {
+                    // COUNT (a) is an alias; COUNT(a) is a native function token.
+                    sb_.append(" (");
+                    for (auto* column = name->next_sibling; column; column = column->next_sibling) {
+                        if (column != name->next_sibling) sb_.append(", ");
+                        emit_node(column);
+                    }
+                    sb_.append_char(')');
+                }
+                break;
+            }
             case NodeType::NODE_ON_DUPLICATE_KEY: emit_on_duplicate_key(node); break;
             case NodeType::NODE_ON_CONFLICT:     emit_on_conflict(node); break;
             case NodeType::NODE_CONFLICT_TARGET: emit_conflict_target(node); break;

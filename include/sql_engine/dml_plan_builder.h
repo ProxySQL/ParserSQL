@@ -206,6 +206,10 @@ private:
         if (!ast) return false;
         if constexpr (D == sql_parser::Dialect::PostgreSQL) {
             if (!PlanBuilder<D>::supports_dml_features(ast) || unsupported_dml(ast)) return false;
+        } else if (ast->type == sql_parser::NodeType::NODE_INSERT_STMT) {
+            // INSERT plans must not discard newly parsed aliases or sources.
+            // UPDATE/DELETE retain their existing original-AST routing paths.
+            if (!PlanBuilder<D>::supports_dml_features(ast) || unsupported_dml(ast)) return false;
         }
         return true;
     }

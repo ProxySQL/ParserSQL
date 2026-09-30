@@ -444,7 +444,13 @@ private:
         const char* open_pos = cursor_;
         ++cursor_;  // skip opening backtick
         const char* content_start = cursor_;
-        while (cursor_ < end_ && *cursor_ != '`') ++cursor_;
+        while (cursor_ < end_) {
+            if (*cursor_ == '`') {
+                if (cursor_ + 1 < end_ && cursor_[1] == '`') { cursor_ += 2; continue; }
+                break;
+            }
+            ++cursor_;
+        }
         if (cursor_ >= end_) {
             return make_token(TokenType::TK_ERROR, open_pos, 1);
         }

@@ -8,7 +8,6 @@
 #include "sql_parser/arena.h"
 #include "sql_parser/expression_parser.h"
 #include "sql_parser/table_ref_parser.h"
-#include "sql_parser/select_parser.h"
 #include "sql_parser/pg_merge_parser.h"
 
 namespace sql_parser {
@@ -20,9 +19,8 @@ template <Dialect D>
 class InsertParser {
 public:
     InsertParser(Tokenizer<D>& tokenizer, Arena& arena, bool is_replace = false)
-        : tok_(tokenizer), arena_(arena), expr_parser_(tokenizer, arena),
-          table_ref_parser_(tokenizer, arena, expr_parser_),
-          is_replace_(is_replace) {}
+        : tok_(tokenizer), arena_(arena), expr_parser_(tokenizer, arena, D == Dialect::MySQL),
+          table_ref_parser_(tokenizer, arena, expr_parser_), is_replace_(is_replace) {}
 
     void set_subquery_callback(SubqueryParseCallback<D> cb) {
         subquery_cb_ = cb;
@@ -30,108 +28,71 @@ public:
         table_ref_parser_.set_subquery_callback(cb);
     }
 
-    // Parse INSERT/REPLACE statement (INSERT/REPLACE keyword already consumed).
+    // INSERT/REPLACE keyword already consumed.
     AstNode* parse() {
-        if constexpr (D == Dialect::PostgreSQL)
+        if constexpr (D == Dialect::PostgreSQL) {
             return PgDmlParser(tok_, arena_, subquery_cb_).insert();
-        AstNode* root = make_node(arena_, NodeType::NODE_INSERT_STMT, {},
-                                  is_replace_ ? FLAG_REPLACE : uint16_t(0));
-        if (!root) return nullptr;
+        } else {
+            auto* root = make_node(arena_, NodeType::NODE_INSERT_STMT, {},
+                                   is_replace_ ? FLAG_REPLACE : uint16_t(0));
+            if (!root) return error();
+            if (auto* options = parse_stmt_options()) root->add_child(options);
+            take(TokenType::TK_INTO);
 
-        // MySQL options: [LOW_PRIORITY | DELAYED | HIGH_PRIORITY] [IGNORE]
-        if constexpr (D == Dialect::MySQL) {
-            AstNode* opts = parse_stmt_options();
-            if (opts) root->add_child(opts);
-        }
-
-        // Optional INTO keyword
-        if (tok_.peek().type == TokenType::TK_INTO) {
-            tok_.skip();
-        }
-
-        // Table reference
-        AstNode* table_ref = table_ref_parser_.parse_table_reference();
-        if (table_ref) root->add_child(table_ref);
-
-        // Check for column list or go straight to data source
-        // Column list: (col1, col2, ...)
-        // Need to distinguish (col_list) from VALUES (row) — peek ahead
-        if (tok_.peek().type == TokenType::TK_LPAREN) {
-            // Could be column list or VALUES row without VALUES keyword
-            // If VALUES/SET/SELECT/DEFAULT follows later, this is a column list
-            // Heuristic: peek inside the parens — if followed by VALUES/SET/SELECT/DEFAULT/ON/RETURNING/;/EOF, it's columns
-            // Actually: column list is (identifiers), VALUES clause has VALUES keyword before parens
-            // So if next is LPAREN and it's NOT preceded by VALUES, it's the column list
-            if (tok_.peek().type == TokenType::TK_LPAREN &&
-                !is_values_next()) {
-                AstNode* cols = parse_column_list();
-                if (cols) root->add_child(cols);
+            // INSERT targets are table_ident, not SELECT table references:
+            // no target alias, join, derived table or index hint is permitted.
+            auto* target = make_node(arena_, NodeType::NODE_TABLE_REF);
+            auto* name = parse_name(2);
+            if (!target || !name) return error();
+            target->add_child(name);
+            if (tok_.peek().type == TokenType::TK_PARTITION) {
+                auto* partition = table_ref_parser_.parse_mysql_partition_selection();
+                if (!partition) return error();
+                target->add_child(partition);
             }
-        }
+            root->add_child(target);
 
-        // Data source: VALUES | SELECT | SET | DEFAULT VALUES
-        Token next = tok_.peek();
-        if (next.type == TokenType::TK_VALUES) {
-            tok_.skip();
-            AstNode* values = parse_values_clause();
-            if (values) root->add_child(values);
-        } else if (next.type == TokenType::TK_SELECT) {
-            // INSERT ... SELECT
-            tok_.skip();  // consume SELECT
-            SelectParser<D> select_parser(tok_, arena_);
-            AstNode* select = select_parser.parse();
-            if (select) root->add_child(select);
-        } else if constexpr (D == Dialect::MySQL) {
-            if (next.type == TokenType::TK_SET) {
-                tok_.skip();
-                AstNode* set_clause = parse_insert_set_clause();
-                if (set_clause) root->add_child(set_clause);
+            bool columns = false;
+            if (tok_.peek().type == TokenType::TK_LPAREN && !query_source_start()) {
+                auto* list = parse_column_list();
+                if (!list) return error();
+                root->add_child(list);
+                columns = true;
             }
-        }
-        if constexpr (D == Dialect::PostgreSQL) {
-            if (next.type == TokenType::TK_DEFAULT) {
-                tok_.skip();  // consume DEFAULT
-                if (tok_.peek().type == TokenType::TK_VALUES) {
-                    tok_.skip();  // consume VALUES
-                    // Store as a VALUES clause with no rows (signals DEFAULT VALUES)
-                    AstNode* values = make_node(arena_, NodeType::NODE_VALUES_CLAUSE,
-                                                StringRef{"DEFAULT VALUES", 14});
-                    root->add_child(values);
-                }
-            }
-        }
 
-        // MySQL: ON DUPLICATE KEY UPDATE
-        if constexpr (D == Dialect::MySQL) {
-            if (tok_.peek().type == TokenType::TK_ON) {
-                AstNode* odku = parse_on_duplicate_key();
-                if (odku) root->add_child(odku);
-            }
-        }
+            bool alias_allowed = false;
+            AstNode* source = nullptr;
+            if (query_source_start()) {
+                if (!subquery_cb_) return error();
+                source = subquery_cb_(tok_, arena_);
+            } else if (take(TokenType::TK_VALUES) || take_word("VALUE")) {
+                source = parse_values_clause();
+                alias_allowed = !is_replace_;
+            } else if (!columns && take(TokenType::TK_SET)) {
+                source = parse_assignments(NodeType::NODE_INSERT_SET_CLAUSE);
+                alias_allowed = !is_replace_;
+            } else return error();
+            if (!source) return error();
+            root->add_child(source);
 
-        // PostgreSQL: ON CONFLICT ... and RETURNING
-        if constexpr (D == Dialect::PostgreSQL) {
-            if (tok_.peek().type == TokenType::TK_ON) {
-                AstNode* oc = parse_on_conflict();
-                if (oc) root->add_child(oc);
+            if (take(TokenType::TK_AS)) {
+                if (!alias_allowed) return error();
+                auto* alias = parse_values_reference();
+                if (!alias) return error();
+                root->add_child(alias);
             }
-            if (tok_.peek().type == TokenType::TK_RETURNING) {
-                AstNode* ret = parse_returning();
-                if (ret) root->add_child(ret);
+            if (take(TokenType::TK_ON)) {
+                if (is_replace_ || !take(TokenType::TK_DUPLICATE) ||
+                    !take(TokenType::TK_KEY) || !take(TokenType::TK_UPDATE)) return error();
+                auto* updates = parse_assignments(NodeType::NODE_ON_DUPLICATE_KEY);
+                if (!updates) return error();
+                root->add_child(updates);
             }
+            return expr_parser_.has_operand_error() ? error() : root;
         }
-
-        return root;
     }
 
 private:
-    AstNode* make_identifier(const Token& token, NodeType type = NodeType::NODE_IDENTIFIER) {
-        AstNode* node = make_node_from_token(arena_, type, token);
-        if (node && token.type == TokenType::TK_IDENTIFIER && token.source.ptr != token.text.ptr)
-            node->flags |= FLAG_IDENT_DELIMITED;
-        return node;
-    }
-
     Tokenizer<D>& tok_;
     Arena& arena_;
     ExpressionParser<D> expr_parser_;
@@ -139,320 +100,157 @@ private:
     bool is_replace_;
     SubqueryParseCallback<D> subquery_cb_ = nullptr;
 
-    // Check if we're looking at a VALUES keyword (not a column list paren)
-    bool is_values_next() {
-        // The LPAREN is for column list, not VALUES row
-        // This is only called when we see LPAREN and need to decide
-        // A column list is always followed by VALUES/SET/SELECT/DEFAULT
-        // Actually the approach is simpler: if the next token is LPAREN
-        // and the token before was the table ref (no VALUES keyword yet),
-        // it's the column list.
-        return false;  // caller only calls this when peeking at LPAREN
+    AstNode* error() { return expr_parser_.syntax_error(); }
+
+    bool take(TokenType type) {
+        if (tok_.peek().type != type) return false;
+        tok_.skip(); return true;
     }
 
-    // Parse MySQL options: LOW_PRIORITY, DELAYED, HIGH_PRIORITY, IGNORE
+    bool take_word(std::string_view word) {
+        if (!ExpressionParser<D>::keyword(tok_.peek(), word)) return false;
+        tok_.skip(); return true;
+    }
+
+    // Only inspect the leading keyword here: an INSERT query may end before
+    // ON DUPLICATE KEY, which is not a general subquery boundary. The query
+    // parser still validates every group and its complete contents.
+    bool query_source_start() {
+        auto look = tok_;
+        while (look.peek().type == TokenType::TK_LPAREN) look.skip();
+        return ExpressionParser<D>::starts_query(look);
+    }
+
+    AstNode* identifier(const Token& token) {
+        auto* node = make_node_from_token(arena_, NodeType::NODE_IDENTIFIER, token);
+        if (node && token.source.ptr != token.text.ptr) node->flags |= FLAG_IDENT_DELIMITED;
+        return node;
+    }
+
+    // Native ident uses keyword rules only on the leading name component.
+    AstNode* parse_name(unsigned maximum) {
+        Token first = tok_.next_token();
+        if (!mysql_identifier_token(first) || mysql_charset_introducer(first)) return error();
+        auto* name = identifier(first);
+        if (!name) return error();
+        if (tok_.peek().type != TokenType::TK_DOT) return name;
+        auto* qualified = make_node(arena_, NodeType::NODE_QUALIFIED_NAME);
+        if (!qualified) return error();
+        qualified->add_child(name);
+        unsigned parts = 1;
+        while (take(TokenType::TK_DOT)) {
+            Token component = tok_.next_token();
+            if (++parts > maximum || !mysql_identifier_word(component)) return error();
+            auto* child = identifier(component);
+            if (!child) return error();
+            qualified->add_child(child);
+        }
+        return qualified;
+    }
+
     AstNode* parse_stmt_options() {
-        AstNode* opts = nullptr;
-        while (true) {
-            Token t = tok_.peek();
-            if (t.type == TokenType::TK_LOW_PRIORITY ||
-                t.type == TokenType::TK_DELAYED ||
-                t.type == TokenType::TK_HIGH_PRIORITY ||
-                t.type == TokenType::TK_IGNORE) {
-                if (!opts) opts = make_node(arena_, NodeType::NODE_STMT_OPTIONS);
-                tok_.skip();
-                opts->add_child(make_node(arena_, NodeType::NODE_IDENTIFIER, t.text));
-            } else {
-                break;
-            }
+        auto type = tok_.peek().type;
+        AstNode* options = nullptr;
+        if (type == TokenType::TK_LOW_PRIORITY || type == TokenType::TK_DELAYED ||
+            (!is_replace_ && type == TokenType::TK_HIGH_PRIORITY)) {
+            options = make_node(arena_, NodeType::NODE_STMT_OPTIONS);
+            if (!options) return error();
+            auto* option = identifier(tok_.next_token());
+            if (!option) return error();
+            options->add_child(option);
         }
-        return opts;
+        if (!is_replace_ && tok_.peek().type == TokenType::TK_IGNORE) {
+            if (!options) options = make_node(arena_, NodeType::NODE_STMT_OPTIONS);
+            if (!options) return error();
+            auto* option = identifier(tok_.next_token());
+            if (!option) return error();
+            options->add_child(option);
+        }
+        return options;
     }
 
-    // Parse column list: (col1, col2, ...)
     AstNode* parse_column_list() {
-        AstNode* cols = make_node(arena_, NodeType::NODE_INSERT_COLUMNS);
-        if (!cols) return nullptr;
-
-        if (tok_.peek().type == TokenType::TK_LPAREN) {
-            tok_.skip();  // consume (
-            while (true) {
-                Token col = tok_.next_token();
-                cols->add_child(make_identifier(col));
-                if (tok_.peek().type == TokenType::TK_COMMA) {
-                    tok_.skip();
-                } else {
-                    break;
-                }
-            }
-            if (tok_.peek().type == TokenType::TK_RPAREN) {
-                tok_.skip();  // consume )
-            }
-        }
-        return cols;
+        tok_.skip(); // (
+        auto* list = make_node(arena_, NodeType::NODE_INSERT_COLUMNS);
+        if (!list) return error();
+        if (take(TokenType::TK_RPAREN)) return list; // native empty target list
+        do {
+            auto* column = parse_name(3);
+            if (!column) return error();
+            list->add_child(column);
+        } while (take(TokenType::TK_COMMA));
+        return take(TokenType::TK_RPAREN) ? list : error();
     }
 
-    // Parse VALUES clause: (row1), (row2), ...
     AstNode* parse_values_clause() {
-        AstNode* values = make_node(arena_, NodeType::NODE_VALUES_CLAUSE);
-        if (!values) return nullptr;
-
-        while (true) {
-            AstNode* row = parse_values_row();
-            if (row) values->add_child(row);
-            if (tok_.peek().type == TokenType::TK_COMMA) {
-                tok_.skip();
-            } else {
-                break;
+        auto* values = make_node(arena_, NodeType::NODE_VALUES_CLAUSE);
+        if (!values) return error();
+        do {
+            if (!take(TokenType::TK_LPAREN)) return error();
+            auto* row = make_node(arena_, NodeType::NODE_VALUES_ROW);
+            if (!row) return error();
+            if (!take(TokenType::TK_RPAREN)) {
+                do {
+                    auto* value = expr_parser_.parse_complete();
+                    if (!value || !mysql_value_expression(value, true)) return error();
+                    row->add_child(value);
+                } while (take(TokenType::TK_COMMA));
+                if (!take(TokenType::TK_RPAREN)) return error();
             }
-        }
+            values->add_child(row);
+        } while (take(TokenType::TK_COMMA));
         return values;
     }
 
-    // Parse a single values row: (expr, expr, ...)
-    AstNode* parse_values_row() {
-        AstNode* row = make_node(arena_, NodeType::NODE_VALUES_ROW);
-        if (!row) return nullptr;
-
-        if (tok_.peek().type == TokenType::TK_LPAREN) {
-            tok_.skip();  // consume (
-            while (true) {
-                AstNode* val = expr_parser_.parse();
-                if (val) row->add_child(val);
-                if (tok_.peek().type == TokenType::TK_COMMA) {
-                    tok_.skip();
-                } else {
-                    break;
-                }
-            }
-            if (tok_.peek().type == TokenType::TK_RPAREN) {
-                tok_.skip();  // consume )
-            }
-        }
-        return row;
+    AstNode* parse_assignments(NodeType type) {
+        auto* list = make_node(arena_, type);
+        if (!list) return error();
+        do {
+            auto* item = make_node(arena_, NodeType::NODE_UPDATE_SET_ITEM);
+            auto* column = parse_name(3);
+            if (!item || !column || (!take(TokenType::TK_EQUAL) && !take(TokenType::TK_COLON_EQUAL)))
+                return error();
+            auto* value = expr_parser_.parse_complete();
+            if (!value || !mysql_value_expression(value, true)) return error();
+            item->add_child(column); item->add_child(value);
+            list->add_child(item);
+        } while (take(TokenType::TK_COMMA));
+        return list;
     }
 
-    // Parse MySQL SET form: col=val, col=val, ...
-    AstNode* parse_insert_set_clause() {
-        AstNode* set_clause = make_node(arena_, NodeType::NODE_INSERT_SET_CLAUSE);
-        if (!set_clause) return nullptr;
-
-        while (true) {
-            AstNode* item = parse_set_item();
-            if (item) set_clause->add_child(item);
-            if (tok_.peek().type == TokenType::TK_COMMA) {
-                tok_.skip();
-            } else {
-                break;
-            }
-        }
-        return set_clause;
+    // The native SYM_FN names shared by the pinned 8.4.8 and 9.7.2
+    // sql/lex.h tables become function tokens only with an adjacent '(' in
+    // default SQL mode. Whitespace, comments and quoting keep them identifiers.
+    bool function_token_alias(const Token& name) {
+        if (name.source.ptr != name.text.ptr || tok_.peek().type != TokenType::TK_LPAREN ||
+            name.source.ptr + name.source.len != tok_.peek().source.ptr) return false;
+        static constexpr std::string_view functions[] = {
+            "ADDDATE", "BIT_AND", "BIT_OR", "BIT_XOR", "CAST", "COUNT", "CURDATE", "CURTIME",
+            "DATE_ADD", "DATE_SUB", "EXTRACT", "GROUP_CONCAT", "JSON_OBJECTAGG", "JSON_ARRAYAGG",
+            "MAX", "MID", "MIN", "NOW", "POSITION", "SESSION_USER", "STD", "STDDEV", "STDDEV_POP",
+            "STDDEV_SAMP", "ST_COLLECT", "SUBDATE", "SUBSTR", "SUBSTRING", "SUM", "SYSDATE",
+            "SYSTEM_USER", "TRIM", "VARIANCE", "VAR_POP", "VAR_SAMP"
+        };
+        for (auto function : functions)
+            if (name.text.equals_ci(function.data(), function.size())) return true;
+        return false;
     }
 
-    // Parse a single col=expr pair
-    AstNode* parse_set_item() {
-        AstNode* item = make_node(arena_, NodeType::NODE_UPDATE_SET_ITEM);
-        if (!item) return nullptr;
-
-        // Column name (may be qualified: table.col)
-        Token col = tok_.next_token();
-        if (tok_.peek().type == TokenType::TK_DOT) {
-            tok_.skip();
-            Token actual_col = tok_.next_token();
-            AstNode* qname = make_node(arena_, NodeType::NODE_QUALIFIED_NAME);
-            qname->add_child(make_identifier(col));
-            qname->add_child(make_identifier(actual_col));
-            item->add_child(qname);
-        } else {
-            item->add_child(make_identifier(col, NodeType::NODE_COLUMN_REF));
+    AstNode* parse_values_reference() {
+        const Token first = tok_.peek();
+        auto* alias = make_node(arena_, NodeType::NODE_MYSQL_INSERT_ALIAS);
+        auto* name = parse_name(1);
+        if (!alias || !name || function_token_alias(first)) return error();
+        alias->add_child(name);
+        if (take(TokenType::TK_LPAREN)) {
+            do {
+                auto* column = parse_name(1);
+                if (!column) return error();
+                alias->add_child(column);
+            } while (take(TokenType::TK_COMMA));
+            if (!take(TokenType::TK_RPAREN)) return error();
         }
-
-        // = sign
-        if (tok_.peek().type == TokenType::TK_EQUAL) {
-            tok_.skip();
-        }
-
-        // Expression value
-        AstNode* val = expr_parser_.parse();
-        if (val) item->add_child(val);
-
-        return item;
-    }
-
-    // Parse MySQL ON DUPLICATE KEY UPDATE col=val, ...
-    AstNode* parse_on_duplicate_key() {
-        // Expect: ON DUPLICATE KEY UPDATE
-        if (tok_.peek().type != TokenType::TK_ON) return nullptr;
-        tok_.skip();  // ON
-
-        if (tok_.peek().type != TokenType::TK_DUPLICATE) return nullptr;
-        tok_.skip();  // DUPLICATE
-
-        if (tok_.peek().type != TokenType::TK_KEY) return nullptr;
-        tok_.skip();  // KEY
-
-        if (tok_.peek().type != TokenType::TK_UPDATE) return nullptr;
-        tok_.skip();  // UPDATE
-
-        AstNode* odku = make_node(arena_, NodeType::NODE_ON_DUPLICATE_KEY);
-        if (!odku) return nullptr;
-
-        // Parse SET items
-        while (true) {
-            AstNode* item = parse_set_item();
-            if (item) odku->add_child(item);
-            if (tok_.peek().type == TokenType::TK_COMMA) {
-                tok_.skip();
-            } else {
-                break;
-            }
-        }
-
-        return odku;
-    }
-
-    // Parse PostgreSQL ON CONFLICT ...
-    AstNode* parse_on_conflict() {
-        // Expect: ON CONFLICT
-        if (tok_.peek().type != TokenType::TK_ON) return nullptr;
-        tok_.skip();  // ON
-
-        if (tok_.peek().type != TokenType::TK_CONFLICT) return nullptr;
-        tok_.skip();  // CONFLICT
-
-        AstNode* oc = make_node(arena_, NodeType::NODE_ON_CONFLICT);
-        if (!oc) return nullptr;
-
-        // Optional conflict target: (cols) or ON CONSTRAINT name
-        if (tok_.peek().type == TokenType::TK_LPAREN) {
-            AstNode* target = parse_conflict_target_cols();
-            if (target) oc->add_child(target);
-        } else if (tok_.peek().type == TokenType::TK_ON) {
-            // ON CONSTRAINT name
-            AstNode* target = parse_conflict_target_constraint();
-            if (target) oc->add_child(target);
-        }
-
-        // DO UPDATE SET ... or DO NOTHING
-        if (tok_.peek().type == TokenType::TK_DO) {
-            AstNode* action = parse_conflict_action();
-            if (action) oc->add_child(action);
-        }
-
-        return oc;
-    }
-
-    // Parse conflict target: (col1, col2, ...)
-    AstNode* parse_conflict_target_cols() {
-        AstNode* target = make_node(arena_, NodeType::NODE_CONFLICT_TARGET);
-        if (!target) return nullptr;
-
-        tok_.skip();  // consume (
-        while (true) {
-            Token col = tok_.next_token();
-            target->add_child(make_identifier(col));
-            if (tok_.peek().type == TokenType::TK_COMMA) {
-                tok_.skip();
-            } else {
-                break;
-            }
-        }
-        if (tok_.peek().type == TokenType::TK_RPAREN) tok_.skip();
-
-        return target;
-    }
-
-    // Parse ON CONSTRAINT name
-    AstNode* parse_conflict_target_constraint() {
-        AstNode* target = make_node(arena_, NodeType::NODE_CONFLICT_TARGET,
-                                    StringRef{"ON CONSTRAINT", 13});
-        if (!target) return nullptr;
-
-        tok_.skip();  // ON
-        if (tok_.peek().type == TokenType::TK_CONSTRAINT) {
-            tok_.skip();  // CONSTRAINT
-        }
-        Token name = tok_.next_token();
-        target->add_child(make_identifier(name));
-
-        return target;
-    }
-
-    // Parse DO UPDATE SET ... WHERE ... or DO NOTHING
-    AstNode* parse_conflict_action() {
-        if (tok_.peek().type != TokenType::TK_DO) return nullptr;
-        tok_.skip();  // DO
-
-        AstNode* action = make_node(arena_, NodeType::NODE_CONFLICT_ACTION);
-        if (!action) return nullptr;
-
-        if (tok_.peek().type == TokenType::TK_NOTHING) {
-            tok_.skip();
-            action->set_value(StringRef{"NOTHING", 7});
-        } else if (tok_.peek().type == TokenType::TK_UPDATE) {
-            tok_.skip();  // UPDATE
-            action->set_value(StringRef{"UPDATE", 6});
-
-            if (tok_.peek().type == TokenType::TK_SET) {
-                tok_.skip();  // SET
-            }
-
-            // Parse SET items
-            while (true) {
-                AstNode* item = parse_set_item();
-                if (item) action->add_child(item);
-                if (tok_.peek().type == TokenType::TK_COMMA) {
-                    tok_.skip();
-                } else {
-                    break;
-                }
-            }
-
-            // Optional WHERE
-            if (tok_.peek().type == TokenType::TK_WHERE) {
-                tok_.skip();
-                AstNode* where = make_node(arena_, NodeType::NODE_WHERE_CLAUSE);
-                AstNode* expr = expr_parser_.parse();
-                if (expr) where->add_child(expr);
-                action->add_child(where);
-            }
-        }
-
-        return action;
-    }
-
-    // Parse PostgreSQL RETURNING expr_list
-    AstNode* parse_returning() {
-        if (tok_.peek().type != TokenType::TK_RETURNING) return nullptr;
-        tok_.skip();  // RETURNING
-
-        AstNode* ret = make_node(arena_, NodeType::NODE_RETURNING_CLAUSE);
-        if (!ret) return nullptr;
-
-        while (true) {
-            AstNode* expr = expr_parser_.parse();
-            if (!expr) break;
-            ret->add_child(expr);
-
-            // Check for optional alias
-            Token next = tok_.peek();
-            if (next.type == TokenType::TK_AS) {
-                tok_.skip();
-                Token alias_name = tok_.next_token();
-                AstNode* alias = make_node_from_token(arena_, NodeType::NODE_ALIAS, alias_name);
-                if (alias && alias_name.source.ptr != alias_name.text.ptr)
-                    alias->flags |= FLAG_IDENT_DELIMITED;
-                ret->add_child(alias);
-            }
-
-            if (tok_.peek().type == TokenType::TK_COMMA) {
-                tok_.skip();
-            } else {
-                break;
-            }
-        }
-
-        return ret;
+        return alias;
     }
 };
 

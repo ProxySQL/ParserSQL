@@ -194,6 +194,7 @@ private:
             case NodeType::NODE_MYSQL_CHARSET_LITERAL:
             case NodeType::NODE_MYSQL_COLLATE:
             case NodeType::NODE_MYSQL_CONVERT:
+            case NodeType::NODE_MYSQL_INSERT_ALIAS:
             case NodeType::NODE_MYSQL_EXTRACT:
             case NodeType::NODE_MYSQL_SUBSTRING:
             case NodeType::NODE_MYSQL_MATCH:

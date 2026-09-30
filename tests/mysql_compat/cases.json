@@ -218,10 +218,10 @@
           "kind": "grammar_anchor"
         }
       ],
-      "expected": "TRAILING_INPUT",
-      "known_gap": true,
-      "gap_note": "Relevant syntax is not fully consumed; inspect remaining input in report.",
-      "native_action": "explain"
+      "expected": "CHECKED",
+      "known_gap": false,
+      "native_action": "explain",
+      "expected_sql": "INSERT INTO t (id, n) VALUES (1, 2) AS new ON DUPLICATE KEY UPDATE n = new.n"
     },
     {
       "id": "partition",
@@ -5507,6 +5507,1334 @@
       "expected": "REJECTED",
       "known_gap": false,
       "native_action": "execute"
+    },
+    {
+      "id": "insert_alias_columns",
+      "sql": "INSERT INTO t (id,n) VALUES (1,2),(3,4) AS incoming (new_id,new_n) ON DUPLICATE KEY UPDATE n=incoming.new_n",
+      "validity": "valid",
+      "derivation": "hand-reduced syntax witness; source anchors identify relevant grammar, not verbatim MTR extraction",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 13357,
+          "excerpt": "opt_values_reference:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 13913,
+          "excerpt": "opt_values_reference:",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "CHECKED",
+      "known_gap": false,
+      "native_action": "explain",
+      "expected_sql": "INSERT INTO t (id, n) VALUES (1, 2), (3, 4) AS incoming (new_id, new_n) ON DUPLICATE KEY UPDATE n = incoming.new_n"
+    },
+    {
+      "id": "insert_alias_value",
+      "sql": "INSERT INTO t (id,n) VALUE (1,2) AS incoming",
+      "validity": "valid",
+      "derivation": "hand-reduced syntax witness; source anchors identify relevant grammar, not verbatim MTR extraction",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 13269,
+          "excerpt": "value_or_values:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 13825,
+          "excerpt": "value_or_values:",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "CHECKED",
+      "known_gap": false,
+      "native_action": "explain",
+      "expected_sql": "INSERT INTO t (id, n) VALUES (1, 2) AS incoming"
+    },
+    {
+      "id": "insert_alias_quoted",
+      "sql": "INSERT INTO t (`id`,`n`) VALUES (1,2) AS `select` (`from`,`where`) ON DUPLICATE KEY UPDATE `n`=`select`.`where`",
+      "validity": "valid",
+      "derivation": "hand-reduced syntax witness; source anchors identify relevant grammar, not verbatim MTR extraction",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 13357,
+          "excerpt": "opt_values_reference:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 13913,
+          "excerpt": "opt_values_reference:",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "CHECKED",
+      "known_gap": false,
+      "native_action": "explain",
+      "expected_sql": "INSERT INTO t (`id`, `n`) VALUES (1, 2) AS `select` (`from`, `where`) ON DUPLICATE KEY UPDATE `n` = `select`.`where`"
+    },
+    {
+      "id": "insert_alias_set",
+      "sql": "INSERT INTO t SET id=1,n=2 AS incoming (new_id,new_n) ON DUPLICATE KEY UPDATE n=new_n",
+      "validity": "valid",
+      "derivation": "hand-reduced syntax witness; source anchors identify relevant grammar, not verbatim MTR extraction",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 13357,
+          "excerpt": "opt_values_reference:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 13913,
+          "excerpt": "opt_values_reference:",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "CHECKED",
+      "known_gap": false,
+      "native_action": "explain",
+      "expected_sql": "INSERT INTO t SET id = 1, n = 2 AS incoming (new_id, new_n) ON DUPLICATE KEY UPDATE n = new_n"
+    },
+    {
+      "id": "insert_assignment_columns",
+      "sql": "INSERT INTO t SET t.id:=1,t.n=DEFAULT AS incoming ON DUPLICATE KEY UPDATE t.n:=incoming.n",
+      "validity": "valid",
+      "derivation": "hand-reduced syntax witness; source anchors identify relevant grammar, not verbatim MTR extraction",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 13430,
+          "excerpt": "update_elem:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 13986,
+          "excerpt": "update_elem:",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "CHECKED",
+      "known_gap": false,
+      "native_action": "explain",
+      "expected_sql": "INSERT INTO t SET t.id = 1, t.n = DEFAULT AS incoming ON DUPLICATE KEY UPDATE t.n = incoming.n"
+    },
+    {
+      "id": "insert_alias_partition",
+      "sql": "INSERT INTO pt PARTITION (p0) (id,n) VALUES (1,2) AS incoming ON DUPLICATE KEY UPDATE n=incoming.n",
+      "validity": "valid",
+      "derivation": "hand-reduced syntax witness; source anchors identify relevant grammar, not verbatim MTR extraction",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 13064,
+          "excerpt": "insert_stmt:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 13620,
+          "excerpt": "insert_stmt:",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "CHECKED",
+      "known_gap": false,
+      "native_action": "explain",
+      "expected_sql": "INSERT INTO pt PARTITION (p0) (id, n) VALUES (1, 2) AS incoming ON DUPLICATE KEY UPDATE n = incoming.n"
+    },
+    {
+      "id": "insert_query_union",
+      "sql": "INSERT INTO t (id,n) SELECT 1,2 UNION ALL SELECT 3,4",
+      "validity": "valid",
+      "derivation": "hand-reduced syntax witness; source anchors identify relevant grammar, not verbatim MTR extraction",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 13220,
+          "excerpt": "insert_query_expression:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 13776,
+          "excerpt": "insert_query_expression:",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "CHECKED",
+      "known_gap": false,
+      "native_action": "explain",
+      "expected_sql": "INSERT INTO t (id, n) SELECT 1, 2 UNION ALL SELECT 3, 4"
+    },
+    {
+      "id": "insert_query_parenthesized",
+      "sql": "INSERT INTO t (id,n) (SELECT 1,2)",
+      "validity": "valid",
+      "derivation": "hand-reduced syntax witness; source anchors identify relevant grammar, not verbatim MTR extraction",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 13220,
+          "excerpt": "insert_query_expression:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 13776,
+          "excerpt": "insert_query_expression:",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "CHECKED",
+      "known_gap": false,
+      "native_action": "explain",
+      "expected_sql": "INSERT INTO t (id, n) (SELECT 1, 2)"
+    },
+    {
+      "id": "insert_query_cte",
+      "sql": "INSERT INTO t (id,n) WITH c AS (SELECT 1 AS a,2 AS b) SELECT a,b FROM c",
+      "validity": "valid",
+      "derivation": "hand-reduced syntax witness; source anchors identify relevant grammar, not verbatim MTR extraction",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 13220,
+          "excerpt": "insert_query_expression:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 13776,
+          "excerpt": "insert_query_expression:",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "CHECKED",
+      "known_gap": false,
+      "native_action": "explain",
+      "expected_sql": "INSERT INTO t (id, n) WITH c AS (SELECT 1 AS a, 2 AS b) SELECT a, b FROM c"
+    },
+    {
+      "id": "insert_query_values_row",
+      "sql": "INSERT INTO t (id,n) VALUES ROW(1,2)",
+      "validity": "valid",
+      "derivation": "hand-reduced syntax witness; source anchors identify relevant grammar, not verbatim MTR extraction",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 13220,
+          "excerpt": "insert_query_expression:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 13776,
+          "excerpt": "insert_query_expression:",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "CHECKED",
+      "known_gap": false,
+      "native_action": "explain",
+      "expected_sql": "INSERT INTO t (id, n) VALUES ROW(1, 2)"
+    },
+    {
+      "id": "insert_query_table",
+      "sql": "INSERT INTO t (id,n) TABLE u",
+      "validity": "valid",
+      "derivation": "hand-reduced syntax witness; source anchors identify relevant grammar, not verbatim MTR extraction",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 13220,
+          "excerpt": "insert_query_expression:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 13776,
+          "excerpt": "insert_query_expression:",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "CHECKED",
+      "known_gap": false,
+      "native_action": "explain",
+      "expected_sql": "INSERT INTO t (id, n) TABLE u"
+    },
+    {
+      "id": "replace_value",
+      "sql": "REPLACE INTO t (id,n) VALUE (1,2)",
+      "validity": "valid",
+      "derivation": "hand-reduced syntax witness; source anchors identify relevant grammar, not verbatim MTR extraction",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 13122,
+          "excerpt": "replace_stmt:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 13678,
+          "excerpt": "replace_stmt:",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "CHECKED",
+      "known_gap": false,
+      "native_action": "explain",
+      "expected_sql": "REPLACE INTO t (id, n) VALUES (1, 2)"
+    },
+    {
+      "id": "insert_empty_constructor",
+      "sql": "INSERT INTO u () VALUES () AS incoming",
+      "validity": "valid",
+      "derivation": "hand-reduced syntax witness; source anchors identify relevant grammar, not verbatim MTR extraction",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 13323,
+          "excerpt": "opt_values:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 13879,
+          "excerpt": "opt_values:",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "CHECKED",
+      "known_gap": false,
+      "native_action": "explain",
+      "expected_sql": "INSERT INTO u () VALUES () AS incoming"
+    },
+    {
+      "id": "insert_alias_missing_as",
+      "sql": "INSERT INTO t (id,n) VALUES (1,2) incoming",
+      "validity": "invalid",
+      "derivation": "hand-written malformed control; source anchors identify the related required grammar",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 13357,
+          "excerpt": "opt_values_reference:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 13913,
+          "excerpt": "opt_values_reference:",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "REJECTED",
+      "known_gap": false,
+      "native_action": "explain"
+    },
+    {
+      "id": "insert_alias_missing_name",
+      "sql": "INSERT INTO t (id,n) VALUES (1,2) AS",
+      "validity": "invalid",
+      "derivation": "hand-written malformed control; source anchors identify the related required grammar",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 13357,
+          "excerpt": "opt_values_reference:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 13913,
+          "excerpt": "opt_values_reference:",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "REJECTED",
+      "known_gap": false,
+      "native_action": "explain"
+    },
+    {
+      "id": "insert_alias_empty_columns",
+      "sql": "INSERT INTO t (id,n) VALUES (1,2) AS incoming ()",
+      "validity": "invalid",
+      "derivation": "hand-written malformed control; source anchors identify the related required grammar",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 12382,
+          "excerpt": "opt_derived_column_list:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 12806,
+          "excerpt": "opt_derived_column_list:",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "REJECTED",
+      "known_gap": false,
+      "native_action": "explain"
+    },
+    {
+      "id": "insert_alias_trailing_columns",
+      "sql": "INSERT INTO t (id,n) VALUES (1,2) AS incoming (a,)",
+      "validity": "invalid",
+      "derivation": "hand-written malformed control; source anchors identify the related required grammar",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 12398,
+          "excerpt": "simple_ident_list:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 12822,
+          "excerpt": "simple_ident_list:",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "REJECTED",
+      "known_gap": false,
+      "native_action": "explain"
+    },
+    {
+      "id": "insert_alias_unclosed_columns",
+      "sql": "INSERT INTO t (id,n) VALUES (1,2) AS incoming (a,b",
+      "validity": "invalid",
+      "derivation": "hand-written malformed control; source anchors identify the related required grammar",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 12382,
+          "excerpt": "opt_derived_column_list:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 12806,
+          "excerpt": "opt_derived_column_list:",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "REJECTED",
+      "known_gap": false,
+      "native_action": "explain"
+    },
+    {
+      "id": "insert_alias_qualified_name",
+      "sql": "INSERT INTO t (id,n) VALUES (1,2) AS db.incoming",
+      "validity": "invalid",
+      "derivation": "hand-written malformed control; source anchors identify the related required grammar",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 13357,
+          "excerpt": "opt_values_reference:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 13913,
+          "excerpt": "opt_values_reference:",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "REJECTED",
+      "known_gap": false,
+      "native_action": "explain"
+    },
+    {
+      "id": "insert_alias_qualified_column",
+      "sql": "INSERT INTO t (id,n) VALUES (1,2) AS incoming (a,b.c)",
+      "validity": "invalid",
+      "derivation": "hand-written malformed control; source anchors identify the related required grammar",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 12398,
+          "excerpt": "simple_ident_list:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 12822,
+          "excerpt": "simple_ident_list:",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "REJECTED",
+      "known_gap": false,
+      "native_action": "explain"
+    },
+    {
+      "id": "insert_alias_string_name",
+      "sql": "INSERT INTO t (id,n) VALUES (1,2) AS 'incoming'",
+      "validity": "invalid",
+      "derivation": "hand-written malformed control; source anchors identify the related required grammar",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 13357,
+          "excerpt": "opt_values_reference:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 13913,
+          "excerpt": "opt_values_reference:",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "REJECTED",
+      "known_gap": false,
+      "native_action": "explain"
+    },
+    {
+      "id": "insert_alias_before_source",
+      "sql": "INSERT INTO t AS incoming (id,n) VALUES (1,2)",
+      "validity": "invalid",
+      "derivation": "hand-written malformed control; source anchors identify the related required grammar",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 13064,
+          "excerpt": "insert_stmt:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 13620,
+          "excerpt": "insert_stmt:",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "REJECTED",
+      "known_gap": false,
+      "native_action": "explain"
+    },
+    {
+      "id": "insert_alias_between_rows",
+      "sql": "INSERT INTO t (id,n) VALUES (1,2) AS incoming,(3,4)",
+      "validity": "invalid",
+      "derivation": "hand-written malformed control; source anchors identify the related required grammar",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 13274,
+          "excerpt": "values_list:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 13830,
+          "excerpt": "values_list:",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "REJECTED",
+      "known_gap": false,
+      "native_action": "explain"
+    },
+    {
+      "id": "insert_alias_after_odku",
+      "sql": "INSERT INTO t (id,n) VALUES (1,2) ON DUPLICATE KEY UPDATE n=3 AS incoming",
+      "validity": "invalid",
+      "derivation": "hand-written malformed control; source anchors identify the related required grammar",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 13357,
+          "excerpt": "opt_values_reference:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 13913,
+          "excerpt": "opt_values_reference:",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "REJECTED",
+      "known_gap": false,
+      "native_action": "explain"
+    },
+    {
+      "id": "replace_alias_values",
+      "sql": "REPLACE INTO t (id,n) VALUES (1,2) AS incoming",
+      "validity": "invalid",
+      "derivation": "hand-written malformed control; source anchors identify the related required grammar",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 13122,
+          "excerpt": "replace_stmt:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 13678,
+          "excerpt": "replace_stmt:",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "REJECTED",
+      "known_gap": false,
+      "native_action": "explain"
+    },
+    {
+      "id": "replace_alias_set",
+      "sql": "REPLACE INTO t SET id=1,n=2 AS incoming",
+      "validity": "invalid",
+      "derivation": "hand-written malformed control; source anchors identify the related required grammar",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 13122,
+          "excerpt": "replace_stmt:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 13678,
+          "excerpt": "replace_stmt:",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "REJECTED",
+      "known_gap": false,
+      "native_action": "explain"
+    },
+    {
+      "id": "replace_odku",
+      "sql": "REPLACE INTO t (id,n) VALUES (1,2) ON DUPLICATE KEY UPDATE n=3",
+      "validity": "invalid",
+      "derivation": "hand-written malformed control; source anchors identify the related required grammar",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 13122,
+          "excerpt": "replace_stmt:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 13678,
+          "excerpt": "replace_stmt:",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "REJECTED",
+      "known_gap": false,
+      "native_action": "explain"
+    },
+    {
+      "id": "insert_query_values_row_alias",
+      "sql": "INSERT INTO t (id,n) VALUES ROW(1,2) AS incoming",
+      "validity": "invalid",
+      "derivation": "hand-written malformed control; source anchors identify the related required grammar",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 13220,
+          "excerpt": "insert_query_expression:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 13776,
+          "excerpt": "insert_query_expression:",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "REJECTED",
+      "known_gap": false,
+      "native_action": "explain"
+    },
+    {
+      "id": "insert_query_parenthesized_alias",
+      "sql": "INSERT INTO t (id,n) (SELECT 1,2) AS incoming",
+      "validity": "invalid",
+      "derivation": "hand-written malformed control; source anchors identify the related required grammar",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 13220,
+          "excerpt": "insert_query_expression:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 13776,
+          "excerpt": "insert_query_expression:",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "REJECTED",
+      "known_gap": false,
+      "native_action": "explain"
+    },
+    {
+      "id": "insert_missing_source",
+      "sql": "INSERT INTO t",
+      "validity": "invalid",
+      "derivation": "hand-written malformed control; source anchors identify the related required grammar",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 13064,
+          "excerpt": "insert_stmt:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 13620,
+          "excerpt": "insert_stmt:",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "REJECTED",
+      "known_gap": false,
+      "native_action": "explain"
+    },
+    {
+      "id": "insert_values_missing_rows",
+      "sql": "INSERT INTO t (id,n) VALUES",
+      "validity": "invalid",
+      "derivation": "hand-written malformed control; source anchors identify the related required grammar",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 13274,
+          "excerpt": "values_list:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 13830,
+          "excerpt": "values_list:",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "REJECTED",
+      "known_gap": false,
+      "native_action": "explain"
+    },
+    {
+      "id": "insert_values_unclosed_row",
+      "sql": "INSERT INTO t (id,n) VALUES (1,2",
+      "validity": "invalid",
+      "derivation": "hand-written malformed control; source anchors identify the related required grammar",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 13315,
+          "excerpt": "row_value:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 13871,
+          "excerpt": "row_value:",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "REJECTED",
+      "known_gap": false,
+      "native_action": "explain"
+    },
+    {
+      "id": "insert_values_trailing_value",
+      "sql": "INSERT INTO t (id,n) VALUES (1,2,)",
+      "validity": "invalid",
+      "derivation": "hand-written malformed control; source anchors identify the related required grammar",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 13333,
+          "excerpt": "values:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 13889,
+          "excerpt": "values:",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "REJECTED",
+      "known_gap": false,
+      "native_action": "explain"
+    },
+    {
+      "id": "insert_values_trailing_row",
+      "sql": "INSERT INTO t (id,n) VALUES (1,2),",
+      "validity": "invalid",
+      "derivation": "hand-written malformed control; source anchors identify the related required grammar",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 13274,
+          "excerpt": "values_list:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 13830,
+          "excerpt": "values_list:",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "REJECTED",
+      "known_gap": false,
+      "native_action": "explain"
+    },
+    {
+      "id": "insert_set_missing_assignment",
+      "sql": "INSERT INTO t SET",
+      "validity": "invalid",
+      "derivation": "hand-written malformed control; source anchors identify the related required grammar",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 13411,
+          "excerpt": "update_list:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 13967,
+          "excerpt": "update_list:",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "REJECTED",
+      "known_gap": false,
+      "native_action": "explain"
+    },
+    {
+      "id": "insert_set_missing_value",
+      "sql": "INSERT INTO t SET id=",
+      "validity": "invalid",
+      "derivation": "hand-written malformed control; source anchors identify the related required grammar",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 13430,
+          "excerpt": "update_elem:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 13986,
+          "excerpt": "update_elem:",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "REJECTED",
+      "known_gap": false,
+      "native_action": "explain"
+    },
+    {
+      "id": "insert_set_trailing_assignment",
+      "sql": "INSERT INTO t SET id=1,",
+      "validity": "invalid",
+      "derivation": "hand-written malformed control; source anchors identify the related required grammar",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 13411,
+          "excerpt": "update_list:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 13967,
+          "excerpt": "update_list:",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "REJECTED",
+      "known_gap": false,
+      "native_action": "explain"
+    },
+    {
+      "id": "insert_set_expression_target",
+      "sql": "INSERT INTO t SET id+1=2",
+      "validity": "invalid",
+      "derivation": "hand-written malformed control; source anchors identify the related required grammar",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 13430,
+          "excerpt": "update_elem:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 13986,
+          "excerpt": "update_elem:",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "REJECTED",
+      "known_gap": false,
+      "native_action": "explain"
+    },
+    {
+      "id": "insert_odku_missing_assignment",
+      "sql": "INSERT INTO t (id,n) VALUES (1,2) AS incoming ON DUPLICATE KEY UPDATE",
+      "validity": "invalid",
+      "derivation": "hand-written malformed control; source anchors identify the related required grammar",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 13375,
+          "excerpt": "opt_insert_update_list:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 13931,
+          "excerpt": "opt_insert_update_list:",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "REJECTED",
+      "known_gap": false,
+      "native_action": "explain"
+    },
+    {
+      "id": "insert_odku_missing_value",
+      "sql": "INSERT INTO t (id,n) VALUES (1,2) AS incoming ON DUPLICATE KEY UPDATE n=",
+      "validity": "invalid",
+      "derivation": "hand-written malformed control; source anchors identify the related required grammar",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 13430,
+          "excerpt": "update_elem:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 13986,
+          "excerpt": "update_elem:",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "REJECTED",
+      "known_gap": false,
+      "native_action": "explain"
+    },
+    {
+      "id": "insert_odku_trailing_assignment",
+      "sql": "INSERT INTO t (id,n) VALUES (1,2) AS incoming ON DUPLICATE KEY UPDATE n=3,",
+      "validity": "invalid",
+      "derivation": "hand-written malformed control; source anchors identify the related required grammar",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 13411,
+          "excerpt": "update_list:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 13967,
+          "excerpt": "update_list:",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "REJECTED",
+      "known_gap": false,
+      "native_action": "explain"
+    },
+    {
+      "id": "insert_target_index_hint",
+      "sql": "INSERT INTO t USE INDEX (idx) (id,n) VALUES (1,2)",
+      "validity": "invalid",
+      "derivation": "hand-written malformed control; source anchors identify the related required grammar",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 13064,
+          "excerpt": "insert_stmt:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 13620,
+          "excerpt": "insert_stmt:",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "REJECTED",
+      "known_gap": false,
+      "native_action": "explain"
+    },
+    {
+      "id": "insert_columns_set",
+      "sql": "INSERT INTO t (id,n) SET id=1,n=2",
+      "validity": "invalid",
+      "derivation": "hand-written malformed control; source anchors identify the related required grammar",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 13064,
+          "excerpt": "insert_stmt:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 13620,
+          "excerpt": "insert_stmt:",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "REJECTED",
+      "known_gap": false,
+      "native_action": "explain"
+    },
+    {
+      "id": "insert_alias_escaped_names",
+      "sql": "INSERT INTO t(id,n) VALUES(1,2) AS `new``row`(`a`,`b``c`) ON DUPLICATE KEY UPDATE n=`new``row`.`b``c`",
+      "validity": "valid",
+      "derivation": "hand-reduced syntax witness; source anchors identify relevant grammar, not verbatim MTR extraction",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 13357,
+          "excerpt": "opt_values_reference:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 13913,
+          "excerpt": "opt_values_reference:",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "CHECKED",
+      "known_gap": false,
+      "native_action": "explain",
+      "expected_sql": "INSERT INTO t (id, n) VALUES (1, 2) AS `new``row` (`a`, `b``c`) ON DUPLICATE KEY UPDATE n = `new``row`.`b``c`"
+    },
+    {
+      "id": "insert_alias_count_spaced",
+      "sql": "INSERT INTO t(id,n) VALUES(1,2) AS count (a,b) ON DUPLICATE KEY UPDATE n=count.b",
+      "validity": "valid",
+      "derivation": "hand-reduced syntax witness; source anchors identify relevant grammar, not verbatim MTR extraction",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 13357,
+          "excerpt": "opt_values_reference:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 13913,
+          "excerpt": "opt_values_reference:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "8.4.8",
+          "path": "sql/lex.h",
+          "line": 826,
+          "excerpt": "{SYM_FN(\"COUNT\", COUNT_SYM)},",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/lex.h",
+          "line": 852,
+          "excerpt": "{SYM_FN(\"COUNT\", COUNT_SYM)},",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_lex.cc",
+          "line": 1580,
+          "excerpt": "if ((tokval = find_keyword(lip, length, c == '('))) {",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_lex.cc",
+          "line": 1631,
+          "excerpt": "if ((tokval = find_keyword(lip, length, c == '('))) {",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "CHECKED",
+      "known_gap": false,
+      "native_action": "explain",
+      "expected_sql": "INSERT INTO t (id, n) VALUES (1, 2) AS count (a, b) ON DUPLICATE KEY UPDATE n = count.b"
+    },
+    {
+      "id": "insert_alias_count_adjacent",
+      "sql": "INSERT INTO t(id,n) VALUES(1,2) AS count(a,b) ON DUPLICATE KEY UPDATE n=count.b",
+      "validity": "invalid",
+      "derivation": "hand-written malformed control; source anchors identify the related required grammar",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 13357,
+          "excerpt": "opt_values_reference:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 13913,
+          "excerpt": "opt_values_reference:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "8.4.8",
+          "path": "sql/lex.h",
+          "line": 826,
+          "excerpt": "{SYM_FN(\"COUNT\", COUNT_SYM)},",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/lex.h",
+          "line": 852,
+          "excerpt": "{SYM_FN(\"COUNT\", COUNT_SYM)},",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_lex.cc",
+          "line": 1580,
+          "excerpt": "if ((tokval = find_keyword(lip, length, c == '('))) {",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_lex.cc",
+          "line": 1631,
+          "excerpt": "if ((tokval = find_keyword(lip, length, c == '('))) {",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "REJECTED",
+      "known_gap": false,
+      "native_action": "explain"
+    },
+    {
+      "id": "insert_alias_max_spaced",
+      "sql": "INSERT INTO t(id,n) VALUES(1,2) AS max (a,b) ON DUPLICATE KEY UPDATE n=max.b",
+      "validity": "valid",
+      "derivation": "hand-reduced syntax witness; source anchors identify relevant grammar, not verbatim MTR extraction",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 13357,
+          "excerpt": "opt_values_reference:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 13913,
+          "excerpt": "opt_values_reference:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "8.4.8",
+          "path": "sql/lex.h",
+          "line": 835,
+          "excerpt": "{SYM_FN(\"MAX\", MAX_SYM)},",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/lex.h",
+          "line": 862,
+          "excerpt": "{SYM_FN(\"MAX\", MAX_SYM)},",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_lex.cc",
+          "line": 1580,
+          "excerpt": "if ((tokval = find_keyword(lip, length, c == '('))) {",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_lex.cc",
+          "line": 1631,
+          "excerpt": "if ((tokval = find_keyword(lip, length, c == '('))) {",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "CHECKED",
+      "known_gap": false,
+      "native_action": "explain",
+      "expected_sql": "INSERT INTO t (id, n) VALUES (1, 2) AS max (a, b) ON DUPLICATE KEY UPDATE n = max.b"
+    },
+    {
+      "id": "insert_alias_max_adjacent",
+      "sql": "INSERT INTO t(id,n) VALUES(1,2) AS max(a,b) ON DUPLICATE KEY UPDATE n=max.b",
+      "validity": "invalid",
+      "derivation": "hand-written malformed control; source anchors identify the related required grammar",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 13357,
+          "excerpt": "opt_values_reference:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 13913,
+          "excerpt": "opt_values_reference:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "8.4.8",
+          "path": "sql/lex.h",
+          "line": 835,
+          "excerpt": "{SYM_FN(\"MAX\", MAX_SYM)},",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/lex.h",
+          "line": 862,
+          "excerpt": "{SYM_FN(\"MAX\", MAX_SYM)},",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_lex.cc",
+          "line": 1580,
+          "excerpt": "if ((tokval = find_keyword(lip, length, c == '('))) {",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_lex.cc",
+          "line": 1631,
+          "excerpt": "if ((tokval = find_keyword(lip, length, c == '('))) {",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "REJECTED",
+      "known_gap": false,
+      "native_action": "explain"
     }
   ]
 }
