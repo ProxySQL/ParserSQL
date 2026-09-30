@@ -14826,6 +14826,4120 @@
       "native_action": "ddl",
       "native_fixture_sql": "CREATE TABLE original(n INT PRIMARY KEY); INSERT INTO original VALUES(1),(2);",
       "expected_sql": "CREATE TABLE t REPLACE AS SELECT /*+ QB_NAME(q) */ 1 AS n"
+    },
+    {
+      "id": "create_partition_hash",
+      "sql": "CREATE TABLE t (id INT, region INT) PARTITION BY HASH (id)",
+      "validity": "valid",
+      "derivation": "hand-reduced syntax witness; source anchors identify relevant grammar, not verbatim MTR extraction",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 6130,
+          "excerpt": "partition_clause:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 6138,
+          "excerpt": "part_type_def:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 6277,
+          "excerpt": "partition_clause:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 6285,
+          "excerpt": "part_type_def:",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "CHECKED",
+      "known_gap": false,
+      "native_action": "ddl",
+      "expected_sql": "CREATE TABLE t (id INT, region INT) PARTITION BY HASH (id)"
+    },
+    {
+      "id": "create_partition_linear_hash",
+      "sql": "CREATE TABLE t (id INT, region INT) PARTITION BY LINEAR HASH (id + 1) PARTITIONS 4",
+      "validity": "valid",
+      "derivation": "hand-reduced syntax witness; source anchors identify relevant grammar, not verbatim MTR extraction",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 6130,
+          "excerpt": "partition_clause:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 6138,
+          "excerpt": "part_type_def:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 6188,
+          "excerpt": "opt_num_parts:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 6277,
+          "excerpt": "partition_clause:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 6285,
+          "excerpt": "part_type_def:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 6335,
+          "excerpt": "opt_num_parts:",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "CHECKED",
+      "known_gap": false,
+      "native_action": "ddl",
+      "expected_sql": "CREATE TABLE t (id INT, region INT) PARTITION BY LINEAR HASH (id + 1) PARTITIONS 4"
+    },
+    {
+      "id": "create_partition_key_empty",
+      "sql": "CREATE TABLE t (id INT, region INT) PARTITION BY KEY ()",
+      "validity": "valid",
+      "derivation": "hand-reduced syntax witness; source anchors identify relevant grammar, not verbatim MTR extraction",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 6130,
+          "excerpt": "partition_clause:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 6138,
+          "excerpt": "part_type_def:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 6277,
+          "excerpt": "partition_clause:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 6285,
+          "excerpt": "part_type_def:",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "CHECKED",
+      "known_gap": false,
+      "native_action": "ddl",
+      "expected_sql": "CREATE TABLE t (id INT, region INT) PARTITION BY KEY ()"
+    },
+    {
+      "id": "create_partition_linear_key_algorithm",
+      "sql": "CREATE TABLE t (id INT, region INT) PARTITION BY LINEAR KEY ALGORITHM = 1 (id, region) PARTITIONS 4",
+      "validity": "valid",
+      "derivation": "hand-reduced syntax witness; source anchors identify relevant grammar, not verbatim MTR extraction",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 6130,
+          "excerpt": "partition_clause:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 6138,
+          "excerpt": "part_type_def:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 6170,
+          "excerpt": "opt_key_algo:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 6277,
+          "excerpt": "partition_clause:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 6285,
+          "excerpt": "part_type_def:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 6317,
+          "excerpt": "opt_key_algo:",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "CHECKED",
+      "known_gap": false,
+      "native_action": "ddl",
+      "expected_sql": "CREATE TABLE t (id INT, region INT) PARTITION BY LINEAR KEY ALGORITHM = 1 (id, region) PARTITIONS 4"
+    },
+    {
+      "id": "create_partition_key_hex_count",
+      "sql": "CREATE TABLE t (id INT, region INT) PARTITION BY KEY ALGORITHM = 2 (`id`) PARTITIONS 0x04",
+      "validity": "valid",
+      "derivation": "hand-reduced syntax witness; source anchors identify relevant grammar, not verbatim MTR extraction",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 6130,
+          "excerpt": "partition_clause:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 6138,
+          "excerpt": "part_type_def:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 12635,
+          "excerpt": "real_ulong_num:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 6277,
+          "excerpt": "partition_clause:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 6285,
+          "excerpt": "part_type_def:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 13105,
+          "excerpt": "real_ulong_num:",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "CHECKED",
+      "known_gap": false,
+      "native_action": "ddl",
+      "expected_sql": "CREATE TABLE t (id INT, region INT) PARTITION BY KEY ALGORITHM = 2 (`id`) PARTITIONS 0x04"
+    },
+    {
+      "id": "create_partition_key_hex_literals",
+      "sql": "CREATE TABLE t (id INT, region INT) PARTITION BY KEY ALGORITHM = X'01' (id) PARTITIONS X'04'",
+      "validity": "valid",
+      "derivation": "hand-reduced syntax witness; source anchors identify relevant grammar, not verbatim MTR extraction",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 6130,
+          "excerpt": "partition_clause:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 6138,
+          "excerpt": "part_type_def:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 12635,
+          "excerpt": "real_ulong_num:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 6277,
+          "excerpt": "partition_clause:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 6285,
+          "excerpt": "part_type_def:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 13105,
+          "excerpt": "real_ulong_num:",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "CHECKED",
+      "known_gap": false,
+      "native_action": "ddl",
+      "expected_sql": "CREATE TABLE t (id INT, region INT) PARTITION BY KEY ALGORITHM = X'01' (id) PARTITIONS X'04'"
+    },
+    {
+      "id": "create_partition_range",
+      "sql": "CREATE TABLE t (id INT, region INT) PARTITION BY RANGE (id) (PARTITION p0 VALUES LESS THAN (10), PARTITION p1 VALUES LESS THAN MAXVALUE)",
+      "validity": "valid",
+      "derivation": "hand-reduced syntax witness; source anchors identify relevant grammar, not verbatim MTR extraction",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 6130,
+          "excerpt": "partition_clause:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 6138,
+          "excerpt": "part_type_def:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 6295,
+          "excerpt": "part_func_max:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 6277,
+          "excerpt": "partition_clause:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 6285,
+          "excerpt": "part_type_def:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 6442,
+          "excerpt": "part_func_max:",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "CHECKED",
+      "known_gap": false,
+      "native_action": "ddl",
+      "expected_sql": "CREATE TABLE t (id INT, region INT) PARTITION BY RANGE (id) (PARTITION p0 VALUES LESS THAN (10), PARTITION p1 VALUES LESS THAN MAXVALUE)"
+    },
+    {
+      "id": "create_partition_range_columns",
+      "sql": "CREATE TABLE t (id INT, region INT) PARTITION BY RANGE COLUMNS (id, region) (PARTITION p0 VALUES LESS THAN (10, MAXVALUE))",
+      "validity": "valid",
+      "derivation": "hand-reduced syntax witness; source anchors identify relevant grammar, not verbatim MTR extraction",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 6130,
+          "excerpt": "partition_clause:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 6138,
+          "excerpt": "part_type_def:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 6360,
+          "excerpt": "part_value_item:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 6277,
+          "excerpt": "partition_clause:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 6285,
+          "excerpt": "part_type_def:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 6507,
+          "excerpt": "part_value_item:",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "CHECKED",
+      "known_gap": false,
+      "native_action": "ddl",
+      "expected_sql": "CREATE TABLE t (id INT, region INT) PARTITION BY RANGE COLUMNS (id, region) (PARTITION p0 VALUES LESS THAN (10, MAXVALUE))"
+    },
+    {
+      "id": "create_partition_list",
+      "sql": "CREATE TABLE t (id INT, region INT) PARTITION BY LIST (id) (PARTITION p0 VALUES IN (1, 2, NULL))",
+      "validity": "valid",
+      "derivation": "hand-reduced syntax witness; source anchors identify relevant grammar, not verbatim MTR extraction",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 6130,
+          "excerpt": "partition_clause:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 6138,
+          "excerpt": "part_type_def:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 6300,
+          "excerpt": "part_values_in:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 6277,
+          "excerpt": "partition_clause:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 6285,
+          "excerpt": "part_type_def:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 6447,
+          "excerpt": "part_values_in:",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "CHECKED",
+      "known_gap": false,
+      "native_action": "ddl",
+      "expected_sql": "CREATE TABLE t (id INT, region INT) PARTITION BY LIST (id) (PARTITION p0 VALUES IN (1, 2, NULL))"
+    },
+    {
+      "id": "create_partition_list_columns",
+      "sql": "CREATE TABLE t (id INT, region INT) PARTITION BY LIST COLUMNS (id, region) (PARTITION p0 VALUES IN ((1, 2), (3, 4)))",
+      "validity": "valid",
+      "derivation": "hand-reduced syntax witness; source anchors identify relevant grammar, not verbatim MTR extraction",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 6130,
+          "excerpt": "partition_clause:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 6138,
+          "excerpt": "part_type_def:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 6311,
+          "excerpt": "part_value_list:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 6277,
+          "excerpt": "partition_clause:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 6285,
+          "excerpt": "part_type_def:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 6458,
+          "excerpt": "part_value_list:",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "CHECKED",
+      "known_gap": false,
+      "native_action": "ddl",
+      "expected_sql": "CREATE TABLE t (id INT, region INT) PARTITION BY LIST COLUMNS (id, region) (PARTITION p0 VALUES IN ((1, 2), (3, 4)))"
+    },
+    {
+      "id": "create_partition_subpartition_hash",
+      "sql": "CREATE TABLE t (id INT, region INT) PARTITION BY RANGE (id) SUBPARTITION BY LINEAR HASH (region) SUBPARTITIONS 2 (PARTITION p0 VALUES LESS THAN (10))",
+      "validity": "valid",
+      "derivation": "hand-reduced syntax witness; source anchors identify relevant grammar, not verbatim MTR extraction",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 6130,
+          "excerpt": "partition_clause:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 6201,
+          "excerpt": "opt_sub_part:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 6237,
+          "excerpt": "opt_num_subparts:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 6277,
+          "excerpt": "partition_clause:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 6348,
+          "excerpt": "opt_sub_part:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 6384,
+          "excerpt": "opt_num_subparts:",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "CHECKED",
+      "known_gap": false,
+      "native_action": "ddl",
+      "expected_sql": "CREATE TABLE t (id INT, region INT) PARTITION BY RANGE (id) SUBPARTITION BY LINEAR HASH (region) SUBPARTITIONS 2 (PARTITION p0 VALUES LESS THAN (10))"
+    },
+    {
+      "id": "create_partition_subpartition_key",
+      "sql": "CREATE TABLE t (id INT, region INT) PARTITION BY RANGE (id) SUBPARTITION BY KEY ALGORITHM = 2 (region) SUBPARTITIONS 2 (PARTITION p0 VALUES LESS THAN (MAXVALUE))",
+      "validity": "valid",
+      "derivation": "hand-reduced syntax witness; source anchors identify relevant grammar, not verbatim MTR extraction",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 6130,
+          "excerpt": "partition_clause:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 6201,
+          "excerpt": "opt_sub_part:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 6170,
+          "excerpt": "opt_key_algo:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 6277,
+          "excerpt": "partition_clause:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 6348,
+          "excerpt": "opt_sub_part:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 6317,
+          "excerpt": "opt_key_algo:",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "CHECKED",
+      "known_gap": false,
+      "native_action": "ddl",
+      "expected_sql": "CREATE TABLE t (id INT, region INT) PARTITION BY RANGE (id) SUBPARTITION BY KEY ALGORITHM = 2 (region) SUBPARTITIONS 2 (PARTITION p0 VALUES LESS THAN (MAXVALUE))"
+    },
+    {
+      "id": "create_partition_definition_options",
+      "sql": "CREATE TABLE t (id INT, region INT) PARTITION BY HASH (id) (PARTITION `select` STORAGE ENGINE = 'InnoDB' NODEGROUP = 0 MAX_ROWS = 100 MIN_ROWS = 0 COMMENT = 'part')",
+      "validity": "valid",
+      "derivation": "hand-reduced syntax witness; source anchors identify relevant grammar, not verbatim MTR extraction",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 6130,
+          "excerpt": "partition_clause:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 6270,
+          "excerpt": "part_definition:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 6413,
+          "excerpt": "part_option:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 6277,
+          "excerpt": "partition_clause:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 6417,
+          "excerpt": "part_definition:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 6560,
+          "excerpt": "part_option:",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "CHECKED",
+      "known_gap": false,
+      "native_action": "ddl",
+      "expected_sql": "CREATE TABLE t (id INT, region INT) PARTITION BY HASH (id) (PARTITION `select` STORAGE ENGINE 'InnoDB' NODEGROUP 0 MAX_ROWS 100 MIN_ROWS 0 COMMENT 'part')"
+    },
+    {
+      "id": "create_partition_explicit_subpartitions",
+      "sql": "CREATE TABLE t (id INT, region INT) PARTITION BY RANGE (id) SUBPARTITION BY KEY (region) (PARTITION p0 VALUES LESS THAN (10) ENGINE = InnoDB (SUBPARTITION s0 COMMENT = 'first', SUBPARTITION 's1'), PARTITION p1 VALUES LESS THAN MAXVALUE (SUBPARTITION s2, SUBPARTITION s3))",
+      "validity": "valid",
+      "derivation": "hand-reduced syntax witness; source anchors identify relevant grammar, not verbatim MTR extraction",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 6130,
+          "excerpt": "partition_clause:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 6270,
+          "excerpt": "part_definition:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 6386,
+          "excerpt": "sub_part_definition:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 6277,
+          "excerpt": "partition_clause:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 6417,
+          "excerpt": "part_definition:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 6533,
+          "excerpt": "sub_part_definition:",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "CHECKED",
+      "known_gap": false,
+      "native_action": "ddl",
+      "expected_sql": "CREATE TABLE t (id INT, region INT) PARTITION BY RANGE (id) SUBPARTITION BY KEY (region) (PARTITION p0 VALUES LESS THAN (10) ENGINE InnoDB (SUBPARTITION s0 COMMENT 'first', SUBPARTITION 's1'), PARTITION p1 VALUES LESS THAN MAXVALUE (SUBPARTITION s2, SUBPARTITION s3))"
+    },
+    {
+      "id": "create_partition_bit_expression",
+      "sql": "CREATE TABLE t (id INT, region INT) PARTITION BY HASH (id | 1)",
+      "validity": "valid",
+      "derivation": "hand-reduced syntax witness; source anchors identify relevant grammar, not verbatim MTR extraction",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 6130,
+          "excerpt": "partition_clause:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 6138,
+          "excerpt": "part_type_def:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 6277,
+          "excerpt": "partition_clause:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 6285,
+          "excerpt": "part_type_def:",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "CHECKED",
+      "known_gap": false,
+      "native_action": "ddl",
+      "expected_sql": "CREATE TABLE t (id INT, region INT) PARTITION BY HASH (id | 1)"
+    },
+    {
+      "id": "create_partition_function_expression",
+      "sql": "CREATE TABLE t (id INT, region INT) PARTITION BY HASH (ABS(id) + 1)",
+      "validity": "valid",
+      "derivation": "hand-reduced syntax witness; source anchors identify relevant grammar, not verbatim MTR extraction",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 6130,
+          "excerpt": "partition_clause:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 6138,
+          "excerpt": "part_type_def:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 6277,
+          "excerpt": "partition_clause:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 6285,
+          "excerpt": "part_type_def:",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "CHECKED",
+      "known_gap": false,
+      "native_action": "ddl",
+      "expected_sql": "CREATE TABLE t (id INT, region INT) PARTITION BY HASH (ABS(id) + 1)"
+    },
+    {
+      "id": "create_partition_value_expression",
+      "sql": "CREATE TABLE t (id INT, region INT) PARTITION BY RANGE (id) (PARTITION p0 VALUES LESS THAN (1 + 2))",
+      "validity": "valid",
+      "derivation": "hand-reduced syntax witness; source anchors identify relevant grammar, not verbatim MTR extraction",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 6130,
+          "excerpt": "partition_clause:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 6360,
+          "excerpt": "part_value_item:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 6277,
+          "excerpt": "partition_clause:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 6507,
+          "excerpt": "part_value_item:",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "CHECKED",
+      "known_gap": false,
+      "native_action": "ddl",
+      "expected_sql": "CREATE TABLE t (id INT, region INT) PARTITION BY RANGE (id) (PARTITION p0 VALUES LESS THAN (1 + 2))"
+    },
+    {
+      "id": "create_partition_options_query",
+      "sql": "CREATE TABLE t (id INT) ENGINE = InnoDB PARTITION BY HASH (id) PARTITIONS 2 AS SELECT 1 AS id",
+      "validity": "valid",
+      "derivation": "hand-reduced syntax witness; source anchors identify relevant grammar, not verbatim MTR extraction",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 6071,
+          "excerpt": "opt_create_table_options_etc:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 6130,
+          "excerpt": "partition_clause:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 6218,
+          "excerpt": "opt_create_table_options_etc:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 6277,
+          "excerpt": "partition_clause:",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "CHECKED",
+      "known_gap": false,
+      "native_action": "ddl",
+      "expected_sql": "CREATE TABLE t (id INT) ENGINE InnoDB PARTITION BY HASH (id) PARTITIONS 2 AS SELECT 1 AS id"
+    },
+    {
+      "id": "create_partition_invalid_missing_method",
+      "sql": "CREATE TABLE t (id INT, region INT) PARTITION BY",
+      "validity": "invalid",
+      "derivation": "hand-reduced syntax witness; source anchors identify relevant grammar, not verbatim MTR extraction",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 6138,
+          "excerpt": "part_type_def:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 6285,
+          "excerpt": "part_type_def:",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "REJECTED",
+      "known_gap": false,
+      "native_action": "ddl"
+    },
+    {
+      "id": "create_partition_invalid_hash_empty",
+      "sql": "CREATE TABLE t (id INT, region INT) PARTITION BY HASH()",
+      "validity": "invalid",
+      "derivation": "hand-reduced syntax witness; source anchors identify relevant grammar, not verbatim MTR extraction",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 6138,
+          "excerpt": "part_type_def:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 6285,
+          "excerpt": "part_type_def:",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "REJECTED",
+      "known_gap": false,
+      "native_action": "ddl"
+    },
+    {
+      "id": "create_partition_invalid_hash_list",
+      "sql": "CREATE TABLE t (id INT, region INT) PARTITION BY HASH(id, region)",
+      "validity": "invalid",
+      "derivation": "hand-reduced syntax witness; source anchors identify relevant grammar, not verbatim MTR extraction",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 6138,
+          "excerpt": "part_type_def:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 6285,
+          "excerpt": "part_type_def:",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "REJECTED",
+      "known_gap": false,
+      "native_action": "ddl"
+    },
+    {
+      "id": "create_partition_invalid_hash_incomplete",
+      "sql": "CREATE TABLE t (id INT, region INT) PARTITION BY HASH(id +)",
+      "validity": "invalid",
+      "derivation": "hand-reduced syntax witness; source anchors identify relevant grammar, not verbatim MTR extraction",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 6138,
+          "excerpt": "part_type_def:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 6285,
+          "excerpt": "part_type_def:",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "REJECTED",
+      "known_gap": false,
+      "native_action": "ddl"
+    },
+    {
+      "id": "create_partition_invalid_linear_range",
+      "sql": "CREATE TABLE t (id INT, region INT) PARTITION BY LINEAR RANGE(id)",
+      "validity": "invalid",
+      "derivation": "hand-reduced syntax witness; source anchors identify relevant grammar, not verbatim MTR extraction",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 6138,
+          "excerpt": "part_type_def:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 6285,
+          "excerpt": "part_type_def:",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "REJECTED",
+      "known_gap": false,
+      "native_action": "ddl"
+    },
+    {
+      "id": "create_partition_invalid_columns_empty",
+      "sql": "CREATE TABLE t (id INT, region INT) PARTITION BY RANGE COLUMNS()",
+      "validity": "invalid",
+      "derivation": "hand-reduced syntax witness; source anchors identify relevant grammar, not verbatim MTR extraction",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 6138,
+          "excerpt": "part_type_def:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 6285,
+          "excerpt": "part_type_def:",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "REJECTED",
+      "known_gap": false,
+      "native_action": "ddl"
+    },
+    {
+      "id": "create_partition_invalid_key_literal",
+      "sql": "CREATE TABLE t (id INT, region INT) PARTITION BY KEY('id')",
+      "validity": "invalid",
+      "derivation": "hand-reduced syntax witness; source anchors identify relevant grammar, not verbatim MTR extraction",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 6138,
+          "excerpt": "part_type_def:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 6222,
+          "excerpt": "name_list:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 6285,
+          "excerpt": "part_type_def:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 6369,
+          "excerpt": "name_list:",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "REJECTED",
+      "known_gap": false,
+      "native_action": "ddl"
+    },
+    {
+      "id": "create_partition_invalid_key_algorithm_equal",
+      "sql": "CREATE TABLE t (id INT, region INT) PARTITION BY KEY ALGORITHM 1(id)",
+      "validity": "invalid",
+      "derivation": "hand-reduced syntax witness; source anchors identify relevant grammar, not verbatim MTR extraction",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 6170,
+          "excerpt": "opt_key_algo:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 6317,
+          "excerpt": "opt_key_algo:",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "REJECTED",
+      "known_gap": false,
+      "native_action": "ddl"
+    },
+    {
+      "id": "create_partition_invalid_key_algorithm_invalid",
+      "sql": "CREATE TABLE t (id INT, region INT) PARTITION BY KEY ALGORITHM=3(id)",
+      "validity": "invalid",
+      "derivation": "hand-reduced syntax witness; source anchors identify relevant grammar, not verbatim MTR extraction",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 6170,
+          "excerpt": "opt_key_algo:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 6317,
+          "excerpt": "opt_key_algo:",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "REJECTED",
+      "known_gap": false,
+      "native_action": "ddl"
+    },
+    {
+      "id": "create_partition_invalid_key_algorithm_decimal",
+      "sql": "CREATE TABLE t (id INT, region INT) PARTITION BY KEY ALGORITHM=1.0(id)",
+      "validity": "invalid",
+      "derivation": "hand-reduced syntax witness; source anchors identify relevant grammar, not verbatim MTR extraction",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 6170,
+          "excerpt": "opt_key_algo:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 12635,
+          "excerpt": "real_ulong_num:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 6317,
+          "excerpt": "opt_key_algo:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 13105,
+          "excerpt": "real_ulong_num:",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "REJECTED",
+      "known_gap": false,
+      "native_action": "ddl"
+    },
+    {
+      "id": "create_partition_invalid_count_missing",
+      "sql": "CREATE TABLE t (id INT, region INT) PARTITION BY HASH(id) PARTITIONS",
+      "validity": "invalid",
+      "derivation": "hand-reduced syntax witness; source anchors identify relevant grammar, not verbatim MTR extraction",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 6188,
+          "excerpt": "opt_num_parts:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 6335,
+          "excerpt": "opt_num_parts:",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "REJECTED",
+      "known_gap": false,
+      "native_action": "ddl"
+    },
+    {
+      "id": "create_partition_invalid_count_zero",
+      "sql": "CREATE TABLE t (id INT, region INT) PARTITION BY HASH(id) PARTITIONS 0",
+      "validity": "invalid",
+      "derivation": "hand-reduced syntax witness; source anchors identify relevant grammar, not verbatim MTR extraction",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 6188,
+          "excerpt": "opt_num_parts:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 6335,
+          "excerpt": "opt_num_parts:",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "REJECTED",
+      "known_gap": false,
+      "native_action": "ddl"
+    },
+    {
+      "id": "create_partition_invalid_count_negative",
+      "sql": "CREATE TABLE t (id INT, region INT) PARTITION BY HASH(id) PARTITIONS -1",
+      "validity": "invalid",
+      "derivation": "hand-reduced syntax witness; source anchors identify relevant grammar, not verbatim MTR extraction",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 6188,
+          "excerpt": "opt_num_parts:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 6335,
+          "excerpt": "opt_num_parts:",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "REJECTED",
+      "known_gap": false,
+      "native_action": "ddl"
+    },
+    {
+      "id": "create_partition_invalid_count_exponent",
+      "sql": "CREATE TABLE t (id INT, region INT) PARTITION BY HASH(id) PARTITIONS 2e0",
+      "validity": "invalid",
+      "derivation": "hand-reduced syntax witness; source anchors identify relevant grammar, not verbatim MTR extraction",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 6188,
+          "excerpt": "opt_num_parts:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 12635,
+          "excerpt": "real_ulong_num:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 6335,
+          "excerpt": "opt_num_parts:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 13105,
+          "excerpt": "real_ulong_num:",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "REJECTED",
+      "known_gap": false,
+      "native_action": "ddl"
+    },
+    {
+      "id": "create_partition_invalid_subpartition_range",
+      "sql": "CREATE TABLE t (id INT, region INT) PARTITION BY HASH(id) SUBPARTITION BY RANGE(region)",
+      "validity": "invalid",
+      "derivation": "hand-reduced syntax witness; source anchors identify relevant grammar, not verbatim MTR extraction",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 6201,
+          "excerpt": "opt_sub_part:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 6348,
+          "excerpt": "opt_sub_part:",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "REJECTED",
+      "known_gap": false,
+      "native_action": "ddl"
+    },
+    {
+      "id": "create_partition_invalid_subpartition_key_empty",
+      "sql": "CREATE TABLE t (id INT, region INT) PARTITION BY HASH(id) SUBPARTITION BY KEY()",
+      "validity": "invalid",
+      "derivation": "hand-reduced syntax witness; source anchors identify relevant grammar, not verbatim MTR extraction",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 6201,
+          "excerpt": "opt_sub_part:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 6348,
+          "excerpt": "opt_sub_part:",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "REJECTED",
+      "known_gap": false,
+      "native_action": "ddl"
+    },
+    {
+      "id": "create_partition_invalid_subpartition_count_zero",
+      "sql": "CREATE TABLE t (id INT, region INT) PARTITION BY HASH(id) SUBPARTITION BY HASH(region) SUBPARTITIONS 0",
+      "validity": "invalid",
+      "derivation": "hand-reduced syntax witness; source anchors identify relevant grammar, not verbatim MTR extraction",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 6237,
+          "excerpt": "opt_num_subparts:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 6384,
+          "excerpt": "opt_num_subparts:",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "REJECTED",
+      "known_gap": false,
+      "native_action": "ddl"
+    },
+    {
+      "id": "create_partition_invalid_definitions_empty",
+      "sql": "CREATE TABLE t (id INT, region INT) PARTITION BY HASH(id) ()",
+      "validity": "invalid",
+      "derivation": "hand-reduced syntax witness; source anchors identify relevant grammar, not verbatim MTR extraction",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 6250,
+          "excerpt": "opt_part_defs:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 6397,
+          "excerpt": "opt_part_defs:",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "REJECTED",
+      "known_gap": false,
+      "native_action": "ddl"
+    },
+    {
+      "id": "create_partition_invalid_name_text",
+      "sql": "CREATE TABLE t (id INT, region INT) PARTITION BY HASH(id) (PARTITION 'p0')",
+      "validity": "invalid",
+      "derivation": "hand-reduced syntax witness; source anchors identify relevant grammar, not verbatim MTR extraction",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 6270,
+          "excerpt": "part_definition:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 6417,
+          "excerpt": "part_definition:",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "REJECTED",
+      "known_gap": false,
+      "native_action": "ddl"
+    },
+    {
+      "id": "create_partition_invalid_definition_trailing_comma",
+      "sql": "CREATE TABLE t (id INT, region INT) PARTITION BY HASH(id) (PARTITION p0,)",
+      "validity": "invalid",
+      "derivation": "hand-reduced syntax witness; source anchors identify relevant grammar, not verbatim MTR extraction",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 6255,
+          "excerpt": "part_def_list:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 6402,
+          "excerpt": "part_def_list:",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "REJECTED",
+      "known_gap": false,
+      "native_action": "ddl"
+    },
+    {
+      "id": "create_partition_invalid_range_value_empty",
+      "sql": "CREATE TABLE t (id INT, region INT) PARTITION BY RANGE(id) (PARTITION p0 VALUES LESS THAN ())",
+      "validity": "invalid",
+      "derivation": "hand-reduced syntax witness; source anchors identify relevant grammar, not verbatim MTR extraction",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 6295,
+          "excerpt": "part_func_max:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 6345,
+          "excerpt": "part_value_item_list:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 6442,
+          "excerpt": "part_func_max:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 6492,
+          "excerpt": "part_value_item_list:",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "REJECTED",
+      "known_gap": false,
+      "native_action": "ddl"
+    },
+    {
+      "id": "create_partition_invalid_list_value_empty",
+      "sql": "CREATE TABLE t (id INT, region INT) PARTITION BY LIST(id) (PARTITION p0 VALUES IN ())",
+      "validity": "invalid",
+      "derivation": "hand-reduced syntax witness; source anchors identify relevant grammar, not verbatim MTR extraction",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 6300,
+          "excerpt": "part_values_in:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 6447,
+          "excerpt": "part_values_in:",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "REJECTED",
+      "known_gap": false,
+      "native_action": "ddl"
+    },
+    {
+      "id": "create_partition_invalid_list_rows_trailing_comma",
+      "sql": "CREATE TABLE t (id INT, region INT) PARTITION BY LIST COLUMNS(id, region) (PARTITION p0 VALUES IN ((1, 2),))",
+      "validity": "invalid",
+      "derivation": "hand-reduced syntax witness; source anchors identify relevant grammar, not verbatim MTR extraction",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 6311,
+          "excerpt": "part_value_list:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 6458,
+          "excerpt": "part_value_list:",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "REJECTED",
+      "known_gap": false,
+      "native_action": "ddl"
+    },
+    {
+      "id": "create_partition_invalid_engine_missing",
+      "sql": "CREATE TABLE t (id INT, region INT) PARTITION BY HASH(id) (PARTITION p0 ENGINE=)",
+      "validity": "invalid",
+      "derivation": "hand-reduced syntax witness; source anchors identify relevant grammar, not verbatim MTR extraction",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 6413,
+          "excerpt": "part_option:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 6560,
+          "excerpt": "part_option:",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "REJECTED",
+      "known_gap": false,
+      "native_action": "ddl"
+    },
+    {
+      "id": "create_partition_invalid_comment_number",
+      "sql": "CREATE TABLE t (id INT, region INT) PARTITION BY HASH(id) (PARTITION p0 COMMENT=1)",
+      "validity": "invalid",
+      "derivation": "hand-reduced syntax witness; source anchors identify relevant grammar, not verbatim MTR extraction",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 6413,
+          "excerpt": "part_option:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 6560,
+          "excerpt": "part_option:",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "REJECTED",
+      "known_gap": false,
+      "native_action": "ddl"
+    },
+    {
+      "id": "create_partition_invalid_max_rows_decimal",
+      "sql": "CREATE TABLE t (id INT, region INT) PARTITION BY HASH(id) (PARTITION p0 MAX_ROWS=1.1)",
+      "validity": "invalid",
+      "derivation": "hand-reduced syntax witness; source anchors identify relevant grammar, not verbatim MTR extraction",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 6413,
+          "excerpt": "part_option:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 12651,
+          "excerpt": "real_ulonglong_num:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 6560,
+          "excerpt": "part_option:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 13121,
+          "excerpt": "real_ulonglong_num:",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "REJECTED",
+      "known_gap": false,
+      "native_action": "ddl"
+    },
+    {
+      "id": "create_partition_invalid_subpartition_values",
+      "sql": "CREATE TABLE t (id INT, region INT) PARTITION BY HASH(id) (PARTITION p0 (SUBPARTITION s0 VALUES IN (1)))",
+      "validity": "invalid",
+      "derivation": "hand-reduced syntax witness; source anchors identify relevant grammar, not verbatim MTR extraction",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 6386,
+          "excerpt": "sub_part_definition:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 6533,
+          "excerpt": "sub_part_definition:",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "REJECTED",
+      "known_gap": false,
+      "native_action": "ddl"
+    },
+    {
+      "id": "create_partition_invalid_predicate",
+      "sql": "CREATE TABLE t (id INT, region INT) PARTITION BY HASH(id = 1)",
+      "validity": "invalid",
+      "derivation": "hand-reduced syntax witness; source anchors identify relevant grammar, not verbatim MTR extraction",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 6138,
+          "excerpt": "part_type_def:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 6285,
+          "excerpt": "part_type_def:",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "REJECTED",
+      "known_gap": false,
+      "native_action": "ddl"
+    },
+    {
+      "id": "create_partition_invalid_boolean",
+      "sql": "CREATE TABLE t (id INT, region INT) PARTITION BY HASH(id AND region)",
+      "validity": "invalid",
+      "derivation": "hand-reduced syntax witness; source anchors identify relevant grammar, not verbatim MTR extraction",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 6138,
+          "excerpt": "part_type_def:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 6285,
+          "excerpt": "part_type_def:",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "REJECTED",
+      "known_gap": false,
+      "native_action": "ddl"
+    },
+    {
+      "id": "create_partition_invalid_not",
+      "sql": "CREATE TABLE t (id INT, region INT) PARTITION BY HASH(NOT id)",
+      "validity": "invalid",
+      "derivation": "hand-reduced syntax witness; source anchors identify relevant grammar, not verbatim MTR extraction",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 6138,
+          "excerpt": "part_type_def:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 6285,
+          "excerpt": "part_type_def:",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "REJECTED",
+      "known_gap": false,
+      "native_action": "ddl"
+    },
+    {
+      "id": "create_partition_invalid_value_predicate",
+      "sql": "CREATE TABLE t (id INT, region INT) PARTITION BY LIST(id) (PARTITION p0 VALUES IN (1 = 1))",
+      "validity": "invalid",
+      "derivation": "hand-reduced syntax witness; source anchors identify relevant grammar, not verbatim MTR extraction",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 6360,
+          "excerpt": "part_value_item:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 6507,
+          "excerpt": "part_value_item:",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "REJECTED",
+      "known_gap": false,
+      "native_action": "ddl"
+    },
+    {
+      "id": "create_partition_invalid_trailing_options",
+      "sql": "CREATE TABLE t (id INT, region INT) PARTITION BY HASH(id) ENGINE=InnoDB",
+      "validity": "invalid",
+      "derivation": "hand-reduced syntax witness; source anchors identify relevant grammar, not verbatim MTR extraction",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 6071,
+          "excerpt": "opt_create_table_options_etc:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 6130,
+          "excerpt": "partition_clause:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 6218,
+          "excerpt": "opt_create_table_options_etc:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 6277,
+          "excerpt": "partition_clause:",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "REJECTED",
+      "known_gap": false,
+      "native_action": "ddl"
+    },
+    {
+      "id": "create_partition_invalid_preceding_comma",
+      "sql": "CREATE TABLE t (id INT, region INT) ENGINE=InnoDB, PARTITION BY HASH(id)",
+      "validity": "invalid",
+      "derivation": "hand-reduced syntax witness; source anchors identify relevant grammar, not verbatim MTR extraction",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 6071,
+          "excerpt": "opt_create_table_options_etc:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 6518,
+          "excerpt": "create_table_options:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 6218,
+          "excerpt": "opt_create_table_options_etc:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 6665,
+          "excerpt": "create_table_options:",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "REJECTED",
+      "known_gap": false,
+      "native_action": "ddl"
+    },
+    {
+      "id": "alter_partition_repartition",
+      "sql": "ALTER TABLE t PARTITION BY HASH (id) PARTITIONS 4",
+      "validity": "valid",
+      "derivation": "hand-reduced syntax witness; source anchors identify relevant grammar, not verbatim MTR extraction",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 8654,
+          "excerpt": "standalone_alter_commands:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 8623,
+          "excerpt": "alter_table_partition_options:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 8924,
+          "excerpt": "standalone_alter_commands:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 8893,
+          "excerpt": "alter_table_partition_options:",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "CHECKED",
+      "known_gap": false,
+      "native_action": "ddl",
+      "expected_sql": "ALTER TABLE t PARTITION BY HASH (id) PARTITIONS 4",
+      "native_fixture_sql": "CREATE TABLE t (id INT, region INT) PARTITION BY RANGE(id) (PARTITION p0 VALUES LESS THAN (10), PARTITION p1 VALUES LESS THAN (20));"
+    },
+    {
+      "id": "alter_partition_column_repartition",
+      "sql": "ALTER TABLE t ADD COLUMN n INT PARTITION BY KEY (id) PARTITIONS 2",
+      "validity": "valid",
+      "derivation": "hand-reduced syntax witness; source anchors identify relevant grammar, not verbatim MTR extraction",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 8654,
+          "excerpt": "standalone_alter_commands:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 8594,
+          "excerpt": "opt_alter_table_actions:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 8924,
+          "excerpt": "standalone_alter_commands:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 8864,
+          "excerpt": "opt_alter_table_actions:",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "CHECKED",
+      "known_gap": false,
+      "native_action": "ddl",
+      "expected_sql": "ALTER TABLE t ADD COLUMN n INT PARTITION BY KEY (id) PARTITIONS 2",
+      "native_fixture_sql": "CREATE TABLE t (id INT, region INT) PARTITION BY RANGE(id) (PARTITION p0 VALUES LESS THAN (10), PARTITION p1 VALUES LESS THAN (20));"
+    },
+    {
+      "id": "alter_partition_modifier_repartition",
+      "sql": "ALTER TABLE t ALGORITHM = COPY, LOCK = SHARED PARTITION BY HASH (id)",
+      "validity": "valid",
+      "derivation": "hand-reduced syntax witness; source anchors identify relevant grammar, not verbatim MTR extraction",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 8654,
+          "excerpt": "standalone_alter_commands:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 8594,
+          "excerpt": "opt_alter_table_actions:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 8924,
+          "excerpt": "standalone_alter_commands:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 8864,
+          "excerpt": "opt_alter_table_actions:",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "CHECKED",
+      "known_gap": false,
+      "native_action": "ddl",
+      "expected_sql": "ALTER TABLE t ALGORITHM COPY, LOCK SHARED PARTITION BY HASH (id)",
+      "native_fixture_sql": "CREATE TABLE t (id INT, region INT) PARTITION BY RANGE(id) (PARTITION p0 VALUES LESS THAN (10), PARTITION p1 VALUES LESS THAN (20));"
+    },
+    {
+      "id": "alter_partition_remove",
+      "sql": "ALTER TABLE t REMOVE PARTITIONING",
+      "validity": "valid",
+      "derivation": "hand-reduced syntax witness; source anchors identify relevant grammar, not verbatim MTR extraction",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 8654,
+          "excerpt": "standalone_alter_commands:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 8623,
+          "excerpt": "alter_table_partition_options:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 8924,
+          "excerpt": "standalone_alter_commands:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 8893,
+          "excerpt": "alter_table_partition_options:",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "CHECKED",
+      "known_gap": false,
+      "native_action": "ddl",
+      "expected_sql": "ALTER TABLE t REMOVE PARTITIONING",
+      "native_fixture_sql": "CREATE TABLE t (id INT, region INT) PARTITION BY RANGE(id) (PARTITION p0 VALUES LESS THAN (10), PARTITION p1 VALUES LESS THAN (20));"
+    },
+    {
+      "id": "alter_partition_column_remove",
+      "sql": "ALTER TABLE t ADD COLUMN n INT REMOVE PARTITIONING",
+      "validity": "valid",
+      "derivation": "hand-reduced syntax witness; source anchors identify relevant grammar, not verbatim MTR extraction",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 8654,
+          "excerpt": "standalone_alter_commands:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 8594,
+          "excerpt": "opt_alter_table_actions:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 8924,
+          "excerpt": "standalone_alter_commands:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 8864,
+          "excerpt": "opt_alter_table_actions:",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "CHECKED",
+      "known_gap": false,
+      "native_action": "ddl",
+      "expected_sql": "ALTER TABLE t ADD COLUMN n INT REMOVE PARTITIONING",
+      "native_fixture_sql": "CREATE TABLE t (id INT, region INT) PARTITION BY RANGE(id) (PARTITION p0 VALUES LESS THAN (10), PARTITION p1 VALUES LESS THAN (20));"
+    },
+    {
+      "id": "alter_partition_add_definition",
+      "sql": "ALTER TABLE t ADD PARTITION (PARTITION p2 VALUES LESS THAN (30))",
+      "validity": "valid",
+      "derivation": "hand-reduced syntax witness; source anchors identify relevant grammar, not verbatim MTR extraction",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 8654,
+          "excerpt": "standalone_alter_commands:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 6255,
+          "excerpt": "part_def_list:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 8924,
+          "excerpt": "standalone_alter_commands:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 6402,
+          "excerpt": "part_def_list:",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "CHECKED",
+      "known_gap": false,
+      "native_action": "ddl",
+      "expected_sql": "ALTER TABLE t ADD PARTITION (PARTITION p2 VALUES LESS THAN (30))",
+      "native_fixture_sql": "CREATE TABLE t (id INT, region INT) PARTITION BY RANGE(id) (PARTITION p0 VALUES LESS THAN (10), PARTITION p1 VALUES LESS THAN (20));"
+    },
+    {
+      "id": "alter_partition_add_count",
+      "sql": "ALTER TABLE t ADD PARTITION PARTITIONS 2",
+      "validity": "valid",
+      "derivation": "hand-reduced syntax witness; source anchors identify relevant grammar, not verbatim MTR extraction",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 8654,
+          "excerpt": "standalone_alter_commands:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 12635,
+          "excerpt": "real_ulong_num:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 8924,
+          "excerpt": "standalone_alter_commands:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 13105,
+          "excerpt": "real_ulong_num:",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "CHECKED",
+      "known_gap": false,
+      "native_action": "ddl",
+      "expected_sql": "ALTER TABLE t ADD PARTITION PARTITIONS 2",
+      "native_fixture_sql": "CREATE TABLE t (id INT, region INT) PARTITION BY HASH(id) PARTITIONS 4;"
+    },
+    {
+      "id": "alter_partition_add_local_hex",
+      "sql": "ALTER TABLE t ADD PARTITION LOCAL PARTITIONS 0x2",
+      "validity": "valid",
+      "derivation": "hand-reduced syntax witness; source anchors identify relevant grammar, not verbatim MTR extraction",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 8654,
+          "excerpt": "standalone_alter_commands:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 12635,
+          "excerpt": "real_ulong_num:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 8924,
+          "excerpt": "standalone_alter_commands:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 13105,
+          "excerpt": "real_ulong_num:",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "CHECKED",
+      "known_gap": false,
+      "native_action": "ddl",
+      "expected_sql": "ALTER TABLE t ADD PARTITION LOCAL PARTITIONS 0x2",
+      "native_fixture_sql": "CREATE TABLE t (id INT, region INT) PARTITION BY HASH(id) PARTITIONS 4;"
+    },
+    {
+      "id": "alter_partition_add_empty",
+      "sql": "ALTER TABLE t ADD PARTITION",
+      "validity": "valid",
+      "derivation": "hand-reduced syntax witness; source anchors identify relevant grammar, not verbatim MTR extraction",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 8654,
+          "excerpt": "standalone_alter_commands:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 8924,
+          "excerpt": "standalone_alter_commands:",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "CHECKED",
+      "known_gap": false,
+      "native_action": "ddl",
+      "expected_sql": "ALTER TABLE t ADD PARTITION",
+      "native_fixture_sql": "CREATE TABLE t (id INT, region INT) PARTITION BY HASH(id) PARTITIONS 4;"
+    },
+    {
+      "id": "alter_partition_drop",
+      "sql": "ALTER TABLE t DROP PARTITION p0",
+      "validity": "valid",
+      "derivation": "hand-reduced syntax witness; source anchors identify relevant grammar, not verbatim MTR extraction",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 8654,
+          "excerpt": "standalone_alter_commands:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 12245,
+          "excerpt": "ident_string_list:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 8924,
+          "excerpt": "standalone_alter_commands:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 12669,
+          "excerpt": "ident_string_list:",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "CHECKED",
+      "known_gap": false,
+      "native_action": "ddl",
+      "expected_sql": "ALTER TABLE t DROP PARTITION p0",
+      "native_fixture_sql": "CREATE TABLE t (id INT, region INT) PARTITION BY RANGE(id) (PARTITION p0 VALUES LESS THAN (10), PARTITION p1 VALUES LESS THAN (20));"
+    },
+    {
+      "id": "alter_partition_truncate_all",
+      "sql": "ALTER TABLE t TRUNCATE PARTITION ALL",
+      "validity": "valid",
+      "derivation": "hand-reduced syntax witness; source anchors identify relevant grammar, not verbatim MTR extraction",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 8654,
+          "excerpt": "standalone_alter_commands:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 8771,
+          "excerpt": "all_or_alt_part_name_list:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 8924,
+          "excerpt": "standalone_alter_commands:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 9041,
+          "excerpt": "all_or_alt_part_name_list:",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "CHECKED",
+      "known_gap": false,
+      "native_action": "ddl",
+      "expected_sql": "ALTER TABLE t TRUNCATE PARTITION ALL",
+      "native_fixture_sql": "CREATE TABLE t (id INT, region INT) PARTITION BY RANGE(id) (PARTITION p0 VALUES LESS THAN (10), PARTITION p1 VALUES LESS THAN (20));"
+    },
+    {
+      "id": "alter_partition_truncate_names",
+      "sql": "ALTER TABLE t TRUNCATE PARTITION `p0`, p1",
+      "validity": "valid",
+      "derivation": "hand-reduced syntax witness; source anchors identify relevant grammar, not verbatim MTR extraction",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 8654,
+          "excerpt": "standalone_alter_commands:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 8771,
+          "excerpt": "all_or_alt_part_name_list:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 8924,
+          "excerpt": "standalone_alter_commands:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 9041,
+          "excerpt": "all_or_alt_part_name_list:",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "CHECKED",
+      "known_gap": false,
+      "native_action": "ddl",
+      "expected_sql": "ALTER TABLE t TRUNCATE PARTITION `p0`, p1",
+      "native_fixture_sql": "CREATE TABLE t (id INT, region INT) PARTITION BY RANGE(id) (PARTITION p0 VALUES LESS THAN (10), PARTITION p1 VALUES LESS THAN (20));"
+    },
+    {
+      "id": "alter_partition_coalesce",
+      "sql": "ALTER TABLE t COALESCE PARTITION NO_WRITE_TO_BINLOG 2",
+      "validity": "valid",
+      "derivation": "hand-reduced syntax witness; source anchors identify relevant grammar, not verbatim MTR extraction",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 8654,
+          "excerpt": "standalone_alter_commands:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 12635,
+          "excerpt": "real_ulong_num:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 8924,
+          "excerpt": "standalone_alter_commands:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 13105,
+          "excerpt": "real_ulong_num:",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "CHECKED",
+      "known_gap": false,
+      "native_action": "ddl",
+      "expected_sql": "ALTER TABLE t COALESCE PARTITION NO_WRITE_TO_BINLOG 2",
+      "native_fixture_sql": "CREATE TABLE t (id INT, region INT) PARTITION BY HASH(id) PARTITIONS 4;"
+    },
+    {
+      "id": "alter_partition_reorganize_empty",
+      "sql": "ALTER TABLE t REORGANIZE PARTITION",
+      "validity": "valid",
+      "derivation": "hand-reduced syntax witness; source anchors identify relevant grammar, not verbatim MTR extraction",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 8654,
+          "excerpt": "standalone_alter_commands:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 8924,
+          "excerpt": "standalone_alter_commands:",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "CHECKED",
+      "known_gap": false,
+      "native_action": "ddl",
+      "expected_sql": "ALTER TABLE t REORGANIZE PARTITION",
+      "native_fixture_sql": "CREATE TABLE t (id INT, region INT) PARTITION BY HASH(id) PARTITIONS 4;"
+    },
+    {
+      "id": "alter_partition_reorganize",
+      "sql": "ALTER TABLE t REORGANIZE PARTITION p0, p1 INTO (PARTITION p2 VALUES LESS THAN (20))",
+      "validity": "valid",
+      "derivation": "hand-reduced syntax witness; source anchors identify relevant grammar, not verbatim MTR extraction",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 8654,
+          "excerpt": "standalone_alter_commands:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 6255,
+          "excerpt": "part_def_list:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 8924,
+          "excerpt": "standalone_alter_commands:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 6402,
+          "excerpt": "part_def_list:",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "CHECKED",
+      "known_gap": false,
+      "native_action": "ddl",
+      "expected_sql": "ALTER TABLE t REORGANIZE PARTITION p0, p1 INTO (PARTITION p2 VALUES LESS THAN (20))",
+      "native_fixture_sql": "CREATE TABLE t (id INT, region INT) PARTITION BY RANGE(id) (PARTITION p0 VALUES LESS THAN (10), PARTITION p1 VALUES LESS THAN (20));"
+    },
+    {
+      "id": "alter_partition_rebuild",
+      "sql": "ALTER TABLE t REBUILD PARTITION LOCAL ALL",
+      "validity": "valid",
+      "derivation": "hand-reduced syntax witness; source anchors identify relevant grammar, not verbatim MTR extraction",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 8654,
+          "excerpt": "standalone_alter_commands:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 8771,
+          "excerpt": "all_or_alt_part_name_list:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 8924,
+          "excerpt": "standalone_alter_commands:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 9041,
+          "excerpt": "all_or_alt_part_name_list:",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "CHECKED",
+      "known_gap": false,
+      "native_action": "ddl",
+      "expected_sql": "ALTER TABLE t REBUILD PARTITION LOCAL ALL",
+      "native_fixture_sql": "CREATE TABLE t (id INT, region INT) PARTITION BY RANGE(id) (PARTITION p0 VALUES LESS THAN (10), PARTITION p1 VALUES LESS THAN (20));"
+    },
+    {
+      "id": "alter_partition_optimize",
+      "sql": "ALTER TABLE t OPTIMIZE PARTITION p0, p1",
+      "validity": "valid",
+      "derivation": "hand-reduced syntax witness; source anchors identify relevant grammar, not verbatim MTR extraction",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 8654,
+          "excerpt": "standalone_alter_commands:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 8771,
+          "excerpt": "all_or_alt_part_name_list:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 8924,
+          "excerpt": "standalone_alter_commands:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 9041,
+          "excerpt": "all_or_alt_part_name_list:",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "CHECKED",
+      "known_gap": false,
+      "native_action": "ddl",
+      "expected_sql": "ALTER TABLE t OPTIMIZE PARTITION p0, p1",
+      "native_fixture_sql": "CREATE TABLE t (id INT, region INT) PARTITION BY RANGE(id) (PARTITION p0 VALUES LESS THAN (10), PARTITION p1 VALUES LESS THAN (20));"
+    },
+    {
+      "id": "alter_partition_analyze",
+      "sql": "ALTER TABLE t ANALYZE PARTITION NO_WRITE_TO_BINLOG ALL",
+      "validity": "valid",
+      "derivation": "hand-reduced syntax witness; source anchors identify relevant grammar, not verbatim MTR extraction",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 8654,
+          "excerpt": "standalone_alter_commands:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 8771,
+          "excerpt": "all_or_alt_part_name_list:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 8924,
+          "excerpt": "standalone_alter_commands:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 9041,
+          "excerpt": "all_or_alt_part_name_list:",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "CHECKED",
+      "known_gap": false,
+      "native_action": "ddl",
+      "expected_sql": "ALTER TABLE t ANALYZE PARTITION NO_WRITE_TO_BINLOG ALL",
+      "native_fixture_sql": "CREATE TABLE t (id INT, region INT) PARTITION BY RANGE(id) (PARTITION p0 VALUES LESS THAN (10), PARTITION p1 VALUES LESS THAN (20));"
+    },
+    {
+      "id": "alter_partition_check",
+      "sql": "ALTER TABLE t CHECK PARTITION p0 QUICK FOR UPGRADE",
+      "validity": "valid",
+      "derivation": "hand-reduced syntax witness; source anchors identify relevant grammar, not verbatim MTR extraction",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 8654,
+          "excerpt": "standalone_alter_commands:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 9491,
+          "excerpt": "opt_mi_check_types:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 8924,
+          "excerpt": "standalone_alter_commands:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 9805,
+          "excerpt": "opt_mi_check_types:",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "CHECKED",
+      "known_gap": false,
+      "native_action": "ddl",
+      "expected_sql": "ALTER TABLE t CHECK PARTITION p0 QUICK FOR UPGRADE",
+      "native_fixture_sql": "CREATE TABLE t (id INT, region INT) PARTITION BY RANGE(id) (PARTITION p0 VALUES LESS THAN (10), PARTITION p1 VALUES LESS THAN (20));"
+    },
+    {
+      "id": "alter_partition_repair",
+      "sql": "ALTER TABLE t REPAIR PARTITION LOCAL ALL EXTENDED",
+      "validity": "valid",
+      "derivation": "hand-reduced syntax witness; source anchors identify relevant grammar, not verbatim MTR extraction",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 8654,
+          "excerpt": "standalone_alter_commands:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 9371,
+          "excerpt": "opt_mi_repair_types:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 8924,
+          "excerpt": "standalone_alter_commands:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 9685,
+          "excerpt": "opt_mi_repair_types:",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "CHECKED",
+      "known_gap": false,
+      "native_action": "ddl",
+      "expected_sql": "ALTER TABLE t REPAIR PARTITION LOCAL ALL EXTENDED",
+      "native_fixture_sql": "CREATE TABLE t (id INT, region INT) PARTITION BY RANGE(id) (PARTITION p0 VALUES LESS THAN (10), PARTITION p1 VALUES LESS THAN (20));"
+    },
+    {
+      "id": "alter_partition_exchange",
+      "sql": "ALTER TABLE t EXCHANGE PARTITION p0 WITH TABLE u WITHOUT VALIDATION",
+      "validity": "valid",
+      "derivation": "hand-reduced syntax witness; source anchors identify relevant grammar, not verbatim MTR extraction",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 8654,
+          "excerpt": "standalone_alter_commands:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 8755,
+          "excerpt": "opt_with_validation:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 8924,
+          "excerpt": "standalone_alter_commands:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 9025,
+          "excerpt": "opt_with_validation:",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "CHECKED",
+      "known_gap": false,
+      "native_action": "ddl",
+      "expected_sql": "ALTER TABLE t EXCHANGE PARTITION p0 WITH TABLE u WITHOUT VALIDATION",
+      "native_fixture_sql": "CREATE TABLE t (id INT, region INT) PARTITION BY RANGE(id) (PARTITION p0 VALUES LESS THAN (10), PARTITION p1 VALUES LESS THAN (20)); CREATE TABLE u (id INT, region INT);"
+    },
+    {
+      "id": "alter_partition_modifier_add",
+      "sql": "ALTER TABLE t ALGORITHM = INPLACE, LOCK = NONE, ADD PARTITION PARTITIONS 1",
+      "validity": "valid",
+      "derivation": "hand-reduced syntax witness; source anchors identify relevant grammar, not verbatim MTR extraction",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 8654,
+          "excerpt": "standalone_alter_commands:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 8610,
+          "excerpt": "standalone_alter_table_action:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 8812,
+          "excerpt": "alter_commands_modifier_list:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 8924,
+          "excerpt": "standalone_alter_commands:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 8880,
+          "excerpt": "standalone_alter_table_action:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 9117,
+          "excerpt": "alter_commands_modifier_list:",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "CHECKED",
+      "known_gap": false,
+      "native_action": "ddl",
+      "expected_sql": "ALTER TABLE t ALGORITHM INPLACE, LOCK NONE, ADD PARTITION PARTITIONS 1",
+      "native_fixture_sql": "CREATE TABLE t (id INT, region INT) PARTITION BY HASH(id) PARTITIONS 4;"
+    },
+    {
+      "id": "alter_partition_validation_exchange",
+      "sql": "ALTER TABLE t WITH VALIDATION, EXCHANGE PARTITION p0 WITH TABLE u",
+      "validity": "valid",
+      "derivation": "hand-reduced syntax witness; source anchors identify relevant grammar, not verbatim MTR extraction",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 8654,
+          "excerpt": "standalone_alter_commands:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 8610,
+          "excerpt": "standalone_alter_table_action:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 8760,
+          "excerpt": "with_validation:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 8924,
+          "excerpt": "standalone_alter_commands:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 8880,
+          "excerpt": "standalone_alter_table_action:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 9030,
+          "excerpt": "with_validation:",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "CHECKED",
+      "known_gap": false,
+      "native_action": "ddl",
+      "expected_sql": "ALTER TABLE t WITH VALIDATION, EXCHANGE PARTITION p0 WITH TABLE u",
+      "native_fixture_sql": "CREATE TABLE t (id INT, region INT) PARTITION BY RANGE(id) (PARTITION p0 VALUES LESS THAN (10), PARTITION p1 VALUES LESS THAN (20)); CREATE TABLE u (id INT, region INT);"
+    },
+    {
+      "id": "alter_partition_invalid_add_empty_definitions",
+      "sql": "ALTER TABLE t ADD PARTITION ()",
+      "validity": "invalid",
+      "derivation": "hand-reduced syntax witness; source anchors identify relevant grammar, not verbatim MTR extraction",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 8654,
+          "excerpt": "standalone_alter_commands:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 6255,
+          "excerpt": "part_def_list:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 8924,
+          "excerpt": "standalone_alter_commands:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 6402,
+          "excerpt": "part_def_list:",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "REJECTED",
+      "known_gap": false,
+      "native_action": "ddl",
+      "native_fixture_sql": "CREATE TABLE t (id INT, region INT) PARTITION BY RANGE(id) (PARTITION p0 VALUES LESS THAN (10), PARTITION p1 VALUES LESS THAN (20));"
+    },
+    {
+      "id": "alter_partition_invalid_drop_missing",
+      "sql": "ALTER TABLE t DROP PARTITION",
+      "validity": "invalid",
+      "derivation": "hand-reduced syntax witness; source anchors identify relevant grammar, not verbatim MTR extraction",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 8654,
+          "excerpt": "standalone_alter_commands:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 12245,
+          "excerpt": "ident_string_list:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 8924,
+          "excerpt": "standalone_alter_commands:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 12669,
+          "excerpt": "ident_string_list:",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "REJECTED",
+      "known_gap": false,
+      "native_action": "ddl",
+      "native_fixture_sql": "CREATE TABLE t (id INT, region INT) PARTITION BY RANGE(id) (PARTITION p0 VALUES LESS THAN (10), PARTITION p1 VALUES LESS THAN (20));"
+    },
+    {
+      "id": "alter_partition_invalid_drop_all",
+      "sql": "ALTER TABLE t DROP PARTITION ALL",
+      "validity": "invalid",
+      "derivation": "hand-reduced syntax witness; source anchors identify relevant grammar, not verbatim MTR extraction",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 8654,
+          "excerpt": "standalone_alter_commands:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 12245,
+          "excerpt": "ident_string_list:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 8924,
+          "excerpt": "standalone_alter_commands:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 12669,
+          "excerpt": "ident_string_list:",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "REJECTED",
+      "known_gap": false,
+      "native_action": "ddl",
+      "native_fixture_sql": "CREATE TABLE t (id INT, region INT) PARTITION BY RANGE(id) (PARTITION p0 VALUES LESS THAN (10), PARTITION p1 VALUES LESS THAN (20));"
+    },
+    {
+      "id": "alter_partition_invalid_drop_text",
+      "sql": "ALTER TABLE t DROP PARTITION 'p0'",
+      "validity": "invalid",
+      "derivation": "hand-reduced syntax witness; source anchors identify relevant grammar, not verbatim MTR extraction",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 8654,
+          "excerpt": "standalone_alter_commands:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 12245,
+          "excerpt": "ident_string_list:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 8924,
+          "excerpt": "standalone_alter_commands:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 12669,
+          "excerpt": "ident_string_list:",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "REJECTED",
+      "known_gap": false,
+      "native_action": "ddl",
+      "native_fixture_sql": "CREATE TABLE t (id INT, region INT) PARTITION BY RANGE(id) (PARTITION p0 VALUES LESS THAN (10), PARTITION p1 VALUES LESS THAN (20));"
+    },
+    {
+      "id": "alter_partition_invalid_drop_trailing_comma",
+      "sql": "ALTER TABLE t DROP PARTITION p0,",
+      "validity": "invalid",
+      "derivation": "hand-reduced syntax witness; source anchors identify relevant grammar, not verbatim MTR extraction",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 8654,
+          "excerpt": "standalone_alter_commands:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 12245,
+          "excerpt": "ident_string_list:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 8924,
+          "excerpt": "standalone_alter_commands:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 12669,
+          "excerpt": "ident_string_list:",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "REJECTED",
+      "known_gap": false,
+      "native_action": "ddl",
+      "native_fixture_sql": "CREATE TABLE t (id INT, region INT) PARTITION BY RANGE(id) (PARTITION p0 VALUES LESS THAN (10), PARTITION p1 VALUES LESS THAN (20));"
+    },
+    {
+      "id": "alter_partition_invalid_truncate_missing",
+      "sql": "ALTER TABLE t TRUNCATE PARTITION",
+      "validity": "invalid",
+      "derivation": "hand-reduced syntax witness; source anchors identify relevant grammar, not verbatim MTR extraction",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 8654,
+          "excerpt": "standalone_alter_commands:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 8771,
+          "excerpt": "all_or_alt_part_name_list:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 8924,
+          "excerpt": "standalone_alter_commands:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 9041,
+          "excerpt": "all_or_alt_part_name_list:",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "REJECTED",
+      "known_gap": false,
+      "native_action": "ddl",
+      "native_fixture_sql": "CREATE TABLE t (id INT, region INT) PARTITION BY RANGE(id) (PARTITION p0 VALUES LESS THAN (10), PARTITION p1 VALUES LESS THAN (20));"
+    },
+    {
+      "id": "alter_partition_invalid_truncate_all_list",
+      "sql": "ALTER TABLE t TRUNCATE PARTITION ALL, p0",
+      "validity": "invalid",
+      "derivation": "hand-reduced syntax witness; source anchors identify relevant grammar, not verbatim MTR extraction",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 8654,
+          "excerpt": "standalone_alter_commands:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 8771,
+          "excerpt": "all_or_alt_part_name_list:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 8924,
+          "excerpt": "standalone_alter_commands:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 9041,
+          "excerpt": "all_or_alt_part_name_list:",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "REJECTED",
+      "known_gap": false,
+      "native_action": "ddl",
+      "native_fixture_sql": "CREATE TABLE t (id INT, region INT) PARTITION BY RANGE(id) (PARTITION p0 VALUES LESS THAN (10), PARTITION p1 VALUES LESS THAN (20));"
+    },
+    {
+      "id": "alter_partition_invalid_coalesce_negative",
+      "sql": "ALTER TABLE t COALESCE PARTITION -1",
+      "validity": "invalid",
+      "derivation": "hand-reduced syntax witness; source anchors identify relevant grammar, not verbatim MTR extraction",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 8654,
+          "excerpt": "standalone_alter_commands:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 12635,
+          "excerpt": "real_ulong_num:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 8924,
+          "excerpt": "standalone_alter_commands:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 13105,
+          "excerpt": "real_ulong_num:",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "REJECTED",
+      "known_gap": false,
+      "native_action": "ddl",
+      "native_fixture_sql": "CREATE TABLE t (id INT, region INT) PARTITION BY RANGE(id) (PARTITION p0 VALUES LESS THAN (10), PARTITION p1 VALUES LESS THAN (20));"
+    },
+    {
+      "id": "alter_partition_invalid_coalesce_decimal",
+      "sql": "ALTER TABLE t COALESCE PARTITION 1.5",
+      "validity": "invalid",
+      "derivation": "hand-reduced syntax witness; source anchors identify relevant grammar, not verbatim MTR extraction",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 8654,
+          "excerpt": "standalone_alter_commands:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 12635,
+          "excerpt": "real_ulong_num:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 8924,
+          "excerpt": "standalone_alter_commands:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 13105,
+          "excerpt": "real_ulong_num:",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "REJECTED",
+      "known_gap": false,
+      "native_action": "ddl",
+      "native_fixture_sql": "CREATE TABLE t (id INT, region INT) PARTITION BY RANGE(id) (PARTITION p0 VALUES LESS THAN (10), PARTITION p1 VALUES LESS THAN (20));"
+    },
+    {
+      "id": "alter_partition_invalid_add_exponent",
+      "sql": "ALTER TABLE t ADD PARTITION PARTITIONS 1e2",
+      "validity": "invalid",
+      "derivation": "hand-reduced syntax witness; source anchors identify relevant grammar, not verbatim MTR extraction",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 8654,
+          "excerpt": "standalone_alter_commands:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 12635,
+          "excerpt": "real_ulong_num:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 8924,
+          "excerpt": "standalone_alter_commands:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 13105,
+          "excerpt": "real_ulong_num:",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "REJECTED",
+      "known_gap": false,
+      "native_action": "ddl",
+      "native_fixture_sql": "CREATE TABLE t (id INT, region INT) PARTITION BY RANGE(id) (PARTITION p0 VALUES LESS THAN (10), PARTITION p1 VALUES LESS THAN (20));"
+    },
+    {
+      "id": "alter_partition_invalid_reorganize_missing_into",
+      "sql": "ALTER TABLE t REORGANIZE PARTITION p0",
+      "validity": "invalid",
+      "derivation": "hand-reduced syntax witness; source anchors identify relevant grammar, not verbatim MTR extraction",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 8654,
+          "excerpt": "standalone_alter_commands:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 8924,
+          "excerpt": "standalone_alter_commands:",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "REJECTED",
+      "known_gap": false,
+      "native_action": "ddl",
+      "native_fixture_sql": "CREATE TABLE t (id INT, region INT) PARTITION BY RANGE(id) (PARTITION p0 VALUES LESS THAN (10), PARTITION p1 VALUES LESS THAN (20));"
+    },
+    {
+      "id": "alter_partition_invalid_reorganize_all",
+      "sql": "ALTER TABLE t REORGANIZE PARTITION ALL INTO (PARTITION p1)",
+      "validity": "invalid",
+      "derivation": "hand-reduced syntax witness; source anchors identify relevant grammar, not verbatim MTR extraction",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 8654,
+          "excerpt": "standalone_alter_commands:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 8924,
+          "excerpt": "standalone_alter_commands:",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "REJECTED",
+      "known_gap": false,
+      "native_action": "ddl",
+      "native_fixture_sql": "CREATE TABLE t (id INT, region INT) PARTITION BY RANGE(id) (PARTITION p0 VALUES LESS THAN (10), PARTITION p1 VALUES LESS THAN (20));"
+    },
+    {
+      "id": "alter_partition_invalid_reorganize_empty_definitions",
+      "sql": "ALTER TABLE t REORGANIZE PARTITION p0 INTO ()",
+      "validity": "invalid",
+      "derivation": "hand-reduced syntax witness; source anchors identify relevant grammar, not verbatim MTR extraction",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 8654,
+          "excerpt": "standalone_alter_commands:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 6255,
+          "excerpt": "part_def_list:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 8924,
+          "excerpt": "standalone_alter_commands:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 6402,
+          "excerpt": "part_def_list:",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "REJECTED",
+      "known_gap": false,
+      "native_action": "ddl",
+      "native_fixture_sql": "CREATE TABLE t (id INT, region INT) PARTITION BY RANGE(id) (PARTITION p0 VALUES LESS THAN (10), PARTITION p1 VALUES LESS THAN (20));"
+    },
+    {
+      "id": "alter_partition_invalid_exchange_missing_table",
+      "sql": "ALTER TABLE t EXCHANGE PARTITION p0 WITH u",
+      "validity": "invalid",
+      "derivation": "hand-reduced syntax witness; source anchors identify relevant grammar, not verbatim MTR extraction",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 8654,
+          "excerpt": "standalone_alter_commands:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 8924,
+          "excerpt": "standalone_alter_commands:",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "REJECTED",
+      "known_gap": false,
+      "native_action": "ddl",
+      "native_fixture_sql": "CREATE TABLE t (id INT, region INT) PARTITION BY RANGE(id) (PARTITION p0 VALUES LESS THAN (10), PARTITION p1 VALUES LESS THAN (20));"
+    },
+    {
+      "id": "alter_partition_invalid_exchange_incomplete_validation",
+      "sql": "ALTER TABLE t EXCHANGE PARTITION p0 WITH TABLE u WITH",
+      "validity": "invalid",
+      "derivation": "hand-reduced syntax witness; source anchors identify relevant grammar, not verbatim MTR extraction",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 8654,
+          "excerpt": "standalone_alter_commands:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 8755,
+          "excerpt": "opt_with_validation:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 8924,
+          "excerpt": "standalone_alter_commands:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 9025,
+          "excerpt": "opt_with_validation:",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "REJECTED",
+      "known_gap": false,
+      "native_action": "ddl",
+      "native_fixture_sql": "CREATE TABLE t (id INT, region INT) PARTITION BY RANGE(id) (PARTITION p0 VALUES LESS THAN (10), PARTITION p1 VALUES LESS THAN (20));"
+    },
+    {
+      "id": "alter_partition_invalid_remove_before_action",
+      "sql": "ALTER TABLE t REMOVE PARTITIONING, ADD n INT",
+      "validity": "invalid",
+      "derivation": "hand-reduced syntax witness; source anchors identify relevant grammar, not verbatim MTR extraction",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 8654,
+          "excerpt": "standalone_alter_commands:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 8594,
+          "excerpt": "opt_alter_table_actions:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 8924,
+          "excerpt": "standalone_alter_commands:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 8864,
+          "excerpt": "opt_alter_table_actions:",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "REJECTED",
+      "known_gap": false,
+      "native_action": "ddl",
+      "native_fixture_sql": "CREATE TABLE t (id INT, region INT) PARTITION BY RANGE(id) (PARTITION p0 VALUES LESS THAN (10), PARTITION p1 VALUES LESS THAN (20));"
+    },
+    {
+      "id": "alter_partition_invalid_remove_comma",
+      "sql": "ALTER TABLE t ADD n INT, REMOVE PARTITIONING",
+      "validity": "invalid",
+      "derivation": "hand-reduced syntax witness; source anchors identify relevant grammar, not verbatim MTR extraction",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 8654,
+          "excerpt": "standalone_alter_commands:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 8594,
+          "excerpt": "opt_alter_table_actions:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 8924,
+          "excerpt": "standalone_alter_commands:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 8864,
+          "excerpt": "opt_alter_table_actions:",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "REJECTED",
+      "known_gap": false,
+      "native_action": "ddl",
+      "native_fixture_sql": "CREATE TABLE t (id INT, region INT) PARTITION BY RANGE(id) (PARTITION p0 VALUES LESS THAN (10), PARTITION p1 VALUES LESS THAN (20));"
+    },
+    {
+      "id": "alter_partition_invalid_repartition_comma",
+      "sql": "ALTER TABLE t ADD n INT, PARTITION BY HASH(n)",
+      "validity": "invalid",
+      "derivation": "hand-reduced syntax witness; source anchors identify relevant grammar, not verbatim MTR extraction",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 8654,
+          "excerpt": "standalone_alter_commands:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 8594,
+          "excerpt": "opt_alter_table_actions:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 8924,
+          "excerpt": "standalone_alter_commands:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 8864,
+          "excerpt": "opt_alter_table_actions:",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "REJECTED",
+      "known_gap": false,
+      "native_action": "ddl",
+      "native_fixture_sql": "CREATE TABLE t (id INT, region INT) PARTITION BY RANGE(id) (PARTITION p0 VALUES LESS THAN (10), PARTITION p1 VALUES LESS THAN (20));"
+    },
+    {
+      "id": "alter_partition_invalid_add_after_column",
+      "sql": "ALTER TABLE t ADD n INT, ADD PARTITION PARTITIONS 2",
+      "validity": "invalid",
+      "derivation": "hand-reduced syntax witness; source anchors identify relevant grammar, not verbatim MTR extraction",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 8654,
+          "excerpt": "standalone_alter_commands:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 8610,
+          "excerpt": "standalone_alter_table_action:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 8924,
+          "excerpt": "standalone_alter_commands:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 8880,
+          "excerpt": "standalone_alter_table_action:",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "REJECTED",
+      "known_gap": false,
+      "native_action": "ddl",
+      "native_fixture_sql": "CREATE TABLE t (id INT, region INT) PARTITION BY RANGE(id) (PARTITION p0 VALUES LESS THAN (10), PARTITION p1 VALUES LESS THAN (20));"
+    },
+    {
+      "id": "alter_partition_invalid_column_after_add",
+      "sql": "ALTER TABLE t ADD PARTITION PARTITIONS 2, ADD n INT",
+      "validity": "invalid",
+      "derivation": "hand-reduced syntax witness; source anchors identify relevant grammar, not verbatim MTR extraction",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 8654,
+          "excerpt": "standalone_alter_commands:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 8610,
+          "excerpt": "standalone_alter_table_action:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 8924,
+          "excerpt": "standalone_alter_commands:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 8880,
+          "excerpt": "standalone_alter_table_action:",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "REJECTED",
+      "known_gap": false,
+      "native_action": "ddl",
+      "native_fixture_sql": "CREATE TABLE t (id INT, region INT) PARTITION BY RANGE(id) (PARTITION p0 VALUES LESS THAN (10), PARTITION p1 VALUES LESS THAN (20));"
+    },
+    {
+      "id": "alter_partition_invalid_modifier_after_add",
+      "sql": "ALTER TABLE t ADD PARTITION PARTITIONS 2, ALGORITHM=COPY",
+      "validity": "invalid",
+      "derivation": "hand-reduced syntax witness; source anchors identify relevant grammar, not verbatim MTR extraction",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 8654,
+          "excerpt": "standalone_alter_commands:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 8610,
+          "excerpt": "standalone_alter_table_action:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 8924,
+          "excerpt": "standalone_alter_commands:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 8880,
+          "excerpt": "standalone_alter_table_action:",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "REJECTED",
+      "known_gap": false,
+      "native_action": "ddl",
+      "native_fixture_sql": "CREATE TABLE t (id INT, region INT) PARTITION BY RANGE(id) (PARTITION p0 VALUES LESS THAN (10), PARTITION p1 VALUES LESS THAN (20));"
+    },
+    {
+      "id": "alter_partition_invalid_column_after_drop",
+      "sql": "ALTER TABLE t DROP PARTITION p0, ADD n INT",
+      "validity": "invalid",
+      "derivation": "hand-reduced syntax witness; source anchors identify relevant grammar, not verbatim MTR extraction",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 8654,
+          "excerpt": "standalone_alter_commands:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 8610,
+          "excerpt": "standalone_alter_table_action:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 8924,
+          "excerpt": "standalone_alter_commands:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 8880,
+          "excerpt": "standalone_alter_table_action:",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "REJECTED",
+      "known_gap": false,
+      "native_action": "ddl",
+      "native_fixture_sql": "CREATE TABLE t (id INT, region INT) PARTITION BY RANGE(id) (PARTITION p0 VALUES LESS THAN (10), PARTITION p1 VALUES LESS THAN (20));"
+    },
+    {
+      "id": "alter_partition_invalid_check_local",
+      "sql": "ALTER TABLE t CHECK PARTITION LOCAL p0",
+      "validity": "invalid",
+      "derivation": "hand-reduced syntax witness; source anchors identify relevant grammar, not verbatim MTR extraction",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 8654,
+          "excerpt": "standalone_alter_commands:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 9491,
+          "excerpt": "opt_mi_check_types:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 8924,
+          "excerpt": "standalone_alter_commands:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 9805,
+          "excerpt": "opt_mi_check_types:",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "REJECTED",
+      "known_gap": false,
+      "native_action": "ddl",
+      "native_fixture_sql": "CREATE TABLE t (id INT, region INT) PARTITION BY RANGE(id) (PARTITION p0 VALUES LESS THAN (10), PARTITION p1 VALUES LESS THAN (20));"
+    },
+    {
+      "id": "alter_partition_invalid_rebuild_check_option",
+      "sql": "ALTER TABLE t REBUILD PARTITION ALL QUICK",
+      "validity": "invalid",
+      "derivation": "hand-reduced syntax witness; source anchors identify relevant grammar, not verbatim MTR extraction",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 8654,
+          "excerpt": "standalone_alter_commands:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 8924,
+          "excerpt": "standalone_alter_commands:",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "REJECTED",
+      "known_gap": false,
+      "native_action": "ddl",
+      "native_fixture_sql": "CREATE TABLE t (id INT, region INT) PARTITION BY RANGE(id) (PARTITION p0 VALUES LESS THAN (10), PARTITION p1 VALUES LESS THAN (20));"
+    },
+    {
+      "id": "alter_partition_invalid_check_incomplete",
+      "sql": "ALTER TABLE t CHECK PARTITION p0 FOR",
+      "validity": "invalid",
+      "derivation": "hand-reduced syntax witness; source anchors identify relevant grammar, not verbatim MTR extraction",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 8654,
+          "excerpt": "standalone_alter_commands:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 9491,
+          "excerpt": "opt_mi_check_types:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 8924,
+          "excerpt": "standalone_alter_commands:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 9805,
+          "excerpt": "opt_mi_check_types:",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "REJECTED",
+      "known_gap": false,
+      "native_action": "ddl",
+      "native_fixture_sql": "CREATE TABLE t (id INT, region INT) PARTITION BY RANGE(id) (PARTITION p0 VALUES LESS THAN (10), PARTITION p1 VALUES LESS THAN (20));"
+    },
+    {
+      "id": "alter_partition_invalid_repair_changed",
+      "sql": "ALTER TABLE t REPAIR PARTITION ALL CHANGED",
+      "validity": "invalid",
+      "derivation": "hand-reduced syntax witness; source anchors identify relevant grammar, not verbatim MTR extraction",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 8654,
+          "excerpt": "standalone_alter_commands:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 9371,
+          "excerpt": "opt_mi_repair_types:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 8924,
+          "excerpt": "standalone_alter_commands:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 9685,
+          "excerpt": "opt_mi_repair_types:",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "REJECTED",
+      "known_gap": false,
+      "native_action": "ddl",
+      "native_fixture_sql": "CREATE TABLE t (id INT, region INT) PARTITION BY RANGE(id) (PARTITION p0 VALUES LESS THAN (10), PARTITION p1 VALUES LESS THAN (20));"
+    },
+    {
+      "id": "create_partition_invalid_grouped_query_without_as",
+      "sql": "CREATE TABLE t (id INT) PARTITION BY HASH(id) (SELECT 1 AS id)",
+      "validity": "invalid",
+      "derivation": "hand-reduced syntax witness; source anchors identify relevant grammar, not verbatim MTR extraction",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 6071,
+          "excerpt": "opt_create_table_options_etc:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 6130,
+          "excerpt": "partition_clause:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 6218,
+          "excerpt": "opt_create_table_options_etc:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 6277,
+          "excerpt": "partition_clause:",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "REJECTED",
+      "known_gap": false,
+      "native_action": "ddl"
+    },
+    {
+      "id": "create_partition_invalid_parenthesized_list_first_item",
+      "sql": "CREATE TABLE t (id INT) PARTITION BY LIST(id) (PARTITION p0 VALUES IN ((1+2),3))",
+      "validity": "invalid",
+      "derivation": "hand-reduced syntax witness; source anchors identify relevant grammar, not verbatim MTR extraction",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 6311,
+          "excerpt": "part_value_list:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 6458,
+          "excerpt": "part_value_list:",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "REJECTED",
+      "known_gap": false,
+      "native_action": "ddl"
+    },
+    {
+      "id": "create_partition_invalid_doublepipe",
+      "sql": "CREATE TABLE t (id INT) PARTITION BY HASH(id||2)",
+      "validity": "invalid",
+      "derivation": "hand-reduced syntax witness; source anchors identify relevant grammar, not verbatim MTR extraction",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 6138,
+          "excerpt": "part_type_def:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 6285,
+          "excerpt": "part_type_def:",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "REJECTED",
+      "known_gap": false,
+      "native_action": "ddl"
+    },
+    {
+      "id": "create_partition_invalid_value_doublepipe",
+      "sql": "CREATE TABLE t (id INT) PARTITION BY RANGE(id) (PARTITION p0 VALUES LESS THAN (1||2))",
+      "validity": "invalid",
+      "derivation": "hand-reduced syntax witness; source anchors identify relevant grammar, not verbatim MTR extraction",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 6360,
+          "excerpt": "part_value_item:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 6507,
+          "excerpt": "part_value_item:",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "REJECTED",
+      "known_gap": false,
+      "native_action": "ddl"
+    },
+    {
+      "id": "create_partition_grouped_doublepipe",
+      "sql": "CREATE TABLE t (id INT) PARTITION BY HASH ((id || 2))",
+      "validity": "valid",
+      "derivation": "hand-reduced syntax witness; source anchors identify relevant grammar, not verbatim MTR extraction",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 6130,
+          "excerpt": "partition_clause:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 6138,
+          "excerpt": "part_type_def:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 6277,
+          "excerpt": "partition_clause:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 6285,
+          "excerpt": "part_type_def:",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "CHECKED",
+      "known_gap": false,
+      "native_action": "ddl",
+      "expected_sql": "CREATE TABLE t (id INT) PARTITION BY HASH ((id || 2))"
+    },
+    {
+      "id": "create_partition_max_rows_wide_hex",
+      "sql": "CREATE TABLE t (id INT) PARTITION BY HASH(id) (PARTITION p0 MAX_ROWS=0x10000000000000000)",
+      "validity": "valid",
+      "derivation": "hand-reduced syntax witness; source anchors identify relevant grammar, not verbatim MTR extraction",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 6413,
+          "excerpt": "part_option:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 12651,
+          "excerpt": "real_ulonglong_num:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 6560,
+          "excerpt": "part_option:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 13121,
+          "excerpt": "real_ulonglong_num:",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "CHECKED",
+      "known_gap": false,
+      "native_action": "ddl",
+      "expected_sql": "CREATE TABLE t (id INT) PARTITION BY HASH (id) (PARTITION p0 MAX_ROWS 0x10000000000000000)"
+    },
+    {
+      "id": "create_partition_invalid_interval_unit",
+      "sql": "CREATE TABLE t (id INT) PARTITION BY HASH(INTERVAL 1 garbage)",
+      "validity": "invalid",
+      "derivation": "hand-reduced syntax witness; source anchors identify relevant grammar, not verbatim MTR extraction",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 6138,
+          "excerpt": "part_type_def:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 12266,
+          "excerpt": "interval:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 6285,
+          "excerpt": "part_type_def:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 12690,
+          "excerpt": "interval:",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "REJECTED",
+      "known_gap": false,
+      "native_action": "ddl"
+    },
+    {
+      "id": "create_partition_invalid_nested_interval_unit",
+      "sql": "CREATE TABLE t (id INT) PARTITION BY HASH(id + INTERVAL 1 garbage)",
+      "validity": "invalid",
+      "derivation": "hand-reduced syntax witness; source anchors identify relevant grammar, not verbatim MTR extraction",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 10253,
+          "excerpt": "bit_expr:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 12266,
+          "excerpt": "interval:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 10567,
+          "excerpt": "bit_expr:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 12690,
+          "excerpt": "interval:",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "REJECTED",
+      "known_gap": false,
+      "native_action": "ddl"
+    },
+    {
+      "id": "create_partition_invalid_opaque_quantifier",
+      "sql": "CREATE TABLE t (id INT) PARTITION BY HASH(ALL(SELECT nonsense tokens))",
+      "validity": "invalid",
+      "derivation": "hand-reduced syntax witness; source anchors identify relevant grammar, not verbatim MTR extraction",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 6138,
+          "excerpt": "part_type_def:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 10346,
+          "excerpt": "all_or_any:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 6285,
+          "excerpt": "part_type_def:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 10660,
+          "excerpt": "all_or_any:",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "REJECTED",
+      "known_gap": false,
+      "native_action": "ddl"
+    },
+    {
+      "id": "create_partition_invalid_array_constructor",
+      "sql": "CREATE TABLE t (id INT) PARTITION BY HASH(ARRAY[1,2])",
+      "validity": "invalid",
+      "derivation": "hand-reduced syntax witness; source anchors identify relevant grammar, not verbatim MTR extraction",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 10351,
+          "excerpt": "simple_expr:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 10665,
+          "excerpt": "simple_expr:",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "REJECTED",
+      "known_gap": false,
+      "native_action": "ddl"
+    },
+    {
+      "id": "create_partition_array_identifier",
+      "sql": "CREATE TABLE t (ARRAY INT) PARTITION BY HASH (ARRAY)",
+      "validity": "valid",
+      "derivation": "hand-reduced syntax witness; source anchors identify relevant grammar, not verbatim MTR extraction",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 14895,
+          "excerpt": "simple_ident:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 15323,
+          "excerpt": "| ARRAY_SYM",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 15555,
+          "excerpt": "simple_ident:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 15986,
+          "excerpt": "| ARRAY_SYM",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "CHECKED",
+      "known_gap": false,
+      "native_action": "ddl",
+      "expected_sql": "CREATE TABLE t (ARRAY INT) PARTITION BY HASH (ARRAY)"
     }
   ]
 }
