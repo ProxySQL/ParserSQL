@@ -226,6 +226,21 @@ MySQL ROWS/RANGE frames are parsed and emitted, but remain unsupported by the
 local planner. Nested ordinary function calls no longer allocate discarded
 expression trees during speculative type-prefix parsing.
 
+PostgreSQL escape-string literals (`E'...'`) retain their source spelling for
+parsing, emission and parameterization. Local SELECT and DML planning reject
+these literals until the evaluator implements PostgreSQL escape decoding;
+ordinary and dollar-quoted strings retain their existing execution support.
+WITH-prefixed INSERT/UPDATE/DELETE/MERGE and standalone MERGE expose the main
+target through `schema_name` and `table_name`, independently of CTE and source
+relations. SELECT with a modifying CTE does not report that CTE as its target.
+
+Window-frame, bound and exclusion allocation failures are detected without
+dereferencing missing nodes or reporting a complete successful parse.
+Quantified comparisons retain their incoming operator precedence, including
+when combined with LIKE and NOT. Bare DEFAULT placeholders are rejected in
+CREATE column/domain default operands; independent full-expression contexts
+follow the native grammar and may still require server semantic validation.
+
 Session transaction dispatch requires a successful, complete parse before any
 transaction-manager call. PostgreSQL SAVEPOINT, RELEASE and ROLLBACK TO use the
 named operand, including identifier case folding and quoted-name decoding.
