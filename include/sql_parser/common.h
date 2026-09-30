@@ -358,6 +358,10 @@ enum class NodeType : uint16_t {
     NODE_MYSQL_MATCH_COLUMNS, // nonempty list of simple or qualified columns
     NODE_MYSQL_MATCH, // value=validated search mode; column list, search expression
 
+    NODE_MYSQL_CHARSET_LITERAL, // value=charset introducer; string/hex/bit literal children
+    NODE_MYSQL_COLLATE, // value=collation source spelling; one expression child
+    NODE_MYSQL_CONVERT, // expression, type/charset metadata; flag 1=USING form
+
 };
 
 } // namespace sql_parser

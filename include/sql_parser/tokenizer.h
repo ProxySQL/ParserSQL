@@ -319,6 +319,7 @@ private:
         }
         ++cursor_;
         uint32_t len = static_cast<uint32_t>(cursor_ - start);
+        if (hex && ((len - 3) & 1)) invalid = true; // quoted hex encodes whole bytes
         return make_token(invalid ? TokenType::TK_ERROR :
                           (hex ? TokenType::TK_HEX_LITERAL : TokenType::TK_BIT_LITERAL),
                           start, len);

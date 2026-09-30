@@ -179,6 +179,21 @@ private:
                 break;
             case NodeType::NODE_UNARY_OP:        emit_unary_op(node); break;
             case NodeType::NODE_FUNCTION_CALL:   emit_function_call(node); break;
+            case NodeType::NODE_MYSQL_CHARSET_LITERAL:
+                emit_value(node);
+                for (const auto* literal = node->first_child; literal; literal = literal->next_sibling) {
+                    if (literal != node->first_child || literal->type != NodeType::NODE_LITERAL_STRING)
+                        sb_.append_char(' ');
+                    emit_mysql_syntax_string(literal);
+                }
+                break;
+            case NodeType::NODE_MYSQL_COLLATE:
+                emit_node(node->first_child); sb_.append(" COLLATE "); emit_value(node); break;
+            case NodeType::NODE_MYSQL_CONVERT:
+                sb_.append("CONVERT("); emit_node(node->first_child);
+                sb_.append(node->flags & 1 ? " USING " : ", ");
+                emit_node(node->first_child ? node->first_child->next_sibling : nullptr);
+                sb_.append_char(')'); break;
             case NodeType::NODE_MYSQL_EXTRACT:
             case NodeType::NODE_MYSQL_SUBSTRING:
             case NodeType::NODE_MYSQL_MATCH: emit_mysql_special(node); break;
@@ -651,9 +666,15 @@ private:
                 return;
             }
         }
-        sb_.append_char('\'');
+        char delimiter = '\'';
+        if constexpr (D == Dialect::MySQL) {
+            // Token values retain lexical escapes. Changing a double-quoted
+            // delimiter can invalidate apostrophes or doubled double quotes.
+            if (!node->source().empty() && node->source_ptr[0] == '"') delimiter = '"';
+        }
+        sb_.append_char(delimiter);
         sb_.append(node->value_ptr, node->value_len);
-        sb_.append_char('\'');
+        sb_.append_char(delimiter);
     }
 
     void emit_placeholder(const AstNode* node) {

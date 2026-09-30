@@ -11,6 +11,8 @@
 #include "sql_parser/pg_identifier.h"
 #include "sql_parser/pg_sql_json_parser.h"
 #include "sql_parser/mysql_value_syntax.h"
+#include "sql_parser/mysql_charset.h"
+#include "sql_parser/mysql_cast_type_parser.h"
 
 namespace sql_parser {
 
@@ -444,6 +446,9 @@ private:
     // Parse a primary expression (atom)
     AstNode* parse_atom() {
         Token t = tok_.peek();
+        if constexpr (D == Dialect::MySQL) {
+            if (mysql_charset_introducer(t)) return parse_mysql_charset_literal();
+        }
         if constexpr (D == Dialect::PostgreSQL) {
             if ((t.type == TokenType::TK_IDENTIFIER || t.type == TokenType::TK_INTERVAL) &&
                 (keyword(t, "OPERATOR") || keyword(t, "INTERVAL"))) {
@@ -804,6 +809,9 @@ private:
 
     AstNode* parse_identifier_or_function(const Token& name_token) {
         if constexpr (D == Dialect::MySQL) {
+            if (tok_.peek().type == TokenType::TK_LPAREN &&
+                (keyword(name_token, "CAST") || keyword(name_token, "CONVERT")))
+                return parse_mysql_conversion(keyword(name_token, "CONVERT"));
             if (keyword(name_token, "MATCH")) return parse_mysql_match();
             if (tok_.peek().type == TokenType::TK_LPAREN && keyword(name_token, "EXTRACT") &&
                 name_token.source.ptr + name_token.source.len == tok_.peek().source.ptr)
@@ -928,24 +936,6 @@ private:
             AstNode* func = make_node(arena_, NodeType::NODE_FUNCTION_CALL, function_name,
                 qualified_function ? FLAG_FUNCTION_QUALIFIED : 0);
             if (!func) return syntax_error();
-            // CAST uses `CAST(expr AS type)` rather than a comma-separated
-            // argument list. Model it as a function call so consumers can
-            // reject or handle the expression without leaving valid input
-            // unconsumed.
-            if (D == Dialect::MySQL && name_token.text.equals_ci("CAST", 4)) {
-                AstNode* arg = parse();
-                if (!arg || tok_.peek().type != TokenType::TK_AS) return func;
-                func->add_child(arg);
-                tok_.skip();
-                Token type = tok_.next_token();
-                if (type.type == TokenType::TK_EOF ||
-                    type.type == TokenType::TK_RPAREN) {
-                    return func;
-                }
-                func->add_child(make_node(arena_, NodeType::NODE_IDENTIFIER, type.text));
-                if (tok_.peek().type == TokenType::TK_RPAREN) tok_.skip();
-                return func;
-            }
             // Aggregate modifiers precede a nonempty expression list.
             if constexpr (D == Dialect::PostgreSQL) {
                 Token modifier = tok_.peek();
@@ -1075,6 +1065,57 @@ private:
             col_ref->flags |= FLAG_IDENT_DELIMITED;
         if constexpr (D == Dialect::MySQL) return parse_mysql_json_extract(col_ref);
         return col_ref;
+    }
+
+    AstNode* parse_mysql_charset_literal() {
+        const Token introducer = tok_.next_token();
+        auto* node = make_node(arena_, NodeType::NODE_MYSQL_CHARSET_LITERAL, introducer.source);
+        if (!node) return syntax_error();
+        Token value = tok_.peek();
+        const bool text = value.type == TokenType::TK_STRING;
+        // Unlike quoted X'/B' forms, numeric introducers use lowercase x/b.
+        if (value.source.len >= 2 && value.source.ptr[0] == '0' &&
+            (value.source.ptr[1] == 'X' || value.source.ptr[1] == 'B')) return syntax_error();
+        if (!text && value.type != TokenType::TK_HEX_LITERAL && value.type != TokenType::TK_BIT_LITERAL)
+            return syntax_error();
+        do {
+            tok_.skip();
+            auto kind = text ? NodeType::NODE_LITERAL_STRING : value.type == TokenType::TK_HEX_LITERAL ?
+                NodeType::NODE_LITERAL_HEX : NodeType::NODE_LITERAL_BIT;
+            auto* literal = make_node_from_token(arena_, kind, value);
+            if (!literal) return syntax_error();
+            node->add_child(literal);
+            value = tok_.peek();
+        } while (text && value.type == TokenType::TK_STRING);
+        return node;
+    }
+
+    AstNode* parse_mysql_conversion(bool convert) {
+        tok_.skip(); // (
+        auto* value = parse_complete();
+        if (!value || !mysql_value_expression(value)) return syntax_error();
+        const bool using_charset = convert && tok_.peek().type == TokenType::TK_USING;
+        StringRef type;
+        if (using_charset) {
+            tok_.skip();
+            Token name = tok_.next_token();
+            if (mysql_charset_introducer(name) ||
+                (!mysql_identifier_token(name) && name.type != TokenType::TK_STRING && !keyword(name, "BINARY")))
+                return syntax_error();
+            type = name.source;
+        } else {
+            if (tok_.peek().type != (convert ? TokenType::TK_COMMA : TokenType::TK_AS)) return syntax_error();
+            tok_.skip();
+            type = MySQLCastTypeParser(tok_).parse();
+        }
+        if (type.empty() || tok_.peek().type != TokenType::TK_RPAREN) return syntax_error();
+        tok_.skip();
+        if (!convert) return make_cast(value, type);
+        auto* node = make_node(arena_, NodeType::NODE_MYSQL_CONVERT, {}, using_charset ? 1 : 0);
+        auto* metadata = make_node(arena_, NodeType::NODE_TYPE_NAME, type);
+        if (!node || !metadata) return syntax_error();
+        node->add_child(value); node->add_child(metadata);
+        return node;
     }
 
     AstNode* parse_mysql_extract() {
@@ -1287,6 +1328,9 @@ private:
                 default: break;
             }
         }
+        if constexpr (D == Dialect::MySQL) {
+            if (type == TokenType::TK_COLLATE) return Precedence::POSTFIX;
+        }
         switch (type) {
             case TokenType::TK_OR:             return Precedence::OR;
             case TokenType::TK_XOR:            return Precedence::XOR;
@@ -1377,6 +1421,16 @@ private:
                     AstNode* node = make_node(arena_, NodeType::NODE_BINARY_OP, StringRef{"COLLATE", 7}, FLAG_PG_OPERATOR);
                     node->add_child(left);
                     node->add_child(make_node(arena_, NodeType::NODE_TYPE_NAME, span));
+                    return node;
+                }
+                if constexpr (D == Dialect::MySQL) {
+                    Token name = tok_.next_token();
+                    if (mysql_charset_introducer(name) ||
+                        (!mysql_identifier_token(name) && name.type != TokenType::TK_STRING) ||
+                        !left || !mysql_value_expression(left)) return syntax_error();
+                    auto* node = make_node(arena_, NodeType::NODE_MYSQL_COLLATE, name.source);
+                    if (!node) return syntax_error();
+                    node->add_child(left);
                     return node;
                 }
                 return nullptr;

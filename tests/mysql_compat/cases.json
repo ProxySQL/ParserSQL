@@ -661,10 +661,10 @@
           "kind": "grammar_anchor"
         }
       ],
-      "expected": "TRAILING_INPUT",
-      "known_gap": true,
-      "gap_note": "Relevant syntax is not fully consumed; inspect remaining input in report.",
-      "native_action": "execute"
+      "expected": "CHECKED",
+      "known_gap": false,
+      "native_action": "execute",
+      "expected_sql": "SELECT _utf8mb4'hello' COLLATE utf8mb4_bin"
     },
     {
       "id": "cast_decimal",
@@ -687,10 +687,10 @@
           "kind": "grammar_anchor"
         }
       ],
-      "expected": "TRAILING_INPUT",
-      "known_gap": true,
-      "gap_note": "Relevant syntax is not fully consumed; inspect remaining input in report.",
-      "native_action": "execute"
+      "expected": "CHECKED",
+      "known_gap": false,
+      "native_action": "execute",
+      "expected_sql": "SELECT CAST(n AS DECIMAL(10,2)) FROM t"
     },
     {
       "id": "interval",
@@ -4391,6 +4391,1116 @@
           "path": "sql/sql_yacc.yy",
           "line": 11070,
           "excerpt": "| EXTRACT_SYM '(' interval FROM expr ')'",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "REJECTED",
+      "known_gap": false,
+      "native_action": "execute"
+    },
+    {
+      "id": "cast_signed_unsigned",
+      "sql": "SELECT CAST('12' AS SIGNED), CAST(-1 AS UNSIGNED)",
+      "validity": "valid",
+      "derivation": "hand-reduced syntax witness; source anchors identify relevant grammar, not verbatim MTR extraction",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 11523,
+          "excerpt": "cast_type:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 11947,
+          "excerpt": "cast_type:",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected_sql": "SELECT CAST('12' AS SIGNED), CAST(-1 AS UNSIGNED)",
+      "expected": "CHECKED",
+      "known_gap": false,
+      "native_action": "execute"
+    },
+    {
+      "id": "cast_character_binary",
+      "sql": "SELECT CAST('hello' AS CHAR(3) CHARACTER SET utf8mb4), CAST('ab' AS BINARY(3))",
+      "validity": "valid",
+      "derivation": "hand-reduced syntax witness; source anchors identify relevant grammar, not verbatim MTR extraction",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 11523,
+          "excerpt": "cast_type:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 11947,
+          "excerpt": "cast_type:",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected_sql": "SELECT CAST('hello' AS CHAR(3) CHARACTER SET utf8mb4), CAST('ab' AS BINARY(3))",
+      "expected": "CHECKED",
+      "known_gap": false,
+      "native_action": "execute"
+    },
+    {
+      "id": "cast_char_attributes",
+      "sql": "SELECT CAST('a' AS CHAR ASCII), CAST('b' AS CHAR CHARACTER SET latin1 BINARY), CAST('c' AS CHAR BYTE)",
+      "validity": "valid",
+      "derivation": "hand-reduced syntax witness; source anchors identify relevant grammar, not verbatim MTR extraction",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 11523,
+          "excerpt": "cast_type:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 11947,
+          "excerpt": "cast_type:",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected_sql": "SELECT CAST('a' AS CHAR ASCII), CAST('b' AS CHAR CHARACTER SET latin1 BINARY), CAST('c' AS CHAR BYTE)",
+      "expected": "CHECKED",
+      "known_gap": false,
+      "native_action": "execute"
+    },
+    {
+      "id": "cast_temporal",
+      "sql": "SELECT CAST('2026-01-02' AS DATE), CAST('12:34:56.123' AS TIME(3)), CAST('2026-01-02 12:34:56.12' AS DATETIME(2)), CAST(2026 AS YEAR)",
+      "validity": "valid",
+      "derivation": "hand-reduced syntax witness; source anchors identify relevant grammar, not verbatim MTR extraction",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 11523,
+          "excerpt": "cast_type:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 11947,
+          "excerpt": "cast_type:",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected_sql": "SELECT CAST('2026-01-02' AS DATE), CAST('12:34:56.123' AS TIME(3)), CAST('2026-01-02 12:34:56.12' AS DATETIME(2)), CAST(2026 AS YEAR)",
+      "expected": "CHECKED",
+      "known_gap": false,
+      "native_action": "execute"
+    },
+    {
+      "id": "cast_numeric_json",
+      "sql": "SELECT CAST(1 AS FLOAT(24)), CAST(1 AS DOUBLE), CAST('1' AS JSON)",
+      "validity": "valid",
+      "derivation": "hand-reduced syntax witness; source anchors identify relevant grammar, not verbatim MTR extraction",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 11523,
+          "excerpt": "cast_type:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 11947,
+          "excerpt": "cast_type:",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected_sql": "SELECT CAST(1 AS FLOAT(24)), CAST(1 AS DOUBLE), CAST('1' AS JSON)",
+      "expected": "CHECKED",
+      "known_gap": false,
+      "native_action": "execute"
+    },
+    {
+      "id": "convert_type_decimal",
+      "sql": "SELECT CONVERT(n + 1, DECIMAL(9, 2)) FROM t",
+      "validity": "valid",
+      "derivation": "hand-reduced syntax witness; source anchors identify relevant grammar, not verbatim MTR extraction",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 10449,
+          "excerpt": "| CONVERT_SYM '(' expr ',' cast_type ')'",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 10770,
+          "excerpt": "| CONVERT_SYM '(' expr ',' cast_type ')'",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected_sql": "SELECT CONVERT(n + 1, DECIMAL(9, 2)) FROM t",
+      "expected": "CHECKED",
+      "known_gap": false,
+      "native_action": "execute"
+    },
+    {
+      "id": "convert_type_nested",
+      "sql": "SELECT CAST(CONVERT('17', SIGNED) AS CHAR(2))",
+      "validity": "valid",
+      "derivation": "hand-reduced syntax witness; source anchors identify relevant grammar, not verbatim MTR extraction",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 10425,
+          "excerpt": "| CAST_SYM '(' expr AS cast_type opt_array_cast ')'",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 10745,
+          "excerpt": "| CAST_SYM '(' expr AS cast_type opt_array_cast ')'",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected_sql": "SELECT CAST(CONVERT('17', SIGNED) AS CHAR(2))",
+      "expected": "CHECKED",
+      "known_gap": false,
+      "native_action": "execute"
+    },
+    {
+      "id": "convert_using_names",
+      "sql": "SELECT CONVERT('hello' USING utf8mb4), CONVERT('hello' USING 'latin1'), CONVERT('hello' USING BINARY)",
+      "validity": "valid",
+      "derivation": "hand-reduced syntax witness; source anchors identify relevant grammar, not verbatim MTR extraction",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 10455,
+          "excerpt": "| CONVERT_SYM '(' expr USING charset_name ')'",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 10776,
+          "excerpt": "| CONVERT_SYM '(' expr USING charset_name ')'",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected_sql": "SELECT CONVERT('hello' USING utf8mb4), CONVERT('hello' USING 'latin1'), CONVERT('hello' USING BINARY)",
+      "expected": "CHECKED",
+      "known_gap": false,
+      "native_action": "execute"
+    },
+    {
+      "id": "convert_using_quoted_identifier",
+      "sql": "SELECT CONVERT ('hello' USING `utf8mb4`)",
+      "validity": "valid",
+      "derivation": "hand-reduced syntax witness; source anchors identify relevant grammar, not verbatim MTR extraction",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 10455,
+          "excerpt": "| CONVERT_SYM '(' expr USING charset_name ')'",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 10776,
+          "excerpt": "| CONVERT_SYM '(' expr USING charset_name ')'",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected_sql": "SELECT CONVERT('hello' USING `utf8mb4`)",
+      "expected": "CHECKED",
+      "known_gap": false,
+      "native_action": "execute"
+    },
+    {
+      "id": "charset_text_spaced",
+      "sql": "SELECT _latin1 'hello', _utf8'world'",
+      "validity": "valid",
+      "derivation": "hand-reduced syntax witness; source anchors identify relevant grammar, not verbatim MTR extraction",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 14693,
+          "excerpt": "| UNDERSCORE_CHARSET TEXT_STRING",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 15319,
+          "excerpt": "| UNDERSCORE_CHARSET TEXT_STRING",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected_sql": "SELECT _latin1'hello', _utf8'world'",
+      "expected": "CHECKED",
+      "known_gap": false,
+      "native_action": "execute"
+    },
+    {
+      "id": "charset_hex",
+      "sql": "SELECT _binary X'4142', _utf8mb4 0x4344",
+      "validity": "valid",
+      "derivation": "hand-reduced syntax witness; source anchors identify relevant grammar, not verbatim MTR extraction",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 14800,
+          "excerpt": "| UNDERSCORE_CHARSET HEX_NUM",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 15426,
+          "excerpt": "| UNDERSCORE_CHARSET HEX_NUM",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected_sql": "SELECT _binary X'4142', _utf8mb4 0x4344",
+      "expected": "CHECKED",
+      "known_gap": false,
+      "native_action": "execute"
+    },
+    {
+      "id": "charset_bit",
+      "sql": "SELECT _binary B'01000001', _utf8mb4 0b01000010",
+      "validity": "valid",
+      "derivation": "hand-reduced syntax witness; source anchors identify relevant grammar, not verbatim MTR extraction",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 14804,
+          "excerpt": "| UNDERSCORE_CHARSET BIN_NUM",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 15430,
+          "excerpt": "| UNDERSCORE_CHARSET BIN_NUM",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected_sql": "SELECT _binary B'01000001', _utf8mb4 0b01000010",
+      "expected": "CHECKED",
+      "known_gap": false,
+      "native_action": "execute"
+    },
+    {
+      "id": "collate_expression_precedence",
+      "sql": "SELECT _utf8mb4'a' COLLATE utf8mb4_bin = _utf8mb4'A'",
+      "validity": "valid",
+      "derivation": "hand-reduced syntax witness; source anchors identify relevant grammar, not verbatim MTR extraction",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 10357,
+          "excerpt": "| simple_expr COLLATE_SYM ident_or_text %prec NEG",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 10671,
+          "excerpt": "| simple_expr COLLATE_SYM ident_or_text %prec NEG",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected_sql": "SELECT _utf8mb4'a' COLLATE utf8mb4_bin = _utf8mb4'A'",
+      "expected": "CHECKED",
+      "known_gap": false,
+      "native_action": "execute"
+    },
+    {
+      "id": "collate_quoted_names",
+      "sql": "SELECT _utf8mb4'a' COLLATE `utf8mb4_bin`, _utf8mb4'b' COLLATE 'utf8mb4_bin'",
+      "validity": "valid",
+      "derivation": "hand-reduced syntax witness; source anchors identify relevant grammar, not verbatim MTR extraction",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 10357,
+          "excerpt": "| simple_expr COLLATE_SYM ident_or_text %prec NEG",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 10671,
+          "excerpt": "| simple_expr COLLATE_SYM ident_or_text %prec NEG",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected_sql": "SELECT _utf8mb4'a' COLLATE `utf8mb4_bin`, _utf8mb4'b' COLLATE 'utf8mb4_bin'",
+      "expected": "CHECKED",
+      "known_gap": false,
+      "native_action": "execute"
+    },
+    {
+      "id": "collate_cast_operand",
+      "sql": "SELECT CAST('hello' AS CHAR CHARACTER SET utf8mb4) COLLATE utf8mb4_bin",
+      "validity": "valid",
+      "derivation": "hand-reduced syntax witness; source anchors identify relevant grammar, not verbatim MTR extraction",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 10357,
+          "excerpt": "| simple_expr COLLATE_SYM ident_or_text %prec NEG",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 10671,
+          "excerpt": "| simple_expr COLLATE_SYM ident_or_text %prec NEG",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected_sql": "SELECT CAST('hello' AS CHAR CHARACTER SET utf8mb4) COLLATE utf8mb4_bin",
+      "expected": "CHECKED",
+      "known_gap": false,
+      "native_action": "execute"
+    },
+    {
+      "id": "collate_match_search",
+      "sql": "SELECT MATCH(body) AGAINST ('mysql' COLLATE utf8mb4_bin IN BOOLEAN MODE) FROM t",
+      "validity": "valid",
+      "derivation": "hand-reduced syntax witness; source anchors identify relevant grammar, not verbatim MTR extraction",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 10357,
+          "excerpt": "| simple_expr COLLATE_SYM ident_or_text %prec NEG",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 10671,
+          "excerpt": "| simple_expr COLLATE_SYM ident_or_text %prec NEG",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected_sql": "SELECT MATCH(body) AGAINST ('mysql' COLLATE utf8mb4_bin IN BOOLEAN MODE) FROM t",
+      "expected": "CHECKED",
+      "known_gap": false,
+      "native_action": "execute"
+    },
+    {
+      "id": "cast_missing_as",
+      "sql": "SELECT CAST(1 SIGNED)",
+      "validity": "invalid",
+      "derivation": "hand-written malformed control; source anchors identify the related required grammar",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 10425,
+          "excerpt": "| CAST_SYM '(' expr AS cast_type opt_array_cast ')'",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 10745,
+          "excerpt": "| CAST_SYM '(' expr AS cast_type opt_array_cast ')'",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "REJECTED",
+      "known_gap": false,
+      "native_action": "execute"
+    },
+    {
+      "id": "cast_missing_operand",
+      "sql": "SELECT CAST(AS SIGNED)",
+      "validity": "invalid",
+      "derivation": "hand-written malformed control; source anchors identify the related required grammar",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 10425,
+          "excerpt": "| CAST_SYM '(' expr AS cast_type opt_array_cast ')'",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 10745,
+          "excerpt": "| CAST_SYM '(' expr AS cast_type opt_array_cast ')'",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "REJECTED",
+      "known_gap": false,
+      "native_action": "execute"
+    },
+    {
+      "id": "cast_missing_type",
+      "sql": "SELECT CAST(1 AS)",
+      "validity": "invalid",
+      "derivation": "hand-written malformed control; source anchors identify the related required grammar",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 10425,
+          "excerpt": "| CAST_SYM '(' expr AS cast_type opt_array_cast ')'",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 10745,
+          "excerpt": "| CAST_SYM '(' expr AS cast_type opt_array_cast ')'",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "REJECTED",
+      "known_gap": false,
+      "native_action": "execute"
+    },
+    {
+      "id": "cast_invalid_native_type",
+      "sql": "SELECT CAST(1 AS INT)",
+      "validity": "invalid",
+      "derivation": "hand-written malformed control; source anchors identify the related required grammar",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 11523,
+          "excerpt": "cast_type:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 11947,
+          "excerpt": "cast_type:",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "REJECTED",
+      "known_gap": false,
+      "native_action": "execute"
+    },
+    {
+      "id": "cast_decimal_missing_scale",
+      "sql": "SELECT CAST(1 AS DECIMAL(9,))",
+      "validity": "invalid",
+      "derivation": "hand-written malformed control; source anchors identify the related required grammar",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 7176,
+          "excerpt": "float_options:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 7432,
+          "excerpt": "float_options:",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "REJECTED",
+      "known_gap": false,
+      "native_action": "execute"
+    },
+    {
+      "id": "cast_decimal_extra_precision",
+      "sql": "SELECT CAST(1 AS DECIMAL(9,2,1))",
+      "validity": "invalid",
+      "derivation": "hand-written malformed control; source anchors identify the related required grammar",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 7176,
+          "excerpt": "float_options:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 7432,
+          "excerpt": "float_options:",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "REJECTED",
+      "known_gap": false,
+      "native_action": "execute"
+    },
+    {
+      "id": "cast_time_extra_precision",
+      "sql": "SELECT CAST('12:34:56' AS TIME(3,2))",
+      "validity": "invalid",
+      "derivation": "hand-written malformed control; source anchors identify the related required grammar",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 7199,
+          "excerpt": "type_datetime_precision:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 7455,
+          "excerpt": "type_datetime_precision:",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "REJECTED",
+      "known_gap": false,
+      "native_action": "execute"
+    },
+    {
+      "id": "convert_missing_type",
+      "sql": "SELECT CONVERT(1,)",
+      "validity": "invalid",
+      "derivation": "hand-written malformed control; source anchors identify the related required grammar",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 10449,
+          "excerpt": "| CONVERT_SYM '(' expr ',' cast_type ')'",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 10770,
+          "excerpt": "| CONVERT_SYM '(' expr ',' cast_type ')'",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "REJECTED",
+      "known_gap": false,
+      "native_action": "execute"
+    },
+    {
+      "id": "convert_using_missing_charset",
+      "sql": "SELECT CONVERT('a' USING)",
+      "validity": "invalid",
+      "derivation": "hand-written malformed control; source anchors identify the related required grammar",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 10455,
+          "excerpt": "| CONVERT_SYM '(' expr USING charset_name ')'",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 10776,
+          "excerpt": "| CONVERT_SYM '(' expr USING charset_name ')'",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "REJECTED",
+      "known_gap": false,
+      "native_action": "execute"
+    },
+    {
+      "id": "convert_using_default_charset",
+      "sql": "SELECT CONVERT('a' USING DEFAULT)",
+      "validity": "invalid",
+      "derivation": "hand-written malformed control; source anchors identify the related required grammar",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 7434,
+          "excerpt": "charset_name:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 7698,
+          "excerpt": "charset_name:",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "REJECTED",
+      "known_gap": false,
+      "native_action": "execute"
+    },
+    {
+      "id": "convert_using_qualified_charset",
+      "sql": "SELECT CONVERT('a' USING utf8mb4.extra)",
+      "validity": "invalid",
+      "derivation": "hand-written malformed control; source anchors identify the related required grammar",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 7434,
+          "excerpt": "charset_name:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 7698,
+          "excerpt": "charset_name:",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "REJECTED",
+      "known_gap": false,
+      "native_action": "execute"
+    },
+    {
+      "id": "charset_nonliteral_operand",
+      "sql": "SELECT _utf8mb4 12",
+      "validity": "invalid",
+      "derivation": "hand-written malformed control; source anchors identify the related required grammar",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 14693,
+          "excerpt": "| UNDERSCORE_CHARSET TEXT_STRING",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 15319,
+          "excerpt": "| UNDERSCORE_CHARSET TEXT_STRING",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "REJECTED",
+      "known_gap": false,
+      "native_action": "execute"
+    },
+    {
+      "id": "collate_missing_name",
+      "sql": "SELECT 'a' COLLATE",
+      "validity": "invalid",
+      "derivation": "hand-written malformed control; source anchors identify the related required grammar",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 10357,
+          "excerpt": "| simple_expr COLLATE_SYM ident_or_text %prec NEG",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 10671,
+          "excerpt": "| simple_expr COLLATE_SYM ident_or_text %prec NEG",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "REJECTED",
+      "known_gap": false,
+      "native_action": "execute"
+    },
+    {
+      "id": "collate_reserved_binary",
+      "sql": "SELECT 'a' COLLATE BINARY",
+      "validity": "invalid",
+      "derivation": "hand-written malformed control; source anchors identify the related required grammar",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 10357,
+          "excerpt": "| simple_expr COLLATE_SYM ident_or_text %prec NEG",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 10671,
+          "excerpt": "| simple_expr COLLATE_SYM ident_or_text %prec NEG",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "REJECTED",
+      "known_gap": false,
+      "native_action": "execute"
+    },
+    {
+      "id": "collate_default",
+      "sql": "SELECT 'a' COLLATE DEFAULT",
+      "validity": "invalid",
+      "derivation": "hand-written malformed control; source anchors identify the related required grammar",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 10357,
+          "excerpt": "| simple_expr COLLATE_SYM ident_or_text %prec NEG",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 10671,
+          "excerpt": "| simple_expr COLLATE_SYM ident_or_text %prec NEG",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "REJECTED",
+      "known_gap": false,
+      "native_action": "execute"
+    },
+    {
+      "id": "collate_qualified_name",
+      "sql": "SELECT 'a' COLLATE utf8mb4_bin.extra",
+      "validity": "invalid",
+      "derivation": "hand-written malformed control; source anchors identify the related required grammar",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 10357,
+          "excerpt": "| simple_expr COLLATE_SYM ident_or_text %prec NEG",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 10671,
+          "excerpt": "| simple_expr COLLATE_SYM ident_or_text %prec NEG",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "REJECTED",
+      "known_gap": false,
+      "native_action": "execute"
+    },
+    {
+      "id": "cast_native_type_aliases",
+      "sql": "SELECT CAST(1 AS FLOAT4), CAST(1 AS FLOAT8 PRECISION), CAST(1 AS SIGNED INT4), CONVERT(1, UNSIGNED INT4)",
+      "validity": "valid",
+      "derivation": "hand-reduced syntax witness; source anchors identify relevant grammar, not verbatim MTR extraction",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 11523,
+          "excerpt": "cast_type:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 11947,
+          "excerpt": "cast_type:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "8.4.8",
+          "path": "sql/lex.h",
+          "line": 274,
+          "excerpt": "{SYM(\"FLOAT4\", FLOAT_SYM)},",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/lex.h",
+          "line": 286,
+          "excerpt": "{SYM(\"FLOAT4\", FLOAT_SYM)},",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "8.4.8",
+          "path": "sql/lex.h",
+          "line": 275,
+          "excerpt": "{SYM(\"FLOAT8\", DOUBLE_SYM)},",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/lex.h",
+          "line": 287,
+          "excerpt": "{SYM(\"FLOAT8\", DOUBLE_SYM)},",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "8.4.8",
+          "path": "sql/lex.h",
+          "line": 342,
+          "excerpt": "{SYM(\"INT4\", INT_SYM)},",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/lex.h",
+          "line": 356,
+          "excerpt": "{SYM(\"INT4\", INT_SYM)},",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "CHECKED",
+      "known_gap": false,
+      "native_action": "execute",
+      "expected_sql": "SELECT CAST(1 AS FLOAT4), CAST(1 AS FLOAT8 PRECISION), CAST(1 AS SIGNED INT4), CONVERT(1, UNSIGNED INT4)"
+    },
+    {
+      "id": "cast_decimal_field_length",
+      "sql": "SELECT CAST('ab' AS CHAR(1.2)), CAST(1 AS DECIMAL(1.)), CAST(1 AS FLOAT(.2))",
+      "validity": "valid",
+      "derivation": "hand-reduced syntax witness; source anchors identify relevant grammar, not verbatim MTR extraction",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 7238,
+          "excerpt": "field_length:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 7494,
+          "excerpt": "field_length:",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "CHECKED",
+      "known_gap": false,
+      "native_action": "execute",
+      "expected_sql": "SELECT CAST('ab' AS CHAR(1.2)), CAST(1 AS DECIMAL(1.)), CAST(1 AS FLOAT(.2))"
+    },
+    {
+      "id": "cast_decimal_precision_num_limit",
+      "sql": "SELECT CAST(1 AS DECIMAL(2147483648,2))",
+      "validity": "invalid",
+      "derivation": "hand-written malformed control; source anchors identify the related required grammar",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 7190,
+          "excerpt": "precision:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 7446,
+          "excerpt": "precision:",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "REJECTED",
+      "known_gap": false,
+      "native_action": "execute"
+    },
+    {
+      "id": "cast_decimal_scale_num_limit",
+      "sql": "SELECT CAST(1 AS DECIMAL(10,2147483648))",
+      "validity": "invalid",
+      "derivation": "hand-written malformed control; source anchors identify the related required grammar",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 7190,
+          "excerpt": "precision:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 7446,
+          "excerpt": "precision:",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "REJECTED",
+      "known_gap": false,
+      "native_action": "execute"
+    },
+    {
+      "id": "cast_time_precision_num_limit",
+      "sql": "SELECT CAST(1 AS TIME(2147483648))",
+      "validity": "invalid",
+      "derivation": "hand-written malformed control; source anchors identify the related required grammar",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 7199,
+          "excerpt": "type_datetime_precision:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 7455,
+          "excerpt": "type_datetime_precision:",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "REJECTED",
+      "known_gap": false,
+      "native_action": "execute"
+    },
+    {
+      "id": "charset_odd_quoted_hex",
+      "sql": "SELECT _binary X'1'",
+      "validity": "invalid",
+      "derivation": "hand-written malformed control; source anchors identify the related required grammar",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 14800,
+          "excerpt": "| UNDERSCORE_CHARSET HEX_NUM",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 15426,
+          "excerpt": "| UNDERSCORE_CHARSET HEX_NUM",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "REJECTED",
+      "known_gap": false,
+      "native_action": "execute"
+    },
+    {
+      "id": "convert_using_introducer_name",
+      "sql": "SELECT CONVERT(1 USING _utf8mb4)",
+      "validity": "invalid",
+      "derivation": "hand-written malformed control; source anchors identify the related required grammar",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 7434,
+          "excerpt": "charset_name:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 7698,
+          "excerpt": "charset_name:",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "REJECTED",
+      "known_gap": false,
+      "native_action": "execute"
+    },
+    {
+      "id": "collate_introducer_name",
+      "sql": "SELECT 'x' COLLATE _utf8mb4",
+      "validity": "invalid",
+      "derivation": "hand-written malformed control; source anchors identify the related required grammar",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 10357,
+          "excerpt": "| simple_expr COLLATE_SYM ident_or_text %prec NEG",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 10671,
+          "excerpt": "| simple_expr COLLATE_SYM ident_or_text %prec NEG",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "REJECTED",
+      "known_gap": false,
+      "native_action": "execute"
+    },
+    {
+      "id": "charset_uppercase_numeric_hex",
+      "sql": "SELECT _binary 0X41",
+      "validity": "invalid",
+      "derivation": "hand-written malformed control; source anchors identify the related required grammar",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 14800,
+          "excerpt": "| UNDERSCORE_CHARSET HEX_NUM",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 15426,
+          "excerpt": "| UNDERSCORE_CHARSET HEX_NUM",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "REJECTED",
+      "known_gap": false,
+      "native_action": "execute"
+    },
+    {
+      "id": "charset_uppercase_numeric_bit",
+      "sql": "SELECT _binary 0B01000001",
+      "validity": "invalid",
+      "derivation": "hand-written malformed control; source anchors identify the related required grammar",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 14804,
+          "excerpt": "| UNDERSCORE_CHARSET BIN_NUM",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 15430,
+          "excerpt": "| UNDERSCORE_CHARSET BIN_NUM",
           "kind": "grammar_anchor"
         }
       ],
