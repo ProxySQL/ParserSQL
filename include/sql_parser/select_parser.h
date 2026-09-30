@@ -356,11 +356,24 @@ private:
             if (tok_.peek().type == TokenType::TK_DISTINCT || tok_.peek().type == TokenType::TK_ALL)
                 group_by->set_value(tok_.next_token().text);
         }
+        if constexpr (D == Dialect::MySQL) {
+            if (mysql_grouping_operation_start()) {
+                auto* operation = parse_mysql_grouping_operation();
+                if (!operation) return expr_parser_.syntax_error();
+                group_by->add_child(operation);
+                return group_by; // Native grouping operations are whole-clause alternatives.
+            }
+        }
         while (true) {
             AstNode* expr;
             if constexpr (D == Dialect::PostgreSQL)
                 expr = PgQueryClauses<D>(tok_, arena_, expr_parser_).grouping();
-            else expr = expr_parser_.parse_complete();
+            else {
+                if (mysql_grouping_operation_start()) return expr_parser_.syntax_error();
+                expr = expr_parser_.parse_complete();
+                if (expr && (!mysql_value_expression(expr) || mysql_nested_grouping_keyword(expr)))
+                    return expr_parser_.syntax_error();
+            }
             if (!expr) {
                 return expr_parser_.syntax_error();
             }
@@ -377,6 +390,64 @@ private:
             }
         }
         return group_by;
+    }
+
+    bool mysql_grouping_operation_start() {
+        const Token first = tok_.peek();
+        auto look = tok_; look.skip();
+        return (look.peek().type == TokenType::TK_LPAREN &&
+                (ExpressionParser<D>::keyword(first, "ROLLUP") || ExpressionParser<D>::keyword(first, "CUBE"))) ||
+            (ExpressionParser<D>::keyword(first, "GROUPING") &&
+             ExpressionParser<D>::keyword(look.peek(), "SETS"));
+    }
+
+    // ROLLUP/CUBE are whole GROUP BY alternatives, not value functions.
+    // Generic function nodes retain name delimiters, so quoted UDF names
+    // remain distinct from these unquoted native grouping keywords.
+    static bool mysql_nested_grouping_keyword(const AstNode* node) {
+        if (node->type == NodeType::NODE_FUNCTION_CALL &&
+            (node->value().equals_ci("ROLLUP", 6) || node->value().equals_ci("CUBE", 4))) return true;
+        for (const auto* child = node->first_child; child; child = child->next_sibling)
+            if (mysql_nested_grouping_keyword(child)) return true;
+        return false;
+    }
+
+    bool parse_mysql_grouping_items(AstNode* parent, bool allow_empty) {
+        if (tok_.peek().type == TokenType::TK_RPAREN) return allow_empty;
+        do {
+            auto* expr = expr_parser_.parse_complete();
+            if (!expr || !mysql_value_expression(expr) || mysql_nested_grouping_keyword(expr)) return false;
+            parent->add_child(expr);
+            if (tok_.peek().type != TokenType::TK_COMMA) break;
+            tok_.skip();
+        } while (true);
+        return true;
+    }
+
+    AstNode* parse_mysql_grouping_operation() {
+        const Token name = tok_.next_token();
+        const bool sets = ExpressionParser<D>::keyword(name, "GROUPING");
+        if (sets) tok_.skip(); // SETS recognized by lookahead
+        if (tok_.peek().type != TokenType::TK_LPAREN) return expr_parser_.syntax_error();
+        tok_.skip();
+        auto* group = make_node(arena_, NodeType::NODE_GROUPING_SET,
+            sets ? StringRef{"GROUPING SETS", 13} : name.text);
+        if (!group) return expr_parser_.syntax_error();
+        if (sets) {
+            do {
+                if (tok_.peek().type != TokenType::TK_LPAREN) return expr_parser_.syntax_error();
+                tok_.skip();
+                auto* tuple = make_node(arena_, NodeType::NODE_TUPLE);
+                if (!tuple || !parse_mysql_grouping_items(tuple, true) ||
+                    tok_.peek().type != TokenType::TK_RPAREN) return expr_parser_.syntax_error();
+                tok_.skip(); group->add_child(tuple);
+                if (tok_.peek().type != TokenType::TK_COMMA) break;
+                tok_.skip();
+            } while (true);
+        } else if (!parse_mysql_grouping_items(group, false)) return expr_parser_.syntax_error();
+        if (tok_.peek().type != TokenType::TK_RPAREN) return expr_parser_.syntax_error();
+        tok_.skip();
+        return group;
     }
 
     // ---- HAVING ----

@@ -823,6 +823,11 @@ private:
                 return parse_mysql_substring(name_token);
             if (tok_.peek().type == TokenType::TK_LPAREN && keyword(name_token, "GROUP_CONCAT"))
                 return parse_mysql_group_concat();
+            // Native JSON aggregates require adjacency with IGNORE_SPACE off.
+            if (tok_.peek().type == TokenType::TK_LPAREN &&
+                name_token.source.ptr + name_token.source.len == tok_.peek().source.ptr &&
+                (keyword(name_token, "JSON_ARRAYAGG") || keyword(name_token, "JSON_OBJECTAGG")))
+                return parse_mysql_json_aggregate(name_token);
         }
         if constexpr (D == Dialect::PostgreSQL) {
             const bool has_arguments = tok_.peek().type == TokenType::TK_LPAREN;
@@ -901,6 +906,13 @@ private:
             }
         }
         StringRef function_name = name_token.source.empty() ? name_token.text : name_token.source;
+        bool mysql_space = false;
+        if constexpr (D == Dialect::MySQL) {
+            // Retain the separation that makes these names ordinary UDF calls.
+            if (tok_.peek().type == TokenType::TK_LPAREN &&
+                (keyword(name_token, "JSON_ARRAYAGG") || keyword(name_token, "JSON_OBJECTAGG")))
+                mysql_space = true;
+        }
         bool qualified_function = false;
         if constexpr (D == Dialect::PostgreSQL) {
             // Probe dotted names without consuming a column reference. Keep the
@@ -934,7 +946,7 @@ private:
             }
             tok_.skip();  // consume (
             AstNode* func = make_node(arena_, NodeType::NODE_FUNCTION_CALL, function_name,
-                qualified_function ? FLAG_FUNCTION_QUALIFIED : 0);
+                qualified_function ? FLAG_FUNCTION_QUALIFIED : (mysql_space ? FLAG_FUNCTION_MYSQL_SPACE : 0));
             if (!func) return syntax_error();
             // Aggregate modifiers precede a nonempty expression list.
             if constexpr (D == Dialect::PostgreSQL) {
@@ -1275,6 +1287,43 @@ private:
             if (!separator || !literal) return syntax_error();
             separator->add_child(literal);
             node->add_child(separator);
+        }
+        if (tok_.peek().type != TokenType::TK_RPAREN) return syntax_error();
+        tok_.skip();
+        return tok_.peek().type == TokenType::TK_OVER ? parse_window_function(node) : node;
+    }
+
+    AstNode* parse_mysql_json_aggregate(const Token& name) {
+        tok_.skip(); // (
+        const bool array = keyword(name, "JSON_ARRAYAGG");
+        auto* node = make_node(arena_, NodeType::NODE_MYSQL_JSON_AGGREGATE, name.source);
+        if (!node) return syntax_error();
+        // MySQL in_sum_expr permits ALL independently before each operand.
+        for (unsigned i = 0; i < (array ? 1u : 2u); ++i) {
+            if (i) {
+                if (tok_.peek().type != TokenType::TK_COMMA) return syntax_error();
+                tok_.skip();
+            }
+            const bool all = tok_.peek().type == TokenType::TK_ALL;
+            if (all) tok_.skip();
+            auto* value = parse_complete();
+            if (!value || !mysql_value_expression(value)) return syntax_error();
+            if (all) {
+                auto* argument = make_node(arena_, NodeType::NODE_MYSQL_JSON_AGG_ARGUMENT, {}, 1);
+                if (!argument) return syntax_error();
+                argument->add_child(value);
+                value = argument;
+            }
+            node->add_child(value);
+        }
+        // MySQL 9.7 adds the null clause to JSON_ARRAYAGG only.
+        if (array && (keyword(tok_.peek(), "NULL") || keyword(tok_.peek(), "ABSENT"))) {
+            node->flags = keyword(tok_.peek(), "NULL") ? 1 : 2;
+            tok_.skip();
+            if (!keyword(tok_.peek(), "ON")) return syntax_error();
+            tok_.skip();
+            if (!keyword(tok_.peek(), "NULL")) return syntax_error();
+            tok_.skip();
         }
         if (tok_.peek().type != TokenType::TK_RPAREN) return syntax_error();
         tok_.skip();

@@ -398,6 +398,100 @@ ParseResult Parser<D>::parse_explain(bool is_describe) {
     AstNode* root = make_node(arena_, NodeType::NODE_EXPLAIN_STMT);
     if (!root) { r.status = ParseResult::ERROR; scan_to_end(r); return r; }
 
+    if constexpr (D == Dialect::MySQL) {
+        auto failure = [&]() {
+            tokenizer_.flag_fatal_error_at(tokenizer_.peek().source);
+            r.status = ParseResult::ERROR; r.ast = root;
+            scan_to_end(r); return r;
+        };
+        auto identifier = [&](const Token& token) {
+            return make_node_from_token(arena_, NodeType::NODE_IDENTIFIER, token,
+                token.source.ptr != token.text.ptr ? FLAG_IDENT_DELIMITED : 0);
+        };
+        auto* options = make_node(arena_, NodeType::NODE_EXPLAIN_OPTIONS);
+        if (!options) return failure();
+        if (tokenizer_.peek().type == TokenType::TK_ANALYZE) {
+            auto* analyze = identifier(tokenizer_.next_token());
+            if (!analyze) return failure();
+            options->add_child(analyze);
+        }
+        auto format_lookahead = tokenizer_; format_lookahead.skip();
+        if (tokenizer_.peek().type == TokenType::TK_FORMAT && format_lookahead.peek().type == TokenType::TK_EQUAL) {
+            tokenizer_.skip();
+            if (tokenizer_.peek().type != TokenType::TK_EQUAL) return failure();
+            tokenizer_.skip();
+            const Token format = tokenizer_.next_token();
+            if ((!mysql_identifier_token(format) && format.type != TokenType::TK_STRING) ||
+                mysql_charset_introducer(format)) return failure();
+            // The native grammar accepts ident_or_text; format availability and
+            // INTO's JSON requirement remain server semantic checks.
+            auto* node = make_node(arena_, NodeType::NODE_EXPLAIN_FORMAT, format.source);
+            if (!node) return failure();
+            options->add_child(node);
+        }
+        if (tokenizer_.peek().type == TokenType::TK_INTO) {
+            tokenizer_.skip();
+            auto* destination = make_mysql_user_variable_node(arena_, tokenizer_.next_token());
+            auto* into = make_node(arena_, NodeType::NODE_MYSQL_EXPLAIN_INTO);
+            if (!destination || !into) return failure();
+            into->add_child(destination); options->add_child(into);
+        }
+        if (options->first_child) root->add_child(options);
+
+        const Token first = tokenizer_.peek();
+        const bool query = ExpressionParser<D>::starts_query(first.type) || first.type == TokenType::TK_LPAREN;
+        if (query && first.type != TokenType::TK_WITH) {
+            auto* inner = parse_subquery_select<D>(tokenizer_, arena_);
+            if (!inner) return failure();
+            root->add_child(inner); r.ast = root; r.status = ParseResult::OK;
+            scan_to_end(r); return r;
+        }
+        if (query || first.type == TokenType::TK_INSERT || first.type == TokenType::TK_REPLACE ||
+            first.type == TokenType::TK_UPDATE || first.type == TokenType::TK_DELETE) {
+            ParseResult inner = classify_and_dispatch();
+            if (inner.ast) root->add_child(inner.ast);
+            r.ast = root; r.status = inner.status;
+            r.full_input = inner.full_input; r.remaining = inner.remaining;
+            return r;
+        }
+        // EXPLAIN, DESC and DESCRIBE share the table-description form. Options
+        // belong to statement explanation, never to this shorthand.
+        if (options->first_child || !mysql_identifier_token(first) || mysql_charset_introducer(first))
+            return failure();
+        tokenizer_.skip();
+        auto* table = make_node(arena_, NodeType::NODE_TABLE_REF);
+        auto* name = identifier(first);
+        if (!table || !name) return failure();
+        r.table_name = first.text;
+        if (tokenizer_.peek().type == TokenType::TK_DOT) {
+            tokenizer_.skip();
+            const Token second = tokenizer_.next_token();
+            if (!mysql_identifier_word(second)) return failure();
+            auto* qualified = make_node(arena_, NodeType::NODE_QUALIFIED_NAME);
+            auto* component = identifier(second);
+            if (!qualified || !component) return failure();
+            qualified->add_child(name); qualified->add_child(component); name = qualified;
+            r.schema_name = first.text; r.table_name = second.text;
+        }
+        table->add_child(name); root->add_child(table);
+        const Token column = tokenizer_.peek();
+        if (column.type != TokenType::TK_EOF && column.type != TokenType::TK_SEMICOLON) {
+            const bool text = column.type == TokenType::TK_STRING;
+            const bool hex = column.type == TokenType::TK_HEX_LITERAL;
+            const bool bit = column.type == TokenType::TK_BIT_LITERAL;
+            if ((!mysql_identifier_token(column) && !text && !hex && !bit) ||
+                mysql_charset_introducer(column)) return failure();
+            tokenizer_.skip();
+            auto* field = (text || hex || bit)
+                ? make_node_from_token(arena_, text ? NodeType::NODE_LITERAL_STRING :
+                    hex ? NodeType::NODE_LITERAL_HEX : NodeType::NODE_LITERAL_BIT, column) : identifier(column);
+            if (!field) return failure();
+            root->add_child(field);
+        }
+        r.ast = root; r.status = ParseResult::OK;
+        scan_to_end(r); return r;
+    }
+
     if (is_describe) {
         // DESCRIBE table_name [column_name]
         // DESC table_name [column_name]
@@ -470,136 +564,7 @@ ParseResult Parser<D>::parse_explain(bool is_describe) {
         return r;
     }
 
-    // EXPLAIN [ANALYZE] [VERBOSE] [FORMAT = ...] inner_stmt  (MySQL)
-    // EXPLAIN [ANALYZE] [VERBOSE] [(options)] inner_stmt     (PostgreSQL)
-
-    AstNode* options = make_node(arena_, NodeType::NODE_EXPLAIN_OPTIONS);
-    bool has_options = false;
-
-    // Parse options before the inner statement
-    while (true) {
-        Token t = tokenizer_.peek();
-
-        if (t.type == TokenType::TK_ANALYZE) {
-            tokenizer_.skip();
-            options->add_child(make_node(arena_, NodeType::NODE_IDENTIFIER, t.text));
-            has_options = true;
-            continue;
-        }
-
-        if (t.type == TokenType::TK_VERBOSE) {
-            tokenizer_.skip();
-            options->add_child(make_node(arena_, NodeType::NODE_IDENTIFIER, t.text));
-            has_options = true;
-            continue;
-        }
-
-        if (t.type == TokenType::TK_FORMAT) {
-            tokenizer_.skip();
-            // Expect = value
-            if (tokenizer_.peek().type == TokenType::TK_EQUAL) {
-                tokenizer_.skip();
-            }
-            Token fmt = tokenizer_.next_token();
-            AstNode* format_node = make_node(arena_, NodeType::NODE_EXPLAIN_FORMAT, fmt.text);
-            options->add_child(format_node);
-            has_options = true;
-            continue;
-        }
-
-        // PostgreSQL parenthesized options: EXPLAIN (ANALYZE, VERBOSE, FORMAT JSON) stmt
-        if constexpr (D == Dialect::PostgreSQL) {
-            if (t.type == TokenType::TK_LPAREN) {
-                tokenizer_.skip();
-                while (tokenizer_.peek().type != TokenType::TK_RPAREN &&
-                       tokenizer_.peek().type != TokenType::TK_EOF) {
-                    Token opt = tokenizer_.next_token();
-                    if (opt.type == TokenType::TK_COMMA) continue;
-
-                    if (opt.type == TokenType::TK_FORMAT) {
-                        // FORMAT followed by value
-                        Token fmt = tokenizer_.next_token();
-                        AstNode* format_node = make_node(arena_, NodeType::NODE_EXPLAIN_FORMAT, fmt.text);
-                        options->add_child(format_node);
-                    } else {
-                        // Boolean options: ANALYZE, VERBOSE, COSTS, SETTINGS, BUFFERS, WAL, TIMING, SUMMARY
-                        options->add_child(make_node(arena_, NodeType::NODE_IDENTIFIER, opt.text));
-                    }
-                    has_options = true;
-                }
-                if (tokenizer_.peek().type == TokenType::TK_RPAREN) {
-                    tokenizer_.skip();
-                }
-                continue;
-            }
-        }
-
-        break;  // No more options
-    }
-
-    if (has_options) {
-        root->add_child(options);
-    }
-
-    // Check if the next token is an explainable statement or just a table name
-    Token next = tokenizer_.peek();
-    bool is_inner_stmt = (next.type == TokenType::TK_SELECT ||
-                          next.type == TokenType::TK_INSERT ||
-                          next.type == TokenType::TK_UPDATE ||
-                          next.type == TokenType::TK_DELETE ||
-                          next.type == TokenType::TK_REPLACE ||
-                          next.type == TokenType::TK_CREATE ||
-                          next.type == TokenType::TK_ALTER ||
-                          next.type == TokenType::TK_DROP ||
-                          next.type == TokenType::TK_TRUNCATE ||
-                          next.type == TokenType::TK_SHOW ||
-                          next.type == TokenType::TK_SET ||
-                          next.type == TokenType::TK_EXECUTE ||
-                          next.type == TokenType::TK_CALL ||
-                          next.type == TokenType::TK_DO ||
-                          next.type == TokenType::TK_LPAREN);
-
-    if (is_inner_stmt) {
-        // Parse inner statement recursively
-        ParseResult inner = classify_and_dispatch();
-        if (inner.ast) {
-            root->add_child(inner.ast);
-        }
-        r.status = inner.status;
-        r.ast = root;
-        r.full_input = inner.full_input;
-        // Preserve the inner statement's completion and error state.
-        r.remaining = inner.remaining;
-        return r;
-    }
-
-    // MySQL shorthand: EXPLAIN table_name (equivalent to SHOW COLUMNS)
-    if (next.type == TokenType::TK_IDENTIFIER || next.type == TokenType::TK_TABLE) {
-        Token name = tokenizer_.next_token();
-        AstNode* table_ref = make_node(arena_, NodeType::NODE_TABLE_REF);
-        if (tokenizer_.peek().type == TokenType::TK_DOT) {
-            tokenizer_.skip();
-            Token table_tok = tokenizer_.next_token();
-            AstNode* qname = make_node(arena_, NodeType::NODE_QUALIFIED_NAME);
-            qname->add_child(make_node(arena_, NodeType::NODE_IDENTIFIER, name.text));
-            qname->add_child(make_node(arena_, NodeType::NODE_IDENTIFIER, table_tok.text));
-            table_ref->add_child(qname);
-            r.schema_name = name.text;
-            r.table_name = table_tok.text;
-        } else {
-            table_ref->add_child(make_node(arena_, NodeType::NODE_IDENTIFIER, name.text));
-            r.table_name = name.text;
-        }
-        root->add_child(table_ref);
-        r.status = ParseResult::OK;
-        r.ast = root;
-        scan_to_end(r);
-        return r;
-    }
-
-    // Fallback: mark as partial
-    r.status = ParseResult::PARTIAL;
-    r.ast = root;
+    r.status = ParseResult::ERROR;
     scan_to_end(r);
     return r;
 }

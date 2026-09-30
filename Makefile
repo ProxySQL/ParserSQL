@@ -73,6 +73,9 @@ TEST_SRCS = $(TEST_DIR)/test_main.cpp \
             $(TEST_DIR)/test_mysql_cast_types.cpp \
             $(TEST_DIR)/test_mysql_conversion_expressions.cpp \
             $(TEST_DIR)/test_mysql_insert_sources.cpp \
+            $(TEST_DIR)/test_mysql_json_aggregates.cpp \
+            $(TEST_DIR)/test_mysql_grouping.cpp \
+            $(TEST_DIR)/test_mysql_explain.cpp \
             $(TEST_DIR)/test_review_ast.cpp \
             $(TEST_DIR)/test_review_transactions.cpp \
             $(TEST_DIR)/test_review_runtime.cpp \

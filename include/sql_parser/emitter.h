@@ -194,6 +194,15 @@ private:
                 break;
             case NodeType::NODE_UNARY_OP:        emit_unary_op(node); break;
             case NodeType::NODE_FUNCTION_CALL:   emit_function_call(node); break;
+            case NodeType::NODE_MYSQL_JSON_AGGREGATE:
+                emit_value(node); sb_.append_char('('); emit_list(node, ", ");
+                if (node->flags & 1) sb_.append(" NULL ON NULL");
+                else if (node->flags & 2) sb_.append(" ABSENT ON NULL");
+                sb_.append_char(')'); break;
+            case NodeType::NODE_MYSQL_JSON_AGG_ARGUMENT:
+                sb_.append("ALL "); emit_node(node->first_child); break;
+            case NodeType::NODE_MYSQL_EXPLAIN_INTO:
+                sb_.append("INTO "); emit_node(node->first_child); break;
             case NodeType::NODE_MYSQL_CHARSET_LITERAL:
                 emit_value(node);
                 for (const auto* literal = node->first_child; literal; literal = literal->next_sibling) {
@@ -1409,7 +1418,8 @@ private:
                 c->type == NodeType::NODE_INSERT_STMT ||
                 c->type == NodeType::NODE_UPDATE_STMT ||
                 c->type == NodeType::NODE_DELETE_STMT ||
-                c->type == NodeType::NODE_COMPOUND_QUERY) {
+                c->type == NodeType::NODE_COMPOUND_QUERY ||
+                c->type == NodeType::NODE_CTE || c->type == NodeType::NODE_TABLE_QUERY) {
                 has_inner_stmt = true;
             }
             if (c->type == NodeType::NODE_EXPLAIN_OPTIONS) {
@@ -1708,6 +1718,9 @@ private:
             emit_node(arg);
             arg = arg ? arg->next_sibling : nullptr;
         } else emit_value(node);
+        if constexpr (D == Dialect::MySQL) {
+            if (node->flags & FLAG_FUNCTION_MYSQL_SPACE) sb_.append_char(' ');
+        }
         sb_.append_char('(');
         if (node->flags & FLAG_FUNCTION_DISTINCT) sb_.append("DISTINCT ");
         else if (node->flags & FLAG_FUNCTION_ALL) sb_.append("ALL ");

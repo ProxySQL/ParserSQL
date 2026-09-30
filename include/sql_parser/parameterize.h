@@ -66,7 +66,7 @@ inline bool supported_node(const AstNode& node) {
             return false;
         case NodeType::NODE_FUNCTION_CALL:
             // The current generic emitter cannot render CAST(expr AS type).
-            return !node.value().equals_ci("CAST", 4);
+            return !node.value().equals_ci("CAST", 4) && !(node.flags & FLAG_FUNCTION_MYSQL_SPACE);
         case NodeType::NODE_SUBQUERY:
             return node.first_child != nullptr; // Reject opaque SQL fragments.
         case NodeType::NODE_IDENTIFIER: {

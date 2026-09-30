@@ -195,6 +195,9 @@ private:
             case NodeType::NODE_MYSQL_COLLATE:
             case NodeType::NODE_MYSQL_CONVERT:
             case NodeType::NODE_MYSQL_INSERT_ALIAS:
+            case NodeType::NODE_MYSQL_JSON_AGGREGATE:
+            case NodeType::NODE_MYSQL_JSON_AGG_ARGUMENT:
+            case NodeType::NODE_MYSQL_EXPLAIN_INTO:
             case NodeType::NODE_MYSQL_EXTRACT:
             case NodeType::NODE_MYSQL_SUBSTRING:
             case NodeType::NODE_MYSQL_MATCH:
@@ -212,7 +215,7 @@ private:
             case NodeType::NODE_FUNCTION_CALL:
                 if (node->flags & (sql_parser::FLAG_FUNCTION_TABLE | sql_parser::FLAG_FUNCTION_DISTINCT |
                     sql_parser::FLAG_FUNCTION_ALL | sql_parser::FLAG_FUNCTION_QUALIFIED |
-                    sql_parser::FLAG_FUNCTION_WITHIN_GROUP)) return true;
+                    sql_parser::FLAG_FUNCTION_WITHIN_GROUP | sql_parser::FLAG_FUNCTION_MYSQL_SPACE)) return true;
                 break;
             case NodeType::NODE_ORDER_BY_ITEM:
                 if (node->flags & sql_parser::FLAG_ORDER_NULLS) return true;

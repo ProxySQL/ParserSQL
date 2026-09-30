@@ -68,6 +68,7 @@ static constexpr uint16_t FLAG_FUNCTION_DISTINCT = 0x02;
 static constexpr uint16_t FLAG_FUNCTION_ALL = 0x04;
 static constexpr uint16_t FLAG_FUNCTION_QUALIFIED = 0x08;
 static constexpr uint16_t FLAG_FUNCTION_WITHIN_GROUP = 0x10;
+static constexpr uint16_t FLAG_FUNCTION_MYSQL_SPACE = 0x20; // keep a native function name in ordinary-call syntax
 // On binary/unary expressions: PostgreSQL operation without local engine support.
 static constexpr uint16_t FLAG_PG_OPERATOR = 0x01;
 static constexpr uint16_t FLAG_WINDOW_BETWEEN = 0x01;
@@ -362,6 +363,9 @@ enum class NodeType : uint16_t {
     NODE_MYSQL_COLLATE, // value=collation source spelling; one expression child
     NODE_MYSQL_CONVERT, // expression, type/charset metadata; flag 1=USING form
     NODE_MYSQL_INSERT_ALIAS, // row identifier, optional nonempty column identifier list
+    NODE_MYSQL_JSON_AGGREGATE, // value=function; argument children; flags 1=NULL ON NULL, 2=ABSENT ON NULL
+    NODE_MYSQL_JSON_AGG_ARGUMENT, // explicit ALL argument; expression child
+    NODE_MYSQL_EXPLAIN_INTO, // user-variable destination child
 
 };
 

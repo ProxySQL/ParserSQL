@@ -1001,9 +1001,8 @@
           "kind": "grammar_anchor"
         }
       ],
-      "expected": "TRAILING_INPUT",
-      "known_gap": true,
-      "gap_note": "MySQL 9.7.2 production is not fully parsed by ParserSQL.",
+      "expected": "CHECKED",
+      "known_gap": false,
       "native_action": "execute",
       "native_validity": {
         "8.4.8": "invalid",
@@ -1022,7 +1021,8 @@
           "state": "ACCEPTED",
           "error_code": null
         }
-      }
+      },
+      "expected_sql": "SELECT JSON_ARRAYAGG(n NULL ON NULL) FROM t"
     },
     {
       "id": "json_arrayagg_absent_on_null",
@@ -1045,9 +1045,8 @@
           "kind": "grammar_anchor"
         }
       ],
-      "expected": "TRAILING_INPUT",
-      "known_gap": true,
-      "gap_note": "MySQL 9.7.2 production is not fully parsed by ParserSQL.",
+      "expected": "CHECKED",
+      "known_gap": false,
       "native_action": "execute",
       "native_validity": {
         "8.4.8": "invalid",
@@ -1066,7 +1065,8 @@
           "state": "SERVER_ERROR",
           "error_code": 1235
         }
-      }
+      },
+      "expected_sql": "SELECT JSON_ARRAYAGG(n ABSENT ON NULL) FROM t"
     },
     {
       "id": "explain_analyze_into",
@@ -1089,9 +1089,8 @@
           "kind": "grammar_anchor"
         }
       ],
-      "expected": "PARTIAL",
-      "known_gap": true,
-      "gap_note": "MySQL 9.7.2 production is not fully parsed by ParserSQL.",
+      "expected": "CHECKED",
+      "known_gap": false,
       "native_action": "execute",
       "native_validity": {
         "8.4.8": "invalid",
@@ -1110,7 +1109,8 @@
           "state": "ACCEPTED",
           "error_code": null
         }
-      }
+      },
+      "expected_sql": "EXPLAIN ANALYZE FORMAT = JSON INTO @plan SELECT 1"
     },
     {
       "id": "grouping_sets",
@@ -1133,9 +1133,8 @@
           "kind": "grammar_anchor"
         }
       ],
-      "expected": "TRAILING_INPUT",
-      "known_gap": true,
-      "gap_note": "MySQL 9.7.2 production is not fully parsed by ParserSQL.",
+      "expected": "CHECKED",
+      "known_gap": false,
       "native_action": "execute",
       "native_validity": {
         "8.4.8": "invalid",
@@ -1154,7 +1153,8 @@
           "state": "SERVER_ERROR",
           "error_code": 3889
         }
-      }
+      },
+      "expected_sql": "SELECT id, COUNT(*) FROM t GROUP BY GROUPING SETS ((id), ())"
     },
     {
       "id": "partition_multiple",
@@ -6835,6 +6835,2695 @@
       "expected": "REJECTED",
       "known_gap": false,
       "native_action": "explain"
+    },
+    {
+      "id": "json_arrayagg_basic",
+      "sql": "SELECT JSON_ARRAYAGG(n) FROM t",
+      "validity": "valid",
+      "derivation": "hand-reduced syntax witness; source anchors identify relevant grammar, not verbatim MTR extraction",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 10988,
+          "excerpt": "| JSON_ARRAYAGG '(' in_sum_expr ')' opt_windowing_clause",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 11397,
+          "excerpt": "| JSON_ARRAYAGG '(' in_sum_expr opt_json_constructor_null_clause ')' opt_windowing_clause",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "CHECKED",
+      "known_gap": false,
+      "native_action": "execute",
+      "native_validity": {
+        "8.4.8": "valid",
+        "9.7.2": "valid"
+      },
+      "expected_sql": "SELECT JSON_ARRAYAGG(n) FROM t"
+    },
+    {
+      "id": "json_arrayagg_all",
+      "sql": "SELECT JSON_ARRAYAGG(ALL n) FROM t",
+      "validity": "valid",
+      "derivation": "hand-reduced syntax witness; source anchors identify relevant grammar, not verbatim MTR extraction",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 10988,
+          "excerpt": "| JSON_ARRAYAGG '(' in_sum_expr ')' opt_windowing_clause",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 11516,
+          "excerpt": "in_sum_expr:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 11397,
+          "excerpt": "| JSON_ARRAYAGG '(' in_sum_expr opt_json_constructor_null_clause ')' opt_windowing_clause",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 11940,
+          "excerpt": "in_sum_expr:",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "CHECKED",
+      "known_gap": false,
+      "native_action": "execute",
+      "native_validity": {
+        "8.4.8": "valid",
+        "9.7.2": "valid"
+      },
+      "expected_sql": "SELECT JSON_ARRAYAGG(ALL n) FROM t"
+    },
+    {
+      "id": "json_arrayagg_window",
+      "sql": "SELECT JSON_ARRAYAGG(n) OVER (PARTITION BY id ORDER BY n) FROM t",
+      "validity": "valid",
+      "derivation": "hand-reduced syntax witness; source anchors identify relevant grammar, not verbatim MTR extraction",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 10988,
+          "excerpt": "| JSON_ARRAYAGG '(' in_sum_expr ')' opt_windowing_clause",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 11397,
+          "excerpt": "| JSON_ARRAYAGG '(' in_sum_expr opt_json_constructor_null_clause ')' opt_windowing_clause",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "CHECKED",
+      "known_gap": false,
+      "native_action": "execute",
+      "native_validity": {
+        "8.4.8": "valid",
+        "9.7.2": "valid"
+      },
+      "expected_sql": "SELECT JSON_ARRAYAGG(n) OVER (PARTITION BY id ORDER BY n) FROM t"
+    },
+    {
+      "id": "json_arrayagg_null_window",
+      "sql": "SELECT JSON_ARRAYAGG(n NULL ON NULL) OVER (PARTITION BY id) FROM t",
+      "validity": "valid",
+      "derivation": "hand-reduced syntax witness; source anchors identify relevant grammar, not verbatim MTR extraction",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 10988,
+          "excerpt": "| JSON_ARRAYAGG '(' in_sum_expr ')' opt_windowing_clause",
+          "kind": "older_production_without_extension"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 11397,
+          "excerpt": "| JSON_ARRAYAGG '(' in_sum_expr opt_json_constructor_null_clause ')' opt_windowing_clause",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "CHECKED",
+      "known_gap": false,
+      "native_action": "execute",
+      "native_validity": {
+        "8.4.8": "invalid",
+        "9.7.2": "valid"
+      },
+      "expected_sql": "SELECT JSON_ARRAYAGG(n NULL ON NULL) OVER (PARTITION BY id) FROM t",
+      "applicability": {
+        "8.4.8": "production absent",
+        "9.7.2": "production present; runtime availability is separate"
+      },
+      "native_observations": {
+        "8.4.8": {
+          "state": "SYNTAX_REJECTED",
+          "error_code": 1064
+        },
+        "9.7.2": {
+          "state": "ACCEPTED",
+          "error_code": null
+        }
+      }
+    },
+    {
+      "id": "json_arrayagg_absent_all",
+      "sql": "SELECT JSON_ARRAYAGG(ALL n ABSENT ON NULL) FROM t",
+      "validity": "valid",
+      "derivation": "hand-reduced syntax witness; source anchors identify relevant grammar, not verbatim MTR extraction",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 10988,
+          "excerpt": "| JSON_ARRAYAGG '(' in_sum_expr ')' opt_windowing_clause",
+          "kind": "older_production_without_extension"
+        },
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 11516,
+          "excerpt": "in_sum_expr:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 11397,
+          "excerpt": "| JSON_ARRAYAGG '(' in_sum_expr opt_json_constructor_null_clause ')' opt_windowing_clause",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 11940,
+          "excerpt": "in_sum_expr:",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "CHECKED",
+      "known_gap": false,
+      "native_action": "execute",
+      "native_validity": {
+        "8.4.8": "invalid",
+        "9.7.2": "valid"
+      },
+      "expected_sql": "SELECT JSON_ARRAYAGG(ALL n ABSENT ON NULL) FROM t",
+      "applicability": {
+        "8.4.8": "production absent",
+        "9.7.2": "production present; runtime availability is separate"
+      },
+      "native_observations": {
+        "8.4.8": {
+          "state": "SYNTAX_REJECTED",
+          "error_code": 1064
+        },
+        "9.7.2": {
+          "state": "SERVER_ERROR",
+          "error_code": 1235
+        }
+      }
+    },
+    {
+      "id": "json_objectagg_basic",
+      "sql": "SELECT JSON_OBJECTAGG(id, n) FROM t",
+      "validity": "valid",
+      "derivation": "hand-reduced syntax witness; source anchors identify relevant grammar, not verbatim MTR extraction",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 10998,
+          "excerpt": "| JSON_OBJECTAGG '(' in_sum_expr ',' in_sum_expr ')' opt_windowing_clause",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 11407,
+          "excerpt": "| JSON_OBJECTAGG '(' in_sum_expr ',' in_sum_expr ')' opt_windowing_clause",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "CHECKED",
+      "known_gap": false,
+      "native_action": "execute",
+      "native_validity": {
+        "8.4.8": "valid",
+        "9.7.2": "valid"
+      },
+      "expected_sql": "SELECT JSON_OBJECTAGG(id, n) FROM t"
+    },
+    {
+      "id": "json_objectagg_all_arguments",
+      "sql": "SELECT JSON_OBJECTAGG(ALL id, ALL n) FROM t",
+      "validity": "valid",
+      "derivation": "hand-reduced syntax witness; source anchors identify relevant grammar, not verbatim MTR extraction",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 10998,
+          "excerpt": "| JSON_OBJECTAGG '(' in_sum_expr ',' in_sum_expr ')' opt_windowing_clause",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 11516,
+          "excerpt": "in_sum_expr:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 11407,
+          "excerpt": "| JSON_OBJECTAGG '(' in_sum_expr ',' in_sum_expr ')' opt_windowing_clause",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 11940,
+          "excerpt": "in_sum_expr:",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "CHECKED",
+      "known_gap": false,
+      "native_action": "execute",
+      "native_validity": {
+        "8.4.8": "valid",
+        "9.7.2": "valid"
+      },
+      "expected_sql": "SELECT JSON_OBJECTAGG(ALL id, ALL n) FROM t"
+    },
+    {
+      "id": "json_objectagg_window",
+      "sql": "SELECT JSON_OBJECTAGG(id, n) OVER w FROM t WINDOW w AS (PARTITION BY id)",
+      "validity": "valid",
+      "derivation": "hand-reduced syntax witness; source anchors identify relevant grammar, not verbatim MTR extraction",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 10998,
+          "excerpt": "| JSON_OBJECTAGG '(' in_sum_expr ',' in_sum_expr ')' opt_windowing_clause",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 11407,
+          "excerpt": "| JSON_OBJECTAGG '(' in_sum_expr ',' in_sum_expr ')' opt_windowing_clause",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "CHECKED",
+      "known_gap": false,
+      "native_action": "execute",
+      "native_validity": {
+        "8.4.8": "valid",
+        "9.7.2": "valid"
+      },
+      "expected_sql": "SELECT JSON_OBJECTAGG(id, n) OVER w FROM t WINDOW w AS (PARTITION BY id)"
+    },
+    {
+      "id": "json_arrayagg_empty",
+      "sql": "SELECT JSON_ARRAYAGG() FROM t",
+      "validity": "invalid",
+      "derivation": "hand-written malformed control for the anchored native production",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 10988,
+          "excerpt": "| JSON_ARRAYAGG '(' in_sum_expr ')' opt_windowing_clause",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 11397,
+          "excerpt": "| JSON_ARRAYAGG '(' in_sum_expr opt_json_constructor_null_clause ')' opt_windowing_clause",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "REJECTED",
+      "known_gap": false,
+      "native_action": "execute",
+      "native_validity": {
+        "8.4.8": "invalid",
+        "9.7.2": "invalid"
+      }
+    },
+    {
+      "id": "json_arrayagg_distinct",
+      "sql": "SELECT JSON_ARRAYAGG(DISTINCT n) FROM t",
+      "validity": "invalid",
+      "derivation": "hand-written malformed control for the anchored native production",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 10988,
+          "excerpt": "| JSON_ARRAYAGG '(' in_sum_expr ')' opt_windowing_clause",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 11397,
+          "excerpt": "| JSON_ARRAYAGG '(' in_sum_expr opt_json_constructor_null_clause ')' opt_windowing_clause",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "REJECTED",
+      "known_gap": false,
+      "native_action": "execute",
+      "native_validity": {
+        "8.4.8": "invalid",
+        "9.7.2": "invalid"
+      }
+    },
+    {
+      "id": "json_arrayagg_two_arguments",
+      "sql": "SELECT JSON_ARRAYAGG(id, n) FROM t",
+      "validity": "invalid",
+      "derivation": "hand-written malformed control for the anchored native production",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 10988,
+          "excerpt": "| JSON_ARRAYAGG '(' in_sum_expr ')' opt_windowing_clause",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 11397,
+          "excerpt": "| JSON_ARRAYAGG '(' in_sum_expr opt_json_constructor_null_clause ')' opt_windowing_clause",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "REJECTED",
+      "known_gap": false,
+      "native_action": "execute",
+      "native_validity": {
+        "8.4.8": "invalid",
+        "9.7.2": "invalid"
+      }
+    },
+    {
+      "id": "json_arrayagg_star",
+      "sql": "SELECT JSON_ARRAYAGG(*) FROM t",
+      "validity": "invalid",
+      "derivation": "hand-written malformed control for the anchored native production",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 10988,
+          "excerpt": "| JSON_ARRAYAGG '(' in_sum_expr ')' opt_windowing_clause",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 11397,
+          "excerpt": "| JSON_ARRAYAGG '(' in_sum_expr opt_json_constructor_null_clause ')' opt_windowing_clause",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "REJECTED",
+      "known_gap": false,
+      "native_action": "execute",
+      "native_validity": {
+        "8.4.8": "invalid",
+        "9.7.2": "invalid"
+      }
+    },
+    {
+      "id": "json_arrayagg_order",
+      "sql": "SELECT JSON_ARRAYAGG(n ORDER BY id) FROM t",
+      "validity": "invalid",
+      "derivation": "hand-written malformed control for the anchored native production",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 10988,
+          "excerpt": "| JSON_ARRAYAGG '(' in_sum_expr ')' opt_windowing_clause",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 11397,
+          "excerpt": "| JSON_ARRAYAGG '(' in_sum_expr opt_json_constructor_null_clause ')' opt_windowing_clause",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "REJECTED",
+      "known_gap": false,
+      "native_action": "execute",
+      "native_validity": {
+        "8.4.8": "invalid",
+        "9.7.2": "invalid"
+      }
+    },
+    {
+      "id": "json_arrayagg_null_missing_on",
+      "sql": "SELECT JSON_ARRAYAGG(n NULL NULL) FROM t",
+      "validity": "invalid",
+      "derivation": "hand-written malformed control for the anchored native production",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 10988,
+          "excerpt": "| JSON_ARRAYAGG '(' in_sum_expr ')' opt_windowing_clause",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 11397,
+          "excerpt": "| JSON_ARRAYAGG '(' in_sum_expr opt_json_constructor_null_clause ')' opt_windowing_clause",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "REJECTED",
+      "known_gap": false,
+      "native_action": "execute",
+      "native_validity": {
+        "8.4.8": "invalid",
+        "9.7.2": "invalid"
+      }
+    },
+    {
+      "id": "json_arrayagg_absent_missing_null",
+      "sql": "SELECT JSON_ARRAYAGG(n ABSENT ON) FROM t",
+      "validity": "invalid",
+      "derivation": "hand-written malformed control for the anchored native production",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 10988,
+          "excerpt": "| JSON_ARRAYAGG '(' in_sum_expr ')' opt_windowing_clause",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 11397,
+          "excerpt": "| JSON_ARRAYAGG '(' in_sum_expr opt_json_constructor_null_clause ')' opt_windowing_clause",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "REJECTED",
+      "known_gap": false,
+      "native_action": "execute",
+      "native_validity": {
+        "8.4.8": "invalid",
+        "9.7.2": "invalid"
+      }
+    },
+    {
+      "id": "json_arrayagg_repeated_null",
+      "sql": "SELECT JSON_ARRAYAGG(n NULL ON NULL NULL ON NULL) FROM t",
+      "validity": "invalid",
+      "derivation": "hand-written malformed control for the anchored native production",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 10988,
+          "excerpt": "| JSON_ARRAYAGG '(' in_sum_expr ')' opt_windowing_clause",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 11397,
+          "excerpt": "| JSON_ARRAYAGG '(' in_sum_expr opt_json_constructor_null_clause ')' opt_windowing_clause",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "REJECTED",
+      "known_gap": false,
+      "native_action": "execute",
+      "native_validity": {
+        "8.4.8": "invalid",
+        "9.7.2": "invalid"
+      }
+    },
+    {
+      "id": "json_arrayagg_missing_operand",
+      "sql": "SELECT JSON_ARRAYAGG(NULL ON NULL) FROM t",
+      "validity": "invalid",
+      "derivation": "hand-written malformed control for the anchored native production",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 10988,
+          "excerpt": "| JSON_ARRAYAGG '(' in_sum_expr ')' opt_windowing_clause",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 11397,
+          "excerpt": "| JSON_ARRAYAGG '(' in_sum_expr opt_json_constructor_null_clause ')' opt_windowing_clause",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "REJECTED",
+      "known_gap": false,
+      "native_action": "execute",
+      "native_validity": {
+        "8.4.8": "invalid",
+        "9.7.2": "invalid"
+      }
+    },
+    {
+      "id": "json_objectagg_empty",
+      "sql": "SELECT JSON_OBJECTAGG() FROM t",
+      "validity": "invalid",
+      "derivation": "hand-written malformed control for the anchored native production",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 10998,
+          "excerpt": "| JSON_OBJECTAGG '(' in_sum_expr ',' in_sum_expr ')' opt_windowing_clause",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 11407,
+          "excerpt": "| JSON_OBJECTAGG '(' in_sum_expr ',' in_sum_expr ')' opt_windowing_clause",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "REJECTED",
+      "known_gap": false,
+      "native_action": "execute",
+      "native_validity": {
+        "8.4.8": "invalid",
+        "9.7.2": "invalid"
+      }
+    },
+    {
+      "id": "json_objectagg_one_argument",
+      "sql": "SELECT JSON_OBJECTAGG(id) FROM t",
+      "validity": "invalid",
+      "derivation": "hand-written malformed control for the anchored native production",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 10998,
+          "excerpt": "| JSON_OBJECTAGG '(' in_sum_expr ',' in_sum_expr ')' opt_windowing_clause",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 11407,
+          "excerpt": "| JSON_OBJECTAGG '(' in_sum_expr ',' in_sum_expr ')' opt_windowing_clause",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "REJECTED",
+      "known_gap": false,
+      "native_action": "execute",
+      "native_validity": {
+        "8.4.8": "invalid",
+        "9.7.2": "invalid"
+      }
+    },
+    {
+      "id": "json_objectagg_three_arguments",
+      "sql": "SELECT JSON_OBJECTAGG(id, n, id) FROM t",
+      "validity": "invalid",
+      "derivation": "hand-written malformed control for the anchored native production",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 10998,
+          "excerpt": "| JSON_OBJECTAGG '(' in_sum_expr ',' in_sum_expr ')' opt_windowing_clause",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 11407,
+          "excerpt": "| JSON_OBJECTAGG '(' in_sum_expr ',' in_sum_expr ')' opt_windowing_clause",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "REJECTED",
+      "known_gap": false,
+      "native_action": "execute",
+      "native_validity": {
+        "8.4.8": "invalid",
+        "9.7.2": "invalid"
+      }
+    },
+    {
+      "id": "json_objectagg_distinct",
+      "sql": "SELECT JSON_OBJECTAGG(DISTINCT id, n) FROM t",
+      "validity": "invalid",
+      "derivation": "hand-written malformed control for the anchored native production",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 10998,
+          "excerpt": "| JSON_OBJECTAGG '(' in_sum_expr ',' in_sum_expr ')' opt_windowing_clause",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 11407,
+          "excerpt": "| JSON_OBJECTAGG '(' in_sum_expr ',' in_sum_expr ')' opt_windowing_clause",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "REJECTED",
+      "known_gap": false,
+      "native_action": "execute",
+      "native_validity": {
+        "8.4.8": "invalid",
+        "9.7.2": "invalid"
+      }
+    },
+    {
+      "id": "json_objectagg_null_clause",
+      "sql": "SELECT JSON_OBJECTAGG(id, n NULL ON NULL) FROM t",
+      "validity": "invalid",
+      "derivation": "hand-written malformed control for the anchored native production",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 10998,
+          "excerpt": "| JSON_OBJECTAGG '(' in_sum_expr ',' in_sum_expr ')' opt_windowing_clause",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 11407,
+          "excerpt": "| JSON_OBJECTAGG '(' in_sum_expr ',' in_sum_expr ')' opt_windowing_clause",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "REJECTED",
+      "known_gap": false,
+      "native_action": "execute",
+      "native_validity": {
+        "8.4.8": "invalid",
+        "9.7.2": "invalid"
+      }
+    },
+    {
+      "id": "json_objectagg_absent_clause",
+      "sql": "SELECT JSON_OBJECTAGG(id, n ABSENT ON NULL) FROM t",
+      "validity": "invalid",
+      "derivation": "hand-written malformed control for the anchored native production",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 10998,
+          "excerpt": "| JSON_OBJECTAGG '(' in_sum_expr ',' in_sum_expr ')' opt_windowing_clause",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 11407,
+          "excerpt": "| JSON_OBJECTAGG '(' in_sum_expr ',' in_sum_expr ')' opt_windowing_clause",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "REJECTED",
+      "known_gap": false,
+      "native_action": "execute",
+      "native_validity": {
+        "8.4.8": "invalid",
+        "9.7.2": "invalid"
+      }
+    },
+    {
+      "id": "json_objectagg_order",
+      "sql": "SELECT JSON_OBJECTAGG(id, n ORDER BY id) FROM t",
+      "validity": "invalid",
+      "derivation": "hand-written malformed control for the anchored native production",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 10998,
+          "excerpt": "| JSON_OBJECTAGG '(' in_sum_expr ',' in_sum_expr ')' opt_windowing_clause",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 11407,
+          "excerpt": "| JSON_OBJECTAGG '(' in_sum_expr ',' in_sum_expr ')' opt_windowing_clause",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "REJECTED",
+      "known_gap": false,
+      "native_action": "execute",
+      "native_validity": {
+        "8.4.8": "invalid",
+        "9.7.2": "invalid"
+      }
+    },
+    {
+      "id": "group_rollup_function",
+      "sql": "SELECT id, n, COUNT(*) FROM t GROUP BY ROLLUP(id, n)",
+      "validity": "valid",
+      "derivation": "hand-reduced syntax witness; source anchors identify relevant grammar, not verbatim MTR extraction",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 12461,
+          "excerpt": "| GROUP_SYM BY ROLLUP_SYM '(' group_list ')'",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 12885,
+          "excerpt": "| GROUP_SYM BY ROLLUP_SYM '(' simple_grouping_expr_list ')'",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "CHECKED",
+      "known_gap": false,
+      "native_action": "execute",
+      "native_validity": {
+        "8.4.8": "valid",
+        "9.7.2": "valid"
+      },
+      "expected_sql": "SELECT id, n, COUNT(*) FROM t GROUP BY ROLLUP (id, n)"
+    },
+    {
+      "id": "group_cube_function",
+      "sql": "SELECT id, n, COUNT(*) FROM t GROUP BY CUBE(id, n)",
+      "validity": "valid",
+      "derivation": "hand-reduced syntax witness; source anchors identify relevant grammar, not verbatim MTR extraction",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 12465,
+          "excerpt": "| GROUP_SYM BY CUBE_SYM '(' group_list ')'",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 12889,
+          "excerpt": "| GROUP_SYM BY CUBE_SYM '(' simple_grouping_expr_list ')'",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "CHECKED",
+      "known_gap": false,
+      "native_action": "execute",
+      "native_validity": {
+        "8.4.8": "valid",
+        "9.7.2": "valid"
+      },
+      "expected_sql": "SELECT id, n, COUNT(*) FROM t GROUP BY CUBE (id, n)"
+    },
+    {
+      "id": "grouping_sets_multiple",
+      "sql": "SELECT id, n, COUNT(*) FROM t GROUP BY GROUPING SETS ((id, n), (id), ())",
+      "validity": "valid",
+      "derivation": "hand-reduced syntax witness; source anchors identify relevant grammar, not verbatim MTR extraction",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 12457,
+          "excerpt": "| GROUP_SYM BY group_list olap_opt",
+          "kind": "older_production_without_extension"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 12893,
+          "excerpt": "| GROUP_SYM BY GROUPING_SYM SETS_SYM '(' grouping_set_list ')'",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "CHECKED",
+      "known_gap": false,
+      "native_action": "execute",
+      "native_validity": {
+        "8.4.8": "invalid",
+        "9.7.2": "valid"
+      },
+      "expected_sql": "SELECT id, n, COUNT(*) FROM t GROUP BY GROUPING SETS ((id, n), (id), ())",
+      "applicability": {
+        "8.4.8": "production absent",
+        "9.7.2": "production present; runtime availability is separate"
+      },
+      "native_observations": {
+        "8.4.8": {
+          "state": "SYNTAX_REJECTED",
+          "error_code": 1064
+        },
+        "9.7.2": {
+          "state": "SERVER_ERROR",
+          "error_code": 3889
+        }
+      }
+    },
+    {
+      "id": "grouping_sets_only_empty",
+      "sql": "SELECT COUNT(*) FROM t GROUP BY GROUPING SETS (())",
+      "validity": "valid",
+      "derivation": "hand-reduced syntax witness; source anchors identify relevant grammar, not verbatim MTR extraction",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 12457,
+          "excerpt": "| GROUP_SYM BY group_list olap_opt",
+          "kind": "older_production_without_extension"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 12893,
+          "excerpt": "| GROUP_SYM BY GROUPING_SYM SETS_SYM '(' grouping_set_list ')'",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "CHECKED",
+      "known_gap": false,
+      "native_action": "execute",
+      "native_validity": {
+        "8.4.8": "invalid",
+        "9.7.2": "valid"
+      },
+      "expected_sql": "SELECT COUNT(*) FROM t GROUP BY GROUPING SETS (())",
+      "applicability": {
+        "8.4.8": "production absent",
+        "9.7.2": "production present; runtime availability is separate"
+      },
+      "native_observations": {
+        "8.4.8": {
+          "state": "SYNTAX_REJECTED",
+          "error_code": 1064
+        },
+        "9.7.2": {
+          "state": "ACCEPTED",
+          "error_code": null
+        }
+      }
+    },
+    {
+      "id": "group_rollup_empty",
+      "sql": "SELECT COUNT(*) FROM t GROUP BY ROLLUP()",
+      "validity": "invalid",
+      "derivation": "hand-written malformed control for the anchored native production",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 12461,
+          "excerpt": "| GROUP_SYM BY ROLLUP_SYM '(' group_list ')'",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 12885,
+          "excerpt": "| GROUP_SYM BY ROLLUP_SYM '(' simple_grouping_expr_list ')'",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "REJECTED",
+      "known_gap": false,
+      "native_action": "execute",
+      "native_validity": {
+        "8.4.8": "invalid",
+        "9.7.2": "invalid"
+      }
+    },
+    {
+      "id": "group_cube_empty",
+      "sql": "SELECT COUNT(*) FROM t GROUP BY CUBE()",
+      "validity": "invalid",
+      "derivation": "hand-written malformed control for the anchored native production",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 12465,
+          "excerpt": "| GROUP_SYM BY CUBE_SYM '(' group_list ')'",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 12889,
+          "excerpt": "| GROUP_SYM BY CUBE_SYM '(' simple_grouping_expr_list ')'",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "REJECTED",
+      "known_gap": false,
+      "native_action": "execute",
+      "native_validity": {
+        "8.4.8": "invalid",
+        "9.7.2": "invalid"
+      }
+    },
+    {
+      "id": "grouping_sets_empty",
+      "sql": "SELECT COUNT(*) FROM t GROUP BY GROUPING SETS ()",
+      "validity": "invalid",
+      "derivation": "hand-written malformed control for the anchored native production",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 12457,
+          "excerpt": "| GROUP_SYM BY group_list olap_opt",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 12893,
+          "excerpt": "| GROUP_SYM BY GROUPING_SYM SETS_SYM '(' grouping_set_list ')'",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "REJECTED",
+      "known_gap": false,
+      "native_action": "execute",
+      "native_validity": {
+        "8.4.8": "invalid",
+        "9.7.2": "invalid"
+      }
+    },
+    {
+      "id": "grouping_sets_bare_member",
+      "sql": "SELECT id FROM t GROUP BY GROUPING SETS (id)",
+      "validity": "invalid",
+      "derivation": "hand-written malformed control for the anchored native production",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 12457,
+          "excerpt": "| GROUP_SYM BY group_list olap_opt",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 12893,
+          "excerpt": "| GROUP_SYM BY GROUPING_SYM SETS_SYM '(' grouping_set_list ')'",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "REJECTED",
+      "known_gap": false,
+      "native_action": "execute",
+      "native_validity": {
+        "8.4.8": "invalid",
+        "9.7.2": "invalid"
+      }
+    },
+    {
+      "id": "grouping_sets_trailing_comma",
+      "sql": "SELECT id FROM t GROUP BY GROUPING SETS ((id),)",
+      "validity": "invalid",
+      "derivation": "hand-written malformed control for the anchored native production",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 12457,
+          "excerpt": "| GROUP_SYM BY group_list olap_opt",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 12893,
+          "excerpt": "| GROUP_SYM BY GROUPING_SYM SETS_SYM '(' grouping_set_list ')'",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "REJECTED",
+      "known_gap": false,
+      "native_action": "execute",
+      "native_validity": {
+        "8.4.8": "invalid",
+        "9.7.2": "invalid"
+      }
+    },
+    {
+      "id": "group_rollup_trailing_comma",
+      "sql": "SELECT id FROM t GROUP BY ROLLUP(id,)",
+      "validity": "invalid",
+      "derivation": "hand-written malformed control for the anchored native production",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 12461,
+          "excerpt": "| GROUP_SYM BY ROLLUP_SYM '(' group_list ')'",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 12885,
+          "excerpt": "| GROUP_SYM BY ROLLUP_SYM '(' simple_grouping_expr_list ')'",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "REJECTED",
+      "known_gap": false,
+      "native_action": "execute",
+      "native_validity": {
+        "8.4.8": "invalid",
+        "9.7.2": "invalid"
+      }
+    },
+    {
+      "id": "group_cube_trailing_comma",
+      "sql": "SELECT id FROM t GROUP BY CUBE(id,)",
+      "validity": "invalid",
+      "derivation": "hand-written malformed control for the anchored native production",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 12465,
+          "excerpt": "| GROUP_SYM BY CUBE_SYM '(' group_list ')'",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 12889,
+          "excerpt": "| GROUP_SYM BY CUBE_SYM '(' simple_grouping_expr_list ')'",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "REJECTED",
+      "known_gap": false,
+      "native_action": "execute",
+      "native_validity": {
+        "8.4.8": "invalid",
+        "9.7.2": "invalid"
+      }
+    },
+    {
+      "id": "group_rollup_with_rollup",
+      "sql": "SELECT id FROM t GROUP BY ROLLUP(id) WITH ROLLUP",
+      "validity": "invalid",
+      "derivation": "hand-written malformed control for the anchored native production",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 12461,
+          "excerpt": "| GROUP_SYM BY ROLLUP_SYM '(' group_list ')'",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 12885,
+          "excerpt": "| GROUP_SYM BY ROLLUP_SYM '(' simple_grouping_expr_list ')'",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "REJECTED",
+      "known_gap": false,
+      "native_action": "execute",
+      "native_validity": {
+        "8.4.8": "invalid",
+        "9.7.2": "invalid"
+      }
+    },
+    {
+      "id": "group_mixed_rollup",
+      "sql": "SELECT id, n FROM t GROUP BY id, ROLLUP(n)",
+      "validity": "invalid",
+      "derivation": "hand-written malformed control for the anchored native production",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 12461,
+          "excerpt": "| GROUP_SYM BY ROLLUP_SYM '(' group_list ')'",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 12885,
+          "excerpt": "| GROUP_SYM BY ROLLUP_SYM '(' simple_grouping_expr_list ')'",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "REJECTED",
+      "known_gap": false,
+      "native_action": "execute",
+      "native_validity": {
+        "8.4.8": "invalid",
+        "9.7.2": "invalid"
+      }
+    },
+    {
+      "id": "grouping_sets_missing_close",
+      "sql": "SELECT id FROM t GROUP BY GROUPING SETS ((id)",
+      "validity": "invalid",
+      "derivation": "hand-written malformed control for the anchored native production",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 12457,
+          "excerpt": "| GROUP_SYM BY group_list olap_opt",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 12893,
+          "excerpt": "| GROUP_SYM BY GROUPING_SYM SETS_SYM '(' grouping_set_list ')'",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "REJECTED",
+      "known_gap": false,
+      "native_action": "execute",
+      "native_validity": {
+        "8.4.8": "invalid",
+        "9.7.2": "invalid"
+      }
+    },
+    {
+      "id": "group_rollup_direction",
+      "sql": "SELECT id FROM t GROUP BY ROLLUP(id DESC)",
+      "validity": "invalid",
+      "derivation": "hand-written malformed control for the anchored native production",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 12461,
+          "excerpt": "| GROUP_SYM BY ROLLUP_SYM '(' group_list ')'",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 12885,
+          "excerpt": "| GROUP_SYM BY ROLLUP_SYM '(' simple_grouping_expr_list ')'",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "REJECTED",
+      "known_gap": false,
+      "native_action": "execute",
+      "native_validity": {
+        "8.4.8": "invalid",
+        "9.7.2": "invalid"
+      }
+    },
+    {
+      "id": "explain_plain_into",
+      "sql": "EXPLAIN FORMAT=JSON INTO @plan SELECT 1",
+      "validity": "valid",
+      "derivation": "hand-reduced syntax witness; source anchors identify relevant grammar, not verbatim MTR extraction",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 14070,
+          "excerpt": "| INTO '@' ident_or_text",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 14663,
+          "excerpt": "| INTO '@' ident_or_text",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "CHECKED",
+      "known_gap": false,
+      "native_action": "execute",
+      "native_validity": {
+        "8.4.8": "valid",
+        "9.7.2": "valid"
+      },
+      "expected_sql": "EXPLAIN FORMAT = JSON INTO @plan SELECT 1"
+    },
+    {
+      "id": "explain_into_quoted_variable",
+      "sql": "EXPLAIN FORMAT='JSON' INTO @'plan name' SELECT 1",
+      "validity": "valid",
+      "derivation": "hand-reduced syntax witness; source anchors identify relevant grammar, not verbatim MTR extraction",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 14070,
+          "excerpt": "| INTO '@' ident_or_text",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 14663,
+          "excerpt": "| INTO '@' ident_or_text",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "CHECKED",
+      "known_gap": false,
+      "native_action": "execute",
+      "native_validity": {
+        "8.4.8": "valid",
+        "9.7.2": "valid"
+      },
+      "expected_sql": "EXPLAIN FORMAT = 'JSON' INTO @'plan name' SELECT 1"
+    },
+    {
+      "id": "explain_into_backtick_variable",
+      "sql": "EXPLAIN FORMAT=JSON INTO @`plan``name` SELECT 1",
+      "validity": "valid",
+      "derivation": "hand-reduced syntax witness; source anchors identify relevant grammar, not verbatim MTR extraction",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 14070,
+          "excerpt": "| INTO '@' ident_or_text",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 14663,
+          "excerpt": "| INTO '@' ident_or_text",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "CHECKED",
+      "known_gap": false,
+      "native_action": "execute",
+      "native_validity": {
+        "8.4.8": "valid",
+        "9.7.2": "valid"
+      },
+      "expected_sql": "EXPLAIN FORMAT = JSON INTO @`plan``name` SELECT 1"
+    },
+    {
+      "id": "explain_analyze_into_double_quoted",
+      "sql": "EXPLAIN ANALYZE FORMAT=\"JSON\" INTO @\"plan name\" SELECT 1",
+      "validity": "valid",
+      "derivation": "hand-reduced syntax witness; source anchors identify relevant grammar, not verbatim MTR extraction",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 14035,
+          "excerpt": "ANALYZE_SYM opt_explain_format",
+          "kind": "older_production_without_extension"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 14612,
+          "excerpt": "ANALYZE_SYM opt_explain_format opt_explain_into",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "CHECKED",
+      "known_gap": false,
+      "native_action": "execute",
+      "native_validity": {
+        "8.4.8": "invalid",
+        "9.7.2": "valid"
+      },
+      "expected_sql": "EXPLAIN ANALYZE FORMAT = \"JSON\" INTO @\"plan name\" SELECT 1",
+      "applicability": {
+        "8.4.8": "production absent",
+        "9.7.2": "production present; runtime availability is separate"
+      },
+      "native_observations": {
+        "8.4.8": {
+          "state": "SYNTAX_REJECTED",
+          "error_code": 1064
+        },
+        "9.7.2": {
+          "state": "ACCEPTED",
+          "error_code": null
+        }
+      }
+    },
+    {
+      "id": "explain_into_with",
+      "sql": "EXPLAIN FORMAT=JSON INTO @plan WITH c AS (SELECT 1 AS n) SELECT n FROM c",
+      "validity": "valid",
+      "derivation": "hand-reduced syntax witness; source anchors identify relevant grammar, not verbatim MTR extraction",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 14070,
+          "excerpt": "| INTO '@' ident_or_text",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 14663,
+          "excerpt": "| INTO '@' ident_or_text",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "CHECKED",
+      "known_gap": false,
+      "native_action": "execute",
+      "native_validity": {
+        "8.4.8": "valid",
+        "9.7.2": "valid"
+      },
+      "expected_sql": "EXPLAIN FORMAT = JSON INTO @plan WITH c AS (SELECT 1 AS n) SELECT n FROM c"
+    },
+    {
+      "id": "explain_into_table",
+      "sql": "EXPLAIN FORMAT=JSON INTO @plan TABLE t",
+      "validity": "valid",
+      "derivation": "hand-reduced syntax witness; source anchors identify relevant grammar, not verbatim MTR extraction",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 14070,
+          "excerpt": "| INTO '@' ident_or_text",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 14663,
+          "excerpt": "| INTO '@' ident_or_text",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "CHECKED",
+      "known_gap": false,
+      "native_action": "execute",
+      "native_validity": {
+        "8.4.8": "valid",
+        "9.7.2": "valid"
+      },
+      "expected_sql": "EXPLAIN FORMAT = JSON INTO @plan TABLE t"
+    },
+    {
+      "id": "explain_into_values",
+      "sql": "EXPLAIN FORMAT=JSON INTO @plan VALUES ROW(1), ROW(2)",
+      "validity": "valid",
+      "derivation": "hand-reduced syntax witness; source anchors identify relevant grammar, not verbatim MTR extraction",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 14070,
+          "excerpt": "| INTO '@' ident_or_text",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 14663,
+          "excerpt": "| INTO '@' ident_or_text",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "CHECKED",
+      "known_gap": false,
+      "native_action": "execute",
+      "native_validity": {
+        "8.4.8": "valid",
+        "9.7.2": "valid"
+      },
+      "expected_sql": "EXPLAIN FORMAT = JSON INTO @plan VALUES ROW(1), ROW(2)"
+    },
+    {
+      "id": "explain_into_implicit_format",
+      "sql": "EXPLAIN INTO @plan SELECT 1",
+      "validity": "valid",
+      "derivation": "hand-reduced syntax witness; source anchors identify relevant grammar, not verbatim MTR extraction",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 14070,
+          "excerpt": "| INTO '@' ident_or_text",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 14663,
+          "excerpt": "| INTO '@' ident_or_text",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "CHECKED",
+      "known_gap": false,
+      "native_action": "execute",
+      "native_validity": {
+        "8.4.8": "valid",
+        "9.7.2": "valid"
+      },
+      "expected_sql": "EXPLAIN INTO @plan SELECT 1"
+    },
+    {
+      "id": "explain_into_tree",
+      "sql": "EXPLAIN FORMAT=TREE INTO @plan SELECT 1",
+      "validity": "valid",
+      "derivation": "hand-reduced syntax witness; source anchors identify relevant grammar, not verbatim MTR extraction",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 14070,
+          "excerpt": "| INTO '@' ident_or_text",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 14663,
+          "excerpt": "| INTO '@' ident_or_text",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "CHECKED",
+      "known_gap": false,
+      "native_action": "execute",
+      "native_validity": {
+        "8.4.8": "valid",
+        "9.7.2": "valid"
+      },
+      "expected_sql": "EXPLAIN FORMAT = TREE INTO @plan SELECT 1"
+    },
+    {
+      "id": "explain_analyze_into_implicit_format",
+      "sql": "EXPLAIN ANALYZE INTO @plan SELECT 1",
+      "validity": "valid",
+      "derivation": "hand-reduced syntax witness; source anchors identify relevant grammar, not verbatim MTR extraction",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 14035,
+          "excerpt": "ANALYZE_SYM opt_explain_format",
+          "kind": "older_production_without_extension"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 14612,
+          "excerpt": "ANALYZE_SYM opt_explain_format opt_explain_into",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "CHECKED",
+      "known_gap": false,
+      "native_action": "execute",
+      "native_validity": {
+        "8.4.8": "invalid",
+        "9.7.2": "valid"
+      },
+      "expected_sql": "EXPLAIN ANALYZE INTO @plan SELECT 1",
+      "applicability": {
+        "8.4.8": "production absent",
+        "9.7.2": "production present; runtime availability is separate"
+      },
+      "native_observations": {
+        "8.4.8": {
+          "state": "SYNTAX_REJECTED",
+          "error_code": 1064
+        },
+        "9.7.2": {
+          "state": "SERVER_ERROR",
+          "error_code": 6006
+        }
+      }
+    },
+    {
+      "id": "explain_format_after_analyze",
+      "sql": "EXPLAIN FORMAT=JSON ANALYZE SELECT 1",
+      "validity": "invalid",
+      "derivation": "hand-written malformed control for the anchored native production",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 14035,
+          "excerpt": "ANALYZE_SYM opt_explain_format",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 14612,
+          "excerpt": "ANALYZE_SYM opt_explain_format opt_explain_into",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "REJECTED",
+      "known_gap": false,
+      "native_action": "execute",
+      "native_validity": {
+        "8.4.8": "invalid",
+        "9.7.2": "invalid"
+      }
+    },
+    {
+      "id": "explain_into_before_format",
+      "sql": "EXPLAIN INTO @plan FORMAT=JSON SELECT 1",
+      "validity": "invalid",
+      "derivation": "hand-written malformed control for the anchored native production",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 14070,
+          "excerpt": "| INTO '@' ident_or_text",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 14663,
+          "excerpt": "| INTO '@' ident_or_text",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "REJECTED",
+      "known_gap": false,
+      "native_action": "execute",
+      "native_validity": {
+        "8.4.8": "invalid",
+        "9.7.2": "invalid"
+      }
+    },
+    {
+      "id": "explain_repeat_analyze",
+      "sql": "EXPLAIN ANALYZE ANALYZE SELECT 1",
+      "validity": "invalid",
+      "derivation": "hand-written malformed control for the anchored native production",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 14035,
+          "excerpt": "ANALYZE_SYM opt_explain_format",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 14612,
+          "excerpt": "ANALYZE_SYM opt_explain_format opt_explain_into",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "REJECTED",
+      "known_gap": false,
+      "native_action": "execute",
+      "native_validity": {
+        "8.4.8": "invalid",
+        "9.7.2": "invalid"
+      }
+    },
+    {
+      "id": "explain_repeat_format",
+      "sql": "EXPLAIN FORMAT=JSON FORMAT=TREE SELECT 1",
+      "validity": "invalid",
+      "derivation": "hand-written malformed control for the anchored native production",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 14070,
+          "excerpt": "| INTO '@' ident_or_text",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 14663,
+          "excerpt": "| INTO '@' ident_or_text",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "REJECTED",
+      "known_gap": false,
+      "native_action": "execute",
+      "native_validity": {
+        "8.4.8": "invalid",
+        "9.7.2": "invalid"
+      }
+    },
+    {
+      "id": "explain_repeat_into",
+      "sql": "EXPLAIN FORMAT=JSON INTO @plan INTO @other SELECT 1",
+      "validity": "invalid",
+      "derivation": "hand-written malformed control for the anchored native production",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 14070,
+          "excerpt": "| INTO '@' ident_or_text",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 14663,
+          "excerpt": "| INTO '@' ident_or_text",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "REJECTED",
+      "known_gap": false,
+      "native_action": "execute",
+      "native_validity": {
+        "8.4.8": "invalid",
+        "9.7.2": "invalid"
+      }
+    },
+    {
+      "id": "explain_into_missing_at",
+      "sql": "EXPLAIN FORMAT=JSON INTO plan SELECT 1",
+      "validity": "invalid",
+      "derivation": "hand-written malformed control for the anchored native production",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 14070,
+          "excerpt": "| INTO '@' ident_or_text",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 14663,
+          "excerpt": "| INTO '@' ident_or_text",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "REJECTED",
+      "known_gap": false,
+      "native_action": "execute",
+      "native_validity": {
+        "8.4.8": "invalid",
+        "9.7.2": "invalid"
+      }
+    },
+    {
+      "id": "explain_into_system_variable",
+      "sql": "EXPLAIN FORMAT=JSON INTO @@plan SELECT 1",
+      "validity": "invalid",
+      "derivation": "hand-written malformed control for the anchored native production",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 14070,
+          "excerpt": "| INTO '@' ident_or_text",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 14663,
+          "excerpt": "| INTO '@' ident_or_text",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "REJECTED",
+      "known_gap": false,
+      "native_action": "execute",
+      "native_validity": {
+        "8.4.8": "invalid",
+        "9.7.2": "invalid"
+      }
+    },
+    {
+      "id": "explain_into_missing_variable",
+      "sql": "EXPLAIN FORMAT=JSON INTO @ SELECT 1",
+      "validity": "invalid",
+      "derivation": "hand-written malformed control for the anchored native production",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 14070,
+          "excerpt": "| INTO '@' ident_or_text",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 14663,
+          "excerpt": "| INTO '@' ident_or_text",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "REJECTED",
+      "known_gap": false,
+      "native_action": "execute",
+      "native_validity": {
+        "8.4.8": "invalid",
+        "9.7.2": "invalid"
+      }
+    },
+    {
+      "id": "explain_into_multiple_variables",
+      "sql": "EXPLAIN FORMAT=JSON INTO @plan, @other SELECT 1",
+      "validity": "invalid",
+      "derivation": "hand-written malformed control for the anchored native production",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 14070,
+          "excerpt": "| INTO '@' ident_or_text",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 14663,
+          "excerpt": "| INTO '@' ident_or_text",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "REJECTED",
+      "known_gap": false,
+      "native_action": "execute",
+      "native_validity": {
+        "8.4.8": "invalid",
+        "9.7.2": "invalid"
+      }
+    },
+    {
+      "id": "explain_into_missing_query",
+      "sql": "EXPLAIN FORMAT=JSON INTO @plan",
+      "validity": "invalid",
+      "derivation": "hand-written malformed control for the anchored native production",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 14070,
+          "excerpt": "| INTO '@' ident_or_text",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 14663,
+          "excerpt": "| INTO '@' ident_or_text",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "REJECTED",
+      "known_gap": false,
+      "native_action": "execute",
+      "native_validity": {
+        "8.4.8": "invalid",
+        "9.7.2": "invalid"
+      }
+    },
+    {
+      "id": "explain_missing_format_equal",
+      "sql": "EXPLAIN FORMAT JSON SELECT 1",
+      "validity": "invalid",
+      "derivation": "hand-written malformed control for the anchored native production",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 14070,
+          "excerpt": "| INTO '@' ident_or_text",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 14663,
+          "excerpt": "| INTO '@' ident_or_text",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "REJECTED",
+      "known_gap": false,
+      "native_action": "execute",
+      "native_validity": {
+        "8.4.8": "invalid",
+        "9.7.2": "invalid"
+      }
+    },
+    {
+      "id": "group_rollup_suffix_expression",
+      "sql": "SELECT id, n FROM t GROUP BY ROLLUP(id), n",
+      "validity": "invalid",
+      "derivation": "hand-written malformed control for the anchored native production",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 12461,
+          "excerpt": "| GROUP_SYM BY ROLLUP_SYM '(' group_list ')'",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 12885,
+          "excerpt": "| GROUP_SYM BY ROLLUP_SYM '(' simple_grouping_expr_list ')'",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "REJECTED",
+      "known_gap": false,
+      "native_action": "execute",
+      "native_validity": {
+        "8.4.8": "invalid",
+        "9.7.2": "invalid"
+      }
+    },
+    {
+      "id": "grouping_sets_cube_member",
+      "sql": "SELECT id, n FROM t GROUP BY GROUPING SETS ((id), CUBE(n))",
+      "validity": "invalid",
+      "derivation": "hand-written malformed control for the anchored native production",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 12457,
+          "excerpt": "| GROUP_SYM BY group_list olap_opt",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 12893,
+          "excerpt": "| GROUP_SYM BY GROUPING_SYM SETS_SYM '(' grouping_set_list ')'",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "REJECTED",
+      "known_gap": false,
+      "native_action": "execute",
+      "native_validity": {
+        "8.4.8": "invalid",
+        "9.7.2": "invalid"
+      }
+    },
+    {
+      "id": "group_rollup_row_operand",
+      "sql": "SELECT id, n FROM t GROUP BY ROLLUP((id, n))",
+      "validity": "valid",
+      "derivation": "hand-reduced syntax witness; source anchors identify relevant grammar, not verbatim MTR extraction",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 12461,
+          "excerpt": "| GROUP_SYM BY ROLLUP_SYM '(' group_list ')'",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 12885,
+          "excerpt": "| GROUP_SYM BY ROLLUP_SYM '(' simple_grouping_expr_list ')'",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "CHECKED",
+      "known_gap": false,
+      "native_action": "execute",
+      "native_validity": {
+        "8.4.8": "valid",
+        "9.7.2": "valid"
+      },
+      "expected_sql": "SELECT id, n FROM t GROUP BY ROLLUP ((id, n))"
+    },
+    {
+      "id": "explain_into_dotted_variable",
+      "sql": "EXPLAIN FORMAT=JSON INTO @a.b SELECT 1",
+      "validity": "valid",
+      "derivation": "hand-reduced syntax witness; source anchors identify relevant grammar, not verbatim MTR extraction",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 14070,
+          "excerpt": "| INTO '@' ident_or_text",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 14663,
+          "excerpt": "| INTO '@' ident_or_text",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "CHECKED",
+      "known_gap": false,
+      "native_action": "execute",
+      "native_validity": {
+        "8.4.8": "valid",
+        "9.7.2": "valid"
+      },
+      "expected_sql": "EXPLAIN FORMAT = JSON INTO @a.b SELECT 1"
+    },
+    {
+      "id": "explain_into_numeric_variable",
+      "sql": "EXPLAIN FORMAT=JSON INTO @123 SELECT 1",
+      "validity": "valid",
+      "derivation": "hand-reduced syntax witness; source anchors identify relevant grammar, not verbatim MTR extraction",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 14070,
+          "excerpt": "| INTO '@' ident_or_text",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 14663,
+          "excerpt": "| INTO '@' ident_or_text",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "CHECKED",
+      "known_gap": false,
+      "native_action": "execute",
+      "native_validity": {
+        "8.4.8": "valid",
+        "9.7.2": "valid"
+      },
+      "expected_sql": "EXPLAIN FORMAT = JSON INTO @123 SELECT 1"
+    },
+    {
+      "id": "explain_into_keyword_variable",
+      "sql": "EXPLAIN FORMAT=JSON INTO @NULL SELECT 1",
+      "validity": "valid",
+      "derivation": "hand-reduced syntax witness; source anchors identify relevant grammar, not verbatim MTR extraction",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 14070,
+          "excerpt": "| INTO '@' ident_or_text",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 14663,
+          "excerpt": "| INTO '@' ident_or_text",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "CHECKED",
+      "known_gap": false,
+      "native_action": "execute",
+      "native_validity": {
+        "8.4.8": "valid",
+        "9.7.2": "valid"
+      },
+      "expected_sql": "EXPLAIN FORMAT = JSON INTO @NULL SELECT 1"
+    },
+    {
+      "id": "explain_into_escaped_string_variable",
+      "sql": "EXPLAIN FORMAT=JSON INTO @'a''b' SELECT 1",
+      "validity": "valid",
+      "derivation": "hand-reduced syntax witness; source anchors identify relevant grammar, not verbatim MTR extraction",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 14070,
+          "excerpt": "| INTO '@' ident_or_text",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 14663,
+          "excerpt": "| INTO '@' ident_or_text",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "CHECKED",
+      "known_gap": false,
+      "native_action": "execute",
+      "native_validity": {
+        "8.4.8": "valid",
+        "9.7.2": "valid"
+      },
+      "expected_sql": "EXPLAIN FORMAT = JSON INTO @'a''b' SELECT 1"
+    },
+    {
+      "id": "explain_into_hyphen_variable",
+      "sql": "EXPLAIN FORMAT=JSON INTO @a-b SELECT 1",
+      "validity": "invalid",
+      "derivation": "hand-written malformed control for the anchored native production",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 14070,
+          "excerpt": "| INTO '@' ident_or_text",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 14663,
+          "excerpt": "| INTO '@' ident_or_text",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "REJECTED",
+      "known_gap": false,
+      "native_action": "execute",
+      "native_validity": {
+        "8.4.8": "invalid",
+        "9.7.2": "invalid"
+      }
+    },
+    {
+      "id": "group_rollup_nested_cube",
+      "sql": "SELECT id FROM t GROUP BY ROLLUP(CUBE(id))",
+      "validity": "invalid",
+      "derivation": "hand-written malformed control for the anchored native production",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 12461,
+          "excerpt": "| GROUP_SYM BY ROLLUP_SYM '(' group_list ')'",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 12885,
+          "excerpt": "| GROUP_SYM BY ROLLUP_SYM '(' simple_grouping_expr_list ')'",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "REJECTED",
+      "known_gap": false,
+      "native_action": "execute",
+      "native_validity": {
+        "8.4.8": "invalid",
+        "9.7.2": "invalid"
+      }
+    },
+    {
+      "id": "group_rollup_nested_rollup",
+      "sql": "SELECT id FROM t GROUP BY ROLLUP(ROLLUP(id))",
+      "validity": "invalid",
+      "derivation": "hand-written malformed control for the anchored native production",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 12461,
+          "excerpt": "| GROUP_SYM BY ROLLUP_SYM '(' group_list ')'",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 12885,
+          "excerpt": "| GROUP_SYM BY ROLLUP_SYM '(' simple_grouping_expr_list ')'",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "REJECTED",
+      "known_gap": false,
+      "native_action": "execute",
+      "native_validity": {
+        "8.4.8": "invalid",
+        "9.7.2": "invalid"
+      }
+    },
+    {
+      "id": "grouping_sets_nested_rollup",
+      "sql": "SELECT id FROM t GROUP BY GROUPING SETS ((ROLLUP(id)))",
+      "validity": "invalid",
+      "derivation": "hand-written malformed control for the anchored native production",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 12457,
+          "excerpt": "| GROUP_SYM BY group_list olap_opt",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 12893,
+          "excerpt": "| GROUP_SYM BY GROUPING_SYM SETS_SYM '(' grouping_set_list ')'",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "REJECTED",
+      "known_gap": false,
+      "native_action": "execute",
+      "native_validity": {
+        "8.4.8": "invalid",
+        "9.7.2": "invalid"
+      }
+    },
+    {
+      "id": "group_parenthesized_rollup",
+      "sql": "SELECT id FROM t GROUP BY (ROLLUP(id))",
+      "validity": "invalid",
+      "derivation": "hand-written malformed control for the anchored native production",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 12461,
+          "excerpt": "| GROUP_SYM BY ROLLUP_SYM '(' group_list ')'",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 12885,
+          "excerpt": "| GROUP_SYM BY ROLLUP_SYM '(' simple_grouping_expr_list ')'",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "REJECTED",
+      "known_gap": false,
+      "native_action": "execute",
+      "native_validity": {
+        "8.4.8": "invalid",
+        "9.7.2": "invalid"
+      }
+    },
+    {
+      "id": "group_quoted_rollup_function",
+      "sql": "SELECT id FROM t GROUP BY `ROLLUP`(id)",
+      "validity": "valid",
+      "derivation": "hand-reduced syntax witness; source anchors identify relevant grammar, not verbatim MTR extraction",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 12461,
+          "excerpt": "| GROUP_SYM BY ROLLUP_SYM '(' group_list ')'",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 12885,
+          "excerpt": "| GROUP_SYM BY ROLLUP_SYM '(' simple_grouping_expr_list ')'",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "CHECKED",
+      "known_gap": false,
+      "native_action": "execute",
+      "native_validity": {
+        "8.4.8": "valid",
+        "9.7.2": "valid"
+      },
+      "expected_sql": "SELECT id FROM t GROUP BY `ROLLUP`(id)",
+      "native_observations": {
+        "8.4.8": {
+          "state": "SERVER_ERROR",
+          "error_code": 1630
+        },
+        "9.7.2": {
+          "state": "SERVER_ERROR",
+          "error_code": 1630
+        }
+      }
+    },
+    {
+      "id": "group_quoted_cube_function",
+      "sql": "SELECT id FROM t GROUP BY `CUBE`(id)",
+      "validity": "valid",
+      "derivation": "hand-reduced syntax witness; source anchors identify relevant grammar, not verbatim MTR extraction",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 12461,
+          "excerpt": "| GROUP_SYM BY ROLLUP_SYM '(' group_list ')'",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 12885,
+          "excerpt": "| GROUP_SYM BY ROLLUP_SYM '(' simple_grouping_expr_list ')'",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "CHECKED",
+      "known_gap": false,
+      "native_action": "execute",
+      "native_validity": {
+        "8.4.8": "valid",
+        "9.7.2": "valid"
+      },
+      "expected_sql": "SELECT id FROM t GROUP BY `CUBE`(id)",
+      "native_observations": {
+        "8.4.8": {
+          "state": "SERVER_ERROR",
+          "error_code": 1630
+        },
+        "9.7.2": {
+          "state": "SERVER_ERROR",
+          "error_code": 1630
+        }
+      }
+    },
+    {
+      "id": "explain_describe_format_name",
+      "sql": "EXPLAIN format",
+      "validity": "valid",
+      "derivation": "hand-reduced syntax witness; source anchors identify relevant grammar, not verbatim MTR extraction",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 13951,
+          "excerpt": "describe_command table_ident opt_describe_column",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 14924,
+          "excerpt": "table_ident:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 15422,
+          "excerpt": "| FORMAT_SYM",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 14528,
+          "excerpt": "describe_command table_ident opt_describe_column",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 15584,
+          "excerpt": "table_ident:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 16093,
+          "excerpt": "| FORMAT_SYM",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "CHECKED",
+      "known_gap": false,
+      "native_action": "execute",
+      "native_validity": {
+        "8.4.8": "valid",
+        "9.7.2": "valid"
+      },
+      "expected_sql": "DESCRIBE format",
+      "native_observations": {
+        "8.4.8": {
+          "state": "SERVER_ERROR",
+          "error_code": 1146
+        },
+        "9.7.2": {
+          "state": "SERVER_ERROR",
+          "error_code": 1146
+        }
+      }
+    },
+    {
+      "id": "explain_describe_format_qualified",
+      "sql": "EXPLAIN format.id",
+      "validity": "valid",
+      "derivation": "hand-reduced syntax witness; source anchors identify relevant grammar, not verbatim MTR extraction",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 13951,
+          "excerpt": "describe_command table_ident opt_describe_column",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 14924,
+          "excerpt": "table_ident:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 15422,
+          "excerpt": "| FORMAT_SYM",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 14528,
+          "excerpt": "describe_command table_ident opt_describe_column",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 15584,
+          "excerpt": "table_ident:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 16093,
+          "excerpt": "| FORMAT_SYM",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "CHECKED",
+      "known_gap": false,
+      "native_action": "execute",
+      "native_validity": {
+        "8.4.8": "valid",
+        "9.7.2": "valid"
+      },
+      "expected_sql": "DESCRIBE format.id",
+      "native_observations": {
+        "8.4.8": {
+          "state": "SERVER_ERROR",
+          "error_code": 1049
+        },
+        "9.7.2": {
+          "state": "SERVER_ERROR",
+          "error_code": 1049
+        }
+      }
+    },
+    {
+      "id": "explain_describe_hex_quoted",
+      "sql": "EXPLAIN t X'6964'",
+      "validity": "valid",
+      "derivation": "hand-reduced syntax witness; source anchors identify relevant grammar, not verbatim MTR extraction",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 13951,
+          "excerpt": "describe_command table_ident opt_describe_column",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 14090,
+          "excerpt": "opt_describe_column:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 14705,
+          "excerpt": "text_string:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 14528,
+          "excerpt": "describe_command table_ident opt_describe_column",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 14686,
+          "excerpt": "opt_describe_column:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 15331,
+          "excerpt": "text_string:",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "CHECKED",
+      "known_gap": false,
+      "native_action": "execute",
+      "native_validity": {
+        "8.4.8": "valid",
+        "9.7.2": "valid"
+      },
+      "expected_sql": "DESCRIBE t X'6964'"
+    },
+    {
+      "id": "explain_describe_hex_numeric",
+      "sql": "EXPLAIN t 0x6964",
+      "validity": "valid",
+      "derivation": "hand-reduced syntax witness; source anchors identify relevant grammar, not verbatim MTR extraction",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 13951,
+          "excerpt": "describe_command table_ident opt_describe_column",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 14090,
+          "excerpt": "opt_describe_column:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 14705,
+          "excerpt": "text_string:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 14528,
+          "excerpt": "describe_command table_ident opt_describe_column",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 14686,
+          "excerpt": "opt_describe_column:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 15331,
+          "excerpt": "text_string:",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "CHECKED",
+      "known_gap": false,
+      "native_action": "execute",
+      "native_validity": {
+        "8.4.8": "valid",
+        "9.7.2": "valid"
+      },
+      "expected_sql": "DESCRIBE t 0x6964"
+    },
+    {
+      "id": "explain_describe_bit_quoted",
+      "sql": "EXPLAIN t B'01101001'",
+      "validity": "valid",
+      "derivation": "hand-reduced syntax witness; source anchors identify relevant grammar, not verbatim MTR extraction",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 13951,
+          "excerpt": "describe_command table_ident opt_describe_column",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 14090,
+          "excerpt": "opt_describe_column:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 14705,
+          "excerpt": "text_string:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 14528,
+          "excerpt": "describe_command table_ident opt_describe_column",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 14686,
+          "excerpt": "opt_describe_column:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 15331,
+          "excerpt": "text_string:",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "CHECKED",
+      "known_gap": false,
+      "native_action": "execute",
+      "native_validity": {
+        "8.4.8": "valid",
+        "9.7.2": "valid"
+      },
+      "expected_sql": "DESCRIBE t B'01101001'"
+    },
+    {
+      "id": "explain_describe_bit_numeric",
+      "sql": "EXPLAIN t 0b01101001",
+      "validity": "valid",
+      "derivation": "hand-reduced syntax witness; source anchors identify relevant grammar, not verbatim MTR extraction",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 13951,
+          "excerpt": "describe_command table_ident opt_describe_column",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 14090,
+          "excerpt": "opt_describe_column:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 14705,
+          "excerpt": "text_string:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 14528,
+          "excerpt": "describe_command table_ident opt_describe_column",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 14686,
+          "excerpt": "opt_describe_column:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 15331,
+          "excerpt": "text_string:",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "CHECKED",
+      "known_gap": false,
+      "native_action": "execute",
+      "native_validity": {
+        "8.4.8": "valid",
+        "9.7.2": "valid"
+      },
+      "expected_sql": "DESCRIBE t 0b01101001"
     }
   ]
 }
