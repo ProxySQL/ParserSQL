@@ -201,6 +201,8 @@ private:
                 sb_.append_char(')'); break;
             case NodeType::NODE_MYSQL_JSON_AGG_ARGUMENT:
                 sb_.append("ALL "); emit_node(node->first_child); break;
+            case NodeType::NODE_MYSQL_CREATE_LIKE:
+            case NodeType::NODE_MYSQL_CREATE_QUERY:
             case NodeType::NODE_MYSQL_CREATE_TABLE:
             case NodeType::NODE_MYSQL_ALTER_TABLE:
             case NodeType::NODE_MYSQL_COLUMN_DEF:

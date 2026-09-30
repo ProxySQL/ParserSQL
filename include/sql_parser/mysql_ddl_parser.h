@@ -9,8 +9,8 @@
 
 namespace sql_parser {
 
-// Bounded native CREATE/ALTER TABLE grammar. Unsupported partitioning, LIKE,
-// query-derived tables and specialized index options remain explicit errors.
+// Bounded native CREATE/ALTER TABLE grammar. Unsupported partitioning and
+// specialized index options remain explicit errors.
 // Lists, columns, expressions, constraints and options have separate AST nodes;
 // syntax leaves are only emitted after matching their native production.
 class MySQLDdlParser {
@@ -34,15 +34,7 @@ public:
         if (create && take("IF", root)) { require("NOT", root); require("EXISTS", root); }
         add(root, name(true));
         if (create) {
-            auto* definitions = node(NodeType::NODE_MYSQL_DDL_LIST);
-            require(TokenType::TK_LPAREN);
-            do { add(definitions, definition()); } while (!failed_ && take(TokenType::TK_COMMA));
-            require(TokenType::TK_RPAREN);
-            add(root, definitions);
-            while (!failed_ && !terminal()) {
-                add(root, table_option());
-                if (take(TokenType::TK_COMMA) && terminal()) fail();
-            }
+            create_body(root);
         } else {
             auto* actions = node(NodeType::NODE_MYSQL_ALTER_ACTIONS);
             do { add(actions, action()); } while (!failed_ && take(TokenType::TK_COMMA));
@@ -124,6 +116,55 @@ private:
         }
         return n;
     }
+    // Only distinguish the query branch from column definitions here. The
+    // strict query parser validates grouping, operands and clause boundaries.
+    bool query_start() {
+        auto look = tok_;
+        while (look.peek().type == TokenType::TK_LPAREN) look.skip();
+        return ExpressionParser<Dialect::MySQL>::starts_query(look.peek().type);
+    }
+    bool query_suffix() { return query_start() || one_of({"AS", "IGNORE", "REPLACE"}); }
+    void create_body(AstNode* root) {
+        auto look = tok_;
+        const bool parenthesized = look.next_token().type == TokenType::TK_LPAREN &&
+                                   word(look.peek(), "LIKE");
+        if (is("LIKE") || parenthesized) {
+            if (parenthesized) tok_.skip();
+            require("LIKE");
+            auto* source = node(NodeType::NODE_MYSQL_CREATE_LIKE, "LIKE");
+            add(source, name()); // Source must not replace target routing metadata.
+            add(root, source);
+            if (parenthesized) require(TokenType::TK_RPAREN);
+            return;
+        }
+        if (at(TokenType::TK_LPAREN) && !query_start()) {
+            tok_.skip();
+            auto* definitions = node(NodeType::NODE_MYSQL_DDL_LIST);
+            do { add(definitions, definition()); } while (!failed_ && take(TokenType::TK_COMMA));
+            require(TokenType::TK_RPAREN);
+            add(root, definitions);
+        }
+        while (!failed_ && !terminal() && !query_suffix()) {
+            add(root, table_option());
+            // A comma separates table options, never the following query.
+            if (take(TokenType::TK_COMMA) && (terminal() || query_suffix())) fail();
+        }
+        if (failed_ || terminal()) return;
+        const char* prefix = "AS";
+        if (take("IGNORE")) prefix = "IGNORE AS";
+        else if (take("REPLACE")) {
+            prefix = "REPLACE AS";
+            // Native duplicate REPLACE ignores the lexer-attached hint list.
+            if (at(TokenType::TK_MYSQL_OPTIMIZER_HINT)) tok_.skip();
+        }
+        take("AS");
+        if (!query_start()) { fail(); return; }
+        auto* source = node(NodeType::NODE_MYSQL_CREATE_QUERY, prefix);
+        auto callback = callback_ ? callback_ : &parse_subquery_select<Dialect::MySQL>;
+        add(source, callback(tok_, arena_));
+        add(root, source);
+    }
+
     AstNode* expression() {
         ExpressionParser<Dialect::MySQL> parser(tok_, arena_, true);
         if (callback_) parser.set_subquery_callback(callback_);

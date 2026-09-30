@@ -197,6 +197,8 @@ private:
             case NodeType::NODE_MYSQL_INSERT_ALIAS:
             case NodeType::NODE_MYSQL_JSON_AGGREGATE:
             case NodeType::NODE_MYSQL_JSON_AGG_ARGUMENT:
+            case NodeType::NODE_MYSQL_CREATE_LIKE:
+            case NodeType::NODE_MYSQL_CREATE_QUERY:
             case NodeType::NODE_MYSQL_CREATE_TABLE:
             case NodeType::NODE_MYSQL_ALTER_TABLE:
             case NodeType::NODE_MYSQL_COLUMN_DEF:

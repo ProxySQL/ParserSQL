@@ -388,6 +388,9 @@ enum class NodeType : uint16_t {
     NODE_MYSQL_PROCEDURE_BLOCK, // statement children; owns their semicolons
     NODE_MYSQL_OPTIMIZER_HINT, // lossless hint comment metadata; no hint semantic analysis
 
+    NODE_MYSQL_CREATE_LIKE, // LIKE; structured source relation child
+    NODE_MYSQL_CREATE_QUERY, // AS / IGNORE AS / REPLACE AS; query AST child
+
 };
 
 } // namespace sql_parser

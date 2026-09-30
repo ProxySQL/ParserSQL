@@ -11472,6 +11472,3360 @@
       "known_gap": false,
       "native_action": "execute",
       "expected_sql": "SELECT REPLACE('abc', 'a', 'x')"
+    },
+    {
+      "id": "create_like",
+      "sql": "CREATE TABLE copy LIKE original",
+      "validity": "valid",
+      "derivation": "hand-reduced syntax witness; source anchors identify relevant grammar, not verbatim MTR extraction",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 3217,
+          "excerpt": "create_table_stmt:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 6071,
+          "excerpt": "opt_create_table_options_etc:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 6090,
+          "excerpt": "opt_duplicate_as_qe:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 6115,
+          "excerpt": "as_create_query_expression:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 3317,
+          "excerpt": "create_table_stmt:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 6218,
+          "excerpt": "opt_create_table_options_etc:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 6237,
+          "excerpt": "opt_duplicate_as_qe:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 6262,
+          "excerpt": "as_create_query_expression:",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "CHECKED",
+      "known_gap": false,
+      "native_action": "ddl",
+      "native_fixture_sql": "CREATE TABLE original(n INT PRIMARY KEY); INSERT INTO original VALUES(1),(2);",
+      "expected_sql": "CREATE TABLE copy LIKE original"
+    },
+    {
+      "id": "create_like_parenthesized",
+      "sql": "CREATE TABLE copy (LIKE original)",
+      "validity": "valid",
+      "derivation": "hand-reduced syntax witness; source anchors identify relevant grammar, not verbatim MTR extraction",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 3217,
+          "excerpt": "create_table_stmt:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 6071,
+          "excerpt": "opt_create_table_options_etc:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 6090,
+          "excerpt": "opt_duplicate_as_qe:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 6115,
+          "excerpt": "as_create_query_expression:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 3317,
+          "excerpt": "create_table_stmt:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 6218,
+          "excerpt": "opt_create_table_options_etc:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 6237,
+          "excerpt": "opt_duplicate_as_qe:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 6262,
+          "excerpt": "as_create_query_expression:",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "CHECKED",
+      "known_gap": false,
+      "native_action": "ddl",
+      "native_fixture_sql": "CREATE TABLE original(n INT PRIMARY KEY); INSERT INTO original VALUES(1),(2);",
+      "expected_sql": "CREATE TABLE copy LIKE original"
+    },
+    {
+      "id": "create_like_temporary",
+      "sql": "CREATE TEMPORARY TABLE IF NOT EXISTS copy LIKE original",
+      "validity": "valid",
+      "derivation": "hand-reduced syntax witness; source anchors identify relevant grammar, not verbatim MTR extraction",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 3217,
+          "excerpt": "create_table_stmt:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 6071,
+          "excerpt": "opt_create_table_options_etc:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 6090,
+          "excerpt": "opt_duplicate_as_qe:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 6115,
+          "excerpt": "as_create_query_expression:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 3317,
+          "excerpt": "create_table_stmt:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 6218,
+          "excerpt": "opt_create_table_options_etc:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 6237,
+          "excerpt": "opt_duplicate_as_qe:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 6262,
+          "excerpt": "as_create_query_expression:",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "CHECKED",
+      "known_gap": false,
+      "native_action": "ddl",
+      "native_fixture_sql": "CREATE TABLE original(n INT PRIMARY KEY); INSERT INTO original VALUES(1),(2);",
+      "expected_sql": "CREATE TEMPORARY TABLE IF NOT EXISTS copy LIKE original"
+    },
+    {
+      "id": "create_like_quoted",
+      "sql": "CREATE TABLE `copy` (LIKE `original`)",
+      "validity": "valid",
+      "derivation": "hand-reduced syntax witness; source anchors identify relevant grammar, not verbatim MTR extraction",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 3217,
+          "excerpt": "create_table_stmt:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 6071,
+          "excerpt": "opt_create_table_options_etc:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 6090,
+          "excerpt": "opt_duplicate_as_qe:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 6115,
+          "excerpt": "as_create_query_expression:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 3317,
+          "excerpt": "create_table_stmt:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 6218,
+          "excerpt": "opt_create_table_options_etc:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 6237,
+          "excerpt": "opt_duplicate_as_qe:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 6262,
+          "excerpt": "as_create_query_expression:",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "CHECKED",
+      "known_gap": false,
+      "native_action": "ddl",
+      "native_fixture_sql": "CREATE TABLE original(n INT PRIMARY KEY); INSERT INTO original VALUES(1),(2);",
+      "expected_sql": "CREATE TABLE `copy` LIKE `original`"
+    },
+    {
+      "id": "create_query",
+      "sql": "CREATE TABLE t AS SELECT 1 AS n",
+      "validity": "valid",
+      "derivation": "hand-reduced syntax witness; source anchors identify relevant grammar, not verbatim MTR extraction",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 3217,
+          "excerpt": "create_table_stmt:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 6071,
+          "excerpt": "opt_create_table_options_etc:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 6090,
+          "excerpt": "opt_duplicate_as_qe:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 6115,
+          "excerpt": "as_create_query_expression:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 3317,
+          "excerpt": "create_table_stmt:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 6218,
+          "excerpt": "opt_create_table_options_etc:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 6237,
+          "excerpt": "opt_duplicate_as_qe:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 6262,
+          "excerpt": "as_create_query_expression:",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "CHECKED",
+      "known_gap": false,
+      "native_action": "ddl",
+      "native_fixture_sql": "CREATE TABLE original(n INT PRIMARY KEY); INSERT INTO original VALUES(1),(2);",
+      "expected_sql": "CREATE TABLE t AS SELECT 1 AS n"
+    },
+    {
+      "id": "create_query_optional_as",
+      "sql": "CREATE TABLE t SELECT 1 AS n",
+      "validity": "valid",
+      "derivation": "hand-reduced syntax witness; source anchors identify relevant grammar, not verbatim MTR extraction",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 3217,
+          "excerpt": "create_table_stmt:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 6071,
+          "excerpt": "opt_create_table_options_etc:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 6090,
+          "excerpt": "opt_duplicate_as_qe:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 6115,
+          "excerpt": "as_create_query_expression:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 3317,
+          "excerpt": "create_table_stmt:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 6218,
+          "excerpt": "opt_create_table_options_etc:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 6237,
+          "excerpt": "opt_duplicate_as_qe:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 6262,
+          "excerpt": "as_create_query_expression:",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "CHECKED",
+      "known_gap": false,
+      "native_action": "ddl",
+      "native_fixture_sql": "CREATE TABLE original(n INT PRIMARY KEY); INSERT INTO original VALUES(1),(2);",
+      "expected_sql": "CREATE TABLE t AS SELECT 1 AS n"
+    },
+    {
+      "id": "create_query_columns",
+      "sql": "CREATE TABLE t (n INT PRIMARY KEY) AS SELECT 1 AS n",
+      "validity": "valid",
+      "derivation": "hand-reduced syntax witness; source anchors identify relevant grammar, not verbatim MTR extraction",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 3217,
+          "excerpt": "create_table_stmt:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 6071,
+          "excerpt": "opt_create_table_options_etc:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 6090,
+          "excerpt": "opt_duplicate_as_qe:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 6115,
+          "excerpt": "as_create_query_expression:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 3317,
+          "excerpt": "create_table_stmt:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 6218,
+          "excerpt": "opt_create_table_options_etc:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 6237,
+          "excerpt": "opt_duplicate_as_qe:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 6262,
+          "excerpt": "as_create_query_expression:",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "CHECKED",
+      "known_gap": false,
+      "native_action": "ddl",
+      "native_fixture_sql": "CREATE TABLE original(n INT PRIMARY KEY); INSERT INTO original VALUES(1),(2);",
+      "expected_sql": "CREATE TABLE t (n INT PRIMARY KEY) AS SELECT 1 AS n"
+    },
+    {
+      "id": "create_query_options",
+      "sql": "CREATE TABLE t (extra INT DEFAULT 7) ENGINE=InnoDB COMMENT='copy' AS SELECT 1 AS n",
+      "validity": "valid",
+      "derivation": "hand-reduced syntax witness; source anchors identify relevant grammar, not verbatim MTR extraction",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 3217,
+          "excerpt": "create_table_stmt:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 6071,
+          "excerpt": "opt_create_table_options_etc:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 6090,
+          "excerpt": "opt_duplicate_as_qe:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 6115,
+          "excerpt": "as_create_query_expression:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 3317,
+          "excerpt": "create_table_stmt:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 6218,
+          "excerpt": "opt_create_table_options_etc:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 6237,
+          "excerpt": "opt_duplicate_as_qe:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 6262,
+          "excerpt": "as_create_query_expression:",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "CHECKED",
+      "known_gap": false,
+      "native_action": "ddl",
+      "native_fixture_sql": "CREATE TABLE original(n INT PRIMARY KEY); INSERT INTO original VALUES(1),(2);",
+      "expected_sql": "CREATE TABLE t (extra INT DEFAULT 7) ENGINE InnoDB COMMENT 'copy' AS SELECT 1 AS n"
+    },
+    {
+      "id": "create_query_ignore",
+      "sql": "CREATE TABLE t ENGINE=InnoDB, COMMENT='copy' IGNORE SELECT 1 AS n",
+      "validity": "valid",
+      "derivation": "hand-reduced syntax witness; source anchors identify relevant grammar, not verbatim MTR extraction",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 3217,
+          "excerpt": "create_table_stmt:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 6071,
+          "excerpt": "opt_create_table_options_etc:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 6090,
+          "excerpt": "opt_duplicate_as_qe:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 6115,
+          "excerpt": "as_create_query_expression:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 3317,
+          "excerpt": "create_table_stmt:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 6218,
+          "excerpt": "opt_create_table_options_etc:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 6237,
+          "excerpt": "opt_duplicate_as_qe:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 6262,
+          "excerpt": "as_create_query_expression:",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "CHECKED",
+      "known_gap": false,
+      "native_action": "ddl",
+      "native_fixture_sql": "CREATE TABLE original(n INT PRIMARY KEY); INSERT INTO original VALUES(1),(2);",
+      "expected_sql": "CREATE TABLE t ENGINE InnoDB COMMENT 'copy' IGNORE AS SELECT 1 AS n"
+    },
+    {
+      "id": "create_query_replace",
+      "sql": "CREATE TABLE t REPLACE SELECT 1 AS n UNION ALL SELECT 2",
+      "validity": "valid",
+      "derivation": "hand-reduced syntax witness; source anchors identify relevant grammar, not verbatim MTR extraction",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 3217,
+          "excerpt": "create_table_stmt:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 6071,
+          "excerpt": "opt_create_table_options_etc:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 6090,
+          "excerpt": "opt_duplicate_as_qe:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 6115,
+          "excerpt": "as_create_query_expression:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 3317,
+          "excerpt": "create_table_stmt:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 6218,
+          "excerpt": "opt_create_table_options_etc:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 6237,
+          "excerpt": "opt_duplicate_as_qe:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 6262,
+          "excerpt": "as_create_query_expression:",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "CHECKED",
+      "known_gap": false,
+      "native_action": "ddl",
+      "native_fixture_sql": "CREATE TABLE original(n INT PRIMARY KEY); INSERT INTO original VALUES(1),(2);",
+      "expected_sql": "CREATE TABLE t REPLACE AS SELECT 1 AS n UNION ALL SELECT 2"
+    },
+    {
+      "id": "create_query_cte",
+      "sql": "CREATE TABLE t AS WITH c AS (SELECT 1 AS n) SELECT n FROM c",
+      "validity": "valid",
+      "derivation": "hand-reduced syntax witness; source anchors identify relevant grammar, not verbatim MTR extraction",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 3217,
+          "excerpt": "create_table_stmt:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 6071,
+          "excerpt": "opt_create_table_options_etc:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 6090,
+          "excerpt": "opt_duplicate_as_qe:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 6115,
+          "excerpt": "as_create_query_expression:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 3317,
+          "excerpt": "create_table_stmt:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 6218,
+          "excerpt": "opt_create_table_options_etc:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 6237,
+          "excerpt": "opt_duplicate_as_qe:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 6262,
+          "excerpt": "as_create_query_expression:",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "CHECKED",
+      "known_gap": false,
+      "native_action": "ddl",
+      "native_fixture_sql": "CREATE TABLE original(n INT PRIMARY KEY); INSERT INTO original VALUES(1),(2);",
+      "expected_sql": "CREATE TABLE t AS WITH c AS (SELECT 1 AS n) SELECT n FROM c"
+    },
+    {
+      "id": "create_query_cte_optional_as",
+      "sql": "CREATE TABLE t WITH c AS (SELECT 1 AS n) SELECT n FROM c",
+      "validity": "valid",
+      "derivation": "hand-reduced syntax witness; source anchors identify relevant grammar, not verbatim MTR extraction",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 3217,
+          "excerpt": "create_table_stmt:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 6071,
+          "excerpt": "opt_create_table_options_etc:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 6090,
+          "excerpt": "opt_duplicate_as_qe:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 6115,
+          "excerpt": "as_create_query_expression:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 3317,
+          "excerpt": "create_table_stmt:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 6218,
+          "excerpt": "opt_create_table_options_etc:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 6237,
+          "excerpt": "opt_duplicate_as_qe:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 6262,
+          "excerpt": "as_create_query_expression:",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "CHECKED",
+      "known_gap": false,
+      "native_action": "ddl",
+      "native_fixture_sql": "CREATE TABLE original(n INT PRIMARY KEY); INSERT INTO original VALUES(1),(2);",
+      "expected_sql": "CREATE TABLE t AS WITH c AS (SELECT 1 AS n) SELECT n FROM c"
+    },
+    {
+      "id": "create_query_group",
+      "sql": "CREATE TABLE t (SELECT 1 AS n);",
+      "validity": "valid",
+      "derivation": "hand-reduced syntax witness; source anchors identify relevant grammar, not verbatim MTR extraction",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 3217,
+          "excerpt": "create_table_stmt:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 6071,
+          "excerpt": "opt_create_table_options_etc:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 6090,
+          "excerpt": "opt_duplicate_as_qe:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 6115,
+          "excerpt": "as_create_query_expression:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 3317,
+          "excerpt": "create_table_stmt:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 6218,
+          "excerpt": "opt_create_table_options_etc:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 6237,
+          "excerpt": "opt_duplicate_as_qe:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 6262,
+          "excerpt": "as_create_query_expression:",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "CHECKED",
+      "known_gap": false,
+      "native_action": "ddl",
+      "native_fixture_sql": "CREATE TABLE original(n INT PRIMARY KEY); INSERT INTO original VALUES(1),(2);",
+      "expected_sql": "CREATE TABLE t AS (SELECT 1 AS n)"
+    },
+    {
+      "id": "create_query_nested_group",
+      "sql": "CREATE TABLE t ((SELECT 1 AS n) UNION ALL SELECT 2) ORDER BY n LIMIT 1",
+      "validity": "valid",
+      "derivation": "hand-reduced syntax witness; source anchors identify relevant grammar, not verbatim MTR extraction",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 3217,
+          "excerpt": "create_table_stmt:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 6071,
+          "excerpt": "opt_create_table_options_etc:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 6090,
+          "excerpt": "opt_duplicate_as_qe:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 6115,
+          "excerpt": "as_create_query_expression:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 3317,
+          "excerpt": "create_table_stmt:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 6218,
+          "excerpt": "opt_create_table_options_etc:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 6237,
+          "excerpt": "opt_duplicate_as_qe:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 6262,
+          "excerpt": "as_create_query_expression:",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "CHECKED",
+      "known_gap": false,
+      "native_action": "ddl",
+      "native_fixture_sql": "CREATE TABLE original(n INT PRIMARY KEY); INSERT INTO original VALUES(1),(2);",
+      "expected_sql": "CREATE TABLE t AS ((SELECT 1 AS n) UNION ALL SELECT 2) ORDER BY n LIMIT 1"
+    },
+    {
+      "id": "create_query_columns_group",
+      "sql": "CREATE TABLE t (n INT) (SELECT 1 AS n)",
+      "validity": "valid",
+      "derivation": "hand-reduced syntax witness; source anchors identify relevant grammar, not verbatim MTR extraction",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 3217,
+          "excerpt": "create_table_stmt:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 6071,
+          "excerpt": "opt_create_table_options_etc:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 6090,
+          "excerpt": "opt_duplicate_as_qe:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 6115,
+          "excerpt": "as_create_query_expression:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 3317,
+          "excerpt": "create_table_stmt:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 6218,
+          "excerpt": "opt_create_table_options_etc:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 6237,
+          "excerpt": "opt_duplicate_as_qe:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 6262,
+          "excerpt": "as_create_query_expression:",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "CHECKED",
+      "known_gap": false,
+      "native_action": "ddl",
+      "native_fixture_sql": "CREATE TABLE original(n INT PRIMARY KEY); INSERT INTO original VALUES(1),(2);",
+      "expected_sql": "CREATE TABLE t (n INT) AS (SELECT 1 AS n)"
+    },
+    {
+      "id": "create_query_table",
+      "sql": "CREATE TABLE t AS TABLE original",
+      "validity": "valid",
+      "derivation": "hand-reduced syntax witness; source anchors identify relevant grammar, not verbatim MTR extraction",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 3217,
+          "excerpt": "create_table_stmt:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 6071,
+          "excerpt": "opt_create_table_options_etc:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 6090,
+          "excerpt": "opt_duplicate_as_qe:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 6115,
+          "excerpt": "as_create_query_expression:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 3317,
+          "excerpt": "create_table_stmt:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 6218,
+          "excerpt": "opt_create_table_options_etc:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 6237,
+          "excerpt": "opt_duplicate_as_qe:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 6262,
+          "excerpt": "as_create_query_expression:",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "CHECKED",
+      "known_gap": false,
+      "native_action": "ddl",
+      "native_fixture_sql": "CREATE TABLE original(n INT PRIMARY KEY); INSERT INTO original VALUES(1),(2);",
+      "expected_sql": "CREATE TABLE t AS TABLE original"
+    },
+    {
+      "id": "create_query_values",
+      "sql": "CREATE TABLE t AS VALUES ROW(1, 2), ROW(3, 4)",
+      "validity": "valid",
+      "derivation": "hand-reduced syntax witness; source anchors identify relevant grammar, not verbatim MTR extraction",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 3217,
+          "excerpt": "create_table_stmt:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 6071,
+          "excerpt": "opt_create_table_options_etc:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 6090,
+          "excerpt": "opt_duplicate_as_qe:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 6115,
+          "excerpt": "as_create_query_expression:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 3317,
+          "excerpt": "create_table_stmt:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 6218,
+          "excerpt": "opt_create_table_options_etc:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 6237,
+          "excerpt": "opt_duplicate_as_qe:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 6262,
+          "excerpt": "as_create_query_expression:",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "CHECKED",
+      "known_gap": false,
+      "native_action": "ddl",
+      "native_fixture_sql": "CREATE TABLE original(n INT PRIMARY KEY); INSERT INTO original VALUES(1),(2);",
+      "expected_sql": "CREATE TABLE t AS VALUES ROW(1, 2), ROW(3, 4)"
+    },
+    {
+      "id": "create_query_hint_lock",
+      "sql": "CREATE TABLE t AS SELECT /*+ MAX_EXECUTION_TIME(1000) */ n FROM original FOR SHARE",
+      "validity": "valid",
+      "derivation": "hand-reduced syntax witness; source anchors identify relevant grammar, not verbatim MTR extraction",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 3217,
+          "excerpt": "create_table_stmt:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 6071,
+          "excerpt": "opt_create_table_options_etc:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 6090,
+          "excerpt": "opt_duplicate_as_qe:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 6115,
+          "excerpt": "as_create_query_expression:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 3317,
+          "excerpt": "create_table_stmt:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 6218,
+          "excerpt": "opt_create_table_options_etc:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 6237,
+          "excerpt": "opt_duplicate_as_qe:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 6262,
+          "excerpt": "as_create_query_expression:",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "CHECKED",
+      "known_gap": false,
+      "native_action": "ddl",
+      "native_fixture_sql": "CREATE TABLE original(n INT PRIMARY KEY); INSERT INTO original VALUES(1),(2);",
+      "expected_sql": "CREATE TABLE t AS SELECT /*+ MAX_EXECUTION_TIME(1000) */ n FROM original FOR SHARE"
+    },
+    {
+      "id": "create_no_columns",
+      "sql": "CREATE TABLE t",
+      "validity": "valid",
+      "derivation": "hand-reduced syntax witness; source anchors identify relevant grammar, not verbatim MTR extraction",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 3217,
+          "excerpt": "create_table_stmt:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 6071,
+          "excerpt": "opt_create_table_options_etc:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 6090,
+          "excerpt": "opt_duplicate_as_qe:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 6115,
+          "excerpt": "as_create_query_expression:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 3317,
+          "excerpt": "create_table_stmt:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 6218,
+          "excerpt": "opt_create_table_options_etc:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 6237,
+          "excerpt": "opt_duplicate_as_qe:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 6262,
+          "excerpt": "as_create_query_expression:",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "CHECKED",
+      "known_gap": false,
+      "native_action": "ddl",
+      "native_fixture_sql": "CREATE TABLE original(n INT PRIMARY KEY); INSERT INTO original VALUES(1),(2);",
+      "expected_sql": "CREATE TABLE t"
+    },
+    {
+      "id": "create_options_no_columns",
+      "sql": "CREATE TABLE t ENGINE=InnoDB",
+      "validity": "valid",
+      "derivation": "hand-reduced syntax witness; source anchors identify relevant grammar, not verbatim MTR extraction",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 3217,
+          "excerpt": "create_table_stmt:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 6071,
+          "excerpt": "opt_create_table_options_etc:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 6090,
+          "excerpt": "opt_duplicate_as_qe:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 6115,
+          "excerpt": "as_create_query_expression:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 3317,
+          "excerpt": "create_table_stmt:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 6218,
+          "excerpt": "opt_create_table_options_etc:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 6237,
+          "excerpt": "opt_duplicate_as_qe:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 6262,
+          "excerpt": "as_create_query_expression:",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "CHECKED",
+      "known_gap": false,
+      "native_action": "ddl",
+      "native_fixture_sql": "CREATE TABLE original(n INT PRIMARY KEY); INSERT INTO original VALUES(1),(2);",
+      "expected_sql": "CREATE TABLE t ENGINE InnoDB"
+    },
+    {
+      "id": "create_source_invalid_1",
+      "sql": "CREATE TABLE t LIKE",
+      "validity": "invalid",
+      "derivation": "hand-reduced malformed control against native CREATE TABLE source productions",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 3217,
+          "excerpt": "create_table_stmt:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 6071,
+          "excerpt": "opt_create_table_options_etc:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 6090,
+          "excerpt": "opt_duplicate_as_qe:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 6115,
+          "excerpt": "as_create_query_expression:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 3317,
+          "excerpt": "create_table_stmt:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 6218,
+          "excerpt": "opt_create_table_options_etc:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 6237,
+          "excerpt": "opt_duplicate_as_qe:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 6262,
+          "excerpt": "as_create_query_expression:",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "REJECTED",
+      "known_gap": false,
+      "native_action": "ddl",
+      "native_fixture_sql": "CREATE TABLE original(n INT PRIMARY KEY); INSERT INTO original VALUES(1),(2);"
+    },
+    {
+      "id": "create_source_invalid_2",
+      "sql": "CREATE TABLE t LIKE db.",
+      "validity": "invalid",
+      "derivation": "hand-reduced malformed control against native CREATE TABLE source productions",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 3217,
+          "excerpt": "create_table_stmt:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 6071,
+          "excerpt": "opt_create_table_options_etc:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 6090,
+          "excerpt": "opt_duplicate_as_qe:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 6115,
+          "excerpt": "as_create_query_expression:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 3317,
+          "excerpt": "create_table_stmt:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 6218,
+          "excerpt": "opt_create_table_options_etc:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 6237,
+          "excerpt": "opt_duplicate_as_qe:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 6262,
+          "excerpt": "as_create_query_expression:",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "REJECTED",
+      "known_gap": false,
+      "native_action": "ddl",
+      "native_fixture_sql": "CREATE TABLE original(n INT PRIMARY KEY); INSERT INTO original VALUES(1),(2);"
+    },
+    {
+      "id": "create_source_invalid_3",
+      "sql": "CREATE TABLE t LIKE db.src.extra",
+      "validity": "invalid",
+      "derivation": "hand-reduced malformed control against native CREATE TABLE source productions",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 3217,
+          "excerpt": "create_table_stmt:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 6071,
+          "excerpt": "opt_create_table_options_etc:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 6090,
+          "excerpt": "opt_duplicate_as_qe:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 6115,
+          "excerpt": "as_create_query_expression:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 3317,
+          "excerpt": "create_table_stmt:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 6218,
+          "excerpt": "opt_create_table_options_etc:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 6237,
+          "excerpt": "opt_duplicate_as_qe:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 6262,
+          "excerpt": "as_create_query_expression:",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "REJECTED",
+      "known_gap": false,
+      "native_action": "ddl",
+      "native_fixture_sql": "CREATE TABLE original(n INT PRIMARY KEY); INSERT INTO original VALUES(1),(2);"
+    },
+    {
+      "id": "create_source_invalid_4",
+      "sql": "CREATE TABLE t LIKE src extra",
+      "validity": "invalid",
+      "derivation": "hand-reduced malformed control against native CREATE TABLE source productions",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 3217,
+          "excerpt": "create_table_stmt:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 6071,
+          "excerpt": "opt_create_table_options_etc:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 6090,
+          "excerpt": "opt_duplicate_as_qe:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 6115,
+          "excerpt": "as_create_query_expression:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 3317,
+          "excerpt": "create_table_stmt:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 6218,
+          "excerpt": "opt_create_table_options_etc:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 6237,
+          "excerpt": "opt_duplicate_as_qe:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 6262,
+          "excerpt": "as_create_query_expression:",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "REJECTED",
+      "known_gap": false,
+      "native_action": "ddl",
+      "native_fixture_sql": "CREATE TABLE original(n INT PRIMARY KEY); INSERT INTO original VALUES(1),(2);"
+    },
+    {
+      "id": "create_source_invalid_5",
+      "sql": "CREATE TABLE t LIKE src AS SELECT 1",
+      "validity": "invalid",
+      "derivation": "hand-reduced malformed control against native CREATE TABLE source productions",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 3217,
+          "excerpt": "create_table_stmt:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 6071,
+          "excerpt": "opt_create_table_options_etc:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 6090,
+          "excerpt": "opt_duplicate_as_qe:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 6115,
+          "excerpt": "as_create_query_expression:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 3317,
+          "excerpt": "create_table_stmt:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 6218,
+          "excerpt": "opt_create_table_options_etc:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 6237,
+          "excerpt": "opt_duplicate_as_qe:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 6262,
+          "excerpt": "as_create_query_expression:",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "REJECTED",
+      "known_gap": false,
+      "native_action": "ddl",
+      "native_fixture_sql": "CREATE TABLE original(n INT PRIMARY KEY); INSERT INTO original VALUES(1),(2);"
+    },
+    {
+      "id": "create_source_invalid_6",
+      "sql": "CREATE TABLE t LIKE src ENGINE=InnoDB",
+      "validity": "invalid",
+      "derivation": "hand-reduced malformed control against native CREATE TABLE source productions",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 3217,
+          "excerpt": "create_table_stmt:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 6071,
+          "excerpt": "opt_create_table_options_etc:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 6090,
+          "excerpt": "opt_duplicate_as_qe:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 6115,
+          "excerpt": "as_create_query_expression:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 3317,
+          "excerpt": "create_table_stmt:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 6218,
+          "excerpt": "opt_create_table_options_etc:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 6237,
+          "excerpt": "opt_duplicate_as_qe:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 6262,
+          "excerpt": "as_create_query_expression:",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "REJECTED",
+      "known_gap": false,
+      "native_action": "ddl",
+      "native_fixture_sql": "CREATE TABLE original(n INT PRIMARY KEY); INSERT INTO original VALUES(1),(2);"
+    },
+    {
+      "id": "create_source_invalid_7",
+      "sql": "CREATE TABLE t ENGINE=InnoDB LIKE src",
+      "validity": "invalid",
+      "derivation": "hand-reduced malformed control against native CREATE TABLE source productions",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 3217,
+          "excerpt": "create_table_stmt:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 6071,
+          "excerpt": "opt_create_table_options_etc:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 6090,
+          "excerpt": "opt_duplicate_as_qe:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 6115,
+          "excerpt": "as_create_query_expression:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 3317,
+          "excerpt": "create_table_stmt:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 6218,
+          "excerpt": "opt_create_table_options_etc:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 6237,
+          "excerpt": "opt_duplicate_as_qe:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 6262,
+          "excerpt": "as_create_query_expression:",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "REJECTED",
+      "known_gap": false,
+      "native_action": "ddl",
+      "native_fixture_sql": "CREATE TABLE original(n INT PRIMARY KEY); INSERT INTO original VALUES(1),(2);"
+    },
+    {
+      "id": "create_source_invalid_8",
+      "sql": "CREATE TABLE t (LIKE src",
+      "validity": "invalid",
+      "derivation": "hand-reduced malformed control against native CREATE TABLE source productions",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 3217,
+          "excerpt": "create_table_stmt:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 6071,
+          "excerpt": "opt_create_table_options_etc:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 6090,
+          "excerpt": "opt_duplicate_as_qe:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 6115,
+          "excerpt": "as_create_query_expression:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 3317,
+          "excerpt": "create_table_stmt:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 6218,
+          "excerpt": "opt_create_table_options_etc:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 6237,
+          "excerpt": "opt_duplicate_as_qe:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 6262,
+          "excerpt": "as_create_query_expression:",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "REJECTED",
+      "known_gap": false,
+      "native_action": "ddl",
+      "native_fixture_sql": "CREATE TABLE original(n INT PRIMARY KEY); INSERT INTO original VALUES(1),(2);"
+    },
+    {
+      "id": "create_source_invalid_9",
+      "sql": "CREATE TABLE t (LIKE src, id INT)",
+      "validity": "invalid",
+      "derivation": "hand-reduced malformed control against native CREATE TABLE source productions",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 3217,
+          "excerpt": "create_table_stmt:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 6071,
+          "excerpt": "opt_create_table_options_etc:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 6090,
+          "excerpt": "opt_duplicate_as_qe:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 6115,
+          "excerpt": "as_create_query_expression:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 3317,
+          "excerpt": "create_table_stmt:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 6218,
+          "excerpt": "opt_create_table_options_etc:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 6237,
+          "excerpt": "opt_duplicate_as_qe:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 6262,
+          "excerpt": "as_create_query_expression:",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "REJECTED",
+      "known_gap": false,
+      "native_action": "ddl",
+      "native_fixture_sql": "CREATE TABLE original(n INT PRIMARY KEY); INSERT INTO original VALUES(1),(2);"
+    },
+    {
+      "id": "create_source_invalid_10",
+      "sql": "CREATE TABLE t (id INT) LIKE src",
+      "validity": "invalid",
+      "derivation": "hand-reduced malformed control against native CREATE TABLE source productions",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 3217,
+          "excerpt": "create_table_stmt:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 6071,
+          "excerpt": "opt_create_table_options_etc:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 6090,
+          "excerpt": "opt_duplicate_as_qe:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 6115,
+          "excerpt": "as_create_query_expression:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 3317,
+          "excerpt": "create_table_stmt:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 6218,
+          "excerpt": "opt_create_table_options_etc:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 6237,
+          "excerpt": "opt_duplicate_as_qe:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 6262,
+          "excerpt": "as_create_query_expression:",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "REJECTED",
+      "known_gap": false,
+      "native_action": "ddl",
+      "native_fixture_sql": "CREATE TABLE original(n INT PRIMARY KEY); INSERT INTO original VALUES(1),(2);"
+    },
+    {
+      "id": "create_source_invalid_11",
+      "sql": "CREATE TABLE t ((LIKE src))",
+      "validity": "invalid",
+      "derivation": "hand-reduced malformed control against native CREATE TABLE source productions",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 3217,
+          "excerpt": "create_table_stmt:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 6071,
+          "excerpt": "opt_create_table_options_etc:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 6090,
+          "excerpt": "opt_duplicate_as_qe:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 6115,
+          "excerpt": "as_create_query_expression:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 3317,
+          "excerpt": "create_table_stmt:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 6218,
+          "excerpt": "opt_create_table_options_etc:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 6237,
+          "excerpt": "opt_duplicate_as_qe:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 6262,
+          "excerpt": "as_create_query_expression:",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "REJECTED",
+      "known_gap": false,
+      "native_action": "ddl",
+      "native_fixture_sql": "CREATE TABLE original(n INT PRIMARY KEY); INSERT INTO original VALUES(1),(2);"
+    },
+    {
+      "id": "create_source_invalid_12",
+      "sql": "CREATE TABLE t AS",
+      "validity": "invalid",
+      "derivation": "hand-reduced malformed control against native CREATE TABLE source productions",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 3217,
+          "excerpt": "create_table_stmt:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 6071,
+          "excerpt": "opt_create_table_options_etc:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 6090,
+          "excerpt": "opt_duplicate_as_qe:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 6115,
+          "excerpt": "as_create_query_expression:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 3317,
+          "excerpt": "create_table_stmt:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 6218,
+          "excerpt": "opt_create_table_options_etc:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 6237,
+          "excerpt": "opt_duplicate_as_qe:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 6262,
+          "excerpt": "as_create_query_expression:",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "REJECTED",
+      "known_gap": false,
+      "native_action": "ddl",
+      "native_fixture_sql": "CREATE TABLE original(n INT PRIMARY KEY); INSERT INTO original VALUES(1),(2);"
+    },
+    {
+      "id": "create_source_invalid_13",
+      "sql": "CREATE TABLE t IGNORE",
+      "validity": "invalid",
+      "derivation": "hand-reduced malformed control against native CREATE TABLE source productions",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 3217,
+          "excerpt": "create_table_stmt:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 6071,
+          "excerpt": "opt_create_table_options_etc:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 6090,
+          "excerpt": "opt_duplicate_as_qe:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 6115,
+          "excerpt": "as_create_query_expression:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 3317,
+          "excerpt": "create_table_stmt:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 6218,
+          "excerpt": "opt_create_table_options_etc:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 6237,
+          "excerpt": "opt_duplicate_as_qe:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 6262,
+          "excerpt": "as_create_query_expression:",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "REJECTED",
+      "known_gap": false,
+      "native_action": "ddl",
+      "native_fixture_sql": "CREATE TABLE original(n INT PRIMARY KEY); INSERT INTO original VALUES(1),(2);"
+    },
+    {
+      "id": "create_source_invalid_14",
+      "sql": "CREATE TABLE t REPLACE AS",
+      "validity": "invalid",
+      "derivation": "hand-reduced malformed control against native CREATE TABLE source productions",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 3217,
+          "excerpt": "create_table_stmt:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 6071,
+          "excerpt": "opt_create_table_options_etc:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 6090,
+          "excerpt": "opt_duplicate_as_qe:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 6115,
+          "excerpt": "as_create_query_expression:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 3317,
+          "excerpt": "create_table_stmt:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 6218,
+          "excerpt": "opt_create_table_options_etc:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 6237,
+          "excerpt": "opt_duplicate_as_qe:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 6262,
+          "excerpt": "as_create_query_expression:",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "REJECTED",
+      "known_gap": false,
+      "native_action": "ddl",
+      "native_fixture_sql": "CREATE TABLE original(n INT PRIMARY KEY); INSERT INTO original VALUES(1),(2);"
+    },
+    {
+      "id": "create_source_invalid_15",
+      "sql": "CREATE TABLE t IGNORE REPLACE SELECT 1",
+      "validity": "invalid",
+      "derivation": "hand-reduced malformed control against native CREATE TABLE source productions",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 3217,
+          "excerpt": "create_table_stmt:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 6071,
+          "excerpt": "opt_create_table_options_etc:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 6090,
+          "excerpt": "opt_duplicate_as_qe:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 6115,
+          "excerpt": "as_create_query_expression:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 3317,
+          "excerpt": "create_table_stmt:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 6218,
+          "excerpt": "opt_create_table_options_etc:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 6237,
+          "excerpt": "opt_duplicate_as_qe:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 6262,
+          "excerpt": "as_create_query_expression:",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "REJECTED",
+      "known_gap": false,
+      "native_action": "ddl",
+      "native_fixture_sql": "CREATE TABLE original(n INT PRIMARY KEY); INSERT INTO original VALUES(1),(2);"
+    },
+    {
+      "id": "create_source_invalid_16",
+      "sql": "CREATE TABLE t AS IGNORE SELECT 1",
+      "validity": "invalid",
+      "derivation": "hand-reduced malformed control against native CREATE TABLE source productions",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 3217,
+          "excerpt": "create_table_stmt:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 6071,
+          "excerpt": "opt_create_table_options_etc:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 6090,
+          "excerpt": "opt_duplicate_as_qe:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 6115,
+          "excerpt": "as_create_query_expression:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 3317,
+          "excerpt": "create_table_stmt:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 6218,
+          "excerpt": "opt_create_table_options_etc:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 6237,
+          "excerpt": "opt_duplicate_as_qe:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 6262,
+          "excerpt": "as_create_query_expression:",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "REJECTED",
+      "known_gap": false,
+      "native_action": "ddl",
+      "native_fixture_sql": "CREATE TABLE original(n INT PRIMARY KEY); INSERT INTO original VALUES(1),(2);"
+    },
+    {
+      "id": "create_source_invalid_17",
+      "sql": "CREATE TABLE t AS SELECT FROM src",
+      "validity": "invalid",
+      "derivation": "hand-reduced malformed control against native CREATE TABLE source productions",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 3217,
+          "excerpt": "create_table_stmt:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 6071,
+          "excerpt": "opt_create_table_options_etc:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 6090,
+          "excerpt": "opt_duplicate_as_qe:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 6115,
+          "excerpt": "as_create_query_expression:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 3317,
+          "excerpt": "create_table_stmt:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 6218,
+          "excerpt": "opt_create_table_options_etc:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 6237,
+          "excerpt": "opt_duplicate_as_qe:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 6262,
+          "excerpt": "as_create_query_expression:",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "REJECTED",
+      "known_gap": false,
+      "native_action": "ddl",
+      "native_fixture_sql": "CREATE TABLE original(n INT PRIMARY KEY); INSERT INTO original VALUES(1),(2);"
+    },
+    {
+      "id": "create_source_invalid_18",
+      "sql": "CREATE TABLE t AS SELECT 1 +",
+      "validity": "invalid",
+      "derivation": "hand-reduced malformed control against native CREATE TABLE source productions",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 3217,
+          "excerpt": "create_table_stmt:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 6071,
+          "excerpt": "opt_create_table_options_etc:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 6090,
+          "excerpt": "opt_duplicate_as_qe:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 6115,
+          "excerpt": "as_create_query_expression:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 3317,
+          "excerpt": "create_table_stmt:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 6218,
+          "excerpt": "opt_create_table_options_etc:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 6237,
+          "excerpt": "opt_duplicate_as_qe:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 6262,
+          "excerpt": "as_create_query_expression:",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "REJECTED",
+      "known_gap": false,
+      "native_action": "ddl",
+      "native_fixture_sql": "CREATE TABLE original(n INT PRIMARY KEY); INSERT INTO original VALUES(1),(2);"
+    },
+    {
+      "id": "create_source_invalid_19",
+      "sql": "CREATE TABLE t AS SELECT 1 UNION",
+      "validity": "invalid",
+      "derivation": "hand-reduced malformed control against native CREATE TABLE source productions",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 3217,
+          "excerpt": "create_table_stmt:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 6071,
+          "excerpt": "opt_create_table_options_etc:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 6090,
+          "excerpt": "opt_duplicate_as_qe:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 6115,
+          "excerpt": "as_create_query_expression:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 3317,
+          "excerpt": "create_table_stmt:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 6218,
+          "excerpt": "opt_create_table_options_etc:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 6237,
+          "excerpt": "opt_duplicate_as_qe:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 6262,
+          "excerpt": "as_create_query_expression:",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "REJECTED",
+      "known_gap": false,
+      "native_action": "ddl",
+      "native_fixture_sql": "CREATE TABLE original(n INT PRIMARY KEY); INSERT INTO original VALUES(1),(2);"
+    },
+    {
+      "id": "create_source_invalid_21",
+      "sql": "CREATE TABLE t () AS SELECT 1",
+      "validity": "invalid",
+      "derivation": "hand-reduced malformed control against native CREATE TABLE source productions",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 3217,
+          "excerpt": "create_table_stmt:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 6071,
+          "excerpt": "opt_create_table_options_etc:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 6090,
+          "excerpt": "opt_duplicate_as_qe:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 6115,
+          "excerpt": "as_create_query_expression:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 3317,
+          "excerpt": "create_table_stmt:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 6218,
+          "excerpt": "opt_create_table_options_etc:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 6237,
+          "excerpt": "opt_duplicate_as_qe:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 6262,
+          "excerpt": "as_create_query_expression:",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "REJECTED",
+      "known_gap": false,
+      "native_action": "ddl",
+      "native_fixture_sql": "CREATE TABLE original(n INT PRIMARY KEY); INSERT INTO original VALUES(1),(2);"
+    },
+    {
+      "id": "create_source_invalid_22",
+      "sql": "CREATE TABLE t (id) AS SELECT 1",
+      "validity": "invalid",
+      "derivation": "hand-reduced malformed control against native CREATE TABLE source productions",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 3217,
+          "excerpt": "create_table_stmt:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 6071,
+          "excerpt": "opt_create_table_options_etc:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 6090,
+          "excerpt": "opt_duplicate_as_qe:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 6115,
+          "excerpt": "as_create_query_expression:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 3317,
+          "excerpt": "create_table_stmt:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 6218,
+          "excerpt": "opt_create_table_options_etc:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 6237,
+          "excerpt": "opt_duplicate_as_qe:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 6262,
+          "excerpt": "as_create_query_expression:",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "REJECTED",
+      "known_gap": false,
+      "native_action": "ddl",
+      "native_fixture_sql": "CREATE TABLE original(n INT PRIMARY KEY); INSERT INTO original VALUES(1),(2);"
+    },
+    {
+      "id": "create_source_invalid_23",
+      "sql": "CREATE TABLE t AS WITH c AS (SELECT 1) UPDATE src SET n=1",
+      "validity": "invalid",
+      "derivation": "hand-reduced malformed control against native CREATE TABLE source productions",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 3217,
+          "excerpt": "create_table_stmt:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 6071,
+          "excerpt": "opt_create_table_options_etc:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 6090,
+          "excerpt": "opt_duplicate_as_qe:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 6115,
+          "excerpt": "as_create_query_expression:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 3317,
+          "excerpt": "create_table_stmt:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 6218,
+          "excerpt": "opt_create_table_options_etc:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 6237,
+          "excerpt": "opt_duplicate_as_qe:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 6262,
+          "excerpt": "as_create_query_expression:",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "REJECTED",
+      "known_gap": false,
+      "native_action": "ddl",
+      "native_fixture_sql": "CREATE TABLE original(n INT PRIMARY KEY); INSERT INTO original VALUES(1),(2);"
+    },
+    {
+      "id": "create_source_invalid_24",
+      "sql": "CREATE TABLE t AS UPDATE src SET n=1",
+      "validity": "invalid",
+      "derivation": "hand-reduced malformed control against native CREATE TABLE source productions",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 3217,
+          "excerpt": "create_table_stmt:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 6071,
+          "excerpt": "opt_create_table_options_etc:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 6090,
+          "excerpt": "opt_duplicate_as_qe:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 6115,
+          "excerpt": "as_create_query_expression:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 3317,
+          "excerpt": "create_table_stmt:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 6218,
+          "excerpt": "opt_create_table_options_etc:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 6237,
+          "excerpt": "opt_duplicate_as_qe:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 6262,
+          "excerpt": "as_create_query_expression:",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "REJECTED",
+      "known_gap": false,
+      "native_action": "ddl",
+      "native_fixture_sql": "CREATE TABLE original(n INT PRIMARY KEY); INSERT INTO original VALUES(1),(2);"
+    },
+    {
+      "id": "create_query_into_outfile_gap",
+      "sql": "CREATE TABLE t AS SELECT 1 INTO OUTFILE 'x'",
+      "validity": "valid",
+      "derivation": "hand-reduced valid native CREATE SELECT INTO witness; strict query-source INTO remains unsupported",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 3217,
+          "excerpt": "create_table_stmt:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 6071,
+          "excerpt": "opt_create_table_options_etc:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 6090,
+          "excerpt": "opt_duplicate_as_qe:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 6115,
+          "excerpt": "as_create_query_expression:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 3317,
+          "excerpt": "create_table_stmt:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 6218,
+          "excerpt": "opt_create_table_options_etc:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 6237,
+          "excerpt": "opt_duplicate_as_qe:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 6262,
+          "excerpt": "as_create_query_expression:",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "ERROR",
+      "known_gap": true,
+      "native_action": "ddl",
+      "native_fixture_sql": "CREATE TABLE original(n INT PRIMARY KEY); INSERT INTO original VALUES(1),(2);",
+      "expected_sql": "CREATE TABLE t AS SELECT 1 INTO OUTFILE 'x'"
+    },
+    {
+      "id": "create_source_invalid_26",
+      "sql": "CREATE TABLE t ENGINE=InnoDB, AS SELECT 1",
+      "validity": "invalid",
+      "derivation": "hand-reduced malformed control against native CREATE TABLE source productions",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 3217,
+          "excerpt": "create_table_stmt:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 6071,
+          "excerpt": "opt_create_table_options_etc:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 6090,
+          "excerpt": "opt_duplicate_as_qe:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 6115,
+          "excerpt": "as_create_query_expression:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 3317,
+          "excerpt": "create_table_stmt:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 6218,
+          "excerpt": "opt_create_table_options_etc:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 6237,
+          "excerpt": "opt_duplicate_as_qe:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 6262,
+          "excerpt": "as_create_query_expression:",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "REJECTED",
+      "known_gap": false,
+      "native_action": "ddl",
+      "native_fixture_sql": "CREATE TABLE original(n INT PRIMARY KEY); INSERT INTO original VALUES(1),(2);"
+    },
+    {
+      "id": "create_source_invalid_27",
+      "sql": "CREATE TABLE t ENGINE=InnoDB, SELECT 1",
+      "validity": "invalid",
+      "derivation": "hand-reduced malformed control against native CREATE TABLE source productions",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 3217,
+          "excerpt": "create_table_stmt:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 6071,
+          "excerpt": "opt_create_table_options_etc:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 6090,
+          "excerpt": "opt_duplicate_as_qe:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 6115,
+          "excerpt": "as_create_query_expression:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 3317,
+          "excerpt": "create_table_stmt:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 6218,
+          "excerpt": "opt_create_table_options_etc:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 6237,
+          "excerpt": "opt_duplicate_as_qe:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 6262,
+          "excerpt": "as_create_query_expression:",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "REJECTED",
+      "known_gap": false,
+      "native_action": "ddl",
+      "native_fixture_sql": "CREATE TABLE original(n INT PRIMARY KEY); INSERT INTO original VALUES(1),(2);"
+    },
+    {
+      "id": "create_source_invalid_28",
+      "sql": "CREATE TABLE t ENGINE=InnoDB,",
+      "validity": "invalid",
+      "derivation": "hand-reduced malformed control against native CREATE TABLE source productions",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 3217,
+          "excerpt": "create_table_stmt:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 6071,
+          "excerpt": "opt_create_table_options_etc:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 6090,
+          "excerpt": "opt_duplicate_as_qe:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 6115,
+          "excerpt": "as_create_query_expression:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 3317,
+          "excerpt": "create_table_stmt:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 6218,
+          "excerpt": "opt_create_table_options_etc:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 6237,
+          "excerpt": "opt_duplicate_as_qe:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 6262,
+          "excerpt": "as_create_query_expression:",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "REJECTED",
+      "known_gap": false,
+      "native_action": "ddl",
+      "native_fixture_sql": "CREATE TABLE original(n INT PRIMARY KEY); INSERT INTO original VALUES(1),(2);"
+    },
+    {
+      "id": "create_source_invalid_29",
+      "sql": "CREATE TABLE t AS SELECT 1 ENGINE=InnoDB",
+      "validity": "invalid",
+      "derivation": "hand-reduced malformed control against native CREATE TABLE source productions",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 3217,
+          "excerpt": "create_table_stmt:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 6071,
+          "excerpt": "opt_create_table_options_etc:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 6090,
+          "excerpt": "opt_duplicate_as_qe:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 6115,
+          "excerpt": "as_create_query_expression:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 3317,
+          "excerpt": "create_table_stmt:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 6218,
+          "excerpt": "opt_create_table_options_etc:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 6237,
+          "excerpt": "opt_duplicate_as_qe:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 6262,
+          "excerpt": "as_create_query_expression:",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "REJECTED",
+      "known_gap": false,
+      "native_action": "ddl",
+      "native_fixture_sql": "CREATE TABLE original(n INT PRIMARY KEY); INSERT INTO original VALUES(1),(2);"
+    },
+    {
+      "id": "create_query_replace_hint",
+      "sql": "CREATE TABLE t REPLACE /*+ MAX_EXECUTION_TIME(1) */ AS SELECT /*+ QB_NAME(q) */ 1 AS n",
+      "validity": "valid",
+      "derivation": "hand-reduced syntax witness; source anchors identify relevant grammar, not verbatim MTR extraction",
+      "sources": [
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 3217,
+          "excerpt": "create_table_stmt:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 6071,
+          "excerpt": "opt_create_table_options_etc:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 6090,
+          "excerpt": "opt_duplicate_as_qe:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "8.4.8",
+          "path": "sql/sql_yacc.yy",
+          "line": 6115,
+          "excerpt": "as_create_query_expression:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 3317,
+          "excerpt": "create_table_stmt:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 6218,
+          "excerpt": "opt_create_table_options_etc:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 6237,
+          "excerpt": "opt_duplicate_as_qe:",
+          "kind": "grammar_anchor"
+        },
+        {
+          "version": "9.7.2",
+          "path": "sql/sql_yacc.yy",
+          "line": 6262,
+          "excerpt": "as_create_query_expression:",
+          "kind": "grammar_anchor"
+        }
+      ],
+      "expected": "CHECKED",
+      "known_gap": false,
+      "native_action": "ddl",
+      "native_fixture_sql": "CREATE TABLE original(n INT PRIMARY KEY); INSERT INTO original VALUES(1),(2);",
+      "expected_sql": "CREATE TABLE t REPLACE AS SELECT /*+ QB_NAME(q) */ 1 AS n"
     }
   ]
 }

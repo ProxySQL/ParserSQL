@@ -52,7 +52,7 @@ TEST(MySQLTableDdl, RejectsMalformedAndUnsupportedForms) {
         "CREATE TABLE t (id INT DEFAULT arbitrary)", "CREATE TABLE t (id INT DEFAULT 1+2)",
         "CREATE TABLE t (id INT ON UPDATE 1)", "CREATE TABLE t (CHECK ())", "CREATE TABLE t (UNIQUE ())",
         "CREATE TABLE t (FOREIGN KEY (x) REFERENCES p)", "CREATE TABLE t (x INT) ENGINE=", "CREATE TABLE t (x INT) arbitrary tail",
-        "CREATE TABLE t (x INT) PARTITION BY HASH(x)", "CREATE TABLE t AS SELECT 1", "CREATE TABLE t LIKE other",
+        "CREATE TABLE t (x INT) PARTITION BY HASH(x)",
         "CREATE TABLE t (x INT ENFORCED)", "CREATE TABLE t (x INT NOT NULL AS (1))",
         "CREATE TABLE t (x INT COLLATE DEFAULT)", "CREATE TABLE t (x INT) ENGINE=DEFAULT",
         "CREATE TABLE t (x INT DEFAULT NOW)", "CREATE TABLE t (FULLTEXT KEY ix USING HASH (x))",
@@ -173,4 +173,128 @@ TEST(MySQLTableDdl, NowFunctionsKeepLexicallySignificantParenthesisAdjacency) {
     auto again = parser.parse(emitted.data(), emitted.size());
     EXPECT_TRUE(again.ok());
     EXPECT_TRUE(again.full_input);
+}
+
+TEST(MySQLTableDdl, LikeAndQuerySourcesRoundTrip) {
+    for (const char* sql : {
+        "CREATE TABLE copy LIKE original",
+        "CREATE TEMPORARY TABLE IF NOT EXISTS db.copy (LIKE src.original)",
+        "CREATE TABLE `copy` LIKE `src`.`original`",
+        "CREATE TABLE t AS SELECT 1 AS n",
+        "CREATE TABLE t SELECT 1 AS n",
+        "CREATE TABLE t (n INT PRIMARY KEY) AS SELECT 1 AS n",
+        "CREATE TABLE t (extra INT DEFAULT 7) ENGINE=InnoDB COMMENT='copy' AS SELECT 1 AS n",
+        "CREATE TABLE t ENGINE=InnoDB, COMMENT='copy' IGNORE AS SELECT 1 AS n",
+        "CREATE TABLE t REPLACE SELECT 1 AS n UNION ALL SELECT 2",
+        "CREATE TABLE t AS WITH c AS (SELECT 1 AS n) SELECT n FROM c",
+        "CREATE TABLE t WITH c AS (SELECT 1 AS n) SELECT n FROM c",
+        "CREATE TABLE t (SELECT 1 AS n)", "CREATE TABLE t (SELECT 1 AS n);",
+        "CREATE TABLE t ((SELECT 1 AS n) UNION ALL SELECT 2) ORDER BY n LIMIT 1",
+        "CREATE TABLE t (n INT) (SELECT 1 AS n)",
+        "CREATE TABLE t AS TABLE original",
+        "CREATE TABLE t AS VALUES ROW(1, 2), ROW(3, 4)",
+        "CREATE TABLE t AS SELECT /*+ MAX_EXECUTION_TIME(1000) */ n FROM original FOR SHARE",
+        "CREATE TABLE t", "CREATE TABLE t ENGINE=InnoDB"}) {
+        SCOPED_TRACE(sql);
+        Parser<Dialect::MySQL> parser;
+        auto result = parser.parse(sql, std::strlen(sql));
+        ASSERT_TRUE(result.ok()); ASSERT_TRUE(result.full_input); ASSERT_NE(result.ast, nullptr);
+        EXPECT_EQ(std::string(result.table_name.ptr, result.table_name.len),
+                  std::strstr(sql, "LIKE") ? "copy" : "t");
+        Emitter<Dialect::MySQL> emitter(parser.arena()); emitter.emit(result.ast);
+        auto out = emitter.result(); std::string emitted(out.ptr, out.len); SCOPED_TRACE(emitted);
+        Parser<Dialect::MySQL> again; auto r = again.parse(emitted.data(), emitted.size());
+        ASSERT_TRUE(r.ok()); ASSERT_TRUE(r.full_input);
+        Emitter<Dialect::MySQL> second(again.arena()); second.emit(r.ast);
+        EXPECT_EQ(std::string(second.result().ptr, second.result().len), emitted);
+    }
+}
+
+TEST(MySQLTableDdl, RejectsMalformedLikeAndQuerySources) {
+    for (const char* sql : {
+        "CREATE TABLE t LIKE", "CREATE TABLE t LIKE db.", "CREATE TABLE t LIKE db.src.extra",
+        "CREATE TABLE t LIKE src extra", "CREATE TABLE t LIKE src AS SELECT 1",
+        "CREATE TABLE t LIKE src ENGINE=InnoDB", "CREATE TABLE t ENGINE=InnoDB LIKE src",
+        "CREATE TABLE t (LIKE src", "CREATE TABLE t (LIKE src, id INT)",
+        "CREATE TABLE t (id INT) LIKE src", "CREATE TABLE t ((LIKE src))",
+        "CREATE TABLE t AS", "CREATE TABLE t IGNORE", "CREATE TABLE t REPLACE AS",
+        "CREATE TABLE t IGNORE REPLACE SELECT 1", "CREATE TABLE t AS IGNORE SELECT 1",
+        "CREATE TABLE t AS SELECT FROM src", "CREATE TABLE t AS SELECT 1 +",
+        "CREATE TABLE t AS SELECT 1 UNION", "CREATE TABLE t AS SELECT 1; SELECT 2",
+        "CREATE TABLE t () AS SELECT 1", "CREATE TABLE t (id) AS SELECT 1",
+        "CREATE TABLE t AS WITH c AS (SELECT 1) UPDATE src SET n=1",
+        "CREATE TABLE t AS UPDATE src SET n=1",
+        "CREATE TABLE t ENGINE=InnoDB, AS SELECT 1", "CREATE TABLE t ENGINE=InnoDB, SELECT 1",
+        "CREATE TABLE t ENGINE=InnoDB,", "CREATE TABLE t AS SELECT 1 ENGINE=InnoDB"
+    }) {
+        SCOPED_TRACE(sql); Parser<Dialect::MySQL> parser;
+        auto r=parser.parse(sql,std::strlen(sql));
+        EXPECT_FALSE(r.ok() && r.full_input && r.ast);
+    }
+}
+
+
+#include "sql_parser/ast_transform.h"
+#include "sql_parser/parameterize.h"
+#include "sql_engine/plan_builder.h"
+TEST(MySQLTableDdl, SourcesRemainTraversableOwnedAndGuarded) {
+    Arena owned;
+    AstNode* copy = nullptr;
+    {
+        std::string sql = "CREATE TABLE dst.t REPLACE AS SELECT 1 AS n FROM src.s";
+        Parser<Dialect::MySQL> p; auto r = p.parse(sql.data(),sql.size());
+        ASSERT_TRUE(r.ok() && r.full_input);
+        EXPECT_EQ(std::string(r.table_name.ptr,r.table_name.len), "t");
+        EXPECT_EQ(std::string(r.schema_name.ptr,r.schema_name.len), "dst");
+        size_t queries=0, selects=0;
+        auto walk = walk_ast(r.ast, [&](const AstNode& n, const AstVisitContext&) {
+            queries += n.type == NodeType::NODE_MYSQL_CREATE_QUERY;
+            selects += n.type == NodeType::NODE_SELECT_STMT;
+            return AstVisitAction::Continue;
+        });
+        EXPECT_EQ(walk.status, AstWalkStatus::Completed);
+        EXPECT_EQ(queries,1u); EXPECT_EQ(selects,1u);
+        EXPECT_FALSE(sql_engine::PlanBuilder<Dialect::MySQL>::supports_query_features(r.ast));
+        Arena parameters; EXPECT_FALSE(parameterize_ast<Dialect::MySQL>(r,parameters).ok());
+        auto cloned=clone_ast(r.ast,owned); ASSERT_TRUE(cloned.ok()); copy=cloned.ast;
+        p.reset(); sql.assign(sql.size(),'!');
+    }
+    Emitter<Dialect::MySQL> emitter(owned); emitter.emit(copy);
+    EXPECT_EQ(std::string(emitter.result().ptr,emitter.result().len),
+              "CREATE TABLE dst.t REPLACE AS SELECT 1 AS n FROM src.s");
+    const char* sql="CREATE TABLE dst.t (LIKE src.s)";
+    Parser<Dialect::MySQL> p; auto r=p.parse(sql,std::strlen(sql));
+    ASSERT_TRUE(r.ok() && r.full_input);
+    EXPECT_EQ(std::string(r.table_name.ptr,r.table_name.len),"t");
+    EXPECT_EQ(std::string(r.schema_name.ptr,r.schema_name.len),"dst");
+    auto* source=r.ast->first_child;
+    while(source && source->type!=NodeType::NODE_MYSQL_CREATE_LIKE) source=source->next_sibling;
+    ASSERT_NE(source,nullptr); ASSERT_NE(source->first_child,nullptr);
+    EXPECT_EQ(source->first_child->type,NodeType::NODE_QUALIFIED_NAME);
+    Emitter<Dialect::MySQL> like(p.arena()); like.emit(r.ast);
+    EXPECT_EQ(std::string(like.result().ptr,like.result().len),"CREATE TABLE dst.t LIKE src.s");
+}
+
+
+TEST(MySQLTableDdl, DuplicateReplaceDiscardsItsUnusedHintOnly) {
+    for (const char* sql : {
+        "CREATE TABLE t REPLACE /*+ MAX_EXECUTION_TIME(1) */ SELECT 1 AS n",
+        "CREATE TABLE t REPLACE /*+ MAX_EXECUTION_TIME(1) */ AS SELECT 1 AS n"}) {
+        Parser<Dialect::MySQL> p; auto r=p.parse(sql,std::strlen(sql));
+        ASSERT_TRUE(r.ok() && r.full_input);
+        Emitter<Dialect::MySQL> e(p.arena()); e.emit(r.ast);
+        EXPECT_EQ(std::string(e.result().ptr,e.result().len),"CREATE TABLE t REPLACE AS SELECT 1 AS n");
+    }
+    const char* sql="CREATE TABLE t REPLACE /*+ A() */ SELECT /*+ MAX_EXECUTION_TIME(1) */ 1 AS n";
+    Parser<Dialect::MySQL> p; auto r=p.parse(sql,std::strlen(sql)); ASSERT_TRUE(r.ok() && r.full_input);
+    Emitter<Dialect::MySQL> e(p.arena()); e.emit(r.ast);
+    EXPECT_EQ(std::string(e.result().ptr,e.result().len),
+              "CREATE TABLE t REPLACE AS SELECT /*+ MAX_EXECUTION_TIME(1) */ 1 AS n");
+}
+
+TEST(MySQLTableDdl, NativeCreateSelectIntoRemainsExplicitlyUnsupported) {
+    // Both native pins accept this production; do not label it malformed.
+    const char* sql="CREATE TABLE t AS SELECT 1 INTO OUTFILE 'x'";
+    Parser<Dialect::MySQL> p; auto r=p.parse(sql,std::strlen(sql));
+    EXPECT_FALSE(r.ok() && r.full_input && r.ast);
 }
