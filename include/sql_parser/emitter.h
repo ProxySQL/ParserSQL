@@ -766,7 +766,7 @@ private:
             if (!node->source().empty() && node->source_ptr[0] == '"') delimiter = '"';
         }
         sb_.append_char(delimiter);
-        sb_.append(node->value_ptr, node->value_len);
+        sb_.append(node->value());
         sb_.append_char(delimiter);
     }
 
