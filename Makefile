@@ -8,6 +8,7 @@ MYSQL_LIBS = $(shell mysql_config --libs 2>/dev/null)
 PG_CFLAGS = -I$(shell pg_config --includedir 2>/dev/null || echo /usr/include/postgresql)
 PG_LIBS = -L$(shell pg_config --libdir 2>/dev/null || echo /usr/lib/x86_64-linux-gnu) -lpq
 PG_COMPAT_CACHE ?= /tmp/parsersql-pg-compat
+MYSQL_COMPAT_CACHE ?= /tmp/parsersql-mysql-compat
 
 PROJECT_ROOT = .
 SRC_DIR = $(PROJECT_ROOT)/src/sql_parser
@@ -51,6 +52,51 @@ TEST_SRCS = $(TEST_DIR)/test_main.cpp \
             $(TEST_DIR)/test_update.cpp \
             $(TEST_DIR)/test_delete.cpp \
             $(TEST_DIR)/test_compound.cpp \
+            $(TEST_DIR)/test_pg_query_features.cpp \
+            $(TEST_DIR)/test_pg_expressions.cpp \
+            $(TEST_DIR)/test_pg_special_expressions.cpp \
+            $(TEST_DIR)/test_pg_query_gaps.cpp \
+            $(TEST_DIR)/test_pg_query_continuation.cpp \
+            $(TEST_DIR)/test_pg_expression_continuation.cpp \
+            $(TEST_DIR)/test_pg_object_ddl.cpp \
+            $(TEST_DIR)/test_pg_definitions.cpp \
+            $(TEST_DIR)/test_pg_policy_statistics.cpp \
+            $(TEST_DIR)/test_pg_foreign_ddl.cpp \
+            $(TEST_DIR)/test_pg_table_constraints.cpp \
+            $(TEST_DIR)/test_pg_maintenance.cpp \
+            $(TEST_DIR)/test_review_expressions.cpp \
+            $(TEST_DIR)/test_mysql_grammar.cpp \
+            $(TEST_DIR)/test_mysql_tables.cpp \
+            $(TEST_DIR)/test_mysql_query_expressions.cpp \
+            $(TEST_DIR)/test_mysql_cte_dml.cpp \
+            $(TEST_DIR)/test_mysql_special_expressions.cpp \
+            $(TEST_DIR)/test_mysql_cast_types.cpp \
+            $(TEST_DIR)/test_mysql_conversion_expressions.cpp \
+            $(TEST_DIR)/test_mysql_insert_sources.cpp \
+            $(TEST_DIR)/test_mysql_json_aggregates.cpp \
+            $(TEST_DIR)/test_mysql_optimizer_hints.cpp \
+            $(TEST_DIR)/test_mysql_json_table.cpp \
+            $(TEST_DIR)/test_mysql_table_ddl.cpp \
+            $(TEST_DIR)/test_mysql_partition.cpp \
+            $(TEST_DIR)/test_mysql_partition_alter.cpp \
+            $(TEST_DIR)/test_mysql_procedure.cpp \
+            $(TEST_DIR)/test_mysql_grouping.cpp \
+            $(TEST_DIR)/test_mysql_explain.cpp \
+            $(TEST_DIR)/test_review_ast.cpp \
+            $(TEST_DIR)/test_review_transactions.cpp \
+            $(TEST_DIR)/test_review_runtime.cpp \
+            $(TEST_DIR)/test_pr67_expressions.cpp \
+            $(TEST_DIR)/test_pr67_engine.cpp \
+            $(TEST_DIR)/test_pr67_ddl.cpp \
+            $(TEST_DIR)/test_pr67_metadata.cpp \
+            $(TEST_DIR)/test_pg_admin_commands.cpp \
+            $(TEST_DIR)/test_pg_session_commands.cpp \
+            $(TEST_DIR)/test_pg_dml_extensions.cpp \
+            $(TEST_DIR)/test_pg_ddl.cpp \
+            $(TEST_DIR)/test_pg_json_xml.cpp \
+            $(TEST_DIR)/test_pg_utilities.cpp \
+            $(TEST_DIR)/test_parse_all.cpp \
+            $(TEST_DIR)/test_ast_utilities.cpp \
             $(TEST_DIR)/test_digest.cpp \
             $(TEST_DIR)/test_misc_stmts.cpp \
             $(TEST_DIR)/test_value.cpp \
@@ -142,6 +188,12 @@ pg-compat: build-pg-compat
 
 pg-compat-refresh: build-pg-compat
 	python3 ./scripts/pg_compat/run_compat.py refresh --cache $(PG_COMPAT_CACHE)
+
+.PHONY: test-mysql-compat
+test-mysql-compat: lib
+	python3 scripts/mysql_compat/build_probe.py --output "$(MYSQL_COMPAT_CACHE)/probe"
+	python3 -m unittest discover -s tests/mysql_compat -p 'test_*.py' -v
+	python3 scripts/mysql_compat/run.py --probe "$(MYSQL_COMPAT_CACHE)/probe" --report "$(MYSQL_COMPAT_CACHE)/report.json"
 
 all: lib test
 

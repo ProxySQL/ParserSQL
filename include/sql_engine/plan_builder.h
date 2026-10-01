@@ -26,6 +26,7 @@
 #include "sql_parser/arena.h"
 #include <cstring>
 #include <vector>
+#include <limits>
 
 namespace sql_engine {
 
@@ -38,7 +39,7 @@ public:
     // Build a logical plan from a parsed statement AST.
     // Returns nullptr for non-SELECT statements.
     PlanNode* build(const sql_parser::AstNode* stmt_ast) {
-        if (!stmt_ast) return nullptr;
+        if (!stmt_ast || has_unsupported_query_feature(stmt_ast)) return nullptr;
 
         if (stmt_ast->type == sql_parser::NodeType::NODE_SELECT_STMT) {
             return build_select(stmt_ast);
@@ -52,9 +53,213 @@ public:
         return nullptr;
     }
 
+    static bool supports_query_features(const sql_parser::AstNode* ast) {
+        return ast && !has_unsupported_query_feature(ast);
+    }
+
+    // DML owns its VALUES rows; all expression/query restrictions still apply.
+    static bool supports_dml_features(const sql_parser::AstNode* ast) {
+        return ast && !has_unsupported_query_feature(ast, true, true);
+    }
+
 private:
     const Catalog& catalog_;
     sql_parser::Arena& arena_;
+
+    static bool has_unsupported_query_feature(const sql_parser::AstNode* node, bool root = true,
+                                               bool dml_values = false) {
+        using sql_parser::NodeType;
+        switch (node->type) {
+            case NodeType::NODE_ALIAS:
+                if constexpr (D == sql_parser::Dialect::MySQL) {
+                    if (node->first_child) return true; // Derived column renaming needs engine support.
+                }
+                break;
+            case NodeType::NODE_MYSQL_LOCK_TARGETS:
+            case NodeType::NODE_MYSQL_PARTITION_SELECTION:
+            case NodeType::NODE_MYSQL_INDEX_HINT:
+                return true;
+            case NodeType::NODE_QUALIFIED_NAME:
+                // The local resolver combines only table.column; it would
+                // otherwise silently drop the final part of db.table.column.
+                if constexpr (D == sql_parser::Dialect::MySQL) {
+                    if (node->first_child && node->first_child->next_sibling &&
+                        node->first_child->next_sibling->next_sibling) return true;
+                }
+                break;
+            // PG_CONT_EXPRESSION_GUARD
+            case NodeType::NODE_LITERAL_STRING:
+                if constexpr (D == sql_parser::Dialect::PostgreSQL) {
+                    // AST strings retain lexical escapes. Until evaluation
+                    // decodes E literals, their raw contents are not SQL values.
+                    const auto source = node->source();
+                    if (source.len >= 2 && (source.ptr[0] == 'E' || source.ptr[0] == 'e') &&
+                        source.ptr[1] == '\'') return true;
+                }
+                break;
+            case NodeType::NODE_LITERAL_BIT:
+            case NodeType::NODE_LITERAL_HEX:
+                if constexpr (D == sql_parser::Dialect::PostgreSQL) return true;
+                break;
+            case NodeType::NODE_PG_VARIADIC_ARGUMENT:
+            case NodeType::NODE_PG_ARRAY_SLICE:
+            case NodeType::NODE_PG_PATTERN_PREDICATE:
+            case NodeType::NODE_PG_POSITION:
+            case NodeType::NODE_PG_OVERLAY:
+            case NodeType::NODE_PG_JSON_PREDICATE:
+                return true;
+            // PG_CONT_QUERY_GUARD
+            case NodeType::NODE_PG_EXPLAIN_OPTION:
+            case NodeType::NODE_PG_JOIN_TREE:
+            case NodeType::NODE_PG_TABLE_GROUP:
+            case NodeType::NODE_PG_JOIN_USING:
+            case NodeType::NODE_PG_TABLESAMPLE:
+            case NodeType::NODE_PG_ROWS_FROM:
+            case NodeType::NODE_PG_SORT_USING:
+            case NodeType::NODE_PG_SELECT_INTO:
+            case NodeType::NODE_PG_ROW_LOCK:
+                return true;
+            // PG_GAPS_EXPRESSION_GUARD
+            case NodeType::NODE_PG_EXTRACT:
+            case NodeType::NODE_PG_SUBSTRING:
+            case NodeType::NODE_PG_TIME_ZONE:
+            case NodeType::NODE_PG_INTERVAL:
+            case NodeType::NODE_PG_TRIM:
+            case NodeType::NODE_PG_ARRAY_QUERY:
+            case NodeType::NODE_PG_QUANTIFIED_OPERAND:
+            case NodeType::NODE_PG_NORMALIZE:
+                return true;
+            // PG_GAPS_DML_GUARD
+            case NodeType::NODE_MERGE_STMT:
+            case NodeType::NODE_CTE_SEARCH:
+            case NodeType::NODE_CTE_CYCLE:
+            case NodeType::NODE_PG_DML_CLAUSE:
+            case NodeType::NODE_PG_RETURNING_OPTIONS:
+                return true;
+            case NodeType::NODE_INSERT_STMT:
+            case NodeType::NODE_UPDATE_STMT:
+            case NodeType::NODE_DELETE_STMT:
+                if (!root) return true; // A modifying CTE must never be materialized as a query.
+                break;
+            // PG_GAPS_DDL_GUARD
+            case NodeType::NODE_PG_COMMAND_STMT:
+            case NodeType::NODE_PG_DDL_STMT:
+            case NodeType::NODE_PG_DDL_CLAUSE:
+            case NodeType::NODE_PG_DDL_LIST:
+            case NodeType::NODE_PG_DDL_SYNTAX:
+                return true;
+            // PG_GAPS_QUERY_GUARD
+            case NodeType::NODE_LIMIT_CLAUSE: {
+                int64_t value;
+                const auto* count = node->first_child;
+                if (!read_limit_literal(count, -1, value)) return true;
+                const auto* offset = count->next_sibling;
+                if (offset && (!read_limit_literal(offset, 0, value) || offset->next_sibling)) return true;
+                break;
+            }
+            case NodeType::NODE_TABLE_REF:
+                if (node->flags & (sql_parser::FLAG_TABLE_ONLY | sql_parser::FLAG_TABLE_INHERIT)) return true;
+                break;
+            case NodeType::NODE_GROUPING_SET:
+            case NodeType::NODE_OFFSET_CLAUSE:
+            case NodeType::NODE_FETCH_CLAUSE:
+            case NodeType::NODE_ORDINALITY:
+            case NodeType::NODE_FUNCTION_COLUMN:
+                return true;
+            case NodeType::NODE_GROUP_BY_CLAUSE:
+                if (!node->value().empty()) return true;
+                break;
+            // PG_GAPS_JSON_XML_GUARD
+            case NodeType::NODE_PG_JSON_XML:
+            case NodeType::NODE_PG_JSON_XML_SYNTAX:
+                return true;
+            case NodeType::NODE_CTE:
+                // Nested WITH requires its own materialization scope, which
+                // neither build_cte nor the subquery executor implements.
+                if (!root || (node->flags & sql_parser::FLAG_CTE_RECURSIVE)) return true;
+                break;
+            case NodeType::NODE_CTE_DEFINITION:
+                if (node->flags & (sql_parser::FLAG_CTE_MATERIALIZED |
+                    sql_parser::FLAG_CTE_NOT_MATERIALIZED)) return true;
+                break;
+            case NodeType::NODE_CTE_COLUMNS:
+            case NodeType::NODE_TABLE_QUERY:
+                return true;
+            case NodeType::NODE_VALUES_ROW:
+                if (node->flags & sql_parser::FLAG_VALUES_EXPLICIT_ROW) return true;
+                break;
+            case NodeType::NODE_LOCKING_CLAUSE:
+                if (!node->value().empty()) return true;
+                break;
+            case NodeType::NODE_VALUES_CLAUSE:
+                if (!dml_values) return true;
+                break;
+            case NodeType::NODE_BINARY_OP:
+            case NodeType::NODE_UNARY_OP:
+                if (node->flags & sql_parser::FLAG_PG_OPERATOR) return true;
+                break;
+            case NodeType::NODE_NAMED_ARGUMENT:
+            case NodeType::NODE_TYPE_CAST:
+            case NodeType::NODE_MYSQL_CHARSET_LITERAL:
+            case NodeType::NODE_MYSQL_COLLATE:
+            case NodeType::NODE_MYSQL_CONVERT:
+            case NodeType::NODE_MYSQL_INSERT_ALIAS:
+            case NodeType::NODE_MYSQL_JSON_AGGREGATE:
+            case NodeType::NODE_MYSQL_JSON_AGG_ARGUMENT:
+            case NodeType::NODE_MYSQL_CREATE_LIKE:
+            case NodeType::NODE_MYSQL_CREATE_QUERY:
+            case NodeType::NODE_MYSQL_PARTITION_CLAUSE:
+            case NodeType::NODE_MYSQL_PARTITION_DEF:
+            case NodeType::NODE_MYSQL_PARTITION_ACTION:
+            case NodeType::NODE_MYSQL_PARTITION_NAMES:
+            case NodeType::NODE_MYSQL_CREATE_TABLE:
+            case NodeType::NODE_MYSQL_ALTER_TABLE:
+            case NodeType::NODE_MYSQL_COLUMN_DEF:
+            case NodeType::NODE_MYSQL_DDL_CLAUSE:
+            case NodeType::NODE_MYSQL_DDL_LIST:
+            case NodeType::NODE_MYSQL_DDL_SYNTAX:
+            case NodeType::NODE_MYSQL_ALTER_ACTIONS:
+            case NodeType::NODE_MYSQL_JSON_TABLE:
+            case NodeType::NODE_MYSQL_JSON_TABLE_COLUMNS:
+            case NodeType::NODE_MYSQL_JSON_TABLE_COLUMN:
+            case NodeType::NODE_MYSQL_JSON_TABLE_NESTED:
+            case NodeType::NODE_MYSQL_JSON_TABLE_RESPONSE:
+            case NodeType::NODE_MYSQL_JSON_TABLE_LITERAL:
+            case NodeType::NODE_MYSQL_CREATE_PROCEDURE:
+            case NodeType::NODE_MYSQL_PROCEDURE_PARAMS:
+            case NodeType::NODE_MYSQL_PROCEDURE_PARAM:
+            case NodeType::NODE_MYSQL_PROCEDURE_CHARACTERISTIC:
+            case NodeType::NODE_MYSQL_PROCEDURE_BLOCK:
+            case NodeType::NODE_MYSQL_OPTIMIZER_HINT:
+            case NodeType::NODE_MYSQL_EXPLAIN_INTO:
+            case NodeType::NODE_MYSQL_EXTRACT:
+            case NodeType::NODE_MYSQL_SUBSTRING:
+            case NodeType::NODE_MYSQL_MATCH:
+            case NodeType::NODE_MYSQL_JSON_EXTRACT:
+            case NodeType::NODE_MYSQL_GROUP_CONCAT:
+            case NodeType::NODE_MYSQL_SEPARATOR:
+            case NodeType::NODE_DISTINCT_ON:
+            case NodeType::NODE_AGGREGATE_ORDER_BY:
+            case NodeType::NODE_AGGREGATE_FILTER:
+            case NodeType::NODE_LATERAL:
+            case NodeType::NODE_WINDOW_CLAUSE:
+            case NodeType::NODE_WINDOW_REFERENCE:
+            case NodeType::NODE_WINDOW_FRAME:
+                return true;
+            case NodeType::NODE_FUNCTION_CALL:
+                if (node->flags & (sql_parser::FLAG_FUNCTION_TABLE | sql_parser::FLAG_FUNCTION_DISTINCT |
+                    sql_parser::FLAG_FUNCTION_ALL | sql_parser::FLAG_FUNCTION_QUALIFIED |
+                    sql_parser::FLAG_FUNCTION_WITHIN_GROUP | sql_parser::FLAG_FUNCTION_MYSQL_SPACE)) return true;
+                break;
+            case NodeType::NODE_ORDER_BY_ITEM:
+                if (node->flags & sql_parser::FLAG_ORDER_NULLS) return true;
+                break;
+            default: break;
+        }
+        for (const auto* child = node->first_child; child; child = child->next_sibling)
+            if (has_unsupported_query_feature(child, false, dml_values)) return true;
+        return false;
+    }
 
     // Helper: find first child of given type
     static const sql_parser::AstNode* find_child(const sql_parser::AstNode* node,
@@ -355,41 +560,44 @@ private:
         return current;
     }
 
-    // Build a Limit plan node from LIMIT clause AST
-    PlanNode* build_limit_node(const sql_parser::AstNode* limit_clause, PlanNode* child) {
-        PlanNode* limit = make_plan_node(arena_, PlanNodeType::LIMIT);
-        limit->limit.count = -1;
-        limit->limit.offset = 0;
-
-        const sql_parser::AstNode* first = limit_clause->first_child;
-        if (first) {
-            // Parse the literal count value
-            limit->limit.count = parse_int_literal(first);
-
-            const sql_parser::AstNode* second = first->next_sibling;
-            if (second) {
-                // LIMIT count OFFSET offset_val  or  LIMIT offset, count (MySQL)
-                // In the AST, second child is always the offset value
-                limit->limit.offset = parse_int_literal(second);
+    // Local LIMIT execution supports integer constants and PostgreSQL NULL
+    // (including normalized ALL). Other expressions need runtime evaluation.
+    static bool read_limit_literal(const sql_parser::AstNode* node,
+                                   int64_t null_value, int64_t& value) {
+        if (!node) return false;
+        if constexpr (D == sql_parser::Dialect::PostgreSQL) {
+            if (node->type == sql_parser::NodeType::NODE_LITERAL_NULL) {
+                value = null_value;
+                return true;
             }
         }
-        limit->left = child;
-        return limit;
+        if (node->type != sql_parser::NodeType::NODE_LITERAL_INT) return false;
+        const auto text = node->value();
+        if (text.empty()) return false;
+        value = 0;
+        for (uint32_t i = 0; i < text.len; ++i) {
+            const char c = text.ptr[i];
+            if (c < '0' || c > '9') return false;
+            const int digit = c - '0';
+            if (value > (std::numeric_limits<int64_t>::max() - digit) / 10) return false;
+            value = value * 10 + digit;
+        }
+        return true;
     }
 
-    // Parse an integer literal from an AST node
-    static int64_t parse_int_literal(const sql_parser::AstNode* node) {
-        if (!node) return 0;
-        sql_parser::StringRef val = node->value();
-        if (val.len == 0) return 0;
-        int64_t result = 0;
-        for (uint32_t i = 0; i < val.len; ++i) {
-            char c = val.ptr[i];
-            if (c >= '0' && c <= '9') {
-                result = result * 10 + (c - '0');
-            }
-        }
-        return result;
+    // Build a Limit plan node without converting unsupported expressions to zero.
+    PlanNode* build_limit_node(const sql_parser::AstNode* limit_clause, PlanNode* child) {
+        int64_t count, offset = 0;
+        const auto* first = limit_clause->first_child;
+        if (!read_limit_literal(first, -1, count)) return nullptr;
+        const auto* second = first->next_sibling;
+        if (second && (!read_limit_literal(second, 0, offset) || second->next_sibling)) return nullptr;
+        PlanNode* limit = make_plan_node(arena_, PlanNodeType::LIMIT);
+        if (!limit) return nullptr;
+        limit->limit.count = count;
+        limit->limit.offset = offset;
+        limit->left = child;
+        return limit;
     }
 
     // Build plan for CTE (WITH clause)
@@ -606,7 +814,11 @@ private:
         const sql_parser::AstNode* set_op_node = find_child(compound_ast, sql_parser::NodeType::NODE_SET_OPERATION);
         if (set_op_node) {
             current = build_set_op(set_op_node);
+        } else if (compound_ast->first_child) {
+            // Parenthesized operands preserve their own ORDER BY/LIMIT scope.
+            current = build(compound_ast->first_child);
         }
+        if (!current) return nullptr;
 
         // Trailing ORDER BY
         const sql_parser::AstNode* order_by = find_child(compound_ast, sql_parser::NodeType::NODE_ORDER_BY_CLAUSE);
@@ -679,6 +891,7 @@ private:
             }
         }
 
+        if (!node->left || !node->right) return nullptr;
         return node;
     }
 };

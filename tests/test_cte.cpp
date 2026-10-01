@@ -109,3 +109,25 @@ TEST_F(CteTest, CteWithFilter) {
     // Bob(30), Eve(35) = 2 rows
     ASSERT_EQ(rs.row_count(), 2u);
 }
+
+TEST_F(CteTest, RejectUnsupportedPostgresBodiesBeforeReadingShadowedTables) {
+    FunctionRegistry<Dialect::PostgreSQL> pg_functions;
+    pg_functions.register_builtins();
+    for (const char* sql : {
+         "WITH users AS (VALUES (999)) SELECT * FROM users",
+         "WITH users AS (TABLE other_table) SELECT * FROM users",
+         "WITH a AS (WITH users AS (SELECT 999 AS id) SELECT id FROM users) SELECT * FROM a",
+         "WITH users(id) AS (SELECT 999) SELECT * FROM users",
+         "WITH RECURSIVE users AS (SELECT 999 AS id) SELECT * FROM users"}) {
+        SCOPED_TRACE(sql);
+        Parser<Dialect::PostgreSQL> pg_parser;
+        auto r = pg_parser.parse(sql, std::strlen(sql));
+        ASSERT_EQ(r.status, ParseResult::OK);
+        ASSERT_TRUE(r.full_input);
+        PlanExecutor<Dialect::PostgreSQL> executor(pg_functions, catalog, pg_parser.arena());
+        executor.add_data_source("users", users_source);
+        auto rs = executor.execute_with_cte(r.ast);
+        EXPECT_EQ(rs.row_count(), 0u);
+        EXPECT_EQ(rs.column_count, 0u);
+    }
+}
