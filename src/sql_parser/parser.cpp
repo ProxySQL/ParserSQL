@@ -302,6 +302,33 @@ ParseResult Parser<D>::parse_set() {
     return r;
 }
 
+namespace {
+// Keep routing metadata consistent for standalone and WITH-prefixed DML.
+void extract_dml_target(const AstNode* statement, ParseResult& result) {
+    for (const auto* child = statement->first_child; child; child = child->next_sibling) {
+        if (child->type != NodeType::NODE_TABLE_REF) continue;
+        const auto* name = child->first_child;
+        if (name && name->type == NodeType::NODE_QUALIFIED_NAME) {
+            const AstNode* schema = nullptr;
+            const AstNode* table = name->first_child;
+            // PostgreSQL allows catalog.schema.table. Routing exposes only
+            // schema/table; MySQL DELETE targets can end in a non-name '*'.
+            for (const auto* part = table ? table->next_sibling : nullptr;
+                 part && part->type != NodeType::NODE_ASTERISK;
+                 part = part->next_sibling) {
+                schema = table;
+                table = part;
+            }
+            if (schema) result.schema_name = schema->value();
+            if (table) result.table_name = table->value();
+        } else if (name && name->type == NodeType::NODE_IDENTIFIER) {
+            result.table_name = name->value();
+        }
+        break;
+    }
+}
+} // namespace
+
 template <Dialect D>
 ParseResult Parser<D>::parse_insert(bool is_replace) {
     ParseResult r;
@@ -315,22 +342,7 @@ ParseResult Parser<D>::parse_insert(bool is_replace) {
         r.status = ParseResult::OK;
         r.ast = ast;
 
-        // Extract table_name/schema_name from AST for backward compatibility
-        for (const AstNode* child = ast->first_child; child; child = child->next_sibling) {
-            if (child->type == NodeType::NODE_TABLE_REF) {
-                const AstNode* name_node = child->first_child;
-                if (name_node && name_node->type == NodeType::NODE_QUALIFIED_NAME) {
-                    // schema.table
-                    const AstNode* schema = name_node->first_child;
-                    const AstNode* table = schema ? schema->next_sibling : nullptr;
-                    if (schema) r.schema_name = schema->value();
-                    if (table) r.table_name = table->value();
-                } else if (name_node && name_node->type == NodeType::NODE_IDENTIFIER) {
-                    r.table_name = name_node->value();
-                }
-                break;
-            }
-        }
+        extract_dml_target(ast, r);
     } else {
         r.status = ParseResult::PARTIAL;
     }
@@ -338,29 +350,6 @@ ParseResult Parser<D>::parse_insert(bool is_replace) {
     scan_to_end(r);
     return r;
 }
-
-namespace {
-// Keep routing metadata consistent for standalone and WITH-prefixed DML.
-void extract_dml_target(const AstNode* statement, ParseResult& result) {
-    for (const auto* child = statement->first_child; child; child = child->next_sibling) {
-        if (child->type != NodeType::NODE_TABLE_REF) continue;
-        const auto* name = child->first_child;
-        if (name && name->type == NodeType::NODE_QUALIFIED_NAME) {
-            const auto* first = name->first_child;
-            const auto* second = first ? first->next_sibling : nullptr;
-            if (second && second->type == NodeType::NODE_ASTERISK) {
-                result.table_name = first->value(); // DELETE table.* FROM ...
-            } else {
-                if (first) result.schema_name = first->value();
-                if (second) result.table_name = second->value();
-            }
-        } else if (name && name->type == NodeType::NODE_IDENTIFIER) {
-            result.table_name = name->value();
-        }
-        break;
-    }
-}
-} // namespace
 
 template <Dialect D>
 ParseResult Parser<D>::parse_update() {
