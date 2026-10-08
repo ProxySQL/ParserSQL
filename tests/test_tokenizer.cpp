@@ -348,8 +348,8 @@ TEST_F(PgSQLTokenizerTest, NestedBlockComment) {
 }
 
 TEST_F(PgSQLTokenizerTest, NoHashComment) {
-    // PostgreSQL does NOT support # comments — # should be TK_HASH token
+    // PostgreSQL treats # as an operator, not a comment.
     const char* sql = "#";
     tok.reset(sql, strlen(sql));
-    EXPECT_EQ(tok.next_token().type, TokenType::TK_HASH);
+    EXPECT_EQ(tok.next_token().type, TokenType::TK_PG_OPERATOR);
 }

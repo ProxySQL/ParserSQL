@@ -46,6 +46,29 @@ protected:
 };
 
 // SELECT * FROM users → Scan(users)
+TEST_F(PlanBuilderTest, ParenthesizedQueryRetainsPlanAndLocalLimit) {
+    PlanNode* plan = parse_and_build("SELECT * FROM t1 UNION ALL (SELECT * FROM t2 LIMIT 1)");
+    ASSERT_NE(plan, nullptr);
+    ASSERT_EQ(plan->type, PlanNodeType::SET_OP);
+    ASSERT_NE(plan->left, nullptr);
+    ASSERT_NE(plan->right, nullptr);
+    EXPECT_EQ(plan->left->type, PlanNodeType::SCAN);
+    EXPECT_EQ(plan->right->type, PlanNodeType::LIMIT);
+    ASSERT_NE(plan->right->left, nullptr);
+    EXPECT_EQ(plan->right->left->type, PlanNodeType::SCAN);
+    ASSERT_NE(parse_and_build("((SELECT * FROM users))"), nullptr);
+}
+
+TEST(PlanBuilderPostgreSQL, UnsupportedQueryOperandDoesNotProduceIncompletePlan) {
+    InMemoryCatalog catalog;
+    Parser<Dialect::PostgreSQL> parser;
+    const char* sql = "SELECT 1 UNION VALUES (2)";
+    auto result = parser.parse(sql, strlen(sql));
+    ASSERT_NE(result.ast, nullptr);
+    PlanBuilder<Dialect::PostgreSQL> builder(catalog, parser.arena());
+    EXPECT_EQ(builder.build(result.ast), nullptr);
+}
+
 TEST_F(PlanBuilderTest, SelectStarFromTable) {
     PlanNode* plan = parse_and_build("SELECT * FROM users");
     ASSERT_NE(plan, nullptr);

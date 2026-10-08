@@ -123,6 +123,13 @@ jobs:
       - name: Test PostgreSQL compatibility gate
         run: make -f Makefile test-pg-compat
 
+  mysql-compat:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check curated MySQL compatibility baseline
+        run: make -f Makefile test-mysql-compat
+
   pg-compat-full:
     if: github.event_name == 'schedule'
     runs-on: ubuntu-24.04

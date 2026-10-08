@@ -50,7 +50,7 @@ Full benchmark + corpus report: `bash scripts/run_benchmarks.sh report.md`.
 
 ### Namespace
 
-Everything parser-side is in `namespace sql_parser`. All templates are parameterized on `Dialect D`.
+Everything parser-side is in `namespace sql_parser`. Templates with dialect-specific behavior use `Dialect D`; dialect-independent generic helpers are exempt.
 
 ### Adding a new deep parser
 
@@ -242,7 +242,7 @@ Subclass `TransactionManager`. Provide `begin()/commit()/rollback()` semantics; 
 
 ## Tests
 
-Google Test. 1,160 tests across 50 test files. Validated against 86K+ external queries from 9 corpora (99.92% fully parsed).
+Google Test. Run `make test` for the current test totals. Validated against 86K+ external queries from 9 corpora (99.92% fully parsed).
 
 Run a single test: `./run_tests --gtest_filter="*WindowFunc*"`.
 

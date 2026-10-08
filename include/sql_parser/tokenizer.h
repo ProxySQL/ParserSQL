@@ -18,6 +18,8 @@ public:
         has_error_ = false;
         has_fatal_error_ = false;
         has_user_variables_ = false;
+        hint_allowed_ = false;
+        after_dot_ = false;
         paren_depth_ = 0;
         first_open_paren_ = nullptr;
         error_source_ = {};
@@ -82,6 +84,8 @@ private:
     const char* end_ = nullptr;
     Token peeked_;
     bool has_peeked_ = false;
+    bool hint_allowed_ = false;
+    bool after_dot_ = false;
     bool has_error_ = false;
     bool has_fatal_error_ = false;
     bool has_user_variables_ = false;
@@ -122,6 +126,7 @@ private:
                   (static_cast<unsigned char>(peek_char(2)) <= 0x20 ||
                    static_cast<unsigned char>(peek_char(2)) == 0x7f)));
             if (dash_comment) {
+                hint_allowed_ = false;
                 cursor_ += 2;
                 while (cursor_ < end_ && *cursor_ != '\n') ++cursor_;
                 continue;
@@ -130,6 +135,7 @@ private:
             // # line comment (MySQL only)
             if constexpr (D == Dialect::MySQL) {
                 if (c == '#') {
+                    hint_allowed_ = false;
                     ++cursor_;
                     while (cursor_ < end_ && *cursor_ != '\n') ++cursor_;
                     continue;
@@ -138,6 +144,10 @@ private:
 
             // /* block comment */
             if (c == '/' && peek_char(1) == '*') {
+                if constexpr (D == Dialect::MySQL) {
+                    if (hint_allowed_ && peek_char(2) == '+') return;
+                }
+                hint_allowed_ = false;
                 const char* comment_start = cursor_;
                 cursor_ += 2;
                 if constexpr (D == Dialect::PostgreSQL) {
@@ -214,6 +224,13 @@ private:
                 static_cast<uint32_t>(end_ - first_open_paren_)});
         }
         if (type == TokenType::TK_USER_VARIABLE) has_user_variables_ = true;
+        if constexpr (D == Dialect::MySQL) {
+            // MySQL lexes qualified components as identifiers, even when
+            // spelled SELECT/UPDATE/etc.; they do not introduce hints.
+            hint_allowed_ = !after_dot_ && (type == TokenType::TK_SELECT || type == TokenType::TK_INSERT ||
+                type == TokenType::TK_UPDATE || type == TokenType::TK_DELETE || type == TokenType::TK_REPLACE);
+            after_dot_ = type == TokenType::TK_DOT;
+        }
         return Token{type, StringRef{text_start, text_len},
                      StringRef{source_start, source_len},
                      static_cast<uint32_t>(source_start - start_)};
@@ -319,13 +336,15 @@ private:
         }
         ++cursor_;
         uint32_t len = static_cast<uint32_t>(cursor_ - start);
+        if (hex && ((len - 3) & 1)) invalid = true; // quoted hex encodes whole bytes
         return make_token(invalid ? TokenType::TK_ERROR :
                           (hex ? TokenType::TK_HEX_LITERAL : TokenType::TK_BIT_LITERAL),
                           start, len);
     }
 
-    Token scan_single_quoted_string() {
+    Token scan_single_quoted_string(bool escape_prefix = false) {
         const char* source_start = cursor_;
+        if (escape_prefix) ++cursor_;
         ++cursor_;  // skip opening quote
         const char* content_start = cursor_;
         while (cursor_ < end_) {
@@ -337,7 +356,7 @@ private:
                 }
                 break;  // end of string
             }
-            if (*cursor_ == '\\') {
+            if (*cursor_ == '\\' && (D == Dialect::MySQL || escape_prefix)) {
                 ++cursor_;  // skip escaped char
                 if (cursor_ < end_) ++cursor_;
             } else {
@@ -442,7 +461,13 @@ private:
         const char* open_pos = cursor_;
         ++cursor_;  // skip opening backtick
         const char* content_start = cursor_;
-        while (cursor_ < end_ && *cursor_ != '`') ++cursor_;
+        while (cursor_ < end_) {
+            if (*cursor_ == '`') {
+                if (cursor_ + 1 < end_ && cursor_[1] == '`') { cursor_ += 2; continue; }
+                break;
+            }
+            ++cursor_;
+        }
         if (cursor_ >= end_) {
             return make_token(TokenType::TK_ERROR, open_pos, 1);
         }
@@ -461,7 +486,13 @@ private:
         const char* open_pos = cursor_;
         ++cursor_;  // skip opening quote
         const char* content_start = cursor_;
-        while (cursor_ < end_ && *cursor_ != '"') ++cursor_;
+        while (cursor_ < end_) {
+            if (*cursor_ == '"') {
+                if (cursor_ + 1 < end_ && cursor_[1] == '"') { cursor_ += 2; continue; }
+                break;
+            }
+            ++cursor_;
+        }
         if (cursor_ >= end_) {
             return make_token(TokenType::TK_ERROR, open_pos, 1);
         }
@@ -471,22 +502,74 @@ private:
                           static_cast<uint32_t>(cursor_ - open_pos));
     }
 
-    // PostgreSQL: $$...$$ dollar-quoted string
-    Token scan_dollar_string() {
-        // We're at the first $. Simple form: $$content$$
-        cursor_ += 2;  // skip opening $$
+    // PostgreSQL dollar quotes preserve their complete delimiter for emission.
+    Token scan_dollar_string(uint32_t delimiter_len = 2) {
+        const char* source_start = cursor_;
+        cursor_ += delimiter_len;
         const char* content_start = cursor_;
         while (cursor_ < end_) {
-            if (*cursor_ == '$' && peek_char(1) == '$') {
+            if (*cursor_ == '$' && static_cast<size_t>(end_ - cursor_) >= delimiter_len &&
+                std::memcmp(cursor_, source_start, delimiter_len) == 0) {
                 uint32_t len = static_cast<uint32_t>(cursor_ - content_start);
-                cursor_ += 2;  // skip closing $$
-                return make_token(TokenType::TK_STRING, content_start, len);
+                cursor_ += delimiter_len;
+                return make_token(TokenType::TK_STRING, content_start, len, source_start,
+                                  static_cast<uint32_t>(cursor_ - source_start));
             }
             ++cursor_;
         }
-        // Unterminated — return what we have
-        uint32_t len = static_cast<uint32_t>(cursor_ - content_start);
-        return make_token(TokenType::TK_STRING, content_start, len);
+        return make_token(TokenType::TK_ERROR, source_start,
+                          static_cast<uint32_t>(cursor_ - source_start));
+    }
+
+    static bool pg_operator_char(char c) {
+        switch (c) {
+            case '~': case '!': case '@': case '#': case '^': case '&': case '|':
+            case '`': case '?': case '+': case '-': case '*': case '/': case '%':
+            case '<': case '>': case '=': return true;
+            default: return false;
+        }
+    }
+
+    Token scan_pg_operator() {
+        const char* start = cursor_;
+        while (cursor_ < end_ && pg_operator_char(*cursor_)) {
+            if ((*cursor_ == '/' && peek_char(1) == '*') ||
+                (*cursor_ == '-' && peek_char(1) == '-')) break;
+            ++cursor_;
+        }
+        // SQL operators followed by a sign form separate tokens, except when
+        // a non-SQL operator character makes the whole name unambiguous.
+        if (cursor_ - start > 1 && (cursor_[-1] == '+' || cursor_[-1] == '-')) {
+            bool special = false;
+            for (const char* p = start; p < cursor_ - 1; ++p)
+                if (std::strchr("~!@#^&|`?%", *p)) { special = true; break; }
+            if (!special)
+                while (cursor_ - start > 1 && (cursor_[-1] == '+' || cursor_[-1] == '-')) --cursor_;
+        }
+        const uint32_t len = static_cast<uint32_t>(cursor_ - start);
+        TokenType type = TokenType::TK_PG_OPERATOR;
+        if (len >= 64) type = TokenType::TK_ERROR;
+        else if (len == 1) {
+            switch (*start) {
+                case '+': type = TokenType::TK_PLUS; break;
+                case '-': type = TokenType::TK_MINUS; break;
+                case '*': type = TokenType::TK_ASTERISK; break;
+                case '/': type = TokenType::TK_SLASH; break;
+                case '%': type = TokenType::TK_PERCENT; break;
+                case '^': type = TokenType::TK_CARET; break;
+                case '=': type = TokenType::TK_EQUAL; break;
+                case '<': type = TokenType::TK_LESS; break;
+                case '>': type = TokenType::TK_GREATER; break;
+                default: break;
+            }
+        } else if (len == 2) {
+            if (start[0] == '<' && start[1] == '=') type = TokenType::TK_LESS_EQUAL;
+            else if (start[0] == '>' && start[1] == '=') type = TokenType::TK_GREATER_EQUAL;
+            else if ((start[0] == '<' && start[1] == '>') || (start[0] == '!' && start[1] == '='))
+                type = TokenType::TK_NOT_EQUAL;
+            else if (start[0] == '=' && start[1] == '>') type = TokenType::TK_NAMED_ARGUMENT;
+        }
+        return make_token(type, start, len);
     }
 
     Token scan_token() {
@@ -499,6 +582,17 @@ private:
         char c = *cursor_;
 
         if constexpr (D == Dialect::MySQL) {
+            if (hint_allowed_ && c == '/' && peek_char(1) == '*' && peek_char(2) == '+') {
+                const char* begin = cursor_;
+                cursor_ += 3;
+                while (cursor_ < end_ && !(*cursor_ == '*' && peek_char(1) == '/')) ++cursor_;
+                if (cursor_ == end_) {
+                    flag_fatal_error_at({begin, static_cast<uint32_t>(cursor_ - begin)});
+                    return make_token(TokenType::TK_ERROR, begin, static_cast<uint32_t>(cursor_ - begin));
+                }
+                cursor_ += 2;
+                return make_token(TokenType::TK_MYSQL_OPTIMIZER_HINT, begin, static_cast<uint32_t>(cursor_ - begin));
+            }
             if ((c == 'x' || c == 'X') && peek_char(1) == '\'') {
                 return scan_quoted_base_literal(true);
             }
@@ -511,6 +605,11 @@ private:
             if (c == '0' && (peek_char(1) == 'b' || peek_char(1) == 'B')) {
                 return scan_prefixed_base_literal(false);
             }
+        }
+
+        if constexpr (D == Dialect::PostgreSQL) {
+            if ((c == 'E' || c == 'e') && peek_char(1) == '\'')
+                return scan_single_quoted_string(true);
         }
 
         // Identifiers and keywords
@@ -546,6 +645,10 @@ private:
             if (c == '`') return scan_backtick_identifier();
         }
 
+        if constexpr (D == Dialect::PostgreSQL) {
+            if (pg_operator_char(c)) return scan_pg_operator();
+        }
+
         // @ and @@
         if (c == '@') {
             if (peek_char(1) == '@') {
@@ -576,12 +679,19 @@ private:
                     uint32_t len = static_cast<uint32_t>(cursor_ - start);
                     return make_token(TokenType::TK_DOLLAR_NUM, start, len);
                 }
-                // $<letter|underscore>... is NOT a valid PG token at this
-                // position -- it looks like a parameter placeholder but is
-                // syntactically invalid (placeholders must be numeric, e.g.
-                // $1). Emit TK_ERROR so the caller can fail cleanly with
-                // ParseResult::ERROR instead of returning PARTIAL with a
-                // null AST and confusing downstream consumers.
+                const char* tag_end = cursor_ + 1;
+                if (tag_end < end_ && ((*tag_end >= 'a' && *tag_end <= 'z') ||
+                    (*tag_end >= 'A' && *tag_end <= 'Z') || *tag_end == '_' ||
+                    static_cast<unsigned char>(*tag_end) >= 128)) {
+                    ++tag_end;
+                    while (tag_end < end_ && ((*tag_end >= 'a' && *tag_end <= 'z') ||
+                        (*tag_end >= 'A' && *tag_end <= 'Z') ||
+                        (*tag_end >= '0' && *tag_end <= '9') || *tag_end == '_' ||
+                        static_cast<unsigned char>(*tag_end) >= 128)) ++tag_end;
+                    if (tag_end < end_ && *tag_end == '$')
+                        return scan_dollar_string(static_cast<uint32_t>(tag_end + 1 - cursor_));
+                }
+                // A dollar sign outside a quoted delimiter or parameter is invalid.
                 {
                     const char* start = cursor_;
                     ++cursor_;  // consume $ so error offset is precise
@@ -594,6 +704,16 @@ private:
         if (cursor_ + 1 < end_) {
             char c2 = peek_char(1);
 
+            if constexpr (D == Dialect::MySQL) {
+                if (c == '-' && c2 == '>') {
+                    const char* start = cursor_;
+                    cursor_ += 2;
+                    if (cursor_ < end_ && *cursor_ == '>') ++cursor_;
+                    return make_token(TokenType::TK_MYSQL_JSON_ARROW, start,
+                        static_cast<uint32_t>(cursor_ - start));
+                }
+            }
+
             if (c == '<' && c2 == '<') { auto s = cursor_; cursor_ += 2; return make_token(TokenType::TK_SHIFT_LEFT, s, 2); }
             if (c == '>' && c2 == '>') { auto s = cursor_; cursor_ += 2; return make_token(TokenType::TK_SHIFT_RIGHT, s, 2); }
             if (c == '<' && c2 == '=') { auto s = cursor_; cursor_ += 2; return make_token(TokenType::TK_LESS_EQUAL, s, 2); }
@@ -602,9 +722,7 @@ private:
             if (c == '<' && c2 == '>') { auto s = cursor_; cursor_ += 2; return make_token(TokenType::TK_NOT_EQUAL, s, 2); }
             if (c == '|' && c2 == '|') { auto s = cursor_; cursor_ += 2; return make_token(TokenType::TK_DOUBLE_PIPE, s, 2); }
 
-            if constexpr (D == Dialect::MySQL) {
-                if (c == ':' && c2 == '=') { auto s = cursor_; cursor_ += 2; return make_token(TokenType::TK_COLON_EQUAL, s, 2); }
-            }
+            if (c == ':' && c2 == '=') { auto s = cursor_; cursor_ += 2; return make_token(TokenType::TK_COLON_EQUAL, s, 2); }
 
             if constexpr (D == Dialect::PostgreSQL) {
                 if (c == ':' && c2 == ':') { auto s = cursor_; cursor_ += 2; return make_token(TokenType::TK_DOUBLE_COLON, s, 2); }

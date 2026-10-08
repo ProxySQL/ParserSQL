@@ -28,8 +28,16 @@ public:
     Parser& operator=(const Parser&) = delete;
 
     // Parse a SQL string. Returns ParseResult with classification, AST, and
-    // statement metadata when parsing succeeds.
+    // statement metadata when parsing succeeds. Inputs longer than UINT32_MAX
+    // bytes are rejected before reading the buffer because source spans are 32-bit.
     ParseResult parse(const char* sql, size_t len);
+
+    // Parse every nonempty statement, preserving each result and source span.
+    // No arena reset between statements; all returned ASTs remain valid until
+    // the next parse/parse_all/reset call. This is SQL framing, not COPY data
+    // payload or procedural-body parsing. An empty batch is successful. Oversized
+    // input returns one ERROR record with an empty span, without scanning input.
+    BatchParseResult parse_all(const char* sql, size_t len);
 
     // Reset the arena. Call after each query is fully processed.
     void reset();
@@ -52,12 +60,13 @@ private:
 
     // Tier 1 parsers
     ParseResult parse_select();
-    ParseResult parse_select_from_lparen();
+    ParseResult parse_query_expression(TokenType first);
     ParseResult parse_with();
     ParseResult parse_set();
     ParseResult parse_insert(bool is_replace = false);
     ParseResult parse_update();
     ParseResult parse_delete();
+    ParseResult parse_merge();
     ParseResult parse_explain(bool is_describe = false);
     ParseResult parse_call();
     ParseResult parse_do();
