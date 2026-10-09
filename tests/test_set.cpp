@@ -5,6 +5,44 @@
 
 using namespace sql_parser;
 
+TEST(PgSQLSetReleaseRegression, RejectExpressionValues) {
+    Parser<Dialect::PostgreSQL> parser;
+    const char* queries[] = {
+        "SET search_path = \"$user\", \"$invalid\"@schema",
+        "SET search_path = public @ schema",
+        "SET search_path = concat('public', 'private')",
+        "SET work_mem = 1 + 2",
+        "SET work_mem = 1, 2 + 3",
+        "SET work_mem = -true",
+    };
+    for (const char* sql : queries) {
+        SCOPED_TRACE(sql);
+        EXPECT_NE(parser.parse(sql, strlen(sql)).status, ParseResult::OK);
+    }
+}
+
+TEST(PgSQLSetReleaseRegression, PreserveScalarValuesAndMysqlExpressions) {
+    Parser<Dialect::PostgreSQL> parser;
+    const char* queries[] = {
+        "SET search_path = \"$user\", public",
+        "SET search_path = 'public', 'private'",
+        "SET enable_seqscan = on",
+        "SET enable_seqscan = false",
+        "SET work_mem = DEFAULT",
+        "SET custom.value = -1.25",
+        "SET custom.value = +2",
+    };
+    for (const char* sql : queries) {
+        SCOPED_TRACE(sql);
+        auto result = parser.parse(sql, strlen(sql));
+        EXPECT_EQ(result.status, ParseResult::OK);
+        EXPECT_TRUE(result.full_input);
+    }
+    Parser<Dialect::MySQL> mysql;
+    const char* sql = "SET sql_mode = CONCAT(@@sql_mode, ',STRICT_TRANS_TABLES')";
+    EXPECT_EQ(mysql.parse(sql, strlen(sql)).status, ParseResult::OK);
+}
+
 namespace {
 std::string ref_string(StringRef ref) {
     return ref.ptr ? std::string(ref.ptr, ref.len) : std::string();

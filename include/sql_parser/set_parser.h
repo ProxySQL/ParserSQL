@@ -346,8 +346,11 @@ public:
             // VAR_ASSIGNMENT node, alongside the first RHS expression.
             while (assignment && tok_.peek().type == TokenType::TK_COMMA) {
                 tok_.skip();
-                AstNode* extra_val = expr_parser_.parse();
-                if (!extra_val) break;
+                AstNode* extra_val = parse_setting_value();
+                if (!extra_val) {
+                    if (tok_.has_error()) return nullptr;
+                    break;
+                }
                 assignment->add_child(extra_val);
             }
         } else {
@@ -371,6 +374,37 @@ private:
     Tokenizer<D>& tok_;
     Arena& arena_;
     ExpressionParser<D> expr_parser_;
+
+    AstNode* parse_setting_value() {
+        const Token start = tok_.peek();
+        AstNode* value = expr_parser_.parse();
+        if (!value) return nullptr;
+        if constexpr (D == Dialect::PostgreSQL) {
+            // PostgreSQL generic_set uses var_value, not a_expr. In particular,
+            // custom operators must not turn malformed SET values into an OK
+            // result that a proxy can mistake for a session-variable update.
+            bool valid = value && !value->first_child &&
+                (value->type == NodeType::NODE_IDENTIFIER ||
+                 value->type == NodeType::NODE_COLUMN_REF ||
+                 value->type == NodeType::NODE_LITERAL_STRING ||
+                 value->type == NodeType::NODE_LITERAL_INT ||
+                 value->type == NodeType::NODE_LITERAL_FLOAT);
+            if (value && value->type == NodeType::NODE_UNARY_OP &&
+                (value->value().equals_ci("+", 1) || value->value().equals_ci("-", 1))) {
+                const AstNode* number = value->first_child;
+                valid = number && !number->first_child && !number->next_sibling &&
+                    (number->type == NodeType::NODE_LITERAL_INT ||
+                     number->type == NodeType::NODE_LITERAL_FLOAT) &&
+                    !number->value().equals_ci("true", 4) &&
+                    !number->value().equals_ci("false", 5);
+            }
+            if (!valid) {
+                tok_.flag_error_at(start.source);
+                return nullptr;
+            }
+        }
+        return value;
+    }
 
     // Build "<prefix><name_content>" in the arena, dropping any
     // backtick/double-quote delimiters that surrounded `name` in source.
@@ -659,7 +693,7 @@ private:
         // with a separator (`SET x = ,foo`, `SET x = ;`), or otherwise
         // malformed -- flag a parse error so the eventual ParseResult is
         // ERROR rather than PARTIAL with a missing-RHS AST.
-        AstNode* rhs = expr_parser_.parse();
+        AstNode* rhs = parse_setting_value();
         if (rhs) {
             assignment->add_child(rhs);
         } else {
