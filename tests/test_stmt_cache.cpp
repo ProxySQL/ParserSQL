@@ -2,6 +2,7 @@
 #include "sql_parser/parser.h"
 #include "sql_parser/stmt_cache.h"
 #include "sql_parser/emitter.h"
+#include "sql_engine/plan_builder.h"
 
 using namespace sql_parser;
 
@@ -262,4 +263,57 @@ TEST(PreparedStmtTest, EmitWithNullBinding) {
     StringRef result = emitter.result();
     std::string out(result.ptr, result.len);
     EXPECT_EQ(out, "SET character_set_results = NULL");
+}
+
+TEST(PreparedStmtTest, CachedPostgresLiteralsPreservePlannerSupport) {
+    struct Case { const char* sql; bool supported; };
+    const Case cases[] = {
+        {"SELECT E'\\n'", false},
+        {"SELECT e'\\x41'", false},
+        {"SELECT 'hello'", true},
+        {"SELECT ''", true},
+        {"SELECT $q$\\n$q$", true},
+        {"SELECT $$E'\\n'$$", true},
+        {"INSERT INTO t VALUES (E'\\n')", false},
+        {"UPDATE t SET n = E'\\n'", false},
+        {"DELETE FROM t WHERE n = E'\\n'", false},
+    };
+    for (const auto& test : cases) {
+        SCOPED_TRACE(test.sql);
+        Parser<Dialect::PostgreSQL> parser;
+        std::string input = test.sql;
+        auto parsed = parser.parse_and_cache(input.data(), input.size(), 1);
+        ASSERT_TRUE(parsed.ok() && parsed.full_input);
+
+        // Both the caller's SQL and the parser arena may be reused before execute.
+        input.assign(input.size(), 'x');
+        ASSERT_TRUE(parser.parse("SELECT 42", 9).ok());
+        auto cached = parser.execute(1, {});
+        ASSERT_TRUE(cached.ok());
+        ASSERT_NE(cached.ast, nullptr);
+        using Builder = sql_engine::PlanBuilder<Dialect::PostgreSQL>;
+        EXPECT_EQ(Builder::supports_query_features(cached.ast), test.supported);
+        EXPECT_EQ(Builder::supports_dml_features(cached.ast), test.supported);
+
+        Emitter<Dialect::PostgreSQL> emitter(parser.arena());
+        emitter.emit(cached.ast);
+        EXPECT_EQ(std::string(emitter.result().ptr, emitter.result().len), test.sql);
+        parser.prepare_cache_evict(1);
+        EXPECT_FALSE(parser.execute(1, {}).ok());
+    }
+}
+
+TEST(PreparedStmtTest, CachedMysqlSourceSpellingSurvivesInputReuse) {
+    Parser<Dialect::MySQL> parser;
+    const char* expected = "SELECT `odd``name`, 'it\\'s' FROM `some table`";
+    std::string input = expected;
+    auto parsed = parser.parse_and_cache(input.data(), input.size(), 1);
+    ASSERT_TRUE(parsed.ok() && parsed.full_input);
+    input.assign(input.size(), 'x');
+    ASSERT_TRUE(parser.parse("SELECT 42", 9).ok());
+    auto cached = parser.execute(1, {});
+    ASSERT_TRUE(cached.ok());
+    Emitter<Dialect::MySQL> emitter(parser.arena());
+    emitter.emit(cached.ast);
+    EXPECT_EQ(std::string(emitter.result().ptr, emitter.result().len), expected);
 }

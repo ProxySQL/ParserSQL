@@ -133,6 +133,10 @@ enum class TokenType : uint16_t {
     TK_USER_VARIABLE,
     TK_HEX_LITERAL,
     TK_BIT_LITERAL,
+    TK_PG_OPERATOR,  // PostgreSQL symbolic operator name
+    TK_NAMED_ARGUMENT, // =>, reserved for PostgreSQL named function arguments
+    TK_MYSQL_JSON_ARROW, // -> and ->>; spelling distinguishes unquoting
+    TK_MYSQL_OPTIMIZER_HINT, // complete comment in a native hint position
 };
 
 struct Token {

@@ -309,6 +309,8 @@ protected:
         return StableDigest{std::string(dr.normalized.ptr, dr.normalized.len), dr.hash};
     }
 
+    // Token-level digest (uses arena but does NOT call parse, so arena is stable
+    // within a single call but may be invalidated by subsequent parse calls)
     StableDigest digest_token(const char* sql) {
         parser.reset();
         Digest<Dialect::PostgreSQL> digest(parser.arena());
@@ -335,7 +337,7 @@ TEST_F(PgSQLDigestTest, DelimitedFunctionNameKeepsItsOwnSpelling) {
     // PostgreSQL folds undelimited names down, so "MYFUNC" is a different function.
     auto undelimited = digest_ast("SELECT myfunc(a) FROM t");
     auto delimited = digest_ast("SELECT \"MYFUNC\"(a) FROM t");
-    EXPECT_EQ(delimited.normalized, "SELECT MYFUNC(a) FROM t");
+    EXPECT_EQ(delimited.normalized, "SELECT \"MYFUNC\"(a) FROM t");
     EXPECT_NE(undelimited.hash, delimited.hash);
 }
 

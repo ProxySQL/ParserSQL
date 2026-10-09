@@ -11,6 +11,8 @@
 
 namespace sql_parser {
 
+inline void free_ast(AstNode* node);
+
 // Deep-copy an AST tree from arena to heap memory.
 // The returned tree must be freed with free_ast().
 inline AstNode* deep_copy_ast(const AstNode* src) {
@@ -19,22 +21,33 @@ inline AstNode* deep_copy_ast(const AstNode* src) {
     AstNode* dst = static_cast<AstNode*>(std::malloc(sizeof(AstNode)));
     if (!dst) return nullptr;
 
+    *dst = AstNode{};
     dst->type = src->type;
     dst->flags = src->flags;
-    dst->first_child = nullptr;
-    dst->next_sibling = nullptr;
 
     // Deep-copy value string to heap
     if (src->value_ptr && src->value_len > 0) {
         char* val_copy = static_cast<char*>(std::malloc(src->value_len));
-        if (val_copy) {
-            std::memcpy(val_copy, src->value_ptr, src->value_len);
+        if (!val_copy) {
+            free_ast(dst);
+            return nullptr;
         }
+        std::memcpy(val_copy, src->value_ptr, src->value_len);
         dst->value_ptr = val_copy;
         dst->value_len = src->value_len;
-    } else {
-        dst->value_ptr = nullptr;
-        dst->value_len = 0;
+    }
+
+    // Source spelling is used by emission and feature guards after the
+    // caller's SQL buffer and parser arena have been reused.
+    if (src->source_ptr && src->source_len > 0) {
+        char* source_copy = static_cast<char*>(std::malloc(src->source_len));
+        if (!source_copy) {
+            free_ast(dst);
+            return nullptr;
+        }
+        std::memcpy(source_copy, src->source_ptr, src->source_len);
+        dst->source_ptr = source_copy;
+        dst->source_len = src->source_len;
     }
 
     // Recursively copy children
@@ -42,14 +55,16 @@ inline AstNode* deep_copy_ast(const AstNode* src) {
     AstNode* prev_dst_child = nullptr;
     while (src_child) {
         AstNode* dst_child = deep_copy_ast(src_child);
-        if (dst_child) {
-            if (!dst->first_child) {
-                dst->first_child = dst_child;
-            } else if (prev_dst_child) {
-                prev_dst_child->next_sibling = dst_child;
-            }
-            prev_dst_child = dst_child;
+        if (!dst_child) {
+            free_ast(dst);
+            return nullptr;
         }
+        if (!dst->first_child) {
+            dst->first_child = dst_child;
+        } else if (prev_dst_child) {
+            prev_dst_child->next_sibling = dst_child;
+        }
+        prev_dst_child = dst_child;
         src_child = src_child->next_sibling;
     }
 
@@ -70,6 +85,7 @@ inline void free_ast(AstNode* node) {
     if (node->value_ptr) {
         std::free(const_cast<char*>(node->value_ptr));
     }
+    std::free(const_cast<char*>(node->source_ptr));
     std::free(node);
 }
 
