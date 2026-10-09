@@ -111,3 +111,21 @@ TEST(ReviewTransactions, MySqlTransactionBaseline) {
     EXPECT_EQ(manager.calls, (std::vector<std::string>{"begin", "commit", "begin", "rollback",
         "begin", "save:named_point", "commit", "begin", "rollback"}));
 }
+
+TEST(ReviewTransactions, MySqlUnsupportedStartOptionsHaveNoEffects) {
+    InMemoryCatalog catalog;
+    RecordingTransactionManager manager;
+    Session<Dialect::MySQL> session(catalog, manager);
+    for (const char* sql : {
+        "START TRANSACTION READ ONLY", "START TRANSACTION READ WRITE",
+        "START TRANSACTION WITH CONSISTENT SNAPSHOT",
+        "START TRANSACTION WITH CONSISTENT SNAPSHOT, READ ONLY"
+    }) {
+        SCOPED_TRACE(sql);
+        const auto result = session.execute_statement(sql);
+        EXPECT_FALSE(result.success);
+        EXPECT_FALSE(result.error_message.empty());
+        EXPECT_FALSE(manager.in_transaction());
+        EXPECT_TRUE(manager.calls.empty());
+    }
+}

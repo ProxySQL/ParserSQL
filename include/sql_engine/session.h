@@ -178,7 +178,8 @@ public:
             return transaction_error("parse error");
 
         // PostgreSQL transaction controls retain their operands and options
-        // in the AST. MySQL's legacy transaction extractor has no AST.
+        // in the AST. MySQL also has ASTs for BEGIN and START TRANSACTION;
+        // its other transaction controls use the legacy extractor.
         if constexpr (D == sql_parser::Dialect::PostgreSQL) {
             if ((pr.stmt_type == sql_parser::StmtType::BEGIN ||
                  pr.stmt_type == sql_parser::StmtType::START_TRANSACTION ||
@@ -193,10 +194,10 @@ public:
         switch (pr.stmt_type) {
             case sql_parser::StmtType::BEGIN:
             case sql_parser::StmtType::START_TRANSACTION: {
-                if constexpr (D == sql_parser::Dialect::PostgreSQL) {
-                    if (pr.ast->first_child)
-                        return transaction_error("unsupported transaction options");
-                }
+                if (!pr.ast || pr.ast->type != sql_parser::NodeType::NODE_TRANSACTION_STMT)
+                    return transaction_error("parse error");
+                if (pr.ast->first_child)
+                    return transaction_error("unsupported transaction options");
                 DmlResult dr;
                 dr.success = txn_mgr_.begin();
                 if (!dr.success) dr.error_message = "BEGIN failed";

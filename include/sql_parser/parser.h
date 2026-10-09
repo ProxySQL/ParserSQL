@@ -71,6 +71,7 @@ private:
     ParseResult parse_call();
     ParseResult parse_do();
     ParseResult parse_load_data();
+    ParseResult parse_transaction(const Token& first);
 
     // Tier 2 extractors
     ParseResult extract_insert(const Token& first);

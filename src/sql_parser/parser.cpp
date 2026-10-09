@@ -150,7 +150,7 @@ ParseResult Parser<D>::classify_and_dispatch() {
         case TokenType::TK_DELETE:   return parse_delete();
         case TokenType::TK_REPLACE:  return parse_insert(true);
         case TokenType::TK_BEGIN:
-        case TokenType::TK_START:
+        case TokenType::TK_START:    return parse_transaction(first);
         case TokenType::TK_COMMIT:
         case TokenType::TK_ROLLBACK:
         case TokenType::TK_SAVEPOINT:return extract_transaction(first);
@@ -880,6 +880,62 @@ ParseResult Parser<D>::parse_load_data() {
     r.ast = root;
     scan_to_end(r);
     return r;
+}
+
+// ---- Transaction starts ----
+
+template <Dialect D>
+ParseResult Parser<D>::parse_transaction(const Token& first) {
+    if constexpr (D == Dialect::PostgreSQL) {
+        return extract_transaction(first);
+    }
+
+    ParseResult result;
+    const bool begin = first.type == TokenType::TK_BEGIN;
+    result.stmt_type = begin ? StmtType::BEGIN : StmtType::START_TRANSACTION;
+    result.status = ParseResult::OK;
+    auto take = [&](std::string_view word) {
+        if (!ExpressionParser<D>::keyword(tokenizer_.peek(), word)) return false;
+        tokenizer_.skip();
+        return true;
+    };
+    auto fail = [&]() {
+        result.status = ParseResult::ERROR;
+        tokenizer_.flag_error_at(tokenizer_.peek().source);
+    };
+
+    result.ast = make_node(arena_, NodeType::NODE_TRANSACTION_STMT,
+        begin ? StringRef{"BEGIN", 5} : StringRef{"START TRANSACTION", 17});
+    if (!result.ast) fail();
+    else if (begin) take("WORK");
+    else if (!take("TRANSACTION")) fail();
+    else {
+        bool needs_mode = false;
+        while (result.status == ParseResult::OK) {
+            StringRef mode;
+            if (take("READ")) {
+                if (take("ONLY")) mode = {"READ ONLY", 9};
+                else if (take("WRITE")) mode = {"READ WRITE", 10};
+                else { fail(); break; }
+            } else if (take("WITH")) {
+                if (!take("CONSISTENT") || !take("SNAPSHOT")) { fail(); break; }
+                mode = {"WITH CONSISTENT SNAPSHOT", 24};
+            } else {
+                if (needs_mode) fail();
+                break;
+            }
+
+            AstNode* option = make_node(arena_, NodeType::NODE_TRANSACTION_OPTION, mode);
+            if (!option) { fail(); break; }
+            result.ast->add_child(option);
+            // MySQL requires a comma between transaction characteristics.
+            if (tokenizer_.peek().type != TokenType::TK_COMMA) break;
+            tokenizer_.skip();
+            needs_mode = true;
+        }
+    }
+    scan_to_end(result);
+    return result;
 }
 
 // ---- Helpers ----

@@ -339,7 +339,8 @@ DISTINCT ON, FILTER, LATERAL, named windows/frames, transaction/COPY ASTs and
 `parse_all()`. [AST utility APIs](docs/ast-utilities.md) document traversal,
 owning copies, subtree replacement and context-aware parameterization.
 
-- **Tier 1 deep parse:** SELECT, INSERT, UPDATE, DELETE, SET, REPLACE, EXPLAIN, CALL, DO, LOAD DATA
+- **Tier 1 deep parse:** SELECT, INSERT, UPDATE, DELETE, SET, REPLACE, EXPLAIN, CALL, DO, LOAD DATA, BEGIN, START TRANSACTION
+- **Transaction starts:** canonical `NODE_TRANSACTION_OPTION` children capture MySQL `START TRANSACTION` characteristics and PostgreSQL isolation/access/deferrability modes; MySQL `BEGIN [WORK]` has no modes.
 - **Compound queries:** UNION / INTERSECT / EXCEPT with SQL-standard precedence and parenthesized nesting
 - **CTEs:** `WITH ... [RECURSIVE] AS (...)` — non-recursive materialized, recursive planned
 - **Window functions:** ROW_NUMBER, RANK, DENSE_RANK, SUM/COUNT/AVG/MIN/MAX OVER (PARTITION BY ... ORDER BY ...)

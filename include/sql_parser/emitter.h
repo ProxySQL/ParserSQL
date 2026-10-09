@@ -681,6 +681,9 @@ private:
     void emit_transaction_stmt(const AstNode* node) {
         emit_value(node);
         for (const AstNode* child = node->first_child; child; child = child->next_sibling) {
+            if constexpr (D == Dialect::MySQL) {
+                if (child != node->first_child) sb_.append_char(',');
+            }
             sb_.append_char(' ');
             emit_utility_value(child);
         }
