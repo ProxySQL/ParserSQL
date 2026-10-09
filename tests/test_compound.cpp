@@ -4,6 +4,102 @@
 
 using namespace sql_parser;
 
+// These checks require a usable tree and complete input consumption: an OK
+// classification alone must not count as support for a query expression.
+TEST(PgSQLQueryExpression, ValuesPreservesRowsAndExpressions) {
+    Parser<Dialect::PostgreSQL> parser;
+    const char* sql = "VALUES (1, 'one'), (2 + 3, 'two') ORDER BY 1 LIMIT 2";
+    auto r = parser.parse(sql, strlen(sql));
+    ASSERT_EQ(r.stmt_type, StmtType::SELECT);
+    ASSERT_EQ(r.status, ParseResult::OK);
+    ASSERT_TRUE(r.full_input);
+    ASSERT_NE(r.ast, nullptr);
+    const AstNode* values = r.ast->first_child;
+    ASSERT_NE(values, nullptr);
+    ASSERT_EQ(values->type, NodeType::NODE_VALUES_CLAUSE);
+    ASSERT_NE(values->first_child, nullptr);
+    ASSERT_NE(values->first_child->next_sibling, nullptr);
+    EXPECT_EQ(values->first_child->next_sibling->first_child->type,
+              NodeType::NODE_BINARY_OP);
+    Emitter<Dialect::PostgreSQL> emitter(parser.arena());
+    emitter.emit(r.ast);
+    auto out = emitter.result();
+    EXPECT_EQ(std::string(out.ptr, out.len), sql);
+}
+
+TEST(PgSQLQueryExpression, TableAndMixedSetOperationsRoundTrip) {
+    const char* cases[] = {
+        "TABLE public.users",
+        "TABLE ONLY public.users",
+        "TABLE public.users * ORDER BY id LIMIT 3",
+        "TABLE \"Mixed Schema\".\"Mixed Table\"",
+        "VALUES (1), (2) UNION ALL TABLE t INTERSECT SELECT 3",
+        "(VALUES (1) UNION TABLE t) INTERSECT SELECT 3",
+        "SELECT 1 EXCEPT (TABLE t EXCEPT VALUES (2))",
+        "TABLE t UNION (VALUES (1), (2) ORDER BY 1 LIMIT 1)",
+        "((TABLE t))",
+        "SELECT (SELECT 1) UNION VALUES (2)",
+        "VALUES (1) UNION SELECT ", // Empty SELECT target lists are valid PG syntax.
+    };
+    for (const char* sql : cases) {
+        SCOPED_TRACE(sql);
+        Parser<Dialect::PostgreSQL> parser;
+        auto r = parser.parse(sql, strlen(sql));
+        ASSERT_EQ(r.stmt_type, StmtType::SELECT);
+        ASSERT_EQ(r.status, ParseResult::OK);
+        ASSERT_TRUE(r.full_input);
+        ASSERT_NE(r.ast, nullptr);
+        Emitter<Dialect::PostgreSQL> emitter(parser.arena());
+        emitter.emit(r.ast);
+        auto out = emitter.result();
+        EXPECT_EQ(std::string(out.ptr, out.len), sql);
+    }
+}
+
+TEST(PgSQLQueryExpression, IntersectBindsMoreTightlyThanUnion) {
+    Parser<Dialect::PostgreSQL> parser;
+    const char* sql = "VALUES (1) UNION TABLE t INTERSECT SELECT 2";
+    auto r = parser.parse(sql, strlen(sql));
+    ASSERT_NE(r.ast, nullptr);
+    ASSERT_TRUE(r.full_input);
+    auto* op = r.ast->first_child;
+    ASSERT_NE(op, nullptr);
+    EXPECT_TRUE(op->value().equals_ci("UNION", 5));
+    ASSERT_NE(op->first_child, nullptr);
+    auto* right = op->first_child->next_sibling;
+    ASSERT_NE(right, nullptr);
+    EXPECT_TRUE(right->value().equals_ci("INTERSECT", 9));
+}
+
+TEST(PgSQLQueryExpression, RejectsIncompleteQueryOperands) {
+    const char* cases[] = {
+        "VALUES", "VALUES ()", "VALUES (1,)", "VALUES (1", "VALUES (1),",
+        "TABLE", "TABLE public.", "TABLE ONLY", "TABLE t UNION",
+        "VALUES (1) INTERSECT", "(VALUES (1)", "(TABLE t UNION)",
+        "VALUES (1 +)",
+        "VALUES (1) ORDER BY 1,", "VALUES (1) LIMIT 1 OFFSET",
+        "VALUES (1) LIMIT 1, 2",
+        "VALUES (f(1 +))", "VALUES (1 BETWEEN 2)", "VALUES (1 IS)",
+        "VALUES (1) LIMIT 1 +", "VALUES (1) ORDER BY 1 +",
+    };
+    Parser<Dialect::PostgreSQL> parser;
+    for (const char* sql : cases) {
+        SCOPED_TRACE(sql);
+        auto r = parser.parse(sql, strlen(sql));
+        EXPECT_NE(r.status, ParseResult::OK);
+        EXPECT_EQ(r.ast, nullptr);
+    }
+}
+
+TEST(PgSQLQueryExpression, LeavesAdditionalStatementsVisible) {
+    Parser<Dialect::PostgreSQL> parser;
+    const char* sql = "VALUES (1); TABLE t";
+    auto r = parser.parse(sql, strlen(sql));
+    ASSERT_NE(r.ast, nullptr);
+    EXPECT_FALSE(r.full_input);
+    EXPECT_EQ(std::string(r.remaining.ptr, r.remaining.len), "TABLE t");
+}
+
 class MySQLCompoundTest : public ::testing::Test {
 protected:
     Parser<Dialect::MySQL> parser;

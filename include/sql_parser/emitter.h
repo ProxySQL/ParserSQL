@@ -33,7 +33,10 @@ private:
     EmitMode mode_;
 
     void emit_node(const AstNode* node) {
+        if (!node) return;
         switch (node->type) {
+            case NodeType::NODE_TRANSACTION_STMT: emit_transaction_stmt(node); break;
+            case NodeType::NODE_COPY_STMT: emit_copy_stmt(node); break;
             // ---- SET statement ----
             case NodeType::NODE_SET_STMT:     emit_set_stmt(node); break;
             case NodeType::NODE_SET_NAMES:    emit_set_names(node); break;
@@ -52,18 +55,64 @@ private:
             case NodeType::NODE_WHERE_CLAUSE:    emit_where_clause(node); break;
             case NodeType::NODE_GROUP_BY_CLAUSE: emit_group_by(node); break;
             case NodeType::NODE_HAVING_CLAUSE:   emit_having(node); break;
-            case NodeType::NODE_ORDER_BY_CLAUSE: emit_order_by(node); break;
+            case NodeType::NODE_ORDER_BY_CLAUSE:
+            case NodeType::NODE_AGGREGATE_ORDER_BY: emit_order_by(node); break;
             case NodeType::NODE_ORDER_BY_ITEM:   emit_order_by_item(node); break;
             case NodeType::NODE_LIMIT_CLAUSE:    emit_limit(node); break;
             case NodeType::NODE_LOCKING_CLAUSE:  emit_locking(node); break;
             case NodeType::NODE_INTO_CLAUSE:     emit_into(node); break;
 
+            case NodeType::NODE_DISTINCT_ON:
+                sb_.append("DISTINCT ON ("); emit_list(node, ", "); sb_.append_char(')'); break;
+            case NodeType::NODE_AGGREGATE_FILTER:
+                emit_node(node->first_child); sb_.append(" FILTER (WHERE ");
+                emit_node(node->first_child ? node->first_child->next_sibling : nullptr); sb_.append_char(')'); break;
+            case NodeType::NODE_LATERAL:
+                sb_.append("LATERAL "); emit_node(node->first_child); break;
+            case NodeType::NODE_WINDOW_FUNCTION:
+                emit_node(node->first_child); sb_.append(" OVER ");
+                emit_node(node->first_child ? node->first_child->next_sibling : nullptr); break;
+            case NodeType::NODE_WINDOW_SPEC:
+                sb_.append_char('('); emit_list(node, " "); sb_.append_char(')'); break;
+            case NodeType::NODE_WINDOW_PARTITION:
+                sb_.append("PARTITION BY "); emit_list(node, ", "); break;
+            case NodeType::NODE_WINDOW_ORDER:
+                sb_.append("ORDER BY "); emit_list(node, ", "); break;
+            case NodeType::NODE_WINDOW_CLAUSE:
+                sb_.append(" WINDOW "); emit_list(node, ", "); break;
+            case NodeType::NODE_WINDOW_DEFINITION:
+                emit_value(node); sb_.append(" AS "); emit_node(node->first_child); break;
+            case NodeType::NODE_WINDOW_REFERENCE:
+                emit_value(node); break;
+            case NodeType::NODE_WINDOW_FRAME: emit_window_frame(node); break;
+            case NodeType::NODE_WINDOW_BOUND:
+                if (node->first_child) { emit_node(node->first_child); sb_.append_char(' '); }
+                emit_value(node); break;
+            case NodeType::NODE_WINDOW_EXCLUSION:
+                sb_.append("EXCLUDE "); emit_value(node); break;
+
             // ---- INSERT statement ----
             case NodeType::NODE_INSERT_STMT:     emit_insert_stmt(node); break;
+            case NodeType::NODE_MYSQL_MATCH_COLUMNS:
             case NodeType::NODE_INSERT_COLUMNS:  emit_insert_columns(node); break;
             case NodeType::NODE_VALUES_CLAUSE:   emit_values_clause(node); break;
             case NodeType::NODE_VALUES_ROW:      emit_values_row(node); break;
             case NodeType::NODE_INSERT_SET_CLAUSE: emit_insert_set_clause(node); break;
+            case NodeType::NODE_MYSQL_INSERT_ALIAS: {
+                sb_.append("AS ");
+                const auto* name = node->first_child;
+                if (name) emit_node(name);
+                if (name && name->next_sibling) {
+                    // COUNT (a) is an alias; COUNT(a) is a native function token.
+                    sb_.append(" (");
+                    for (auto* column = name->next_sibling; column; column = column->next_sibling) {
+                        if (column != name->next_sibling) sb_.append(", ");
+                        emit_node(column);
+                    }
+                    sb_.append_char(')');
+                }
+                break;
+            }
             case NodeType::NODE_ON_DUPLICATE_KEY: emit_on_duplicate_key(node); break;
             case NodeType::NODE_ON_CONFLICT:     emit_on_conflict(node); break;
             case NodeType::NODE_CONFLICT_TARGET: emit_conflict_target(node); break;
@@ -77,9 +126,13 @@ private:
             case NodeType::NODE_STAR_REPLACE: emit_star_replace(node); break;
             case NodeType::NODE_REPLACE_ITEM: emit_replace_item(node); break;
 
+            case NodeType::NODE_CTE: emit_cte(node); break;
+            case NodeType::NODE_CTE_COLUMNS: emit_list(node, ", "); break;
+
             // ---- Compound query ----
             case NodeType::NODE_COMPOUND_QUERY:  emit_compound_query(node); break;
             case NodeType::NODE_SET_OPERATION:   emit_set_operation(node); break;
+            case NodeType::NODE_TABLE_QUERY:     emit_table_query(node); break;
 
             // ---- DELETE statement ----
             case NodeType::NODE_DELETE_STMT:          emit_delete_stmt(node); break;
@@ -100,22 +153,146 @@ private:
             case NodeType::NODE_LOAD_DATA_STMT:       emit_load_data_stmt(node); break;
             case NodeType::NODE_LOAD_DATA_OPTIONS:    /* emitted inline */ break;
 
-            // ---- TRANSACTION ----
-            case NodeType::NODE_TRANSACTION_STMT:     emit_transaction_stmt(node); break;
-
             // ---- UPDATE statement ----
             case NodeType::NODE_UPDATE_STMT:     emit_update_stmt(node); break;
             case NodeType::NODE_UPDATE_SET_CLAUSE: emit_update_set_clause(node); break;
 
             // ---- Table references ----
             case NodeType::NODE_TABLE_REF:       emit_table_ref(node); break;
+            case NodeType::NODE_MYSQL_LOCK_TARGETS:
+                sb_.append("OF "); emit_list(node, ", "); break;
+            case NodeType::NODE_MYSQL_PARTITION_SELECTION:
+                sb_.append(" PARTITION ("); emit_list(node, ", "); sb_.append_char(')'); break;
+            case NodeType::NODE_MYSQL_INDEX_HINT:
+                sb_.append_char(' '); emit_value(node);
+                sb_.append((node->flags & 1) ? " KEY" : " INDEX");
+                if (node->flags & 2) sb_.append(" FOR JOIN");
+                else if (node->flags & 4) sb_.append(" FOR ORDER BY");
+                else if (node->flags & 8) sb_.append(" FOR GROUP BY");
+                sb_.append(" ("); emit_list(node, ", "); sb_.append_char(')'); break;
             case NodeType::NODE_ALIAS:           emit_alias(node); break;
             case NodeType::NODE_QUALIFIED_NAME:  emit_qualified_name(node); break;
 
+            case NodeType::NODE_TYPE_CAST:
+                sb_.append("CAST(");
+                if (node->first_child) {
+                    emit_node(node->first_child);
+                    sb_.append(" AS ");
+                    if (node->first_child->next_sibling) emit_node(node->first_child->next_sibling);
+                }
+                sb_.append_char(')'); break;
+            case NodeType::NODE_TYPE_NAME: emit_value(node); break;
+            case NodeType::NODE_NAMED_ARGUMENT:
+                emit_value(node); sb_.append(" => ");
+                if (node->first_child) emit_node(node->first_child);
+                break;
             // ---- Expressions ----
             case NodeType::NODE_BINARY_OP:       emit_binary_op(node); break;
+            case NodeType::NODE_MYSQL_JSON_EXTRACT:
+                emit_node(node->first_child); sb_.append_char(' '); emit_value(node); sb_.append_char(' ');
+                emit_mysql_syntax_string(node->first_child ? node->first_child->next_sibling : nullptr);
+                break;
             case NodeType::NODE_UNARY_OP:        emit_unary_op(node); break;
             case NodeType::NODE_FUNCTION_CALL:   emit_function_call(node); break;
+            case NodeType::NODE_MYSQL_JSON_AGGREGATE:
+                emit_value(node); sb_.append_char('('); emit_list(node, ", ");
+                if (node->flags & 1) sb_.append(" NULL ON NULL");
+                else if (node->flags & 2) sb_.append(" ABSENT ON NULL");
+                sb_.append_char(')'); break;
+            case NodeType::NODE_MYSQL_JSON_AGG_ARGUMENT:
+                sb_.append("ALL "); emit_node(node->first_child); break;
+            case NodeType::NODE_MYSQL_CREATE_LIKE:
+            case NodeType::NODE_MYSQL_CREATE_QUERY:
+            case NodeType::NODE_MYSQL_PARTITION_CLAUSE:
+            case NodeType::NODE_MYSQL_PARTITION_DEF:
+            case NodeType::NODE_MYSQL_PARTITION_ACTION:
+            case NodeType::NODE_MYSQL_CREATE_TABLE:
+            case NodeType::NODE_MYSQL_ALTER_TABLE:
+            case NodeType::NODE_MYSQL_COLUMN_DEF:
+            case NodeType::NODE_MYSQL_DDL_CLAUSE:
+            case NodeType::NODE_MYSQL_PROCEDURE_PARAM:
+            case NodeType::NODE_MYSQL_PROCEDURE_CHARACTERISTIC:
+                emit_value(node);
+                if (!node->value().empty() && node->first_child) sb_.append_char(' ');
+                emit_list(node, " "); break;
+            case NodeType::NODE_MYSQL_DDL_SYNTAX:
+            case NodeType::NODE_MYSQL_JSON_TABLE_LITERAL:
+            case NodeType::NODE_MYSQL_OPTIMIZER_HINT:
+                emit_value(node); break;
+            case NodeType::NODE_MYSQL_DDL_LIST:
+            case NodeType::NODE_MYSQL_PROCEDURE_PARAMS:
+                sb_.append_char('('); emit_list(node, ", "); sb_.append_char(')'); break;
+            case NodeType::NODE_MYSQL_PARTITION_NAMES:
+            case NodeType::NODE_MYSQL_ALTER_ACTIONS:
+                emit_list(node, ", "); break;
+            case NodeType::NODE_MYSQL_JSON_TABLE: {
+                sb_.append("JSON_TABLE(");
+                const auto* c = node->first_child;
+                emit_node(c); sb_.append(", ");
+                c = c ? c->next_sibling : nullptr; emit_node(c); sb_.append_char(' ');
+                emit_node(c ? c->next_sibling : nullptr); sb_.append_char(')'); break;
+            }
+            case NodeType::NODE_MYSQL_JSON_TABLE_COLUMNS:
+                sb_.append("COLUMNS ("); emit_list(node, ", "); sb_.append_char(')'); break;
+            case NodeType::NODE_MYSQL_JSON_TABLE_COLUMN: {
+                const auto* c = node->first_child; emit_node(c);
+                if (node->flags & 1) { sb_.append(" FOR ORDINALITY"); break; }
+                c = c ? c->next_sibling : nullptr; sb_.append_char(' '); emit_node(c);
+                sb_.append(node->flags & 2 ? " EXISTS PATH " : " PATH ");
+                for (c = c ? c->next_sibling : nullptr; c; c = c->next_sibling) {
+                    emit_node(c); if (c->next_sibling) sb_.append_char(' ');
+                }
+                break;
+            }
+            case NodeType::NODE_MYSQL_JSON_TABLE_NESTED:
+                sb_.append("NESTED PATH "); emit_list(node, " "); break;
+            case NodeType::NODE_MYSQL_JSON_TABLE_RESPONSE:
+                if (node->first_child) {
+                    sb_.append("DEFAULT "); emit_node(node->first_child);
+                    auto v = node->value();
+                    if (v.len >= 7) sb_.append(v.ptr + 7, v.len - 7);
+                } else emit_value(node);
+                break;
+            case NodeType::NODE_MYSQL_CREATE_PROCEDURE: {
+                sb_.append("CREATE PROCEDURE ");
+                auto* c = node->first_child; emit_node(c);
+                // COUNT (..) is a routine identifier; COUNT(..) is a native function token.
+                sb_.append_char(' ');
+                c = c ? c->next_sibling : nullptr; emit_node(c);
+                for (c = c ? c->next_sibling : nullptr; c; c = c->next_sibling) {
+                    sb_.append_char(' '); emit_node(c);
+                }
+                break;
+            }
+            case NodeType::NODE_MYSQL_PROCEDURE_BLOCK:
+                sb_.append("BEGIN ");
+                for (auto* c = node->first_child; c; c = c->next_sibling) {
+                    emit_node(c); sb_.append("; ");
+                }
+                sb_.append("END"); break;
+            case NodeType::NODE_MYSQL_EXPLAIN_INTO:
+                sb_.append("INTO "); emit_node(node->first_child); break;
+            case NodeType::NODE_MYSQL_CHARSET_LITERAL:
+                emit_value(node);
+                for (const auto* literal = node->first_child; literal; literal = literal->next_sibling) {
+                    if (literal != node->first_child || literal->type != NodeType::NODE_LITERAL_STRING)
+                        sb_.append_char(' ');
+                    emit_mysql_syntax_string(literal);
+                }
+                break;
+            case NodeType::NODE_MYSQL_COLLATE:
+                emit_node(node->first_child); sb_.append(" COLLATE "); emit_value(node); break;
+            case NodeType::NODE_MYSQL_CONVERT:
+                sb_.append("CONVERT("); emit_node(node->first_child);
+                sb_.append(node->flags & 1 ? " USING " : ", ");
+                emit_node(node->first_child ? node->first_child->next_sibling : nullptr);
+                sb_.append_char(')'); break;
+            case NodeType::NODE_MYSQL_EXTRACT:
+            case NodeType::NODE_MYSQL_SUBSTRING:
+            case NodeType::NODE_MYSQL_MATCH: emit_mysql_special(node); break;
+            case NodeType::NODE_MYSQL_GROUP_CONCAT: emit_function_call(node); break;
+            case NodeType::NODE_MYSQL_SEPARATOR:
+                sb_.append(" SEPARATOR "); emit_mysql_syntax_string(node->first_child); break;
             case NodeType::NODE_IS_NULL:         emit_is_null(node); break;
             case NodeType::NODE_IS_NOT_NULL:     emit_is_not_null(node); break;
             case NodeType::NODE_BETWEEN:         emit_between(node); break;
@@ -140,23 +317,417 @@ private:
             case NodeType::NODE_LITERAL_BIT:
                 if (mode_ == EmitMode::DIGEST) { sb_.append_char('?'); break; }
                 emit_value(node); break;
-            case NodeType::NODE_LITERAL_NULL:
             case NodeType::NODE_COLUMN_REF:
-            case NodeType::NODE_ASTERISK:
             case NodeType::NODE_IDENTIFIER:
+                emit_identifier(node); break;
+            case NodeType::NODE_LITERAL_NULL:
+            case NodeType::NODE_ASTERISK:
                 emit_value(node); break;
 
             case NodeType::NODE_LITERAL_STRING:
                 if (mode_ == EmitMode::DIGEST) { sb_.append_char('?'); break; }
                 emit_string_literal(node); break;
 
+            // PG_CONT_EXPRESSION_DISPATCH
+            case NodeType::NODE_PG_VARIADIC_ARGUMENT:
+                sb_.append("VARIADIC "); emit_node(node->first_child); break;
+            case NodeType::NODE_PG_ARRAY_SLICE:
+            case NodeType::NODE_PG_PATTERN_PREDICATE:
+            case NodeType::NODE_PG_POSITION:
+            case NodeType::NODE_PG_OVERLAY:
+            case NodeType::NODE_PG_JSON_PREDICATE:
+                emit_pg_continuation_expression(node); break;
+            // PG_CONT_QUERY_DISPATCH
+            case NodeType::NODE_PG_EXPLAIN_OPTION:
+                emit_value(node);
+                if (node->first_child) { sb_.append_char(' '); emit_node(node->first_child); }
+                break;
+            case NodeType::NODE_PG_JOIN_TREE: emit_pg_join_tree(node); break;
+            case NodeType::NODE_PG_TABLE_GROUP:
+                sb_.append_char('('); emit_node(node->first_child); sb_.append_char(')'); break;
+            case NodeType::NODE_PG_JOIN_USING:
+                sb_.append("USING (");
+                for (const auto* col = node->first_child; col; col = col->next_sibling) {
+                    if (col != node->first_child) sb_.append(", ");
+                    emit_node(col);
+                }
+                sb_.append_char(')');
+                if (!node->value().empty()) { sb_.append(" AS "); emit_identifier(node); }
+                break;
+            case NodeType::NODE_PG_TABLESAMPLE: emit_pg_tablesample(node); break;
+            case NodeType::NODE_PG_ROWS_FROM:
+                sb_.append("ROWS FROM (");
+                for (const auto* item = node->first_child; item; item = item->next_sibling) {
+                    if (item != node->first_child) sb_.append(", ");
+                    emit_node(item);
+                }
+                sb_.append_char(')'); break;
+            case NodeType::NODE_PG_SORT_USING:
+                sb_.append("USING "); emit_value(node); break;
+            case NodeType::NODE_PG_SELECT_INTO:
+                sb_.append(" INTO "); emit_value(node); emit_node(node->first_child); break;
+            case NodeType::NODE_PG_ROW_LOCK:
+                sb_.append(" FOR "); emit_value(node);
+                if (node->first_child) {
+                    sb_.append(" OF ");
+                    for (const auto* rel = node->first_child; rel; rel = rel->next_sibling) {
+                        if (rel != node->first_child) sb_.append(", ");
+                        emit_node(rel);
+                    }
+                }
+                if (node->flags == 1) sb_.append(" NOWAIT");
+                if (node->flags == 2) sb_.append(" SKIP LOCKED");
+                break;
+            // PG_GAPS_EXPRESSION_DISPATCH
+            case NodeType::NODE_PG_EXTRACT:
+            case NodeType::NODE_PG_SUBSTRING:
+            case NodeType::NODE_PG_TIME_ZONE:
+            case NodeType::NODE_PG_INTERVAL:
+            case NodeType::NODE_PG_TRIM:
+            case NodeType::NODE_PG_ARRAY_QUERY:
+            case NodeType::NODE_PG_QUANTIFIED_OPERAND:
+            case NodeType::NODE_PG_NORMALIZE:
+                emit_pg_special_expression(node); break;
+            // PG_GAPS_DML_DISPATCH
+            case NodeType::NODE_MERGE_STMT: emit_pg_merge(node); break;
+            case NodeType::NODE_MERGE_WHEN:
+                sb_.append("WHEN "); emit_pg_dml_clause(node); break;
+            case NodeType::NODE_PG_DML_CLAUSE: emit_pg_dml_clause(node); break;
+            case NodeType::NODE_CTE_SEARCH: emit_pg_cte_search(node); break;
+            case NodeType::NODE_CTE_CYCLE: emit_pg_cte_cycle(node); break;
+            case NodeType::NODE_PG_RETURNING_OPTIONS:
+                sb_.append("WITH ("); emit_list(node, ", "); sb_.append_char(')'); break;
+            case NodeType::NODE_PG_ASSIGNMENT_FIELD:
+                emit_node(node->first_child); sb_.append_char('.');
+                emit_node(node->first_child ? node->first_child->next_sibling : nullptr); break;
+            // PG_GAPS_DDL_DISPATCH
+            case NodeType::NODE_PG_COMMAND_STMT:
+            case NodeType::NODE_PG_DDL_STMT:
+            case NodeType::NODE_PG_DDL_CLAUSE: emit_pg_ddl_clause(node); break;
+            case NodeType::NODE_PG_DDL_LIST:
+                if (!(node->flags & 1)) sb_.append_char('(');
+                emit_list(node, ", ");
+                if (!(node->flags & 1)) sb_.append_char(')');
+                break;
+            case NodeType::NODE_PG_DDL_SYNTAX: emit_value(node); break;
+            // PG_GAPS_QUERY_DISPATCH
+            case NodeType::NODE_GROUPING_SET:
+                emit_value(node); sb_.append(" ("); emit_list(node, ", "); sb_.append_char(')'); break;
+            case NodeType::NODE_OFFSET_CLAUSE:
+                sb_.append(" OFFSET "); emit_node(node->first_child); break;
+            case NodeType::NODE_FETCH_CLAUSE:
+                sb_.append(" FETCH FIRST "); emit_node(node->first_child);
+                sb_.append(node->flags ? " ROWS WITH TIES" : " ROWS ONLY"); break;
+            case NodeType::NODE_ORDINALITY: sb_.append(" WITH ORDINALITY"); break;
+            case NodeType::NODE_FUNCTION_COLUMN:
+                emit_node(node->first_child); sb_.append_char(' ');
+                emit_node(node->first_child ? node->first_child->next_sibling : nullptr); break;
+            // PG_GAPS_JSON_XML_DISPATCH
+            case NodeType::NODE_PG_JSON_XML: emit_pg_json_xml(node); break;
+            case NodeType::NODE_PG_JSON_XML_SYNTAX: emit_value(node); break;
             default:
                 emit_value(node); break;
         }
     }
 
+    // PG_CONT_EXPRESSION_EMITTER
+    void emit_pg_continuation_expression(const AstNode* node) {
+        const AstNode* first = node->first_child;
+        if (node->type == NodeType::NODE_PG_ARRAY_SLICE) {
+            emit_node(first); sb_.append_char('[');
+            const AstNode* bound = first ? first->next_sibling : nullptr;
+            if (node->flags & 1) { emit_node(bound); bound = bound ? bound->next_sibling : nullptr; }
+            sb_.append_char(':');
+            if (node->flags & 2) emit_node(bound);
+            sb_.append_char(']');
+        } else if (node->type == NodeType::NODE_PG_PATTERN_PREDICATE) {
+            emit_node(first); sb_.append_char(' '); emit_value(node); sb_.append_char(' ');
+            const AstNode* pattern = first ? first->next_sibling : nullptr;
+            emit_node(pattern);
+            if (pattern && pattern->next_sibling) {
+                sb_.append(" ESCAPE "); emit_node(pattern->next_sibling);
+            }
+        } else if (node->type == NodeType::NODE_PG_JSON_PREDICATE) {
+            emit_node(first); sb_.append_char(' '); emit_value(node);
+        } else if (node->type == NodeType::NODE_PG_POSITION) {
+            sb_.append("POSITION("); emit_node(first); sb_.append(" IN ");
+            emit_node(first ? first->next_sibling : nullptr); sb_.append_char(')');
+        } else {
+            sb_.append("OVERLAY(");
+            if (node->flags & 1) emit_list(node, ", ");
+            else {
+                const AstNode* replacement = first ? first->next_sibling : nullptr;
+                const AstNode* start = replacement ? replacement->next_sibling : nullptr;
+                emit_node(first); sb_.append(" PLACING "); emit_node(replacement);
+                sb_.append(" FROM "); emit_node(start);
+                if (start && start->next_sibling) { sb_.append(" FOR "); emit_node(start->next_sibling); }
+            }
+            sb_.append_char(')');
+        }
+    }
+    // PG_CONT_QUERY_EMITTER
+    void emit_pg_join_tree(const AstNode* node) {
+        const auto* left = node->first_child;
+        const auto* right = left ? left->next_sibling : nullptr;
+        const auto* qual = right ? right->next_sibling : nullptr;
+        sb_.append_char('('); emit_node(left); sb_.append_char(' ');
+        emit_value(node); sb_.append_char(' '); emit_node(right);
+        if (qual) {
+            sb_.append(qual->type == NodeType::NODE_PG_JOIN_USING ? " " : " ON ");
+            emit_node(qual);
+        }
+        sb_.append_char(')');
+    }
+    void emit_pg_tablesample(const AstNode* node) {
+        const auto* name = node->first_child;
+        const auto* args = name ? name->next_sibling : nullptr;
+        sb_.append(" TABLESAMPLE "); emit_node(name); emit_node(args);
+        if (args && args->next_sibling) {
+            sb_.append(" REPEATABLE ("); emit_node(args->next_sibling); sb_.append_char(')');
+        }
+    }
+
+    // PG_GAPS_EXPRESSION_EMITTER
+    void emit_pg_special_expression(const AstNode* node) {
+        const AstNode* first = node->first_child;
+        if (node->type == NodeType::NODE_PG_NORMALIZE) {
+            sb_.append("NORMALIZE("); emit_node(first);
+            if (!node->value().empty()) { sb_.append(", "); emit_value(node); }
+            sb_.append_char(')');
+        } else if (node->type == NodeType::NODE_PG_QUANTIFIED_OPERAND) {
+            emit_value(node);
+            if (node->flags) emit_node(first);
+            else { sb_.append_char('('); emit_node(first); sb_.append_char(')'); }
+        } else if (node->type == NodeType::NODE_PG_ARRAY_QUERY) {
+            sb_.append("ARRAY");
+            emit_node(first);
+        } else if (node->type == NodeType::NODE_PG_TRIM) {
+            sb_.append("TRIM(");
+            if (!node->value().empty()) { emit_value(node); sb_.append_char(' '); }
+            if (node->flags & 2) {
+                emit_node(first); sb_.append_char(' ');
+                first = first ? first->next_sibling : nullptr;
+            }
+            if (node->flags & 1) sb_.append("FROM ");
+            for (const auto* child = first; child; child = child->next_sibling) {
+                if (child != first) sb_.append(", ");
+                emit_node(child);
+            }
+            sb_.append_char(')');
+        } else if (node->type == NodeType::NODE_PG_TIME_ZONE) {
+            emit_node(first);
+            sb_.append(node->flags ? " AT LOCAL" : " AT TIME ZONE ");
+            if (!node->flags) emit_node(first ? first->next_sibling : nullptr);
+        } else if (node->type == NodeType::NODE_PG_INTERVAL) {
+            emit_value(node);
+            sb_.append_char(' ');
+            emit_node(first);
+            if (first && first->next_sibling) {
+                sb_.append_char(' ');
+                emit_node(first->next_sibling);
+            }
+        } else if (node->type == NodeType::NODE_PG_EXTRACT) {
+            sb_.append("EXTRACT(");
+            emit_value(node); // field is grammar syntax, including quoted spelling
+            sb_.append(" FROM ");
+            emit_node(first);
+            sb_.append_char(')');
+        } else {
+            sb_.append("SUBSTRING(");
+            emit_node(first);
+            const AstNode* second = first ? first->next_sibling : nullptr;
+            sb_.append(node->flags == 2 ? " SIMILAR " : node->flags == 1 ? " FOR " : " FROM ");
+            emit_node(second);
+            if (second && second->next_sibling) {
+                sb_.append(node->flags == 2 ? " ESCAPE " : node->flags == 1 ? " FROM " : " FOR ");
+                emit_node(second->next_sibling);
+            }
+            sb_.append_char(')');
+        }
+    }
+    void emit_mysql_special(const AstNode* node) {
+        const auto* first = node->first_child;
+        if (node->type == NodeType::NODE_MYSQL_EXTRACT) {
+            sb_.append("EXTRACT("); emit_value(node); sb_.append(" FROM ");
+            emit_node(first); sb_.append_char(')');
+        } else if (node->type == NodeType::NODE_MYSQL_SUBSTRING) {
+            emit_value(node); sb_.append_char('('); emit_node(first);
+            const auto* position = first ? first->next_sibling : nullptr;
+            sb_.append(" FROM "); emit_node(position);
+            if (position && position->next_sibling) {
+                sb_.append(" FOR "); emit_node(position->next_sibling);
+            }
+            sb_.append_char(')');
+        } else {
+            sb_.append("MATCH(");
+            if (first) emit_list(first, ", ");
+            sb_.append(") AGAINST (");
+            emit_node(first ? first->next_sibling : nullptr);
+            if (!node->value().empty()) { sb_.append_char(' '); emit_value(node); }
+            sb_.append_char(')');
+        }
+    }
+
+    // PG_GAPS_DML_EMITTER
+    void emit_pg_dml_clause(const AstNode* node) {
+        emit_value(node);
+        bool separator = !node->value().empty();
+        for (const AstNode* c = node->first_child; c; c = c->next_sibling) {
+            if (separator) sb_.append_char(' ');
+            emit_node(c);
+            separator = true;
+        }
+    }
+
+    void emit_pg_merge(const AstNode* node) {
+        sb_.append("MERGE INTO ");
+        bool first = true;
+        for (const AstNode* c = node->first_child; c; c = c->next_sibling) {
+            if (!first) sb_.append_char(' ');
+            emit_node(c);
+            first = false;
+        }
+    }
+
+    void emit_pg_cte_search(const AstNode* node) {
+        sb_.append("SEARCH "); emit_value(node); sb_.append(" FIRST BY ");
+        const AstNode* cols = node->first_child;
+        emit_node(cols);
+        sb_.append(" SET "); emit_node(cols ? cols->next_sibling : nullptr);
+    }
+
+    void emit_pg_cte_cycle(const AstNode* node) {
+        sb_.append("CYCLE ");
+        const AstNode* c = node->first_child;
+        emit_node(c); c = c ? c->next_sibling : nullptr;
+        sb_.append(" SET "); emit_node(c); c = c ? c->next_sibling : nullptr;
+        if (node->flags & 1) {
+            sb_.append(" TO "); emit_pg_cycle_constant(c); c = c ? c->next_sibling : nullptr;
+            sb_.append(" DEFAULT "); emit_pg_cycle_constant(c); c = c ? c->next_sibling : nullptr;
+        }
+        sb_.append(" USING "); emit_node(c);
+    }
+
+    void emit_pg_cycle_constant(const AstNode* node) {
+        // CYCLE requires AexprConst; CAST(...) is not accepted in this position.
+        if (node && node->type == NodeType::NODE_TYPE_CAST && node->first_child) {
+            emit_node(node->first_child->next_sibling);
+            sb_.append_char(' ');
+            emit_node(node->first_child);
+        } else emit_node(node);
+    }
+    // PG_GAPS_DDL_EMITTER
+    void emit_pg_ddl_clause(const AstNode* node) {
+        emit_value(node);
+        if (!node->value().empty() && node->first_child) sb_.append_char(' ');
+        emit_list(node, " ");
+    }
+    // PG_GAPS_QUERY_EMITTER
+    // PG_GAPS_JSON_XML_EMITTER
+    void emit_pg_json_xml(const AstNode* node) {
+        if (!node->value().empty()) emit_value(node);
+        if (node->flags & 1) sb_.append_char('(');
+        else if (!node->value().empty() && node->first_child) sb_.append_char(' ');
+        emit_list(node, " ");
+        if (node->flags & 1) sb_.append_char(')');
+    }
+    void emit_list(const AstNode* node, const char* separator) {
+        for (const AstNode* child = node->first_child; child; child = child->next_sibling) {
+            if (child != node->first_child) sb_.append(separator);
+            emit_node(child);
+        }
+    }
+
+    void emit_window_frame(const AstNode* node) {
+        emit_value(node);
+        sb_.append(node->flags & FLAG_WINDOW_BETWEEN ? " BETWEEN " : " ");
+        const AstNode* bound = node->first_child;
+        emit_node(bound);
+        bound = bound ? bound->next_sibling : nullptr;
+        if (node->flags & FLAG_WINDOW_BETWEEN) {
+            sb_.append(" AND "); emit_node(bound);
+            bound = bound ? bound->next_sibling : nullptr;
+        }
+        if (bound) { sb_.append_char(' '); emit_node(bound); }
+    }
+
+    void emit_identifier(const AstNode* node) {
+        if (!(node->flags & FLAG_IDENT_DELIMITED)) { emit_value(node); return; }
+        if (!node->source().empty()) {
+            sb_.append(node->source_ptr, node->source_len);
+            return;
+        }
+        const char quote = D == Dialect::PostgreSQL ? '"' : '`';
+        sb_.append_char(quote);
+        for (uint32_t i = 0; i < node->value_len; ++i) {
+            sb_.append_char(node->value_ptr[i]);
+            if (node->value_ptr[i] == quote) sb_.append_char(quote);
+        }
+        sb_.append_char(quote);
+    }
+
     void emit_value(const AstNode* node) {
-        sb_.append(node->value_ptr, node->value_len);
+        sb_.append(node->value());
+    }
+
+    void emit_utility_value(const AstNode* node) {
+        // Utility values are syntax constants. Keep source string quoting,
+        // including E'...' and dollar quotes, even in digest mode.
+        if (node->type == NodeType::NODE_LITERAL_STRING && !node->source().empty()) {
+            sb_.append(node->source_ptr, node->source_len);
+        } else emit_node(node);
+    }
+
+    void emit_transaction_stmt(const AstNode* node) {
+        emit_value(node);
+        for (const AstNode* child = node->first_child; child; child = child->next_sibling) {
+            if constexpr (D == Dialect::MySQL) {
+                if (child != node->first_child) sb_.append_char(',');
+            }
+            sb_.append_char(' ');
+            emit_utility_value(child);
+        }
+    }
+
+    void emit_copy_stmt(const AstNode* node) {
+        sb_.append("COPY ", 5);
+        const AstNode* child = node->first_child;
+        if (!child) return;
+        emit_node(child);
+        child = child->next_sibling;
+        if (child && child->type == NodeType::NODE_INSERT_COLUMNS) {
+            sb_.append_char(' ');
+            emit_node(child);
+            child = child->next_sibling;
+        }
+        sb_.append_char(' ');
+        emit_value(node);
+        sb_.append_char(' ');
+        if (!child || child->type != NodeType::NODE_COPY_ENDPOINT) return;
+        if (!child->value().equals_ci("FILE", 4)) emit_value(child);
+        if (child->first_child) {
+            if (child->value().equals_ci("PROGRAM", 7)) sb_.append_char(' ');
+            emit_utility_value(child->first_child);
+        }
+        child = child->next_sibling;
+        if (child && child->type == NodeType::NODE_COPY_OPTION) {
+            sb_.append(" WITH (", 7);
+            bool first = true;
+            while (child && child->type == NodeType::NODE_COPY_OPTION) {
+                if (!first) sb_.append(", ", 2);
+                emit_value(child);
+                if (child->first_child) {
+                    sb_.append_char(' ');
+                    emit_utility_value(child->first_child);
+                }
+                first = false;
+                child = child->next_sibling;
+            }
+            sb_.append_char(')');
+        }
+        if (child && child->type == NodeType::NODE_WHERE_CLAUSE) {
+            emit_node(child);
+        }
     }
 
     void emit_user_variable(const AstNode* node) {
@@ -184,9 +755,22 @@ private:
     }
 
     void emit_string_literal(const AstNode* node) {
-        sb_.append_char('\'');
-        sb_.append(node->value_ptr, node->value_len);
-        sb_.append_char('\'');
+        if constexpr (D == Dialect::PostgreSQL) {
+            if (!node->source().empty() &&
+                (node->source_ptr[0] == 'E' || node->source_ptr[0] == 'e' || node->source_ptr[0] == '$')) {
+                sb_.append(node->source_ptr, node->source_len);
+                return;
+            }
+        }
+        char delimiter = '\'';
+        if constexpr (D == Dialect::MySQL) {
+            // Token values retain lexical escapes. Changing a double-quoted
+            // delimiter can invalidate apostrophes or doubled double quotes.
+            if (!node->source().empty() && node->source_ptr[0] == '"') delimiter = '"';
+        }
+        sb_.append_char(delimiter);
+        sb_.append(node->value());
+        sb_.append_char(delimiter);
     }
 
     void emit_placeholder(const AstNode* node) {
@@ -305,6 +889,7 @@ private:
         sb_.append("SELECT ");
         for (const AstNode* child = node->first_child; child; child = child->next_sibling) {
             emit_node(child);
+            if (child->type == NodeType::NODE_MYSQL_OPTIMIZER_HINT) sb_.append_char(' ');
         }
     }
 
@@ -349,15 +934,24 @@ private:
     }
 
     void emit_table_ref(const AstNode* node) {
+        if constexpr (D == Dialect::PostgreSQL) {
+            if (node->flags & FLAG_TABLE_ONLY) sb_.append("ONLY ");
+        }
         for (const AstNode* child = node->first_child; child; child = child->next_sibling) {
             emit_node(child);
+            if constexpr (D == Dialect::PostgreSQL) {
+                if (child == node->first_child && (node->flags & FLAG_TABLE_INHERIT)) sb_.append(" *");
+            }
         }
     }
 
     void emit_alias(const AstNode* node) {
         if (mode_ == EmitMode::DIGEST) return;  // skip aliases in digest mode
         sb_.append(" AS ");
-        emit_value(node);
+        emit_identifier(node);
+        if (node->first_child) {
+            sb_.append_char('('); emit_list(node, ", "); sb_.append_char(')');
+        }
     }
 
     void emit_qualified_name(const AstNode* node) {
@@ -405,11 +999,17 @@ private:
 
     void emit_group_by(const AstNode* node) {
         sb_.append(" GROUP BY ");
+        if constexpr (D == Dialect::PostgreSQL) {
+            if (!node->value().empty()) { emit_value(node); sb_.append_char(' '); }
+        }
         bool first = true;
         for (const AstNode* child = node->first_child; child; child = child->next_sibling) {
             if (!first) sb_.append(", ");
             first = false;
             emit_node(child);
+        }
+        if constexpr (D == Dialect::MySQL) {
+            if (!node->value().empty()) { sb_.append_char(' '); emit_value(node); }
         }
     }
 
@@ -432,7 +1032,7 @@ private:
         const AstNode* expr = node->first_child;
         if (expr) emit_node(expr);
         const AstNode* dir = expr ? expr->next_sibling : nullptr;
-        if (dir) {
+        for (; dir; dir = dir->next_sibling) {
             sb_.append_char(' ');
             emit_node(dir);
         }
@@ -450,6 +1050,7 @@ private:
     }
 
     void emit_locking(const AstNode* node) {
+        if (!node->value().empty()) { sb_.append_char(' '); emit_value(node); return; }
         sb_.append(" FOR ");
         bool first = true;
         for (const AstNode* child = node->first_child; child; child = child->next_sibling) {
@@ -566,6 +1167,7 @@ private:
     }
 
     void emit_values_row(const AstNode* node) {
+        if (node->flags & FLAG_VALUES_EXPLICIT_ROW) sb_.append("ROW");
         sb_.append_char('(');
         bool first = true;
         for (const AstNode* child = node->first_child; child; child = child->next_sibling) {
@@ -655,7 +1257,10 @@ private:
         sb_.append("RETURNING ");
         bool first = true;
         for (const AstNode* child = node->first_child; child; child = child->next_sibling) {
-            if (child->type == NodeType::NODE_ALIAS) {
+            if (child->type == NodeType::NODE_PG_RETURNING_OPTIONS) {
+                emit_node(child);
+                sb_.append_char(' ');
+            } else if (child->type == NodeType::NODE_ALIAS) {
                 emit_node(child);
             } else {
                 if (!first) sb_.append(", ");
@@ -886,7 +1491,8 @@ private:
                 c->type == NodeType::NODE_INSERT_STMT ||
                 c->type == NodeType::NODE_UPDATE_STMT ||
                 c->type == NodeType::NODE_DELETE_STMT ||
-                c->type == NodeType::NODE_COMPOUND_QUERY) {
+                c->type == NodeType::NODE_COMPOUND_QUERY ||
+                c->type == NodeType::NODE_CTE || c->type == NodeType::NODE_TABLE_QUERY) {
                 has_inner_stmt = true;
             }
             if (c->type == NodeType::NODE_EXPLAIN_OPTIONS) {
@@ -894,7 +1500,7 @@ private:
             }
         }
 
-        if (!has_inner_stmt && !has_options) {
+        if (D == Dialect::MySQL && !has_inner_stmt && !has_options) {
             sb_.append("DESCRIBE");
         } else {
             sb_.append("EXPLAIN");
@@ -907,6 +1513,11 @@ private:
     }
 
     void emit_explain_options(const AstNode* node) {
+        if constexpr (D == Dialect::PostgreSQL) {
+            if (node->flags & 1) {
+                sb_.append_char('('); emit_list(node, ", "); sb_.append_char(')'); return;
+            }
+        }
         bool first = true;
         for (const AstNode* child = node->first_child; child; child = child->next_sibling) {
             if (!first) sb_.append_char(' ');
@@ -1049,27 +1660,22 @@ private:
         if (has_cols) sb_.append_char(')');
     }
 
-    // ---- TRANSACTION ----
+    // ---- Compound query ----
 
-    void emit_transaction_stmt(const AstNode* node) {
-        emit_value(node);  // introducing keywords (BEGIN, BEGIN TRANSACTION, START TRANSACTION)
-
-        if (node->first_child) sb_.append_char(' ');
-        bool first = true;
-        for (const AstNode* child = node->first_child; child; child = child->next_sibling) {
-            if (!first) sb_.append(", ");
-            first = false;
-            // The parser strips ISOLATION LEVEL and flags the child; restore it
-            if (child->flags & FLAG_TXN_MODE_ISOLATION) {
-                sb_.append("ISOLATION LEVEL ");
-            }
-            emit_node(child);
+    void emit_table_query(const AstNode* node) {
+        sb_.append("TABLE ");
+        if (node->flags & FLAG_TABLE_ONLY) sb_.append("ONLY ");
+        const AstNode* name = node->first_child;
+        if (!name) return;
+        emit_node(name);
+        if (node->flags & FLAG_TABLE_INHERIT) sb_.append(" *");
+        for (const AstNode* clause = name->next_sibling; clause; clause = clause->next_sibling) {
+            emit_node(clause);
         }
     }
 
-    // ---- Compound query ----
-
     void emit_compound_query(const AstNode* node) {
+        if (node->flags & FLAG_QUERY_PARENTHESIZED) sb_.append_char('(');
         for (const AstNode* child = node->first_child; child; child = child->next_sibling) {
             if (child->type == NodeType::NODE_SET_OPERATION) {
                 emit_set_operation(child);
@@ -1078,6 +1684,7 @@ private:
                 emit_node(child);
             }
         }
+        if (node->flags & FLAG_QUERY_PARENTHESIZED) sb_.append_char(')');
     }
 
     void emit_set_operation(const AstNode* node) {
@@ -1098,6 +1705,14 @@ private:
     }
 
     // ---- Expressions ----
+
+    void emit_mysql_syntax_string(const AstNode* node) {
+        // A double-quoted literal can contain unescaped apostrophes. Preserve
+        // its delimiter instead of turning a valid path/separator into bad SQL.
+        if (node && mode_ == EmitMode::NORMAL && !node->source().empty())
+            sb_.append(node->source_ptr, node->source_len);
+        else emit_node(node);
+    }
 
     void emit_binary_op(const AstNode* node) {
         const AstNode* left = node->first_child;
@@ -1123,27 +1738,94 @@ private:
             if (child->type == NodeType::NODE_BINARY_OP &&
                 (child->value().equals_ci("LIKE", 4) ||
                  child->value().equals_ci("REGEXP", 6))) {
-                emit_not_binary_op(child);
-                return;
+                const auto* left = child->first_child;
+                const auto* right = left ? left->next_sibling : nullptr;
+                // NOT (x LIKE ANY(...)) differs from x NOT LIKE ANY(...).
+                if (!right || right->type != NodeType::NODE_PG_QUANTIFIED_OPERAND) {
+                    emit_not_binary_op(child);
+                    return;
+                }
             }
         }
 
         emit_value(node);
         // Add space for keyword operators like NOT, no space for - or +
-        if (node->value_len > 1) sb_.append_char(' ');
+        if (node->value_len > 1 || (D == Dialect::PostgreSQL &&
+            ((node->flags & FLAG_PG_OPERATOR) || (child && child->type == NodeType::NODE_UNARY_OP))))
+            sb_.append_char(' ');
         if (child) emit_node(child);
     }
 
-    void emit_function_call(const AstNode* node) {
-        emit_value(node);
-        sb_.append_char('(');
+    void emit_cte(const AstNode* node) {
+        sb_.append("WITH ");
+        if (node->flags & FLAG_CTE_RECURSIVE) sb_.append("RECURSIVE ");
+        const AstNode* child = node->first_child;
         bool first = true;
-        for (const AstNode* arg = node->first_child; arg; arg = arg->next_sibling) {
+        for (; child && child->type == NodeType::NODE_CTE_DEFINITION; child = child->next_sibling) {
+            if (!first) sb_.append(", ");
+            first = false;
+            emit_identifier(child);
+            const AstNode* body = child->first_child;
+            const AstNode* columns = body ? body->next_sibling : nullptr;
+            if (columns && columns->type == NodeType::NODE_CTE_COLUMNS) {
+                sb_.append_char('(');
+                emit_node(columns);
+                sb_.append_char(')');
+            }
+            sb_.append(" AS ");
+            if (child->flags & FLAG_CTE_MATERIALIZED) sb_.append("MATERIALIZED ");
+            else if (child->flags & FLAG_CTE_NOT_MATERIALIZED) sb_.append("NOT MATERIALIZED ");
+            sb_.append_char('(');
+            emit_node(body);
+            sb_.append_char(')');
+            for (const AstNode* option = body ? body->next_sibling : nullptr;
+                 option; option = option->next_sibling) {
+                if (option->type == NodeType::NODE_CTE_SEARCH || option->type == NodeType::NODE_CTE_CYCLE) {
+                    sb_.append_char(' ');
+                    emit_node(option);
+                }
+            }
+        }
+        sb_.append_char(' ');
+        emit_node(child);
+    }
+
+    void emit_function_call(const AstNode* node) {
+        const AstNode* arg = node->first_child;
+        if (node->flags & FLAG_FUNCTION_TABLE) {
+            emit_node(arg);
+            arg = arg ? arg->next_sibling : nullptr;
+        } else emit_value(node);
+        if constexpr (D == Dialect::MySQL) {
+            if (node->flags & FLAG_FUNCTION_MYSQL_SPACE) sb_.append_char(' ');
+        }
+        sb_.append_char('(');
+        if (node->flags & FLAG_FUNCTION_DISTINCT) sb_.append("DISTINCT ");
+        else if (node->flags & FLAG_FUNCTION_ALL) sb_.append("ALL ");
+        bool first = true;
+        const AstNode* order = nullptr;
+        const AstNode* separator = nullptr;
+        for (; arg; arg = arg->next_sibling) {
+            if (arg->type == NodeType::NODE_MYSQL_SEPARATOR) {
+                separator = arg;
+                continue;
+            }
+            if (arg->type == NodeType::NODE_AGGREGATE_ORDER_BY) {
+                order = arg;
+                continue;
+            }
             if (!first) sb_.append(", ");
             first = false;
             emit_node(arg);
         }
+        if (order && !(node->flags & FLAG_FUNCTION_WITHIN_GROUP)) emit_node(order);
+        if (separator) emit_node(separator);
         sb_.append_char(')');
+        if (order && (node->flags & FLAG_FUNCTION_WITHIN_GROUP)) {
+            sb_.append(" WITHIN GROUP (ORDER BY ");
+            emit_list(order, ", ");
+            sb_.append_char(')');
+        }
     }
 
     void emit_is_null(const AstNode* node) {
@@ -1255,9 +1937,21 @@ private:
 
     void emit_case_when(const AstNode* node) {
         sb_.append("CASE ");
-        for (const AstNode* child = node->first_child; child; child = child->next_sibling) {
+        const AstNode* child = node->first_child;
+        if (node->flags && child) {
             emit_node(child);
             sb_.append_char(' ');
+            child = child->next_sibling;
+        }
+        while (child && child->next_sibling) {
+            sb_.append("WHEN "); emit_node(child);
+            child = child->next_sibling;
+            sb_.append(" THEN "); emit_node(child);
+            sb_.append_char(' ');
+            child = child->next_sibling;
+        }
+        if (child) {
+            sb_.append("ELSE "); emit_node(child); sb_.append_char(' ');
         }
         sb_.append("END");
     }
@@ -1300,9 +1994,16 @@ private:
     void emit_field_access(const AstNode* node) {
         const AstNode* expr = node->first_child;
         const AstNode* field = expr ? expr->next_sibling : nullptr;
-        sb_.append_char('(');
-        if (expr) emit_node(expr);
-        sb_.append(").");
+        if (expr && (expr->type == NodeType::NODE_EXPRESSION ||
+            (D == Dialect::PostgreSQL && (expr->type == NodeType::NODE_COLUMN_REF ||
+             expr->type == NodeType::NODE_QUALIFIED_NAME || expr->type == NodeType::NODE_ARRAY_SUBSCRIPT ||
+             expr->type == NodeType::NODE_PG_ARRAY_SLICE || expr->type == NodeType::NODE_FIELD_ACCESS)))) emit_node(expr);
+        else {
+            sb_.append_char('(');
+            if (expr) emit_node(expr);
+            sb_.append_char(')');
+        }
+        sb_.append_char('.');
         if (field) emit_node(field);
     }
 

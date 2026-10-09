@@ -156,23 +156,80 @@ public:
         parser_.reset();
         auto pr = parser_.parse(sql, len);
 
-        // Check for transaction control statements first (parser may not
-        // produce an AST for these — they are classified by stmt_type).
+        auto transaction_error = [](const char* message) {
+            DmlResult dr;
+            dr.error_message = message;
+            return dr;
+        };
+        auto transaction_name = [](const sql_parser::AstNode* operand) {
+            std::string name;
+            const bool quoted = (operand->flags & sql_parser::FLAG_IDENT_DELIMITED) != 0;
+            auto value = operand->value();
+            name.reserve(value.len);
+            for (uint32_t i = 0; i < value.len; ++i) {
+                char c = value.ptr[i];
+                if (quoted && c == '"' && i + 1 < value.len && value.ptr[i + 1] == '"') ++i;
+                else if (!quoted && c >= 'A' && c <= 'Z') c = static_cast<char>(c - 'A' + 'a');
+                name.push_back(c);
+            }
+            return name;
+        };
+        if (pr.status != sql_parser::ParseResult::OK || !pr.full_input)
+            return transaction_error("parse error");
+
+        // PostgreSQL transaction controls retain their operands and options
+        // in the AST. MySQL also has ASTs for BEGIN and START TRANSACTION;
+        // its other transaction controls use the legacy extractor.
+        if constexpr (D == sql_parser::Dialect::PostgreSQL) {
+            if ((pr.stmt_type == sql_parser::StmtType::BEGIN ||
+                 pr.stmt_type == sql_parser::StmtType::START_TRANSACTION ||
+                 pr.stmt_type == sql_parser::StmtType::COMMIT ||
+                 pr.stmt_type == sql_parser::StmtType::ROLLBACK ||
+                 pr.stmt_type == sql_parser::StmtType::SAVEPOINT ||
+                 pr.stmt_type == sql_parser::StmtType::RELEASE_SAVEPOINT) &&
+                (!pr.ast || pr.ast->type != sql_parser::NodeType::NODE_TRANSACTION_STMT))
+                return transaction_error("parse error");
+        }
+
         switch (pr.stmt_type) {
             case sql_parser::StmtType::BEGIN:
             case sql_parser::StmtType::START_TRANSACTION: {
+                if (!pr.ast || pr.ast->type != sql_parser::NodeType::NODE_TRANSACTION_STMT)
+                    return transaction_error("parse error");
+                if (pr.ast->first_child)
+                    return transaction_error("unsupported transaction options");
                 DmlResult dr;
                 dr.success = txn_mgr_.begin();
                 if (!dr.success) dr.error_message = "BEGIN failed";
                 return dr;
             }
             case sql_parser::StmtType::COMMIT: {
+                if constexpr (D == sql_parser::Dialect::PostgreSQL) {
+                    if (pr.ast->first_child)
+                        return transaction_error("unsupported transaction options");
+                }
                 DmlResult dr;
                 dr.success = txn_mgr_.commit();
                 if (!dr.success) dr.error_message = "COMMIT failed";
                 return dr;
             }
             case sql_parser::StmtType::ROLLBACK: {
+                if constexpr (D == sql_parser::Dialect::PostgreSQL) {
+                    const auto* option = pr.ast->first_child;
+                    if (option) {
+                        const auto* name = option->next_sibling;
+                        if (option->type != sql_parser::NodeType::NODE_TRANSACTION_OPTION ||
+                            option->value() != sql_parser::StringRef{"TO SAVEPOINT", 12} ||
+                            !name || name->type != sql_parser::NodeType::NODE_IDENTIFIER ||
+                            name->next_sibling)
+                            return transaction_error("unsupported transaction options");
+                        std::string savepoint = transaction_name(name);
+                        DmlResult dr;
+                        dr.success = txn_mgr_.rollback_to(savepoint.c_str());
+                        if (!dr.success) dr.error_message = "ROLLBACK TO SAVEPOINT failed";
+                        return dr;
+                    }
+                }
                 DmlResult dr;
                 dr.success = txn_mgr_.rollback();
                 if (!dr.success) dr.error_message = "ROLLBACK failed";
@@ -180,17 +237,33 @@ public:
             }
             case sql_parser::StmtType::SAVEPOINT: {
                 DmlResult dr;
-                // The savepoint name is in the AST value or table_name
                 std::string name;
-                if (pr.table_name.ptr && pr.table_name.len > 0)
+                if constexpr (D == sql_parser::Dialect::PostgreSQL) {
+                    const auto* operand = pr.ast->first_child;
+                    if (!operand || operand->type != sql_parser::NodeType::NODE_IDENTIFIER ||
+                        operand->next_sibling)
+                        return transaction_error("parse error");
+                    name = transaction_name(operand);
+                } else if (pr.table_name.ptr && pr.table_name.len > 0)
                     name.assign(pr.table_name.ptr, pr.table_name.len);
-                else if (pr.ast && pr.ast->value_ptr && pr.ast->value_len > 0)
-                    name.assign(pr.ast->value_ptr, pr.ast->value_len);
-                else
-                    name = "sp";
+                else name = "sp";
                 dr.success = txn_mgr_.savepoint(name.c_str());
                 if (!dr.success) dr.error_message = "SAVEPOINT failed";
                 return dr;
+            }
+            case sql_parser::StmtType::RELEASE_SAVEPOINT: {
+                if constexpr (D == sql_parser::Dialect::PostgreSQL) {
+                    const auto* operand = pr.ast->first_child;
+                    if (!operand || operand->type != sql_parser::NodeType::NODE_IDENTIFIER ||
+                        operand->next_sibling)
+                        return transaction_error("parse error");
+                    std::string name = transaction_name(operand);
+                    DmlResult dr;
+                    dr.success = txn_mgr_.release_savepoint(name.c_str());
+                    if (!dr.success) dr.error_message = "RELEASE SAVEPOINT failed";
+                    return dr;
+                }
+                break;
             }
             default:
                 break;

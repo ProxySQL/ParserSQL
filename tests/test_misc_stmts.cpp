@@ -464,6 +464,34 @@ protected:
     }
 };
 
+TEST_F(MySQLTransactionTest, CanonicalCharacteristicsRoundTrip) {
+    struct Case { const char* sql; const char* emitted; };
+    const Case cases[] = {
+        {"begin work", "BEGIN"},
+        {"start transaction read write", "START TRANSACTION READ WRITE"},
+        {"start transaction with /* snapshot */ consistent snapshot, read only",
+         "START TRANSACTION WITH CONSISTENT SNAPSHOT, READ ONLY"},
+        {"START TRANSACTION READ ONLY, READ WRITE", "START TRANSACTION READ ONLY, READ WRITE"},
+    };
+    for (const auto& tc : cases) {
+        SCOPED_TRACE(tc.sql);
+        auto r = parser.parse(tc.sql, strlen(tc.sql));
+        ASSERT_EQ(r.status, ParseResult::OK);
+        ASSERT_TRUE(r.full_input);
+        ASSERT_NE(r.ast, nullptr);
+        for (const AstNode* c = r.ast->first_child; c; c = c->next_sibling)
+            EXPECT_EQ(c->type, NodeType::NODE_TRANSACTION_OPTION);
+        Emitter<Dialect::MySQL> emitter(parser.arena());
+        emitter.emit(r.ast);
+        auto value = emitter.result();
+        std::string emitted(value.ptr, value.len);
+        EXPECT_EQ(emitted, tc.emitted);
+        auto again = parser.parse(emitted.data(), emitted.size());
+        EXPECT_EQ(again.status, ParseResult::OK);
+        EXPECT_TRUE(again.full_input);
+    }
+}
+
 TEST_F(MySQLTransactionTest, StartTransactionReadOnly) {
     const char* sql = "START TRANSACTION READ ONLY";
     auto r = parser.parse(sql, strlen(sql));
@@ -625,15 +653,15 @@ TEST_F(PgSQLTransactionTest, StartTransactionReadOnly) {
 TEST_F(PgSQLTransactionTest, BeginIsolationLevelSerializable) {
     const char* sql = "BEGIN ISOLATION LEVEL SERIALIZABLE";
     auto r = parser.parse(sql, strlen(sql));
-    EXPECT_EQ(txn_modes(r), "SERIALIZABLE");
+    EXPECT_EQ(txn_modes(r), "ISOLATION LEVEL SERIALIZABLE");
 }
 
 TEST_F(PgSQLTransactionTest, BeginIsolationLevelTwoWordLevels) {
     struct Case { const char* sql; const char* mode; };
     const Case cases[] = {
-        {"BEGIN ISOLATION LEVEL REPEATABLE READ", "REPEATABLE READ"},
-        {"BEGIN ISOLATION LEVEL READ COMMITTED", "READ COMMITTED"},
-        {"BEGIN ISOLATION LEVEL READ UNCOMMITTED", "READ UNCOMMITTED"},
+        {"BEGIN ISOLATION LEVEL REPEATABLE READ", "ISOLATION LEVEL REPEATABLE READ"},
+        {"BEGIN ISOLATION LEVEL READ COMMITTED", "ISOLATION LEVEL READ COMMITTED"},
+        {"BEGIN ISOLATION LEVEL READ UNCOMMITTED", "ISOLATION LEVEL READ UNCOMMITTED"},
     };
     for (const auto& tc : cases) {
         SCOPED_TRACE(tc.sql);
@@ -645,7 +673,7 @@ TEST_F(PgSQLTransactionTest, BeginIsolationLevelTwoWordLevels) {
 TEST_F(PgSQLTransactionTest, BeginCommaSeparatedModes) {
     const char* sql = "BEGIN ISOLATION LEVEL READ COMMITTED, READ ONLY";
     auto r = parser.parse(sql, strlen(sql));
-    EXPECT_EQ(txn_modes(r), "READ COMMITTED, READ ONLY");
+    EXPECT_EQ(txn_modes(r), "ISOLATION LEVEL READ COMMITTED, READ ONLY");
 }
 
 TEST_F(PgSQLTransactionTest, BeginDeferrable) {
@@ -675,12 +703,12 @@ TEST_F(PgSQLTransactionTest, SnapshotIsNotAPostgresMode) {
     EXPECT_EQ(txn_modes(r), "");
 }
 
-TEST_F(PgSQLTransactionTest, IncompleteModeIsPartial) {
+TEST_F(PgSQLTransactionTest, IncompleteModeIsError) {
     const char* cases[] = {"BEGIN READ", "BEGIN ISOLATION LEVEL", "BEGIN ISOLATION LEVEL READ"};
     for (const char* sql : cases) {
         SCOPED_TRACE(sql);
         auto r = parser.parse(sql, strlen(sql));
-        EXPECT_EQ(r.status, ParseResult::PARTIAL);
+        EXPECT_EQ(r.status, ParseResult::ERROR);
     }
 }
 
@@ -723,7 +751,7 @@ TEST_F(PgSQLTransactionTest, BeginPreservesRemaining) {
 TEST_F(PgSQLTransactionTest, RoundTripCanonicalIntroducer) {
     EXPECT_EQ(round_trip("BEGIN"), "BEGIN");
     EXPECT_EQ(round_trip("begin"), "BEGIN");
-    EXPECT_EQ(round_trip("BEGIN TRANSACTION READ ONLY"), "BEGIN TRANSACTION READ ONLY");
+    EXPECT_EQ(round_trip("BEGIN TRANSACTION READ ONLY"), "BEGIN READ ONLY");
     EXPECT_EQ(round_trip("START TRANSACTION"), "START TRANSACTION");
     EXPECT_EQ(round_trip("START TRANSACTION READ WRITE"), "START TRANSACTION READ WRITE");
 }
@@ -742,12 +770,94 @@ TEST_F(PgSQLTransactionTest, RoundTripCanonicalModes) {
 
 TEST_F(PgSQLTransactionTest, ModesWithoutCommas) {
     EXPECT_EQ(round_trip("BEGIN ISOLATION LEVEL SERIALIZABLE READ ONLY"),
-                         "BEGIN ISOLATION LEVEL SERIALIZABLE, READ ONLY");
+                         "BEGIN ISOLATION LEVEL SERIALIZABLE READ ONLY");
     const char* sql = "BEGIN ISOLATION LEVEL SERIALIZABLE READ ONLY";
     auto r = parser.parse(sql, strlen(sql));
-    EXPECT_EQ(txn_modes(r), "SERIALIZABLE, READ ONLY");
+    EXPECT_EQ(txn_modes(r), "ISOLATION LEVEL SERIALIZABLE, READ ONLY");
 }
 
+
+TEST_F(PgSQLTransactionTest, RejectsMalformedIsolationAndTrailingComma) {
+    const char* cases[] = {
+        "BEGIN ISOLATION LEVEL REPEATABLE COMMITTED",
+        "BEGIN ISOLATION LEVEL READ READ",
+        "BEGIN ISOLATION SERIALIZABLE",
+        "BEGIN ISOLATION LEVEL rubbish",
+        "BEGIN READ ONLY,",
+        "START READ ONLY",
+    };
+    for (const char* sql : cases) {
+        SCOPED_TRACE(sql);
+        auto r = parser.parse(sql, strlen(sql));
+        EXPECT_NE(r.status, ParseResult::OK);
+    }
+}
+
+TEST_F(PgSQLTransactionTest, QuotedWordsAreNotTransactionKeywords) {
+    for (const char* sql : {"BEGIN \"WORK\"", "BEGIN \"DEFERRABLE\""}) {
+        SCOPED_TRACE(sql);
+        auto r = parser.parse(sql, strlen(sql));
+        EXPECT_FALSE(r.full_input);
+        EXPECT_EQ(txn_modes(r), "");
+    }
+}
+
+TEST_F(PgSQLTransactionTest, IncompleteModeDoesNotConsumeNextStatement) {
+    for (const char* sql : {"BEGIN READ; READ ONLY", "BEGIN ISOLATION LEVEL; READ ONLY"}) {
+        SCOPED_TRACE(sql);
+        auto r = parser.parse(sql, strlen(sql));
+        EXPECT_NE(r.status, ParseResult::OK);
+        EXPECT_EQ(txn_modes(r), "");
+        EXPECT_EQ(std::string(r.remaining.ptr ? r.remaining.ptr : "", r.remaining.len),
+                  "READ ONLY");
+    }
+}
+
+TEST_F(MySQLTransactionTest, RejectsMalformedCharacteristics) {
+    const char* cases[] = {
+        "START READ ONLY", "START", "START TRANSACTION READ rubbish",
+        "START TRANSACTION READ ONLY,", "START TRANSACTION WITH CONSISTENT",
+        "START TRANSACTION WITH `CONSISTENT` `SNAPSHOT`",
+        "START TRANSACTION WITH CONSISTENT `SNAPSHOT`",
+    };
+    for (const char* sql : cases) {
+        SCOPED_TRACE(sql);
+        auto r = parser.parse(sql, strlen(sql));
+        EXPECT_NE(r.status, ParseResult::OK);
+    }
+}
+
+TEST_F(MySQLTransactionTest, QuotedWorkIsNotConsumed) {
+    const char* sql = "BEGIN `WORK`";
+    auto r = parser.parse(sql, strlen(sql));
+    EXPECT_FALSE(r.full_input);
+    EXPECT_EQ(std::string(r.remaining.ptr ? r.remaining.ptr : "", r.remaining.len), "`WORK`");
+}
+
+TEST_F(MySQLTransactionTest, IncompleteModeDoesNotConsumeNextStatement) {
+    for (const char* sql : {"START TRANSACTION READ; READ ONLY",
+                            "START TRANSACTION WITH; READ ONLY",
+                            "START TRANSACTION WITH CONSISTENT; READ ONLY"}) {
+        SCOPED_TRACE(sql);
+        auto r = parser.parse(sql, strlen(sql));
+        EXPECT_NE(r.status, ParseResult::OK);
+        EXPECT_EQ(txn_modes(r), "");
+        EXPECT_EQ(std::string(r.remaining.ptr ? r.remaining.ptr : "", r.remaining.len),
+                  "READ ONLY");
+    }
+}
+
+TEST(TransactionAllocationTest, MissingModeAllocationCannotReturnSuccess) {
+    ParserConfig config;
+    config.arena_block_size = 128;
+    config.arena_max_size = 128;
+    Parser<Dialect::MySQL> mysql(config);
+    Parser<Dialect::PostgreSQL> pgsql(config);
+    const char* mysql_sql = "START TRANSACTION READ ONLY, READ WRITE";
+    const char* pgsql_sql = "BEGIN READ ONLY, READ WRITE";
+    EXPECT_EQ(mysql.parse(mysql_sql, strlen(mysql_sql)).status, ParseResult::ERROR);
+    EXPECT_EQ(pgsql.parse(pgsql_sql, strlen(pgsql_sql)).status, ParseResult::ERROR);
+}
 
 // =====================================================================
 // Bulk data-driven tests

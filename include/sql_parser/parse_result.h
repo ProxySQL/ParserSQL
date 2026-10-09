@@ -3,6 +3,7 @@
 
 #include "sql_parser/common.h"
 #include "sql_parser/ast.h"
+#include <vector>
 
 namespace sql_parser {
 
@@ -50,6 +51,27 @@ struct ParseResult {
 
     bool ok() const { return status == OK; }
     bool has_remaining() const { return !remaining.empty(); }
+};
+
+// The vector owns result records, not ASTs or source text. ASTs live in the
+// parser arena until parse(), parse_all(), or reset(); input text must outlive
+// its results, just as for the single-statement API.
+struct ParsedStatement {
+    ParseResult result;
+    StringRef source;
+    uint32_t offset = 0;
+};
+
+struct BatchParseResult {
+    std::vector<ParsedStatement> statements;
+
+    bool ok() const {
+        for (const auto& statement : statements) {
+            if (!statement.result.ok() || !statement.result.full_input ||
+                statement.result.stmt_type == StmtType::UNKNOWN) return false;
+        }
+        return true;
+    }
 };
 
 } // namespace sql_parser
