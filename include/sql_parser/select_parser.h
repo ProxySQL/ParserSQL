@@ -188,11 +188,11 @@ private:
                         break;
                     }
                 }
-                opts->add_child(make_node(arena_, NodeType::NODE_IDENTIFIER, t.text));
+                opts->add_child(make_node(arena_, NodeType::NODE_IDENTIFIER, ExpressionParser<D>::canonical_keyword(t)));
             } else if (t.type == TokenType::TK_SQL_CALC_FOUND_ROWS) {
                 if (!opts) opts = make_node(arena_, NodeType::NODE_SELECT_OPTIONS);
                 tok_.skip();
-                opts->add_child(make_node(arena_, NodeType::NODE_IDENTIFIER, t.text));
+                opts->add_child(make_node(arena_, NodeType::NODE_IDENTIFIER, ExpressionParser<D>::canonical_keyword(t)));
             } else {
                 break;
             }
@@ -486,7 +486,7 @@ private:
             Token dir = tok_.peek();
             if (dir.type == TokenType::TK_ASC || dir.type == TokenType::TK_DESC) {
                 tok_.skip();
-                item->add_child(make_node(arena_, NodeType::NODE_IDENTIFIER, dir.text));
+                item->add_child(make_node(arena_, NodeType::NODE_IDENTIFIER, ExpressionParser<D>::canonical_keyword(dir)));
             }
 
             if constexpr (D == Dialect::PostgreSQL) {
@@ -565,7 +565,7 @@ public:
         if (strength.type != TokenType::TK_UPDATE && strength.type != TokenType::TK_SHARE)
             return expr_parser_.syntax_error();
         auto* lock = make_node(arena_, NodeType::NODE_LOCKING_CLAUSE);
-        auto* mode = make_node(arena_, NodeType::NODE_IDENTIFIER, strength.text);
+        auto* mode = make_node(arena_, NodeType::NODE_IDENTIFIER, ExpressionParser<D>::canonical_keyword(strength));
         if (!lock || !mode) return expr_parser_.syntax_error();
         lock->add_child(mode);
         if (tok_.peek().type == TokenType::TK_OF) {

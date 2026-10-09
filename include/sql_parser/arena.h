@@ -30,6 +30,11 @@ public:
 
     StringRef allocate_string(const char* src, uint32_t len);
 
+    // ASCII case folding: reuse canonical input; return empty on allocation failure.
+    StringRef allocate_upper(StringRef text);
+
+    StringRef allocate_lower(StringRef text);
+
     void reset();
 
     size_t bytes_used() const;

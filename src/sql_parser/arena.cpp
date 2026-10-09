@@ -62,6 +62,34 @@ StringRef Arena::allocate_string(const char* src, uint32_t len) {
     return StringRef{static_cast<const char*>(mem), len};
 }
 
+StringRef Arena::allocate_upper(StringRef text) {
+    if (!text.ptr || text.len == 0) return text;
+    uint32_t first = 0;
+    while (first < text.len && !(text.ptr[first] >= 'a' && text.ptr[first] <= 'z')) ++first;
+    if (first == text.len) return text;
+    char* buf = static_cast<char*>(allocate(text.len));
+    if (!buf) return {};
+    for (uint32_t i = 0; i < text.len; ++i) {
+        const char c = text.ptr[i];
+        buf[i] = (c >= 'a' && c <= 'z') ? static_cast<char>(c - 32) : c;
+    }
+    return StringRef{buf, text.len};
+}
+
+StringRef Arena::allocate_lower(StringRef text) {
+    if (!text.ptr || text.len == 0) return text;
+    uint32_t first = 0;
+    while (first < text.len && !(text.ptr[first] >= 'A' && text.ptr[first] <= 'Z')) ++first;
+    if (first == text.len) return text;
+    char* buf = static_cast<char*>(allocate(text.len));
+    if (!buf) return {};
+    for (uint32_t i = 0; i < text.len; ++i) {
+        const char c = text.ptr[i];
+        buf[i] = (c >= 'A' && c <= 'Z') ? static_cast<char>(c + 32) : c;
+    }
+    return StringRef{buf, text.len};
+}
+
 void Arena::reset() {
     Block* b = primary_->next;
     while (b) {

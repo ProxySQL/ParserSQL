@@ -315,8 +315,9 @@ public:
 
         // Consume join type tokens
         Token t = tok_.peek();
-        StringRef join_type_start = t.text;
-        StringRef join_type_end = t.text;
+        StringRef parts[8];
+        size_t count = 0;
+        size_t length = 0;
 
         // Optional: NATURAL, LEFT, RIGHT, FULL, INNER, OUTER, CROSS
         while (t.type == TokenType::TK_NATURAL || t.type == TokenType::TK_LEFT ||
@@ -324,22 +325,30 @@ public:
                t.type == TokenType::TK_INNER || t.type == TokenType::TK_OUTER ||
                t.type == TokenType::TK_CROSS) {
             tok_.skip();
-            join_type_end = t.text;
+            if (count == 8) return expr_parser_.syntax_error();
+            parts[count] = ExpressionParser<D>::canonical_keyword(t);
+            length += parts[count++].len;
             t = tok_.peek();
         }
 
         // Every modifier sequence must end in JOIN.
         if (t.type != TokenType::TK_JOIN) return expr_parser_.syntax_error();
         if (t.type == TokenType::TK_JOIN) {
-            join_type_end = t.text;
+            if (count == 8) return expr_parser_.syntax_error();
+            parts[count] = ExpressionParser<D>::canonical_keyword(t);
+            length += parts[count++].len;
             tok_.skip();
         }
 
-        // Set join type as value (covers the span from first modifier to JOIN)
-        StringRef join_type{join_type_start.ptr,
-            static_cast<uint32_t>((join_type_end.ptr + join_type_end.len) - join_type_start.ptr)};
-        join->value_ptr = join_type.ptr;
-        join->value_len = join_type.len;
+        char* value = static_cast<char*>(arena_.allocate(length + count - 1));
+        if (!value) return expr_parser_.syntax_error();
+        size_t offset = 0;
+        for (size_t i = 0; i < count; ++i) {
+            if (i) value[offset++] = ' ';
+            std::memcpy(value + offset, parts[i].ptr, parts[i].len);
+            offset += parts[i].len;
+        }
+        join->set_value(StringRef{value, static_cast<uint32_t>(offset)});
 
         // Right table reference
         AstNode* right_ref = parse_table_reference(true);

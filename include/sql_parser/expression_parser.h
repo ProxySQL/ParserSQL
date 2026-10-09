@@ -55,6 +55,42 @@ using SubqueryParseCallback = AstNode*(*)(Tokenizer<D>&, Arena&);
 template <Dialect D>
 class ExpressionParser {
 public:
+    // Only use for grammar keywords, never for identifier spellings.
+    static StringRef canonical_keyword(const Token& token) {
+        switch (token.type) {
+            case TokenType::TK_AND: return StringRef{"AND", 3};
+            case TokenType::TK_OR: return StringRef{"OR", 2};
+            case TokenType::TK_XOR: return StringRef{"XOR", 3};
+            case TokenType::TK_NOT: return StringRef{"NOT", 3};
+            case TokenType::TK_IS: return StringRef{"IS", 2};
+            case TokenType::TK_IN: return StringRef{"IN", 2};
+            case TokenType::TK_LIKE: return StringRef{"LIKE", 4};
+            case TokenType::TK_REGEXP: return StringRef{"REGEXP", 6};
+            case TokenType::TK_DIV: return StringRef{"DIV", 3};
+            case TokenType::TK_MOD: return StringRef{"MOD", 3};
+            case TokenType::TK_BETWEEN: return StringRef{"BETWEEN", 7};
+            case TokenType::TK_UNION: return StringRef{"UNION", 5};
+            case TokenType::TK_INTERSECT: return StringRef{"INTERSECT", 9};
+            case TokenType::TK_EXCEPT: return StringRef{"EXCEPT", 6};
+            case TokenType::TK_ASC: return StringRef{"ASC", 3};
+            case TokenType::TK_DESC: return StringRef{"DESC", 4};
+            case TokenType::TK_DISTINCT: return StringRef{"DISTINCT", 8};
+            case TokenType::TK_ALL: return StringRef{"ALL", 3};
+            case TokenType::TK_SQL_CALC_FOUND_ROWS: return StringRef{"SQL_CALC_FOUND_ROWS", 19};
+            case TokenType::TK_UPDATE: return StringRef{"UPDATE", 6};
+            case TokenType::TK_SHARE: return StringRef{"SHARE", 5};
+            case TokenType::TK_NATURAL: return StringRef{"NATURAL", 7};
+            case TokenType::TK_LEFT: return StringRef{"LEFT", 4};
+            case TokenType::TK_RIGHT: return StringRef{"RIGHT", 5};
+            case TokenType::TK_FULL: return StringRef{"FULL", 4};
+            case TokenType::TK_INNER: return StringRef{"INNER", 5};
+            case TokenType::TK_OUTER: return StringRef{"OUTER", 5};
+            case TokenType::TK_CROSS: return StringRef{"CROSS", 5};
+            case TokenType::TK_JOIN: return StringRef{"JOIN", 4};
+            default: return token.text;
+        }
+    }
+
     ExpressionParser(Tokenizer<D>& tokenizer, Arena& arena,
                      bool require_complete_operands = false)
         : tok_(tokenizer), arena_(arena), require_complete_operands_(require_complete_operands) {}
@@ -521,7 +557,9 @@ private:
             }
             case TokenType::TK_NULL: {
                 tok_.skip();
-                return make_node_from_token(arena_, NodeType::NODE_LITERAL_NULL, t);
+                AstNode* node = make_node_from_token(arena_, NodeType::NODE_LITERAL_NULL, t);
+                if (node) node->set_value(StringRef{"NULL", 4});
+                return node;
             }
             case TokenType::TK_TRUE:
             case TokenType::TK_FALSE: {
@@ -552,43 +590,31 @@ private:
                 return make_node(arena_, NodeType::NODE_PLACEHOLDER, t.text);
             }
             case TokenType::TK_AT: {
-                // User variable: @name
                 tok_.skip();
                 Token name = tok_.next_token();
-                // Build @name as a single COLUMN_REF with combined text
-                // value_ptr points to @ in original input, len covers @name
-                StringRef full{t.text.ptr,
-                    static_cast<uint32_t>((name.text.ptr + name.text.len) - t.text.ptr)};
-                return make_node(arena_, NodeType::NODE_COLUMN_REF, full);
+                return parse_at_identifier(t, name, nullptr);
             }
             case TokenType::TK_USER_VARIABLE: {
                 tok_.skip();
                 return make_mysql_user_variable_node(arena_, t);
             }
             case TokenType::TK_DOUBLE_AT: {
-                // System variable: @@name or @@scope.name
                 tok_.skip();
                 Token name = tok_.next_token();
-                StringRef full{t.text.ptr,
-                    static_cast<uint32_t>((name.text.ptr + name.text.len) - t.text.ptr)};
-                AstNode* node = make_node(arena_, NodeType::NODE_COLUMN_REF, full);
-                // Check for @@scope.name
+                Token qualified;
                 if (tok_.peek().type == TokenType::TK_DOT) {
                     tok_.skip();
-                    Token var_name = tok_.next_token();
-                    full = StringRef{t.text.ptr,
-                        static_cast<uint32_t>((var_name.text.ptr + var_name.text.len) - t.text.ptr)};
-                    node->value_ptr = full.ptr;
-                    node->value_len = full.len;
+                    qualified = tok_.next_token();
+                    return parse_at_identifier(t, name, &qualified);
                 }
-                return node;
+                return parse_at_identifier(t, name, nullptr);
             }
             case TokenType::TK_PG_OPERATOR: {
                 if constexpr (D == Dialect::PostgreSQL) {
                     tok_.skip();
                     AstNode* operand = parse_complete(Precedence::PG_OPERATOR);
                     if (!operand) return syntax_error();
-                    AstNode* node = make_node(arena_, NodeType::NODE_UNARY_OP, t.text, FLAG_PG_OPERATOR);
+                    AstNode* node = make_node(arena_, NodeType::NODE_UNARY_OP, canonical_keyword(t), FLAG_PG_OPERATOR);
                     if (!node) return syntax_error();
                     node->add_child(operand);
                     return node;
@@ -600,7 +626,7 @@ private:
                 tok_.skip();
                 AstNode* operand = parse(Precedence::UNARY);
                 if (!operand) return nullptr;
-                AstNode* node = make_node(arena_, NodeType::NODE_UNARY_OP, t.text);
+                AstNode* node = make_node(arena_, NodeType::NODE_UNARY_OP, canonical_keyword(t));
                 set_span_through_node_(node, t.source, operand);
                 node->add_child(operand);
                 return node;
@@ -610,7 +636,7 @@ private:
                 tok_.skip();
                 AstNode* operand = parse(Precedence::UNARY);
                 if (!operand) return nullptr;
-                AstNode* node = make_node(arena_, NodeType::NODE_UNARY_OP, t.text);
+                AstNode* node = make_node(arena_, NodeType::NODE_UNARY_OP, canonical_keyword(t));
                 set_span_through_node_(node, t.source, operand);
                 node->add_child(operand);
                 return node;
@@ -619,7 +645,7 @@ private:
                 tok_.skip();
                 AstNode* operand = parse(Precedence::NOT);
                 if (!operand) return nullptr;
-                AstNode* node = make_node(arena_, NodeType::NODE_UNARY_OP, t.text);
+                AstNode* node = make_node(arena_, NodeType::NODE_UNARY_OP, canonical_keyword(t));
                 set_span_through_node_(node, t.source, operand);
                 node->add_child(operand);
                 return node;
@@ -755,14 +781,18 @@ private:
         }
     }
 
-    static void set_span_through_node_(AstNode* node, StringRef start,
+    void set_span_through_node_(AstNode* node, StringRef start,
                                        const AstNode* end_node) {
         if (!node || !start.ptr || !end_node) return;
         StringRef end = end_node->source();
         if (end.empty()) end = end_node->value();
-        if (!end.ptr || end.ptr < start.ptr) return;
-        node->set_source(StringRef{start.ptr,
-            static_cast<uint32_t>(end.ptr + end.len - start.ptr)});
+        const auto input = reinterpret_cast<uintptr_t>(tok_.input_begin());
+        const auto limit = reinterpret_cast<uintptr_t>(tok_.input_end());
+        const auto first = reinterpret_cast<uintptr_t>(start.ptr);
+        const auto last = reinterpret_cast<uintptr_t>(end.ptr);
+        if (first < input || first > limit || last < first || last > limit ||
+            end.len > limit - last) return;
+        node->set_source(StringRef{start.ptr, static_cast<uint32_t>(last + end.len - first)});
     }
 
     AstNode* parse_aggregate_order() {
@@ -806,6 +836,52 @@ private:
             tok_.skip();
         }
         return order;
+    }
+
+    AstNode* parse_at_identifier(const Token& prefix, const Token& name, const Token* qualified) {
+        const StringRef first = name.source;
+        const StringRef second = qualified ? qualified->source : StringRef{};
+        if (first.empty() || (qualified && second.empty())) return syntax_error();
+        const size_t size = prefix.text.len + first.len + (qualified ? 1 + second.len : 0);
+        char* buffer = static_cast<char*>(arena_.allocate(size));
+        if (!buffer) return syntax_error();
+        std::memcpy(buffer, prefix.text.ptr, prefix.text.len);
+        std::memcpy(buffer + prefix.text.len, first.ptr, first.len);
+        if (qualified) {
+            buffer[prefix.text.len + first.len] = '.';
+            std::memcpy(buffer + prefix.text.len + first.len + 1, second.ptr, second.len);
+        }
+        auto* node = make_node(arena_, NodeType::NODE_COLUMN_REF,
+            StringRef{buffer, static_cast<uint32_t>(size)});
+        if (!node) return syntax_error();
+        StringRef last = qualified ? second : first;
+        node->set_source(StringRef{prefix.source.ptr,
+            static_cast<uint32_t>(last.ptr + last.len - prefix.source.ptr)});
+        return node;
+    }
+
+    StringRef canonical_function_name(StringRef source, bool qualified) {
+        if constexpr (D == Dialect::MySQL) return arena_.allocate_upper(source);
+        if (!qualified) {
+            if (source.len && source.ptr[0] == '"') return source;
+            return arena_.allocate_lower(source);
+        }
+        // Qualified function names may mix quoted and unquoted components.
+        // Tokenize the name alone to remove whitespace/comments around dots.
+        Tokenizer<D> names;
+        names.reset(source.ptr, source.len);
+        char* buffer = static_cast<char*>(arena_.allocate(source.len));
+        if (!buffer) return {};
+        uint32_t length = 0;
+        for (Token part = names.next_token(); part.type != TokenType::TK_EOF; part = names.next_token()) {
+            StringRef spelling = part.source;
+            const bool quoted = spelling.len && spelling.ptr[0] == '"';
+            for (uint32_t i = 0; i < spelling.len; ++i) {
+                char c = spelling.ptr[i];
+                buffer[length++] = !quoted && c >= 'A' && c <= 'Z' ? c + ('a' - 'A') : c;
+            }
+        }
+        return StringRef{buffer, length};
     }
 
     AstNode* parse_identifier_or_function(const Token& name_token) {
@@ -950,6 +1026,9 @@ private:
                 if (!pg_type_function_name(name_token) && !special_list) return syntax_error();
             }
             tok_.skip();  // consume (
+            const StringRef function_source = function_name;
+            function_name = canonical_function_name(function_source, qualified_function);
+            if (function_name.empty()) return syntax_error();
             AstNode* func = make_node(arena_, NodeType::NODE_FUNCTION_CALL, function_name,
                 qualified_function ? FLAG_FUNCTION_QUALIFIED : (mysql_space ? FLAG_FUNCTION_MYSQL_SPACE : 0));
             if (!func) return syntax_error();
@@ -968,8 +1047,8 @@ private:
             if (tok_.peek().type != TokenType::TK_RPAREN) {
                 while (true) {
                     AstNode* arg = parse_argument(D == Dialect::PostgreSQL);
+                    if (!arg) return syntax_error();
                     if constexpr (D == Dialect::PostgreSQL) {
-                        if (!arg) return syntax_error();
                         if (arg->type == NodeType::NODE_PG_VARIADIC_ARGUMENT &&
                             ((func->flags & (FLAG_FUNCTION_DISTINCT | FLAG_FUNCTION_ALL)) ||
                              !pg_type_function_name(name_token))) return syntax_error();
@@ -995,7 +1074,11 @@ private:
                 }
                 if (tok_.peek().type != TokenType::TK_RPAREN) return syntax_error();
             }
-            if (tok_.peek().type == TokenType::TK_RPAREN) tok_.skip();
+            if (tok_.peek().type == TokenType::TK_RPAREN) {
+                Token close = tok_.next_token();
+                func->set_source(StringRef{function_source.ptr,
+                    static_cast<uint32_t>(close.source.ptr + close.source.len - function_source.ptr)});
+            }
             if constexpr (D == Dialect::PostgreSQL) {
                 if (keyword(tok_.peek(), "WITHIN")) {
                     if (func->flags & FLAG_FUNCTION_DISTINCT) return syntax_error();
@@ -1496,14 +1579,14 @@ private:
                     tok_.skip();
                     AstNode* in_node = parse_in(left);
                     // Wrap in NOT
-                    AstNode* not_node = make_node(arena_, NodeType::NODE_UNARY_OP, op.text);
+                    AstNode* not_node = make_node(arena_, NodeType::NODE_UNARY_OP, canonical_keyword(op));
                     not_node->add_child(in_node);
                     return not_node;
                 }
                 if (actual_op.type == TokenType::TK_BETWEEN) {
                     tok_.skip();
                     AstNode* between_node = parse_between(left);
-                    AstNode* not_node = make_node(arena_, NodeType::NODE_UNARY_OP, op.text);
+                    AstNode* not_node = make_node(arena_, NodeType::NODE_UNARY_OP, canonical_keyword(op));
                     not_node->add_child(between_node);
                     return not_node;
                 }
@@ -1512,10 +1595,10 @@ private:
                     tok_.skip();
                     AstNode* right = D == Dialect::PostgreSQL && quantifier(tok_.peek())
                         ? parse_quantified_operand() : parse(prec);
-                    AstNode* like_node = make_node(arena_, NodeType::NODE_BINARY_OP, actual_op.text);
+                    AstNode* like_node = make_node(arena_, NodeType::NODE_BINARY_OP, canonical_keyword(actual_op));
                     like_node->add_child(left);
                     if (right) like_node->add_child(right);
-                    AstNode* not_node = make_node(arena_, NodeType::NODE_UNARY_OP, op.text);
+                    AstNode* not_node = make_node(arena_, NodeType::NODE_UNARY_OP, canonical_keyword(op));
                     not_node->add_child(like_node);
                     return not_node;
                 }
@@ -1583,7 +1666,7 @@ private:
                 AstNode* right = D == Dialect::PostgreSQL && quantifiable_operator(op.type) && quantifier(tok_.peek())
                     ? parse_quantified_operand() : D == Dialect::PostgreSQL ? parse_complete(prec) : parse(prec);
                 if (!right) return D == Dialect::PostgreSQL ? syntax_error() : (require_complete_operands_ ? nullptr : left);
-                AstNode* node = make_node(arena_, NodeType::NODE_BINARY_OP, op.text,
+                AstNode* node = make_node(arena_, NodeType::NODE_BINARY_OP, canonical_keyword(op),
                     pg_operator ? FLAG_PG_OPERATOR : 0);
                 if (!node) return syntax_error();
                 node->add_child(left);
@@ -2263,7 +2346,7 @@ public:
                 Token dir = tok_.peek();
                 if (dir.type == TokenType::TK_ASC || dir.type == TokenType::TK_DESC) {
                     tok_.skip();
-                    AstNode* ordering = make_node(arena_, NodeType::NODE_IDENTIFIER, dir.text);
+                    AstNode* ordering = make_node(arena_, NodeType::NODE_IDENTIFIER, canonical_keyword(dir));
                     if (!ordering) return syntax_error();
                     item->add_child(ordering);
                 } else if constexpr (D == Dialect::PostgreSQL) {

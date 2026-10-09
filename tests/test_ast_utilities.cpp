@@ -493,7 +493,7 @@ TEST(AstParameterize, MysqlPrecisionAliasesStayLiteralOnlyInMysql) {
     auto pg_result = parameterize_ast<Dialect::PostgreSQL>(parsed, pg_arena);
     ASSERT_TRUE(pg_result.ok());
     EXPECT_EQ(emit(pg_result.ast, pg_arena),
-        "SELECT NOW($1), CURTIME($2), SYSDATE($3), UTC_TIME($4), UTC_TIMESTAMP($5), $6");
+        "SELECT now($1), curtime($2), sysdate($3), utc_time($4), utc_timestamp($5), $6");
     EXPECT_EQ(pg_result.parameters.size(), 6u);
 }
 

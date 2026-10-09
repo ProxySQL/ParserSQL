@@ -97,7 +97,7 @@ private:
             }
             AstNode* right = parse_compound_expr(prec);
             if (!right) return nullptr;
-            AstNode* node = make_node(arena_, NodeType::NODE_SET_OPERATION, op.text, flags);
+            AstNode* node = make_node(arena_, NodeType::NODE_SET_OPERATION, ExpressionParser<D>::canonical_keyword(op), flags);
             if (!node) return nullptr;
             node->add_child(left);
             node->add_child(right);
@@ -236,7 +236,7 @@ private:
             Token dir = tok_.peek();
             if (dir.type == TokenType::TK_ASC || dir.type == TokenType::TK_DESC) {
                 tok_.skip();
-                item->add_child(make_node(arena_, NodeType::NODE_IDENTIFIER, dir.text));
+                item->add_child(make_node(arena_, NodeType::NODE_IDENTIFIER, ExpressionParser<D>::canonical_keyword(dir)));
             }
 
             if constexpr (D == Dialect::PostgreSQL) {
