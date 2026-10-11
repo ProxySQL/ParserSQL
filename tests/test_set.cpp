@@ -615,7 +615,8 @@ TEST_F(MySQLSetTest, SetTransaction) {
 }
 
 TEST_F(MySQLSetTest, SetTransactionIsolation) {
-    auto r = parser.parse("SET TRANSACTION ISOLATION LEVEL REPEATABLE READ", 48);
+    const char* sql = "SET TRANSACTION ISOLATION LEVEL REPEATABLE READ";
+    auto r = parser.parse(sql, strlen(sql));
     EXPECT_EQ(r.status, ParseResult::OK);
     ASSERT_NE(r.ast, nullptr);
 }

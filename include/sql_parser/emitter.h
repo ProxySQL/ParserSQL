@@ -42,6 +42,12 @@ private:
             case NodeType::NODE_SET_NAMES:    emit_set_names(node); break;
             case NodeType::NODE_SET_CHARSET:  emit_set_charset(node); break;
             case NodeType::NODE_SET_TRANSACTION: emit_set_transaction(node); break;
+            case NodeType::NODE_SET_ROLE: emit_set_role(node); break;
+            case NodeType::NODE_SET_SESSION_AUTHORIZATION:
+                sb_.append("SESSION AUTHORIZATION ");
+                emit_list(node, " ");
+                break;
+            case NodeType::NODE_SET_CONSTRAINTS: emit_set_constraints(node); break;
             case NodeType::NODE_VAR_ASSIGNMENT: emit_var_assignment(node); break;
             case NodeType::NODE_VAR_TARGET:   emit_var_target(node); break;
 
@@ -839,39 +845,69 @@ private:
         if (node->first_child) emit_node(node->first_child);
     }
 
+    // [scope] TRANSACTION | [scope] SESSION CHARACTERISTICS AS TRANSACTION,
+    // then each characteristic in input order. MySQL requires commas between
+    // characteristics; PostgreSQL modes are space-separated as in BEGIN.
     void emit_set_transaction(const AstNode* node) {
-        sb_.append("TRANSACTION ");
         const AstNode* child = node->first_child;
-        // First child may be scope (GLOBAL/SESSION)
-        if (child && child->value_len > 0) {
-            StringRef val = child->value();
-            // Check if this is a scope keyword
-            if (val.equals_ci("GLOBAL", 6) || val.equals_ci("SESSION", 7) ||
-                val.equals_ci("LOCAL", 5)) {
-                // This was already emitted before TRANSACTION by the SET stmt emitter
-                child = child->next_sibling;
-            }
+        if (child && child->type == NodeType::NODE_IDENTIFIER) {
+            emit_value(child);
+            sb_.append_char(' ');
+            child = child->next_sibling;
         }
-        if (child) {
-            StringRef val = child->value();
-            // Check if this is an isolation level or access mode
-            if (val.equals_ci("READ ONLY", 9) || val.equals_ci("READ WRITE", 10)) {
-                emit_node(child);
-            } else {
-                // It's an isolation level value
-                sb_.append("ISOLATION LEVEL ");
-                emit_node(child);
+        if (node->flags & FLAG_SET_TRANSACTION_CHARACTERISTICS)
+            sb_.append("SESSION CHARACTERISTICS AS ");
+        sb_.append("TRANSACTION");
+        for (const AstNode* first = child; child; child = child->next_sibling) {
+            if constexpr (D == Dialect::MySQL) {
+                if (child != first) sb_.append_char(',');
+            }
+            sb_.append_char(' ');
+            emit_value(child);
+            if (child->first_child) {
+                sb_.append_char(' ');
+                emit_node(child->first_child);
             }
         }
     }
 
+    // PostgreSQL list-valued settings (search_path, DateStyle) carry one
+    // value child per list element; MySQL assignments have exactly one.
     void emit_var_assignment(const AstNode* node) {
         const AstNode* target = node->first_child;
-        const AstNode* rhs = target ? target->next_sibling : nullptr;
-
         if (target) emit_node(target);
         sb_.append(" = ");
-        if (rhs) emit_node(rhs);
+        for (const AstNode* rhs = target ? target->next_sibling : nullptr;
+             rhs; rhs = rhs->next_sibling) {
+            if (rhs != target->next_sibling) sb_.append(", ");
+            emit_node(rhs);
+        }
+    }
+
+    // [LOCAL] ROLE value. The optional first child is the LOCAL scope.
+    void emit_set_role(const AstNode* node) {
+        const AstNode* child = node->first_child;
+        if (child && child->next_sibling) {
+            sb_.append("LOCAL ");
+            child = child->next_sibling;
+        }
+        sb_.append("ROLE ");
+        if (child) emit_node(child);
+    }
+
+    // CONSTRAINTS { ALL | name [, ...] } { DEFERRED | IMMEDIATE }:
+    // every child but the last is a target, the last is the mode.
+    void emit_set_constraints(const AstNode* node) {
+        sb_.append("CONSTRAINTS ");
+        for (const AstNode* child = node->first_child; child; child = child->next_sibling) {
+            if (!child->next_sibling) {
+                sb_.append_char(' ');
+                emit_value(child);
+            } else {
+                if (child != node->first_child) sb_.append(", ");
+                emit_node(child);
+            }
+        }
     }
 
     void emit_var_target(const AstNode* node) {
