@@ -79,6 +79,9 @@ static constexpr uint16_t FLAG_VALUES_EXPLICIT_ROW = 0x01;
 static constexpr uint16_t FLAG_CTE_RECURSIVE = 0x01;
 static constexpr uint16_t FLAG_CTE_MATERIALIZED = 0x02;
 static constexpr uint16_t FLAG_CTE_NOT_MATERIALIZED = 0x04;
+// NODE_SET_TRANSACTION: PostgreSQL SESSION CHARACTERISTICS AS TRANSACTION
+// (session default). Without it the statement is SET [scope] TRANSACTION.
+static constexpr uint16_t FLAG_SET_TRANSACTION_CHARACTERISTICS = 0x01;
 
 // -- Flags for NODE_IDENTIFIER / NODE_COLUMN_REF --
 // Set when the identifier was source-delimited (backtick `name` for MySQL,

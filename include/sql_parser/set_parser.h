@@ -25,6 +25,13 @@ public:
     // Parse a SET statement (SET keyword already consumed by classifier).
     // Returns the root NODE_SET_STMT node, or nullptr on failure.
     AstNode* parse() {
+        reject_statement_ = false;
+        AstNode* root = parse_statement_();
+        return reject_statement_ ? nullptr : root;
+    }
+
+private:
+    AstNode* parse_statement_() {
         AstNode* root = make_node(arena_, NodeType::NODE_SET_STMT);
         if (!root) return nullptr;
 
@@ -73,24 +80,44 @@ public:
             return root;
         }
 
-        // SET [GLOBAL|SESSION] TRANSACTION ...
-        // Need to check for scope + TRANSACTION or just TRANSACTION
+        // SET [scope] TRANSACTION ... and PostgreSQL
+        // SET [scope] SESSION CHARACTERISTICS AS TRANSACTION ...
+        // These forms own the whole statement; see parse_set_transaction().
         if (next.type == TokenType::TK_TRANSACTION) {
             tok_.skip();
-            AstNode* txn_node = parse_set_transaction(StringRef{});
-            if (txn_node) root->add_child(txn_node);
-            if (!root->first_child) return nullptr;
-            return root;
+            return wrap_set_transaction_(root, parse_set_transaction(nullptr, false));
         }
 
-        if (is_set_assignment_scope_(next)) {
+        if (is_set_transaction_scope_(next)) {
             Token scope_tok = tok_.next_token();
             if (tok_.peek().type == TokenType::TK_TRANSACTION) {
                 tok_.skip();
-                AstNode* txn_node = parse_set_transaction(scope_tok.text);
-                if (txn_node) root->add_child(txn_node);
-                if (!root->first_child) return nullptr;
-                return root;
+                return wrap_set_transaction_(root, parse_set_transaction(&scope_tok, false));
+            }
+            if constexpr (D == Dialect::PostgreSQL) {
+                Token after = tok_.peek();
+                // SET SESSION CHARACTERISTICS AS TRANSACTION ...: SESSION is
+                // part of the phrase here, not a scope.
+                if (next.type == TokenType::TK_SESSION &&
+                    ExpressionParser<D>::keyword(after, "CHARACTERISTICS")) {
+                    tok_.skip();
+                    return wrap_set_transaction_(root, parse_session_characteristics_(nullptr));
+                }
+                // SET { LOCAL | SESSION } SESSION CHARACTERISTICS AS TRANSACTION ...
+                // (GLOBAL is not a PostgreSQL keyword.)
+                if (after.type == TokenType::TK_SESSION) {
+                    tok_.skip();
+                    if (!ExpressionParser<D>::keyword(tok_.peek(), "CHARACTERISTICS")) {
+                        tok_.flag_error_at(tok_.peek().source);
+                        return nullptr;
+                    }
+                    tok_.skip();
+                    return wrap_set_transaction_(root,
+                        parse_session_characteristics_(&scope_tok));
+                }
+                if (next.type == TokenType::TK_LOCAL) {
+                    return parse_pg_local_(root, scope_tok);
+                }
             }
             // PostgreSQL: SET SESSION AUTHORIZATION { 'name' | name | DEFAULT }
             // -- role-switching command, NOT a GUC assignment. Emit a
@@ -110,66 +137,23 @@ public:
                         root->add_child(node);
                         return root;
                     }
-                    // SET SESSION CHARACTERISTICS AS TRANSACTION ...
-                    // -- emit as NODE_SET_TRANSACTION with SESSION scope so
-                    // consumers handle it uniformly with plain SET SESSION
-                    // TRANSACTION.
-                    if (after.type == TokenType::TK_IDENTIFIER &&
-                        after.text.equals_ci("CHARACTERISTICS", 15)) {
-                        tok_.skip();
-                        if (tok_.peek().type == TokenType::TK_AS) {
-                            tok_.skip();
-                            if (tok_.peek().type == TokenType::TK_TRANSACTION) {
-                                tok_.skip();
-                                AstNode* txn_node =
-                                    parse_set_transaction(scope_tok.text);
-                                if (txn_node) root->add_child(txn_node);
-                                if (!root->first_child) return nullptr;
-                                return root;
-                            }
-                        }
-                        return nullptr;
-                    }
                 }
             }
-            // Not TRANSACTION — it's SET GLOBAL var = expr
-            // Fall through to variable assignment with scope
+            // Not TRANSACTION -- it's SET <scope> var = expr
             AstNode* assignment = parse_variable_assignment(&scope_tok);
             if (assignment) root->add_child(assignment);
-            // Parse remaining comma-separated assignments
-            while (tok_.peek().type == TokenType::TK_COMMA) {
-                tok_.skip();
-                AstNode* next_assign = parse_comma_item();
-                if (next_assign) root->add_child(next_assign);
+            if constexpr (D == Dialect::PostgreSQL) {
+                if (!parse_pg_value_list_(assignment)) return nullptr;
+            } else {
+                // Parse remaining comma-separated assignments
+                while (tok_.peek().type == TokenType::TK_COMMA) {
+                    tok_.skip();
+                    AstNode* next_assign = parse_comma_item();
+                    if (next_assign) root->add_child(next_assign);
+                }
             }
             if (!root->first_child) return nullptr;
             return root;
-        }
-
-        // PostgreSQL: SET LOCAL ... -- the LOCAL scope applies to whatever
-        // form follows. SET LOCAL ROLE / SET LOCAL <var> = ... etc. We peek
-        // past LOCAL to dispatch correctly; the LOCAL token itself is fed
-        // into the parsed node as scope info so downstream consumers can
-        // preserve the LOCAL semantics.
-        if constexpr (D == Dialect::PostgreSQL) {
-            if (next.type == TokenType::TK_LOCAL) {
-                Token scope_tok = tok_.next_token();
-                Token after = tok_.peek();
-                // SET LOCAL ROLE ...
-                if (after.type == TokenType::TK_IDENTIFIER &&
-                    after.text.equals_ci("ROLE", 4)) {
-                    tok_.skip();
-                    AstNode* node = parse_pg_set_role_value_(/*local=*/true, scope_tok);
-                    if (node) root->add_child(node);
-                    if (!root->first_child) return nullptr;
-                    return root;
-                }
-                // SET LOCAL <var> = expr -- fall to generic path with scope
-                AstNode* assignment = parse_variable_assignment(&scope_tok);
-                if (assignment) root->add_child(assignment);
-                if (!root->first_child) return nullptr;
-                return root;
-            }
         }
 
         // PostgreSQL: SET ROLE { <name> | 'name' | NONE | DEFAULT }
@@ -209,8 +193,7 @@ public:
                         Token name = tok_.peek();
                         if (name.type != TokenType::TK_IDENTIFIER) break;
                         tok_.skip();
-                        node->add_child(make_node(arena_,
-                            NodeType::NODE_IDENTIFIER, name.text));
+                        node->add_child(make_identifier_(name));
                         if (tok_.peek().type != TokenType::TK_COMMA) break;
                         tok_.skip();
                     }
@@ -222,8 +205,9 @@ public:
                       mode.text.equals_ci("IMMEDIATE", 9))) {
                     return nullptr;
                 }
-                node->add_child(make_node(arena_,
-                    NodeType::NODE_IDENTIFIER, mode.text));
+                node->add_child(make_node(arena_, NodeType::NODE_IDENTIFIER,
+                    mode.text.equals_ci("DEFERRED", 8) ? StringRef{"DEFERRED", 8}
+                                                       : StringRef{"IMMEDIATE", 9}));
                 root->add_child(node);
                 return root;
             }
@@ -337,22 +321,7 @@ public:
         AstNode* assignment = parse_variable_assignment(nullptr);
         if (assignment) root->add_child(assignment);
         if constexpr (D == Dialect::PostgreSQL) {
-            // PG SET is single-variable; commas after the first value are list
-            // continuation, not new assignments (see PG docs:
-            //   SET configuration_parameter { TO | = } { value | 'value' | DEFAULT }
-            //   "Some configuration parameters take a list of values, such as
-            //    search_path and datestyle.")
-            // Each extra value is appended as another child of the same
-            // VAR_ASSIGNMENT node, alongside the first RHS expression.
-            while (assignment && tok_.peek().type == TokenType::TK_COMMA) {
-                tok_.skip();
-                AstNode* extra_val = parse_setting_value();
-                if (!extra_val) {
-                    if (tok_.has_error()) return nullptr;
-                    break;
-                }
-                assignment->add_child(extra_val);
-            }
+            if (!parse_pg_value_list_(assignment)) return nullptr;
         } else {
             while (tok_.peek().type == TokenType::TK_COMMA) {
                 Token comma = tok_.next_token();
@@ -374,6 +343,73 @@ private:
     Tokenizer<D>& tok_;
     Arena& arena_;
     ExpressionParser<D> expr_parser_;
+    // Set when an item that must own the whole SET statement (SET
+    // TRANSACTION) appears after another item; the statement is rejected.
+    bool reject_statement_ = false;
+
+    AstNode* wrap_set_transaction_(AstNode* root, AstNode* txn) {
+        if (!txn) return nullptr;
+        root->add_child(txn);
+        return root;
+    }
+
+    // PostgreSQL: after SESSION CHARACTERISTICS, expect AS TRANSACTION.
+    AstNode* parse_session_characteristics_(const Token* scope) {
+        if (tok_.peek().type != TokenType::TK_AS) return fail_set_transaction_(tok_.peek());
+        tok_.skip();
+        if (tok_.peek().type != TokenType::TK_TRANSACTION) return fail_set_transaction_(tok_.peek());
+        tok_.skip();
+        return parse_set_transaction(scope, true);
+    }
+
+    // PG SET is single-variable; commas after the first value are list
+    // continuation, not new assignments (see PG docs:
+    //   SET configuration_parameter { TO | = } { value | 'value' | DEFAULT }
+    //   "Some configuration parameters take a list of values, such as
+    //    search_path and datestyle.")
+    // Each extra value is appended as another child of the same
+    // VAR_ASSIGNMENT node, alongside the first RHS expression.
+    // Returns false when the statement must be rejected.
+    bool parse_pg_value_list_(AstNode* assignment) {
+        while (assignment && tok_.peek().type == TokenType::TK_COMMA) {
+            tok_.skip();
+            AstNode* extra_val = parse_setting_value();
+            if (!extra_val) {
+                if (tok_.has_error()) return false;
+                break;
+            }
+            assignment->add_child(extra_val);
+        }
+        return true;
+    }
+
+    // PostgreSQL: SET LOCAL ... (LOCAL already consumed) -- the LOCAL scope
+    // applies to whatever form follows: SET LOCAL ROLE / SET LOCAL <var> = ...
+    // The LOCAL token is fed into the parsed node as scope info so
+    // downstream consumers can preserve the LOCAL semantics.
+    AstNode* parse_pg_local_(AstNode* root, const Token& scope_tok) {
+        Token after = tok_.peek();
+        if (after.type == TokenType::TK_IDENTIFIER &&
+            after.text.equals_ci("ROLE", 4)) {
+            tok_.skip();
+            AstNode* node = parse_pg_set_role_value_(/*local=*/true, scope_tok);
+            if (node) root->add_child(node);
+            if (!root->first_child) return nullptr;
+            return root;
+        }
+        AstNode* assignment = parse_variable_assignment(&scope_tok);
+        if (assignment) root->add_child(assignment);
+        if (!parse_pg_value_list_(assignment)) return nullptr;
+        if (!root->first_child) return nullptr;
+        return root;
+    }
+
+    static bool is_set_transaction_scope_(const Token& tok) {
+        if constexpr (D == Dialect::PostgreSQL) {
+            if (tok.type == TokenType::TK_LOCAL) return true;
+        }
+        return is_set_assignment_scope_(tok);
+    }
 
     AstNode* parse_setting_value() {
         const Token start = tok_.peek();
@@ -445,8 +481,11 @@ private:
         AstNode* node = make_node(arena_, NodeType::NODE_SET_ROLE);
         if (!node) return nullptr;
         if (local) {
-            node->add_child(make_node(arena_, NodeType::NODE_IDENTIFIER,
-                scope_tok.text));
+            AstNode* scope = make_node(arena_, NodeType::NODE_IDENTIFIER,
+                StringRef{"LOCAL", 5});
+            if (!scope) return nullptr;
+            scope->set_source(scope_tok.source);
+            node->add_child(scope);
         }
         AstNode* val = parse_session_role_value_();
         if (!val) return nullptr;
@@ -461,24 +500,29 @@ private:
         Token tok = tok_.peek();
         if (tok.type == TokenType::TK_STRING) {
             tok_.skip();
-            return make_node(arena_, NodeType::NODE_LITERAL_STRING, tok.text);
+            return make_node_from_token(arena_, NodeType::NODE_LITERAL_STRING, tok);
         }
         if (tok.type == TokenType::TK_DEFAULT) {
             tok_.skip();
-            return make_node(arena_, NodeType::NODE_IDENTIFIER, tok.text);
+            return make_node(arena_, NodeType::NODE_IDENTIFIER, StringRef{"DEFAULT", 7});
         }
         if (tok.type == TokenType::TK_IDENTIFIER) {
             tok_.skip();
             // NONE / DEFAULT / <name> are all just identifiers here.
-            return make_node(arena_, NodeType::NODE_IDENTIFIER, tok.text);
+            return make_identifier_(tok);
         }
         return nullptr;
     }
 
     AstNode* parse_comma_item() {
         Token peek = tok_.peek();
+        // SET TRANSACTION cannot follow another SET item (the server
+        // grammar rejects it); reject the whole statement, not just the item.
+        if (peek.type == TokenType::TK_TRANSACTION) return reject_statement_at_(peek);
         if (is_set_assignment_scope_(peek)) {
             Token scope_tok = tok_.next_token();
+            if (tok_.peek().type == TokenType::TK_TRANSACTION)
+                return reject_statement_at_(tok_.peek());
             return parse_variable_assignment(&scope_tok);
         }
         if (peek.type == TokenType::TK_NAMES) {
@@ -532,47 +576,170 @@ private:
         return node;
     }
 
-    // SET [GLOBAL|SESSION] TRANSACTION ...
-    AstNode* parse_set_transaction(StringRef scope) {
-        AstNode* node = make_node(arena_, NodeType::NODE_SET_TRANSACTION);
-        if (!node) return nullptr;
+    // SET [scope] TRANSACTION characteristic [, characteristic ...]
+    // PostgreSQL also: SET [scope] SESSION CHARACTERISTICS AS TRANSACTION ...
+    // and SET [scope] TRANSACTION SNAPSHOT 'id'.
+    //
+    // AST: NODE_SET_TRANSACTION (FLAG_SET_TRANSACTION_CHARACTERISTICS for the
+    // PostgreSQL SESSION CHARACTERISTICS AS form), optional first child
+    // NODE_IDENTIFIER scope with a canonical uppercase value, then one
+    // NODE_TRANSACTION_OPTION per characteristic in input order with a
+    // canonical value ("ISOLATION LEVEL READ COMMITTED", "READ ONLY",
+    // "NOT DEFERRABLE", ...). SNAPSHOT carries its string literal as a child.
+    // Values never reference the input text, so comments, case and
+    // whitespace between keywords cannot leak into the AST. Returns nullptr
+    // and flags an error for anything the server grammar rejects.
+    AstNode* parse_set_transaction(const Token* scope, bool characteristics) {
+        AstNode* node = make_node(arena_, NodeType::NODE_SET_TRANSACTION, {},
+            characteristics ? FLAG_SET_TRANSACTION_CHARACTERISTICS : 0);
+        if (!node) return fail_set_transaction_(tok_.peek());
 
-        if (!scope.empty()) {
-            node->add_child(make_node(arena_, NodeType::NODE_IDENTIFIER, scope));
+        if (scope) {
+            AstNode* scope_node = make_node(arena_, NodeType::NODE_IDENTIFIER,
+                canonical_set_scope_(*scope));
+            if (!scope_node || scope_node->value_len == 0)
+                return fail_set_transaction_(*scope);
+            scope_node->set_source(scope->source);
+            node->add_child(scope_node);
         }
 
-        // ISOLATION LEVEL ... or READ ONLY/WRITE
-        Token next = tok_.peek();
-        if (next.type == TokenType::TK_ISOLATION) {
-            tok_.skip();
-            if (tok_.peek().type == TokenType::TK_LEVEL) tok_.skip();
-
-            // READ UNCOMMITTED | READ COMMITTED | REPEATABLE READ | SERIALIZABLE
-            Token level = tok_.next_token();
-            if (level.type == TokenType::TK_READ) {
-                Token sublevel = tok_.next_token();
-                // Combine "READ COMMITTED" or "READ UNCOMMITTED"
-                StringRef combined{level.text.ptr,
-                    static_cast<uint32_t>((sublevel.text.ptr + sublevel.text.len) - level.text.ptr)};
-                node->add_child(make_node(arena_, NodeType::NODE_IDENTIFIER, combined));
-            } else if (level.type == TokenType::TK_REPEATABLE) {
-                Token read_tok = tok_.next_token(); // READ
-                StringRef combined{level.text.ptr,
-                    static_cast<uint32_t>((read_tok.text.ptr + read_tok.text.len) - level.text.ptr)};
-                node->add_child(make_node(arena_, NodeType::NODE_IDENTIFIER, combined));
-            } else {
-                // SERIALIZABLE
-                node->add_child(make_node(arena_, NodeType::NODE_IDENTIFIER, level.text));
+        if constexpr (D == Dialect::PostgreSQL) {
+            // TRANSACTION SNAPSHOT is a standalone form: no other modes, and
+            // not valid after SESSION CHARACTERISTICS AS TRANSACTION.
+            Token snap = tok_.peek();
+            if (!characteristics && ExpressionParser<D>::keyword(snap, "SNAPSHOT")) {
+                tok_.skip();
+                Token id = tok_.peek();
+                if (id.type != TokenType::TK_STRING) return fail_set_transaction_(id);
+                tok_.skip();
+                AstNode* option = make_option_(StringRef{"SNAPSHOT", 8}, snap, id);
+                AstNode* literal = make_node_from_token(arena_,
+                    NodeType::NODE_LITERAL_STRING, id);
+                if (!option || !literal) return fail_set_transaction_(id);
+                option->add_child(literal);
+                node->add_child(option);
+                return finish_set_transaction_(node);
             }
-        } else if (next.type == TokenType::TK_READ) {
-            tok_.skip();
-            Token rw = tok_.next_token(); // ONLY or WRITE
-            StringRef combined{next.text.ptr,
-                static_cast<uint32_t>((rw.text.ptr + rw.text.len) - next.text.ptr)};
-            node->add_child(make_node(arena_, NodeType::NODE_IDENTIFIER, combined));
         }
 
+        bool have_isolation = false;
+        bool have_access = false;
+        while (true) {
+            Token first = tok_.peek();
+            Token last = first;
+            StringRef mode;
+            auto take = [&](const char* word) {
+                Token t = tok_.peek();
+                if (!ExpressionParser<D>::keyword(t, word)) return false;
+                tok_.skip();
+                last = t;
+                return true;
+            };
+            if (take("ISOLATION")) {
+                if (!take("LEVEL")) return fail_set_transaction_(tok_.peek());
+                if (take("SERIALIZABLE")) {
+                    mode = {"ISOLATION LEVEL SERIALIZABLE", 28};
+                } else if (take("REPEATABLE")) {
+                    if (!take("READ")) return fail_set_transaction_(tok_.peek());
+                    mode = {"ISOLATION LEVEL REPEATABLE READ", 31};
+                } else if (take("READ")) {
+                    if (take("COMMITTED")) mode = {"ISOLATION LEVEL READ COMMITTED", 30};
+                    else if (take("UNCOMMITTED")) mode = {"ISOLATION LEVEL READ UNCOMMITTED", 32};
+                    else return fail_set_transaction_(tok_.peek());
+                } else {
+                    return fail_set_transaction_(tok_.peek());
+                }
+                // MySQL allows each characteristic at most once.
+                if (D == Dialect::MySQL && have_isolation) return fail_set_transaction_(first);
+                have_isolation = true;
+            } else if (take("READ")) {
+                if (take("ONLY")) mode = {"READ ONLY", 9};
+                else if (take("WRITE")) mode = {"READ WRITE", 10};
+                else return fail_set_transaction_(tok_.peek());
+                if (D == Dialect::MySQL && have_access) return fail_set_transaction_(first);
+                have_access = true;
+            } else if (D == Dialect::PostgreSQL && take("NOT")) {
+                if (!take("DEFERRABLE")) return fail_set_transaction_(tok_.peek());
+                mode = {"NOT DEFERRABLE", 14};
+            } else if (D == Dialect::PostgreSQL && take("DEFERRABLE")) {
+                mode = {"DEFERRABLE", 10};
+            } else {
+                // Empty list, dangling comma, or a non-characteristic item
+                // (e.g. a variable assignment) after a comma.
+                return fail_set_transaction_(first);
+            }
+
+            AstNode* option = make_option_(mode, first, last);
+            if (!option) return fail_set_transaction_(first);
+            node->add_child(option);
+
+            Token sep = tok_.peek();
+            if (sep.type == TokenType::TK_COMMA) {
+                tok_.skip();
+                continue;
+            }
+            // PostgreSQL also separates transaction modes with whitespace.
+            if constexpr (D == Dialect::PostgreSQL) {
+                if (ExpressionParser<D>::keyword(sep, "ISOLATION") ||
+                    ExpressionParser<D>::keyword(sep, "READ") ||
+                    ExpressionParser<D>::keyword(sep, "NOT") ||
+                    ExpressionParser<D>::keyword(sep, "DEFERRABLE")) {
+                    continue;
+                }
+            }
+            break;
+        }
+        return finish_set_transaction_(node);
+    }
+
+    // A SET TRANSACTION statement cannot be combined with any other SET item:
+    // only end of statement may follow the characteristic list.
+    AstNode* finish_set_transaction_(AstNode* node) {
+        Token after = tok_.peek();
+        if (after.type != TokenType::TK_EOF && after.type != TokenType::TK_SEMICOLON)
+            return fail_set_transaction_(after);
         return node;
+    }
+
+    AstNode* fail_set_transaction_(const Token& at) {
+        tok_.flag_error_at(at.source.ptr ? at.source : at.text);
+        return nullptr;
+    }
+
+    AstNode* make_option_(StringRef mode, const Token& first, const Token& last) {
+        AstNode* option = make_node(arena_, NodeType::NODE_TRANSACTION_OPTION, mode);
+        if (!option) return nullptr;
+        const char* begin = first.source.ptr ? first.source.ptr : first.text.ptr;
+        const char* end = last.source.ptr ? last.source.ptr + last.source.len
+                                          : last.text.ptr + last.text.len;
+        if (begin && end >= begin)
+            option->set_source(StringRef{begin, static_cast<uint32_t>(end - begin)});
+        return option;
+    }
+
+    static StringRef canonical_set_scope_(const Token& tok) {
+        switch (tok.type) {
+            case TokenType::TK_GLOBAL: return {"GLOBAL", 6};
+            case TokenType::TK_SESSION: return {"SESSION", 7};
+            case TokenType::TK_LOCAL: return {"LOCAL", 5};
+            case TokenType::TK_PERSIST: return {"PERSIST", 7};
+            default:
+                if (tok.text.equals_ci("PERSIST_ONLY", 12)) return {"PERSIST_ONLY", 12};
+                return {};
+        }
+    }
+
+    // Identifier node that keeps PostgreSQL "quoted" spelling for emission.
+    AstNode* make_identifier_(const Token& tok) {
+        AstNode* n = make_node_from_token(arena_, NodeType::NODE_IDENTIFIER, tok);
+        if (n && tok.source.len && tok.source.ptr[0] == '"') n->flags |= FLAG_IDENT_DELIMITED;
+        return n;
+    }
+
+    AstNode* reject_statement_at_(const Token& at) {
+        reject_statement_ = true;
+        tok_.flag_error_at(at.source.ptr ? at.source : at.text);
+        return nullptr;
     }
 
     // Parse a single variable assignment: [scope] target = expr
