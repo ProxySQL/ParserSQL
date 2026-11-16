@@ -37,17 +37,20 @@ ParseResult Parser<D>::parse(const char* sql, size_t len) {
     }
     bool has_user_variables = false;
     bool has_executable_comments = false;
-    if constexpr (D == Dialect::MySQL) {
+    bool has_comments = false;
+    {
         Tokenizer<D> detector;
         detector.reset(sql, len);
         while (detector.next_token().type != TokenType::TK_EOF) {}
         has_user_variables = detector.has_user_variables();
         has_executable_comments = detector.has_executable_comments();
+        has_comments = detector.has_comments();
     }
     tokenizer_.reset(sql, len);
     ParseResult result = classify_and_dispatch();
     result.has_user_variables = has_user_variables || tokenizer_.has_user_variables();
     result.has_executable_comments = has_executable_comments || tokenizer_.has_executable_comments();
+    result.has_comments = has_comments || tokenizer_.has_comments();
     return result;
 }
 
@@ -75,6 +78,7 @@ BatchParseResult Parser<D>::parse_all(const char* sql, size_t len) {
             statement.source = StringRef{sql + cursor, static_cast<uint32_t>(end - (sql + cursor))};
             statement.result.status = ParseResult::ERROR;
             statement.result.has_executable_comments = true;
+            statement.result.has_comments = scanner.has_comments();
             statement.result.has_user_variables = scanner.has_user_variables();
             statement.result.error.message = {"Executable comment without a parsed statement", 45};
             statement.result.error.offset = statement.offset;
@@ -129,6 +133,7 @@ BatchParseResult Parser<D>::parse_all(const char* sql, size_t len) {
             }
         }
         statement.result.has_executable_comments = scanner.has_executable_comments();
+        statement.result.has_comments = scanner.has_comments();
         batch.statements.push_back(statement);
         cursor = static_cast<size_t>(end - sql);
     }

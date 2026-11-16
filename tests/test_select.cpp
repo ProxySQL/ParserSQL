@@ -513,3 +513,79 @@ TEST_F(MySQLSelectTest, TypedLiteralRefusalPreservesValidColumnsFunctionsAndAlia
         EXPECT_TRUE(r.full_input) << sql;
     }
 }
+
+TEST_F(MySQLSelectTest, SelectItemExpressionSource) {
+    const char* sql = "SELECT /*lead*/ 1, (1 + 2) AS `x`, COUNT( * ) c, t.col /*end*/ FROM t";
+    auto r = parser.parse(sql, strlen(sql));
+    ASSERT_TRUE(r.ok());
+    ASSERT_TRUE(r.has_comments);
+    auto* items = find_child(r.ast, NodeType::NODE_SELECT_ITEM_LIST);
+    ASSERT_NE(items, nullptr);
+    const char* expected[] = {"1", "(1 + 2)", "COUNT( * )", "t.col"};
+    auto* item = items->first_child;
+    for (auto value : expected) {
+        ASSERT_NE(item, nullptr);
+        EXPECT_EQ(std::string(item->source().ptr, item->source().len), value);
+        item = item->next_sibling;
+    }
+    EXPECT_EQ(item, nullptr);
+}
+
+TEST_F(MySQLSelectTest, BatchCommentsAndSource) {
+    const char* sql = "SELECT 1; /*lead*/ SELECT (2 + 3) x; SELECT '/*no*/'";
+    auto batch = parser.parse_all(sql, strlen(sql));
+    ASSERT_EQ(batch.statements.size(), 3u);
+    EXPECT_FALSE(batch.statements[0].result.has_comments);
+    EXPECT_TRUE(batch.statements[1].result.has_comments);
+    EXPECT_FALSE(batch.statements[2].result.has_comments);
+    auto* items = find_child(batch.statements[1].result.ast, NodeType::NODE_SELECT_ITEM_LIST);
+    ASSERT_NE(items, nullptr);
+    auto span = items->first_child->source();
+    EXPECT_EQ(std::string(span.ptr, span.len), "(2 + 3)");
+    EXPECT_EQ(span.ptr, strstr(sql, "(2 + 3)"));
+}
+
+TEST_F(MySQLSelectTest, NestedSelectItemSources) {
+    const char* sql = "SELECT (SELECT f( 1 )) AS `nested`, 1 /*inside*/ + 2 /*tail*/";
+    auto r = parser.parse(sql, strlen(sql));
+    ASSERT_TRUE(r.ok());
+    auto* outer = find_child(r.ast, NodeType::NODE_SELECT_ITEM_LIST);
+    ASSERT_NE(outer, nullptr);
+    auto* first = outer->first_child;
+    ASSERT_NE(first, nullptr);
+    EXPECT_EQ(std::string(first->source().ptr, first->source().len), "(SELECT f( 1 ))");
+    auto* second = first->next_sibling;
+    ASSERT_NE(second, nullptr);
+    EXPECT_EQ(std::string(second->source().ptr, second->source().len), "1 /*inside*/ + 2");
+    const AstNode* inner = nullptr;
+    auto search = [&](auto&& self, const AstNode* n) -> void {
+        if (n->type == NodeType::NODE_SELECT_ITEM && n != first && n != second) inner = n;
+        for (auto* c = n->first_child; c; c = c->next_sibling) self(self, c);
+    };
+    search(search, first);
+    ASSERT_NE(inner, nullptr);
+    EXPECT_EQ(std::string(inner->source().ptr, inner->source().len), "f( 1 )");
+}
+
+TEST_F(MySQLSelectTest, CommentsMetadataOnErrorsAndHints) {
+    for (const char* sql : {"SELECT /*+ BKA(t) */ 1", "SELECT 1 /*!50000 + 2 */", "SELECT 1 /* unterminated"}) {
+        auto r = parser.parse(sql, strlen(sql));
+        EXPECT_TRUE(r.has_comments) << sql;
+        auto batch = parser.parse_all(sql, strlen(sql));
+        ASSERT_EQ(batch.statements.size(), 1u);
+        EXPECT_TRUE(batch.statements[0].result.has_comments) << sql;
+    }
+    const char* quoted = "SELECT '/* no */', `-- no`";
+    EXPECT_FALSE(parser.parse(quoted, strlen(quoted)).has_comments);
+}
+
+TEST(PostgreSQLSelectProvenance, CommentsAndQuotedControls) {
+    Parser<Dialect::PostgreSQL> parser;
+    const char* commented = "SELECT 1 /* outer /* inner */ end */";
+    EXPECT_TRUE(parser.parse(commented, strlen(commented)).has_comments);
+    auto batch = parser.parse_all(commented, strlen(commented));
+    ASSERT_EQ(batch.statements.size(), 1u);
+    EXPECT_TRUE(batch.statements[0].result.has_comments);
+    const char* quoted = "SELECT '/* no */', \"-- no\"";
+    EXPECT_FALSE(parser.parse(quoted, strlen(quoted)).has_comments);
+}

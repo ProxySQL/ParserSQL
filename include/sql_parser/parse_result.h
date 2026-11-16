@@ -43,6 +43,7 @@ struct ParseResult {
     bool full_input = false;
     bool has_user_variables = false;
     bool has_executable_comments = false;
+    bool has_comments = false; // Recognized comments, including optimizer hints.
 
     StringRef table_name;
     StringRef schema_name;

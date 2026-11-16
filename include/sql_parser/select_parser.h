@@ -256,8 +256,11 @@ private:
         AstNode* item = make_node(arena_, NodeType::NODE_SELECT_ITEM);
         if (!item) return nullptr;
 
+        const char* expression_start = tok_.peek().source.ptr;
         AstNode* expr = expr_parser_.parse();
         if (!expr) return nullptr;
+        // Original expression spelling; like other source refs, input must outlive the AST.
+        item->set_source({expression_start, static_cast<uint32_t>(tok_.consumed_token_end() - expression_start)});
 
         // Check for * EXCEPT(...) or * REPLACE(...)
         bool is_star = (expr->type == NodeType::NODE_ASTERISK);

@@ -13,12 +13,14 @@ public:
     void reset(const char* input, size_t len) {
         start_ = input;
         cursor_ = input;
+        consumed_token_end_ = input;
         end_ = input + len;
         has_peeked_ = false;
         has_error_ = false;
         has_fatal_error_ = false;
         has_user_variables_ = false;
         has_executable_comments_ = false;
+        has_comments_ = false;
         hint_allowed_ = false;
         after_dot_ = false;
         paren_depth_ = 0;
@@ -34,6 +36,11 @@ public:
     bool has_fatal_error() const { return has_fatal_error_; }
     bool has_user_variables() const { return has_user_variables_; }
     bool has_executable_comments() const { return has_executable_comments_; }
+    // Sticky since reset, including optimizer hints and executable comments.
+    bool has_comments() const { return has_comments_; }
+    // End of the last consumed token, or input_begin() before any consumption.
+    // Peeking and consuming EOF do not change this boundary.
+    const char* consumed_token_end() const { return consumed_token_end_; }
     StringRef error_source() const { return error_source_; }
 
     // Hook for parser-level (non-tokenizer) errors -- when the parser
@@ -51,11 +58,16 @@ public:
     }
 
     Token next_token() {
+        Token token;
         if (has_peeked_) {
             has_peeked_ = false;
-            return peeked_;
+            token = peeked_;
+        } else {
+            token = scan_token();
         }
-        return scan_token();
+        if (token.type != TokenType::TK_EOF)
+            consumed_token_end_ = token.source.ptr + token.source.len;
+        return token;
     }
 
     Token peek() {
@@ -66,13 +78,7 @@ public:
         return peeked_;
     }
 
-    void skip() {
-        if (has_peeked_) {
-            has_peeked_ = false;
-        } else {
-            scan_token();
-        }
-    }
+    void skip() { (void)next_token(); }
 
     // Expose start/end of input for remaining-input calculation and for
     // safe lookback (e.g. detecting whether an identifier token was source-
@@ -83,6 +89,7 @@ public:
 private:
     const char* start_ = nullptr;
     const char* cursor_ = nullptr;
+    const char* consumed_token_end_ = nullptr;
     const char* end_ = nullptr;
     Token peeked_;
     bool has_peeked_ = false;
@@ -92,6 +99,7 @@ private:
     bool has_fatal_error_ = false;
     bool has_user_variables_ = false;
     bool has_executable_comments_ = false;
+    bool has_comments_ = false;
     uint32_t paren_depth_ = 0;
     const char* first_open_paren_ = nullptr;
     StringRef error_source_;
@@ -129,6 +137,7 @@ private:
                   (static_cast<unsigned char>(peek_char(2)) <= 0x20 ||
                    static_cast<unsigned char>(peek_char(2)) == 0x7f)));
             if (dash_comment) {
+                has_comments_ = true;
                 hint_allowed_ = false;
                 cursor_ += 2;
                 while (cursor_ < end_ && *cursor_ != '\n') ++cursor_;
@@ -138,6 +147,7 @@ private:
             // # line comment (MySQL only)
             if constexpr (D == Dialect::MySQL) {
                 if (c == '#') {
+                    has_comments_ = true;
                     hint_allowed_ = false;
                     ++cursor_;
                     while (cursor_ < end_ && *cursor_ != '\n') ++cursor_;
@@ -147,6 +157,7 @@ private:
 
             // /* block comment */
             if (c == '/' && peek_char(1) == '*') {
+                has_comments_ = true;
                 if constexpr (D == Dialect::MySQL) {
                     if (hint_allowed_ && peek_char(2) == '+') return;
                 }

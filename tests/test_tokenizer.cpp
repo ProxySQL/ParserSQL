@@ -371,3 +371,21 @@ TEST_F(MySQLTokenizerTest, ExecutableCommentProvenanceAndReset) {
     while (pg.next_token().type != TokenType::TK_EOF) {}
     EXPECT_FALSE(pg.has_executable_comments());
 }
+
+TEST_F(MySQLTokenizerTest, ConsumedEndAndCommentTracking) {
+    const char* sql = "  1 /*c*/ + 2";
+    tok.reset(sql, strlen(sql));
+    EXPECT_EQ(tok.consumed_token_end(), sql);
+    tok.peek();
+    EXPECT_EQ(tok.consumed_token_end(), sql);
+    tok.skip();
+    EXPECT_EQ(tok.consumed_token_end(), sql + 3);
+    tok.peek();
+    EXPECT_EQ(tok.consumed_token_end(), sql + 3);
+    EXPECT_TRUE(tok.has_comments());
+    tok.next_token();
+    EXPECT_EQ(tok.consumed_token_end(), strstr(sql, "+") + 1);
+    tok.reset(sql, strlen(sql));
+    EXPECT_EQ(tok.consumed_token_end(), sql);
+    EXPECT_FALSE(tok.has_comments());
+}
