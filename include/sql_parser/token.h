@@ -137,6 +137,8 @@ enum class TokenType : uint16_t {
     TK_NAMED_ARGUMENT, // =>, reserved for PostgreSQL named function arguments
     TK_MYSQL_JSON_ARROW, // -> and ->>; spelling distinguishes unquoting
     TK_MYSQL_OPTIMIZER_HINT, // complete comment in a native hint position
+    TK_MYSQL_NULL_SAFE_EQUAL,
+    TK_MYSQL_LOGICAL_AND,
 };
 
 struct Token {

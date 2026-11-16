@@ -457,3 +457,15 @@ TEST_F(ExpressionTest, ZeroArgFunction) {
     EXPECT_EQ(node->type, NodeType::NODE_FUNCTION_CALL);
     EXPECT_EQ(node->first_child, nullptr); // no args
 }
+
+TEST_F(ExpressionTest, MySqlLogicalAndAndNullSafeEqualityPrecedence) {
+    AstNode* node = parse_expr("a && b <=> c");
+    ASSERT_NE(node, nullptr);
+    ASSERT_EQ(node->type, NodeType::NODE_BINARY_OP);
+    EXPECT_EQ(std::string(node->value_ptr, node->value_len), "&&");
+    ASSERT_NE(node->first_child, nullptr);
+    AstNode* right = node->first_child->next_sibling;
+    ASSERT_NE(right, nullptr);
+    ASSERT_EQ(right->type, NodeType::NODE_BINARY_OP);
+    EXPECT_EQ(std::string(right->value_ptr, right->value_len), "<=>");
+}

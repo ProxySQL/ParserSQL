@@ -42,6 +42,7 @@ struct ParseResult {
     StringRef remaining;
     bool full_input = false;
     bool has_user_variables = false;
+    bool has_executable_comments = false;
 
     StringRef table_name;
     StringRef schema_name;

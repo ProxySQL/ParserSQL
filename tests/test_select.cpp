@@ -460,3 +460,56 @@ TEST_F(PgSQLSelectTest, ForUpdate) {
     auto r = parser.parse("SELECT * FROM users FOR UPDATE", 30);
     EXPECT_EQ(r.status, ParseResult::OK);
 }
+
+TEST_F(MySQLSelectTest, MySqlModifiersAreExplicitOptionsWithOriginalSpelling) {
+    for (const std::string option : {"high_priority", "SQL_NO_CACHE", "SQL_CACHE", "SQL_SMALL_RESULT", "SQL_BIG_RESULT", "SQL_BUFFER_RESULT", "STRAIGHT_JOIN", "DISTINCTROW"}) {
+        const std::string sql = "SELECT " + option + " a FROM t";
+        auto r = parser.parse(sql.data(), sql.size());
+        ASSERT_EQ(r.status, ParseResult::OK) << sql;
+        ASSERT_TRUE(r.full_input) << sql;
+        ASSERT_NE(r.ast, nullptr);
+        const auto* opts = find_child(r.ast, NodeType::NODE_SELECT_OPTIONS);
+        ASSERT_NE(opts, nullptr) << sql;
+        ASSERT_NE(opts->first_child, nullptr);
+        EXPECT_EQ(std::string(opts->first_child->value().ptr, opts->first_child->value().len), option);
+        const auto* items = find_child(r.ast, NodeType::NODE_SELECT_ITEM_LIST);
+        ASSERT_NE(items, nullptr);
+        ASSERT_NE(items->first_child, nullptr);
+        EXPECT_EQ(find_child(items->first_child, NodeType::NODE_ALIAS), nullptr) << sql;
+    }
+}
+
+TEST_F(MySQLSelectTest, QuotedMySqlModifierNamesRemainColumns) {
+    for (const std::string option : {"HIGH_PRIORITY", "SQL_NO_CACHE", "SQL_CACHE", "SQL_SMALL_RESULT", "SQL_BIG_RESULT", "SQL_BUFFER_RESULT", "STRAIGHT_JOIN", "DISTINCTROW"}) {
+        const std::string sql = "SELECT `" + option + "` FROM t";
+        auto r = parser.parse(sql.data(), sql.size());
+        ASSERT_EQ(r.status, ParseResult::OK) << sql;
+        ASSERT_TRUE(r.full_input) << sql;
+        ASSERT_NE(r.ast, nullptr);
+        EXPECT_EQ(find_child(r.ast, NodeType::NODE_SELECT_OPTIONS), nullptr) << sql;
+        const auto* items = find_child(r.ast, NodeType::NODE_SELECT_ITEM_LIST);
+        ASSERT_NE(items, nullptr);
+        ASSERT_NE(items->first_child, nullptr);
+        ASSERT_NE(items->first_child->first_child, nullptr);
+        EXPECT_EQ(std::string(items->first_child->first_child->value().ptr,
+                              items->first_child->first_child->value().len), option);
+    }
+}
+
+TEST_F(MySQLSelectTest, UnsupportedMySqlTypedLiteralsAndBinaryExpressionsAreNotComplete) {
+    for (const std::string expr : {"DATE '2020-01-01'", "TIME '12:34:56'", "TIMESTAMP '2020-01-01 12:34:56'", "N'hello'", "BINARY 'hello'", "BINARY col", "BINARY(col)", "BINARY CURRENT_DATE", "BINARY @x"}) {
+        for (const std::string sql : {"SELECT " + expr, "SELECT 1 FROM t WHERE a = " + expr}) {
+            auto r = parser.parse(sql.data(), sql.size());
+            EXPECT_EQ(r.stmt_type, StmtType::SELECT) << sql;
+            EXPECT_FALSE(r.ok() && r.full_input) << sql;
+        }
+    }
+}
+
+TEST_F(MySQLSelectTest, TypedLiteralRefusalPreservesValidColumnsFunctionsAndAliases) {
+    for (const std::string sql : {"SELECT `DATE` 'label' FROM t", "SELECT `TIME` 'label' FROM t", "SELECT `TIMESTAMP` 'label' FROM t", "SELECT `BINARY` 'label' FROM t", "SELECT `N` 'label' FROM t", "SELECT N 'label' FROM t", "SELECT date_col AS 'date' FROM t", "SELECT DATE AS 'date' FROM t", "SELECT DATE('2020-01-01'), TIME('12:34:56'), TIMESTAMP('2020-01-01')", "SELECT date_col, time_col, timestamp_col, binary_col FROM t"}) {
+        auto r = parser.parse(sql.data(), sql.size());
+        EXPECT_EQ(r.status, ParseResult::OK) << sql;
+        EXPECT_TRUE(r.full_input) << sql;
+    }
+}

@@ -36,15 +36,18 @@ ParseResult Parser<D>::parse(const char* sql, size_t len) {
         return result;
     }
     bool has_user_variables = false;
+    bool has_executable_comments = false;
     if constexpr (D == Dialect::MySQL) {
         Tokenizer<D> detector;
         detector.reset(sql, len);
         while (detector.next_token().type != TokenType::TK_EOF) {}
         has_user_variables = detector.has_user_variables();
+        has_executable_comments = detector.has_executable_comments();
     }
     tokenizer_.reset(sql, len);
     ParseResult result = classify_and_dispatch();
     result.has_user_variables = has_user_variables || tokenizer_.has_user_variables();
+    result.has_executable_comments = has_executable_comments || tokenizer_.has_executable_comments();
     return result;
 }
 
@@ -63,6 +66,22 @@ BatchParseResult Parser<D>::parse_all(const char* sql, size_t len) {
         Tokenizer<D> scanner;
         scanner.reset(sql + cursor, len - cursor);
         Token first = scanner.next_token();
+        if ((first.type == TokenType::TK_SEMICOLON || first.type == TokenType::TK_EOF) &&
+            scanner.has_executable_comments()) {
+            const char* end = first.type == TokenType::TK_SEMICOLON
+                ? first.source.ptr + first.source.len : sql + len;
+            ParsedStatement statement;
+            statement.offset = static_cast<uint32_t>(cursor);
+            statement.source = StringRef{sql + cursor, static_cast<uint32_t>(end - (sql + cursor))};
+            statement.result.status = ParseResult::ERROR;
+            statement.result.has_executable_comments = true;
+            statement.result.has_user_variables = scanner.has_user_variables();
+            statement.result.error.message = {"Executable comment without a parsed statement", 45};
+            statement.result.error.offset = statement.offset;
+            batch.statements.push_back(statement);
+            cursor = static_cast<size_t>(end - sql);
+            continue;
+        }
         if (first.type == TokenType::TK_SEMICOLON) {
             cursor = static_cast<size_t>(first.source.ptr - sql) + first.source.len;
             continue;
@@ -109,6 +128,7 @@ BatchParseResult Parser<D>::parse_all(const char* sql, size_t len) {
                     ? static_cast<uint32_t>(at - sql) : statement.offset;
             }
         }
+        statement.result.has_executable_comments = scanner.has_executable_comments();
         batch.statements.push_back(statement);
         cursor = static_cast<size_t>(end - sql);
     }

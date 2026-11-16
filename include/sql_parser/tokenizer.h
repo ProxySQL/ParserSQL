@@ -18,6 +18,7 @@ public:
         has_error_ = false;
         has_fatal_error_ = false;
         has_user_variables_ = false;
+        has_executable_comments_ = false;
         hint_allowed_ = false;
         after_dot_ = false;
         paren_depth_ = 0;
@@ -32,6 +33,7 @@ public:
     bool has_error() const { return has_error_; }
     bool has_fatal_error() const { return has_fatal_error_; }
     bool has_user_variables() const { return has_user_variables_; }
+    bool has_executable_comments() const { return has_executable_comments_; }
     StringRef error_source() const { return error_source_; }
 
     // Hook for parser-level (non-tokenizer) errors -- when the parser
@@ -89,6 +91,7 @@ private:
     bool has_error_ = false;
     bool has_fatal_error_ = false;
     bool has_user_variables_ = false;
+    bool has_executable_comments_ = false;
     uint32_t paren_depth_ = 0;
     const char* first_open_paren_ = nullptr;
     StringRef error_source_;
@@ -173,6 +176,7 @@ private:
                     const bool executable = cursor_ < end_ &&
                         (*cursor_ == '!' ||
                          (cursor_ + 1 < end_ && cursor_[0] == 'M' && cursor_[1] == '!'));
+                    if (executable) has_executable_comments_ = true;
                     bool has_user_variable_marker = false;
                     bool closed = false;
                     while (cursor_ < end_) {
@@ -705,6 +709,16 @@ private:
             char c2 = peek_char(1);
 
             if constexpr (D == Dialect::MySQL) {
+                if (c == '<' && c2 == '=' && peek_char(2) == '>') {
+                    const char* start = cursor_;
+                    cursor_ += 3;
+                    return make_token(TokenType::TK_MYSQL_NULL_SAFE_EQUAL, start, 3);
+                }
+                if (c == '&' && c2 == '&') {
+                    const char* start = cursor_;
+                    cursor_ += 2;
+                    return make_token(TokenType::TK_MYSQL_LOGICAL_AND, start, 2);
+                }
                 if (c == '-' && c2 == '>') {
                     const char* start = cursor_;
                     cursor_ += 2;

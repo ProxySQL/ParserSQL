@@ -483,6 +483,30 @@ private:
         Token t = tok_.peek();
         if constexpr (D == Dialect::MySQL) {
             if (mysql_charset_introducer(t)) return parse_mysql_charset_literal();
+            if (keyword(t, "DATE") || keyword(t, "TIME") || keyword(t, "TIMESTAMP") ||
+                keyword(t, "N") || keyword(t, "BINARY")) {
+                auto look = tok_;
+                look.skip();
+                Token next = look.peek();
+                const bool temporal = keyword(t, "DATE") || keyword(t, "TIME") ||
+                                      keyword(t, "TIMESTAMP");
+                const bool national = keyword(t, "N") && next.type == TokenType::TK_STRING &&
+                    t.source.ptr + t.source.len == next.source.ptr && next.source.ptr[0] == '\'';
+                const bool binary = keyword(t, "BINARY") &&
+                    ((mysql_identifier_word(next) && next.type != TokenType::TK_AS) ||
+                     next.type == TokenType::TK_STRING ||
+                     next.type == TokenType::TK_INTEGER || next.type == TokenType::TK_FLOAT ||
+                     next.type == TokenType::TK_HEX_LITERAL || next.type == TokenType::TK_BIT_LITERAL ||
+                     next.type == TokenType::TK_LPAREN || next.type == TokenType::TK_PLUS ||
+                     next.type == TokenType::TK_MINUS || next.type == TokenType::TK_TILDE ||
+                     next.type == TokenType::TK_EXCLAIM || next.type == TokenType::TK_QUESTION ||
+                     next.type == TokenType::TK_USER_VARIABLE || next.type == TokenType::TK_DOUBLE_AT ||
+                     next.type == TokenType::TK_NULL || next.type == TokenType::TK_TRUE ||
+                     next.type == TokenType::TK_FALSE || next.type == TokenType::TK_CASE ||
+                     next.type == TokenType::TK_INTERVAL || next.type == TokenType::TK_NOT);
+                if ((temporal && next.type == TokenType::TK_STRING) || national || binary)
+                    return syntax_error();
+            }
         }
         if constexpr (D == Dialect::PostgreSQL) {
             if ((t.type == TokenType::TK_IDENTIFIER || t.type == TokenType::TK_INTERVAL) &&
@@ -1467,6 +1491,8 @@ private:
         }
         if constexpr (D == Dialect::MySQL) {
             if (type == TokenType::TK_COLLATE) return Precedence::POSTFIX;
+            if (type == TokenType::TK_MYSQL_NULL_SAFE_EQUAL) return Precedence::COMPARISON;
+            if (type == TokenType::TK_MYSQL_LOGICAL_AND) return Precedence::AND;
         }
         switch (type) {
             case TokenType::TK_OR:             return Precedence::OR;

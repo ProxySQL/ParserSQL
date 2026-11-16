@@ -353,3 +353,21 @@ TEST_F(PgSQLTokenizerTest, NoHashComment) {
     tok.reset(sql, strlen(sql));
     EXPECT_EQ(tok.next_token().type, TokenType::TK_PG_OPERATOR);
 }
+
+TEST_F(MySQLTokenizerTest, ExecutableCommentProvenanceAndReset) {
+    for (const std::string sql : {"/*!40101 SELECT 1 */ SELECT 1", "SELECT 1 /*M! + 1 */"}) {
+        tok.reset(sql.data(), sql.size());
+        while (tok.next_token().type != TokenType::TK_EOF) {}
+        EXPECT_TRUE(tok.has_executable_comments()) << sql;
+    }
+    for (const std::string sql : {"SELECT '/*! x */', `/*M! x */`", "SELECT 1 /* ordinary */"}) {
+        tok.reset(sql.data(), sql.size());
+        while (tok.next_token().type != TokenType::TK_EOF) {}
+        EXPECT_FALSE(tok.has_executable_comments()) << sql;
+    }
+    Tokenizer<Dialect::PostgreSQL> pg;
+    const std::string sql = "SELECT 1 /* outer /*! nested */ end */";
+    pg.reset(sql.data(), sql.size());
+    while (pg.next_token().type != TokenType::TK_EOF) {}
+    EXPECT_FALSE(pg.has_executable_comments());
+}
