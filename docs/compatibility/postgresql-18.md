@@ -1,7 +1,7 @@
 # PostgreSQL 18 Compatibility
 
-Generated: 2026-09-27T21:16:51Z
-ParserSQL commit: `3a98211c2f45a20b93d2b067d3771d04547f90de`
+Generated: 2026-11-18T04:23:05Z
+ParserSQL commit: `7018f12fab540bb3e3489ebc4dd5c31756904a2f`
 libpg_query previous: `17-latest` `815abf77660ca3c38511e3f5af7777b31764c1d5` (PostgreSQL 17.7)
 libpg_query target: `18-latest` `9ab9951b7021adcc6d25d261d5016ca0b83726b8` (PostgreSQL 18.4)
 
@@ -9,11 +9,11 @@ libpg_query target: `18-latest` `9ab9951b7021adcc6d25d261d5016ca0b83726b8` (Post
 
 | Result | Count |
 | --- | --- |
-| DEEP_SUPPORTED | 49848 |
+| DEEP_SUPPORTED | 49870 |
 | CLASSIFIED_ONLY | 0 |
-| PARTIAL | 52 |
-| ERROR | 1041 |
-| TRAILING_INPUT | 377 |
+| PARTIAL | 49 |
+| ERROR | 1039 |
+| TRAILING_INPUT | 360 |
 | TYPE_MISMATCH | 97 |
 
 ## PG18 Backlog
@@ -708,7 +708,6 @@ libpg_query target: `18-latest` `9ab9951b7021adcc6d25d261d5016ca0b83726b8` (Post
 | ERROR | PG_QUERY__NODE__NODE_CREATE_PUBLICATION_STMT | fdbd82862a3f0a4b6962d85a | -- Firstly, test using the option publish='insert' because the row filter -- validation of referenced columns is less strict than for delete/update. CREATE PUBLICATION testpub5 FOR TABLE testpub_rf... |
 | ERROR | PG_QUERY__NODE__NODE_CREATE_STMT | 5f4d1d0616ac091ef967f76f | CREATE TABLE withoid() WITH (oids) |
 | ERROR | PG_QUERY__NODE__NODE_CREATE_STMT | 7bfbc8c3dfe3165c0366e675 | -- Specifying name only for a non-Boolean option should fail CREATE TABLE reloptions_test2(i INT) WITH (fillfactor) |
-| ERROR | PG_QUERY__NODE__NODE_CREATE_STMT | b61f8504e316d3b54e162ab7 | create table 計算機用語 (用語 text, 分類コード varchar, 備考1Aだよ char(16)) |
 | ERROR | PG_QUERY__NODE__NODE_CREATE_STMT | e06e6ec92a7d3f86807488e6 | CREATE TEMP TABLE fktable2 (fk int references pktable ENFORCED NOT ENFORCED) |
 | ERROR | PG_QUERY__NODE__NODE_CREATE_SUBSCRIPTION_STMT | 07ebaa7b064e4b49306c6429 | -- fail - origin must be either none or any CREATE SUBSCRIPTION regress_testsub4 CONNECTION 'dbname=regress_doesnotexist' PUBLICATION testpub WITH (slot_name = NONE, connect = false, origin = foo) |
 | ERROR | PG_QUERY__NODE__NODE_CREATE_SUBSCRIPTION_STMT | 121e216e1ced684bb6b5e787 | CREATE SUBSCRIPTION regress_testsub CONNECTION 'dbname=regress_doesnotexist' PUBLICATION mypub WITH (connect = false, create_slot = false, copy_data = false) |
@@ -803,7 +802,6 @@ libpg_query target: `18-latest` `9ab9951b7021adcc6d25d261d5016ca0b83726b8` (Post
 | ERROR | PG_QUERY__NODE__NODE_DROP_OWNED_STMT | f8ddd3dc2ffb90920444b936 | DROP OWNED BY regress_priv_user2, regress_priv_user2 |
 | ERROR | PG_QUERY__NODE__NODE_DROP_STMT | 1ab59e63bd4cde6462bcf518 | DROP TRANSFORM FOR foo LANGUAGE plperl |
 | ERROR | PG_QUERY__NODE__NODE_DROP_STMT | 1b2f581f479bf3faef7b4d28 | DROP CAST IF EXISTS (text AS text) |
-| ERROR | PG_QUERY__NODE__NODE_DROP_STMT | 278ddd66feb40996ffba503e | drop table 計算機用語 |
 | ERROR | PG_QUERY__NODE__NODE_DROP_STMT | 30cf6055f9ac9d4430189971 | DROP CAST IF EXISTS (INTEGER AS no_such_schema.bar) |
 | ERROR | PG_QUERY__NODE__NODE_DROP_STMT | 3236b9d2f456af2c0422d786 | DROP CAST IF EXISTS (no_such_type1 AS INTEGER) |
 | ERROR | PG_QUERY__NODE__NODE_DROP_STMT | 375fea96bc4d54d717960f81 | DROP TRANSFORM IF EXISTS FOR hstore LANGUAGE plperl |
@@ -838,8 +836,6 @@ libpg_query target: `18-latest` `9ab9951b7021adcc6d25d261d5016ca0b83726b8` (Post
 | ERROR | PG_QUERY__NODE__NODE_GRANT_STMT | 1ce6a6886b07bf48aea72ad1 | GRANT SELECT ON atest4 TO GROUP regress_priv_group1 WITH GRANT OPTION |
 | ERROR | PG_QUERY__NODE__NODE_GRANT_STMT | 404e1692abac21ef7902c0d7 | GRANT SELECT ON TABLE deptest TO GROUP regress_dep_group |
 | ERROR | PG_QUERY__NODE__NODE_GRANT_STMT | e14965f3b086b4843a21cd80 | GRANT DELETE ON atest3 TO GROUP regress_priv_group2 |
-| ERROR | PG_QUERY__NODE__NODE_INDEX_STMT | ae845886aca7b8f1176c7801 | create index 計算機用語index2 on 計算機用語 using hash (分類コード) |
-| ERROR | PG_QUERY__NODE__NODE_INDEX_STMT | b7c15dc007ada6fa77dd4d6e | create index 計算機用語index1 on 計算機用語 using btree (用語) |
 | ERROR | PG_QUERY__NODE__NODE_RENAME_STMT | 00c7d8ee48aacf49c76595ca | ALTER TABLESPACE regress_tblspace RENAME TO regress_tblspace_renamed |
 | ERROR | PG_QUERY__NODE__NODE_RENAME_STMT | 043de1fdd68ded7201e68ad0 | alter trigger parenttrig on parent rename to anothertrig |
 | ERROR | PG_QUERY__NODE__NODE_RENAME_STMT | 0651db681ffb0bce9d58f7aa | -- failed (name conflict) ALTER TEXT SEARCH PARSER alt_ts_prs1 RENAME TO alt_ts_prs3 |
@@ -1029,16 +1025,18 @@ libpg_query target: `18-latest` `9ab9951b7021adcc6d25d261d5016ca0b83726b8` (Post
 | ERROR | PG_QUERY__NODE__NODE_VACUUM_STMT | 76951a3bc86863d0e59649f1 | -- Try ANALYZE ONLY with a column list ANALYZE ONLY vacparted(a,b) |
 | ERROR | PG_QUERY__NODE__NODE_VACUUM_STMT | 98e35171ec0c7f5ca3952c20 | -- Ensure only parent is analyzed ANALYZE ONLY only_inh_parent |
 | ERROR | PG_QUERY__NODE__NODE_VACUUM_STMT | b80cd6f58cdc7b0899fd60db | -- Ensure only the partitioned table is analyzed ANALYZE ONLY only_parted |
-| ERROR | PG_QUERY__NODE__NODE_VACUUM_STMT | d000619583de4f04de5994cc | vacuum 計算機用語 |
 | ERROR | PG_QUERY__NODE__NODE_VACUUM_STMT | d6c97c0eaa46e6ac032287fc | ANALYZE (nonexistentarg) does_not_exit |
 | ERROR | PG_QUERY__NODE__NODE_VACUUM_STMT | f23eac5f2baa7393de3c7e95 | -- VACUUM ONLY on a partitioned table does nothing, ensure we get a warning. VACUUM ONLY vacparted |
 | ERROR | PG_QUERY__NODE__NODE_VARIABLE_SET_STMT | 0160e03ddcd04c17585bb65d | SET LOCAL SESSION AUTHORIZATION DEFAULT |
 | ERROR | PG_QUERY__NODE__NODE_VARIABLE_SET_STMT | 1ecabc22845de67696abbcf1 | -- SET SESSION AUTHORIZATION SET SESSION SESSION AUTHORIZATION DEFAULT |
 | ERROR | PG_QUERY__NODE__NODE_VARIABLE_SET_STMT | 278202514ab9c9f1d0e03ba6 | SET LOCAL work_mem FROM CURRENT |
+| ERROR | PG_QUERY__NODE__NODE_VARIABLE_SET_STMT | 28405a5b75ac01fabec5cf3b | SET LOCAL TIME ZONE 'Australia/Sydney' |
 | ERROR | PG_QUERY__NODE__NODE_VARIABLE_SET_STMT | 5f2c699c2e5356a309c452f9 | SET custom.my.qualified.guc = 'foo' |
 | ERROR | PG_QUERY__NODE__NODE_VARIABLE_SET_STMT | 663d123df1d48c5423a418e2 | SET work_mem FROM CURRENT |
 | ERROR | PG_QUERY__NODE__NODE_VARIABLE_SET_STMT | 9a3202425cde5cf0cea2b6ce | SET LOCAL SESSION AUTHORIZATION regress_seq_user |
 | ERROR | PG_QUERY__NODE__NODE_VARIABLE_SET_STMT | a57b18b744c2f48fedc760dd | SET LOCAL SESSION AUTHORIZATION 'regress_stat_set_1' |
+| ERROR | PG_QUERY__NODE__NODE_VARIABLE_SET_STMT | d0c6c1770b30efe94cdf88ff | SET LOCAL TIME ZONE -8 |
+| ERROR | PG_QUERY__NODE__NODE_VARIABLE_SET_STMT | ef6e0e1253c4a671d4228c3e | SET LOCAL TIME ZONE 'Europe/Paris' |
 | ERROR | PG_QUERY__NODE__NODE_VARIABLE_SET_STMT | efa1b85c4bda6d329cfe770a | SET LOCAL SESSION AUTHORIZATION 'regress_stat_set_2' |
 | ERROR | PG_QUERY__NODE__NODE_VIEW_STMT | 032d167d2c1239e9779571dc | CREATE VIEW pg_stats WITH (security_barrier) AS SELECT nspname AS schemaname, relname AS tablename, attname AS attname, stainherit AS inherited, stanullfrac AS null_frac, stawidth AS avg_width, sta... |
 | ERROR | PG_QUERY__NODE__NODE_VIEW_STMT | 0fc7df93738459f61f6dfb06 | CREATE VIEW my_property_secure WITH (security_barrier) AS SELECT * FROM customer WHERE name = current_user |
@@ -1071,16 +1069,13 @@ libpg_query target: `18-latest` `9ab9951b7021adcc6d25d261d5016ca0b83726b8` (Post
 | PARTIAL | PG_QUERY__NODE__NODE_EXPLAIN_STMT | d0d86e169a6d9b5bc197cfad | explain (costs off) insert into insertconflicttest values(0, 'Crowberry') on conflict (key, fruit collate "C") do nothing |
 | PARTIAL | PG_QUERY__NODE__NODE_EXPLAIN_STMT | ddb84921f3cce2d9ec979c6a | explain (costs off) insert into insertconflicttest values(0, 'Crowberry') on conflict (fruit collate "C" text_pattern_ops, key) do nothing |
 | PARTIAL | PG_QUERY__NODE__NODE_INSERT_STMT | 0e687abaf19d83cc110cc8bf | insert into arr_pk_tbl(pk, f1[1:2]) values (1, '{6,7,8}') on conflict (pk) do update set f1[1] = excluded.f1[1], f1[2] = excluded.f1[2], f1[3] = excluded.f1[3] returning pk, f1 |
-| PARTIAL | PG_QUERY__NODE__NODE_INSERT_STMT | 2852eccba6ac4adf3cb81068 | insert into 計算機用語 values('コンピュータグラフィックス','分B10中') |
 | PARTIAL | PG_QUERY__NODE__NODE_INSERT_STMT | 30f6d5a976bb0164926c8799 | insert into arr_pk_tbl(pk, f1[-2147483648:2147483647]) values (2, '{}') |
 | PARTIAL | PG_QUERY__NODE__NODE_INSERT_STMT | 5affd2fd3542393270d13056 | -- error, type mismatch INSERT INTO arrtest (b[1:2]) VALUES(now()) |
 | PARTIAL | PG_QUERY__NODE__NODE_INSERT_STMT | 5d7cdc942bb8b3784b0661b6 | INSERT INTO arrtest (a, b[1:2], c, d[1:2]) VALUES ('{}', '{3,4}', '{foo,bar}', '{bar,foo}') |
 | PARTIAL | PG_QUERY__NODE__NODE_INSERT_STMT | 5f685f584deb7838d72c3d65 | INSERT INTO arrtest2 VALUES( ARRAY[[[113,142],[1,147]]], ARRAY[1.1,1.2,1.3]::float8[], ARRAY[1.1,1.2,1.3], ARRAY[[['aaa','aab'],['aba','abb'],['aca','acb']],[['baa','bab'],['bba','bbb'],['bca','bcb... |
-| PARTIAL | PG_QUERY__NODE__NODE_INSERT_STMT | 687a915c1b971b946a48da92 | insert into 計算機用語 values('コンピュータディスプレイ','機A01上') |
 | PARTIAL | PG_QUERY__NODE__NODE_INSERT_STMT | 92127ca4cb2e8ddb320b5fa5 | insert into arr_pk_tbl(pk, f1[0:2147483647]) values (2, '{}') |
 | PARTIAL | PG_QUERY__NODE__NODE_INSERT_STMT | b4f0e3c53b785e755144f064 | -- -- only the 'e' array is 0-based, the others are 1-based. -- INSERT INTO arrtest (a[1:5], b[1:1][1:2][1:2], c, d, f, g) VALUES ('{1,2,3,4,5}', '{{{0,0},{1,2}}}', '{}', '{}', '{}', '{}') |
 | PARTIAL | PG_QUERY__NODE__NODE_INSERT_STMT | bea89e870e0a098756d44fe6 | INSERT INTO arrtest (a, b[1:2][1:2], c, d, e, f, g) VALUES ('{11,12,23}', '{{3,4},{4,5}}', '{"foobar"}', '{{"elt1", "elt2"}}', '{"3.4", "6.7"}', '{"abc","abcde"}', '{"abc","abcde"}') |
-| PARTIAL | PG_QUERY__NODE__NODE_INSERT_STMT | e2d63e3201f2cf3bef49b5f6 | insert into 計算機用語 values('コンピュータプログラマー','人Z01下') |
 | PARTIAL | PG_QUERY__NODE__NODE_INSERT_STMT | fff040341e4a1456c3de7ef8 | INSERT INTO onek_with_null(unique1, unique2) VALUES (NULL, -1), (NULL, 2_147_483_647), (NULL, NULL), (100, NULL), (500, NULL) |
 | PARTIAL | PG_QUERY__NODE__NODE_LOAD_STMT | 0f700b9e49ab23eebf123911 | LOAD 'plpgsql' |
 | PARTIAL | PG_QUERY__NODE__NODE_LOAD_STMT | 21b258d05f002025775286e8 | LOAD '$libdir/sepgsql' |
@@ -1356,10 +1351,7 @@ libpg_query target: `18-latest` `9ab9951b7021adcc6d25d261d5016ca0b83726b8` (Post
 | TRAILING_INPUT | PG_QUERY__NODE__NODE_SELECT_STMT | 11a104e822f3b438959bad62 | -- fail -- Appendrels excluded by constraints failed to check permissions in 8.4-9.2. select * from ((select a.q1 as x from int8_tbl a offset 0) union all (select b.q2 as x from int8_tbl b offset 0... |
 | TRAILING_INPUT | PG_QUERY__NODE__NODE_SELECT_STMT | 124c83969dc3db708742dacb | SELECT ARRAY[[1,2],[3,4]] \|\| ARRAY[5,6] AS "{{1,2},{3,4},{5,6}}" |
 | TRAILING_INPUT | PG_QUERY__NODE__NODE_SELECT_STMT | 18e7bdfe22cb1ae5584196ad | SELECT class, aa FROM a_star* x WHERE aa ISNULL |
-| TRAILING_INPUT | PG_QUERY__NODE__NODE_SELECT_STMT | 1ae30f65b161516689dc9b07 | select *,character_length(用語) from 計算機用語 |
-| TRAILING_INPUT | PG_QUERY__NODE__NODE_SELECT_STMT | 1d38c100426f015fbf060d09 | select * from 計算機用語 where 用語 ~* 'コンピュータ[デグ]' |
 | TRAILING_INPUT | PG_QUERY__NODE__NODE_SELECT_STMT | 1dfddd45b17864e9c109ab3e | select percentile_disc(array[[null,1,0.5],[0.75,0.25,null]]) within group (order by thousand) from tenk1 |
-| TRAILING_INPUT | PG_QUERY__NODE__NODE_SELECT_STMT | 22af652eb3a84169f1363ad7 | select *,position('デ' in 用語) from 計算機用語 |
 | TRAILING_INPUT | PG_QUERY__NODE__NODE_SELECT_STMT | 2442b608284e5dff96ac99c7 | SELECT crypt('a very much longer text to encrypt. This one even stretches over more' 'than one line.', '$5$rounds=1400$anotherlongsaltstring') = '$5$rounds=1400$anotherlongsalts$Rx.j8H.h8HjEDGomFU8... |
 | TRAILING_INPUT | PG_QUERY__NODE__NODE_SELECT_STMT | 27b6ef8e1eab255381c3aa8e | SELECT pg_typeof(ARRAY[['a','bc'],['def','hijk']]::text[]::varchar[]) AS "character varying[]" |
 | TRAILING_INPUT | PG_QUERY__NODE__NODE_SELECT_STMT | 2c40c98f9d685e0fc642dbc1 | -- expressions SELECT t.f[1][3][1] AS "131", t.f[2][2][1] AS "221" FROM ( SELECT ARRAY[[[111,112],[121,122],[131,132]],[[211,212],[221,122],[231,232]]] AS f ) AS t |
@@ -1406,13 +1398,11 @@ libpg_query target: `18-latest` `9ab9951b7021adcc6d25d261d5016ca0b83726b8` (Post
 | TRAILING_INPUT | PG_QUERY__NODE__NODE_SELECT_STMT | 88af22bde7280c5f8a841f2e | SELECT sum(unique1) over (rows between unbounded.x preceding and unbounded.x following), unique1, four FROM tenk1, (values (1)) as unbounded(x) WHERE unique1 < 10 |
 | TRAILING_INPUT | PG_QUERY__NODE__NODE_SELECT_STMT | 8c7b68d96d6689c2118a5867 | SELECT sum(unique1) over (rows between unbounded(1) preceding and unbounded(1) following), unique1, four FROM tenk1 WHERE unique1 < 10 |
 | TRAILING_INPUT | PG_QUERY__NODE__NODE_SELECT_STMT | 8d87936ad471a0c232018b48 | SELECT * FROM test_type_conversion_array_timestamp(ARRAY[[['2016-09-21 15:34:24.078792-04','2016-10-22 11:34:24.078795-04',NULL], [NULL,'2016-10-21 11:34:25.078792-04','2016-10-21 11:34:24.098792-0... |
-| TRAILING_INPUT | PG_QUERY__NODE__NODE_SELECT_STMT | 8f446acafba8601f238956f3 | select * from 計算機用語 where 分類コード like '_Z%' |
 | TRAILING_INPUT | PG_QUERY__NODE__NODE_SELECT_STMT | 8f57590d909393200501cff4 | select armor('', array[['']], array['foo']) |
 | TRAILING_INPUT | PG_QUERY__NODE__NODE_SELECT_STMT | 93e151090ea311d21652e606 | SELECT (timestamp without time zone '2000-11-27', interval '12 hours') OVERLAPS (timestamp without time zone '2000-11-27', interval '12 hours') AS "True" |
 | TRAILING_INPUT | PG_QUERY__NODE__NODE_SELECT_STMT | 955088e13b194a4b55241f30 | select * from iboolpart where a is unknown |
 | TRAILING_INPUT | PG_QUERY__NODE__NODE_SELECT_STMT | 971f16c75af88b76ccb1715b | SELECT array_sort(ARRAY[[2,4],[2,1],[6,5]]) |
 | TRAILING_INPUT | PG_QUERY__NODE__NODE_SELECT_STMT | 98a6db81538e2cbd127226cb | SELECT test_slru_page_delete(0x1234500000030) |
-| TRAILING_INPUT | PG_QUERY__NODE__NODE_SELECT_STMT | 99aa9b1fedd8e79b004e38dc | select * from 計算機用語 where 分類コード ~* '人z01下' |
 | TRAILING_INPUT | PG_QUERY__NODE__NODE_SELECT_STMT | 9bdcf352eb002ddcb537e16b | SELECT ARRAY[[['hello','world']]] \|\| ARRAY[[['happy','birthday']]] AS "ARRAY" |
 | TRAILING_INPUT | PG_QUERY__NODE__NODE_SELECT_STMT | 9c4d3622c89385831388bb96 | SELECT test_slru_page_sync(0x1234500000030) |
 | TRAILING_INPUT | PG_QUERY__NODE__NODE_SELECT_STMT | 9c592518d7e3dd8c18b69eb7 | select plperl_sum_array(ARRAY[[[[[[1,2],[3,4]],[[5,6],[7,8]]],[[[9,10],[11,12]], [[13,14],[15,16]]]], [[[[17,18],[19,20]],[[21,22],[23,24]]],[[[25,26],[27,28]],[[29,30],[31,32]]]]], [[[[[1,2],[3,4]... |
@@ -1422,7 +1412,6 @@ libpg_query target: `18-latest` `9ab9951b7021adcc6d25d261d5016ca0b83726b8` (Post
 | TRAILING_INPUT | PG_QUERY__NODE__NODE_SELECT_STMT | a83b390a6cd79d36de5bb959 | SELECT array_position(ARRAY[[1,2],[3,4]], 3) |
 | TRAILING_INPUT | PG_QUERY__NODE__NODE_SELECT_STMT | a9f19d05e1f0812ad4c2e6ad | select armor('', array['foo'], array[['']]) |
 | TRAILING_INPUT | PG_QUERY__NODE__NODE_SELECT_STMT | acc3666c61ed6d8c539c7f42 | select * from boolpart where a is not unknown |
-| TRAILING_INPUT | PG_QUERY__NODE__NODE_SELECT_STMT | af6390317ba0d7d8854d07a7 | select *,substring(用語 from 10 for 4) from 計算機用語 |
 | TRAILING_INPUT | PG_QUERY__NODE__NODE_SELECT_STMT | b0df8d41cbcff2d401ba7e0c | SELECT (time '00:00', interval '1 hour') OVERLAPS (time '00:30', interval '1 hour') AS "True" |
 | TRAILING_INPUT | PG_QUERY__NODE__NODE_SELECT_STMT | b2acdf3245205205eef95ec7 | SELECT * FROM test_type_conversion_array_int4(ARRAY[[[1,2,NULL],[NULL,5,6]],[[NULL,8,9],[10,11,12]]]) |
 | TRAILING_INPUT | PG_QUERY__NODE__NODE_SELECT_STMT | b4b6be0d1fbf0563c34e78a0 | SELECT (timestamp with time zone '2000-11-27', interval '12 hours') OVERLAPS (timestamp with time zone '2000-11-27 12:00', timestamp with time zone '2000-11-30') AS "False" |
@@ -1441,30 +1430,19 @@ libpg_query target: `18-latest` `9ab9951b7021adcc6d25d261d5016ca0b83726b8` (Post
 | TRAILING_INPUT | PG_QUERY__NODE__NODE_SELECT_STMT | cc2fd50309421bf428d2c7e6 | select ARRAY[['a','g'],['b','h'],['asd','i']]::hstore |
 | TRAILING_INPUT | PG_QUERY__NODE__NODE_SELECT_STMT | cdd78a1079eec9bd1c5d1820 | SELECT test_slru_page_read(0x1234500000000) |
 | TRAILING_INPUT | PG_QUERY__NODE__NODE_SELECT_STMT | ce4a58bc619730a331fd5ee1 | SELECT test_slru_page_read(0x1234500000020, true) |
-| TRAILING_INPUT | PG_QUERY__NODE__NODE_SELECT_STMT | ce7da3e2130168aef6c19eb9 | select *,octet_length(用語) from 計算機用語 |
 | TRAILING_INPUT | PG_QUERY__NODE__NODE_SELECT_STMT | d62cf5861378a25986f295cf | select ARRAY[[['a','g'],['b','h'],['asd','i']]]::hstore |
-| TRAILING_INPUT | PG_QUERY__NODE__NODE_SELECT_STMT | d8a215ade168c188f2a65818 | select * from 計算機用語 |
 | TRAILING_INPUT | PG_QUERY__NODE__NODE_SELECT_STMT | da0953de0f290c0c5ff878f3 | select 'a=>1 , b=>2, c=>3'::hstore - ARRAY[['b'],['c'],['a']] |
 | TRAILING_INPUT | PG_QUERY__NODE__NODE_SELECT_STMT | db452239909bdc3706c0f824 | SELECT test_slru_page_readonly(0x1234500000001) |
 | TRAILING_INPUT | PG_QUERY__NODE__NODE_SELECT_STMT | dc58656c9ced960c942fe400 | SELECT (timestamp without time zone '2000-11-26', timestamp without time zone '2000-11-27') OVERLAPS (timestamp without time zone '2000-11-27 12:00', timestamp without time zone '2000-11-30') AS "F... |
 | TRAILING_INPUT | PG_QUERY__NODE__NODE_SELECT_STMT | e5cb740a5fb0dd7a06b48b9b | select foreach_test(ARRAY[[1,2],[3,4]]) |
 | TRAILING_INPUT | PG_QUERY__NODE__NODE_SELECT_STMT | e6e93483e876328ed351cdbe | SELECT * FROM test_type_conversion_array_date(ARRAY[[['2016-09-21','2016-09-22',NULL],[NULL,'2016-10-21','2016-10-22']], [[NULL,'2016-11-21','2016-10-21'],['2015-09-21','2015-09-22','2014-09-21']]]... |
-| TRAILING_INPUT | PG_QUERY__NODE__NODE_SELECT_STMT | ef06fdedf511011e4a3f3d66 | select * from 計算機用語 where 用語 ~ 'コンピュータ[デグ]' |
-| TRAILING_INPUT | PG_QUERY__NODE__NODE_SELECT_STMT | f3456f7f77637b07a7bb3fe4 | select * from 計算機用語 where 分類コード like '_Z01_' |
 | TRAILING_INPUT | PG_QUERY__NODE__NODE_SELECT_STMT | f83f7887c4a67039ccecf1e9 | select 'aa=>1, c=>3, b=>2, d=>4'::hstore -> ARRAY[['b','d'],['aa','c']] |
-| TRAILING_INPUT | PG_QUERY__NODE__NODE_SELECT_STMT | fa7c7d692b7dd19ceddcaaec | select * from 計算機用語 where 分類コード = '人Z01下' |
 | TRAILING_INPUT | PG_QUERY__NODE__NODE_SELECT_STMT | fadd5c83de9605fea9e56bd6 | SELECT ARRAY[['a','bc'],['def','hijk']]::text[]::varchar[] AS "{{a,bc},{def,hijk}}" |
 | TRAILING_INPUT | PG_QUERY__NODE__NODE_SELECT_STMT | fb39079244ed9893a307016e | SELECT * FROM test_type_conversion_array_text(ARRAY[['foo', 'bar'],['foo2', 'bar2']]) |
 | TRAILING_INPUT | PG_QUERY__NODE__NODE_UPDATE_STMT | 25c3493c48cbec2eaf1733a1 | -- let attribute a differ (must be done on rtest_t1 - see above) update rtest_t1 set a = a + 10 where b isnull |
-| TRAILING_INPUT | PG_QUERY__NODE__NODE_VARIABLE_SET_STMT | 108241523c8781dfd555b9bd | SET TRANSACTION SNAPSHOT 'Incorrect Identifier' |
-| TRAILING_INPUT | PG_QUERY__NODE__NODE_VARIABLE_SET_STMT | 2883046f1e58bfa966e2f29d | SET SESSION CHARACTERISTICS AS TRANSACTION READ ONLY, READ ONLY |
 | TRAILING_INPUT | PG_QUERY__NODE__NODE_VARIABLE_SET_STMT | 6d7cda546bc9e1ce8a44d90f | SET XML OPTION CONTENT |
 | TRAILING_INPUT | PG_QUERY__NODE__NODE_VARIABLE_SET_STMT | 763b75d9edeab280716214d2 | -- SET XML OPTION SET XML OPTION DOCUMENT |
-| TRAILING_INPUT | PG_QUERY__NODE__NODE_VARIABLE_SET_STMT | b9ecaa55eb680ad640b74111 | SET TRANSACTION ISOLATION LEVEL SERIALIZABLE, READ ONLY, DEFERRABLE |
-| TRAILING_INPUT | PG_QUERY__NODE__NODE_VARIABLE_SET_STMT | bf92167628b07677b6aa8424 | SET LOCAL search_path = ctl_schema, public |
 | TRAILING_INPUT | PG_QUERY__NODE__NODE_VARIABLE_SET_STMT | d389de9fe57465b653789229 | SET LOCAL TIME ZONE 10.5 |
-| TRAILING_INPUT | PG_QUERY__NODE__NODE_VARIABLE_SET_STMT | e1356d14e97ce520c935bed8 | SET TRANSACTION SNAPSHOT 'FFF-FFF-F' |
-| TRAILING_INPUT | PG_QUERY__NODE__NODE_VARIABLE_SET_STMT | f8df4d44e2f17213c6326e62 | SET SESSION CHARACTERISTICS AS TRANSACTION READ ONLY, READ WRITE |
 | TRAILING_INPUT | PG_QUERY__NODE__NODE_VARIABLE_SHOW_STMT | 0cac682a12cc29708e469913 | SHOW transaction_deferrable |
 | TRAILING_INPUT | PG_QUERY__NODE__NODE_VARIABLE_SHOW_STMT | 21c69acd774ac99411761799 | -- passes with role member of pg_read_all_settings SHOW session_preload_libraries |
 | TRAILING_INPUT | PG_QUERY__NODE__NODE_VARIABLE_SHOW_STMT | 309c3d6eb5ed49ffb65d0ba1 | SHOW TIME ZONE |
@@ -4979,6 +4957,7 @@ libpg_query target: `18-latest` `9ab9951b7021adcc6d25d261d5016ca0b83726b8` (Post
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_VARIABLE_SET_STMT | 1e506dba60cd562bbe233ba6 | SET check_function_bodies TO off |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_VARIABLE_SET_STMT | 1e6cd580437a60964d67e269 | -- Special cases. Keep these ones at the end to avoid conflicts. SET SCHEMA 'foo' |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_VARIABLE_SET_STMT | 26d5e8213809a66e75f85b0f | -- Check that the Hash Join bucket size estimator detects equal clauses correctly. SET enable_nestloop = 'off' |
+| DEEP_SUPPORTED | PG_QUERY__NODE__NODE_VARIABLE_SET_STMT | 2883046f1e58bfa966e2f29d | SET SESSION CHARACTERISTICS AS TRANSACTION READ ONLY, READ ONLY |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_VARIABLE_SET_STMT | 3076b5a0d6759fccad99f93d | set constraint_exclusion to on |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_VARIABLE_SET_STMT | 316ad88daed44ffecc49b9dc | -- Temporary schema SET search_path = 'pg_temp' |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_VARIABLE_SET_STMT | 3419ea41ce1ad5cd04378e9d | SET track_activities = off |
@@ -5032,6 +5011,7 @@ libpg_query target: `18-latest` `9ab9951b7021adcc6d25d261d5016ca0b83726b8` (Post
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_VARIABLE_SET_STMT | f25d4689a2aff455faca7a37 | SET pgcrypto.builtin_crypto_enabled = off |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_VARIABLE_SET_STMT | f4305aeb77ad7a28b29d54eb | set local enable_hashagg = off |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_VARIABLE_SET_STMT | f5d3e908ca015a0cec81679b | -- from timezone_abbreviations SET timezone = 'America/Montevideo' |
+| DEEP_SUPPORTED | PG_QUERY__NODE__NODE_VARIABLE_SET_STMT | f8df4d44e2f17213c6326e62 | SET SESSION CHARACTERISTICS AS TRANSACTION READ ONLY, READ WRITE |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_VARIABLE_SET_STMT | fc56a3ee91dc23d55af2573b | set local enable_bitmapscan = off |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_VIEW_STMT | 014f15d121ce8b14a254d3fc | CREATE VIEW pg_shmem_allocations_numa AS SELECT * FROM pg_get_shmem_allocations_numa() |
 | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_VIEW_STMT | 0534b45ad8db4e617d9c0851 | CREATE VIEW pg_replication_slots AS SELECT L.slot_name, L.plugin, L.slot_type, L.datoid, D.datname AS database, L.temporary, L.active, L.active_pid, L.xmin, L.catalog_xmin, L.restart_lsn, L.confirm... |
@@ -5142,8 +5122,6 @@ libpg_query target: `18-latest` `9ab9951b7021adcc6d25d261d5016ca0b83726b8` (Post
 | TRAILING_INPUT | PG_QUERY__NODE__NODE_SELECT_STMT | 4414b8358396adc3491bb8e9 | SELECT crypt('a very much longer text to encrypt. This one even stretches over more' 'than one line.', '$6$rounds=1400$anotherlongsaltstring') = '$6$rounds=1400$anotherlongsalts$POfYwTEok97VWcjxIiS... |
 | TRAILING_INPUT | PG_QUERY__NODE__NODE_SELECT_STMT | 971f16c75af88b76ccb1715b | SELECT array_sort(ARRAY[[2,4],[2,1],[6,5]]) |
 | TRAILING_INPUT | PG_QUERY__NODE__NODE_SELECT_STMT | c1850a2d38c3fca98271de6a | SELECT proname, proargtypes, pronamespace FROM pg_proc WHERE (proname, pronamespace) < ('abs', 1_000_000) ORDER BY proname DESC, proargtypes DESC, pronamespace DESC LIMIT 1 |
-| TRAILING_INPUT | PG_QUERY__NODE__NODE_VARIABLE_SET_STMT | 2883046f1e58bfa966e2f29d | SET SESSION CHARACTERISTICS AS TRANSACTION READ ONLY, READ ONLY |
-| TRAILING_INPUT | PG_QUERY__NODE__NODE_VARIABLE_SET_STMT | f8df4d44e2f17213c6326e62 | SET SESSION CHARACTERISTICS AS TRANSACTION READ ONLY, READ WRITE |
 | TRAILING_INPUT | PG_QUERY__NODE__NODE_VARIABLE_SHOW_STMT | 6b6c8b3bbddfd97dd05a27b4 | SHOW isn.weak |
 | TYPE_MISMATCH | PG_QUERY__NODE__NODE_VARIABLE_SET_STMT | 096f4b0b73310691abeadfe7 | reset rls_test.blah |
 | TYPE_MISMATCH | PG_QUERY__NODE__NODE_VARIABLE_SET_STMT | 3747b884a086d1d9ec428b7d | RESET vacuum_truncate |
@@ -5158,15 +5136,33 @@ libpg_query target: `18-latest` `9ab9951b7021adcc6d25d261d5016ca0b83726b8` (Post
 
 | Previous | Current | Oracle Node | ID | SQL |
 | --- | --- | --- | --- | --- |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_TRANSACTION_STMT | 33873c0047519609077c6129 | ROLLBACK TO SAVEPOINT settings |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_TRANSACTION_STMT | a1c8abfcfd392c7ee858a9d6 | rollback to settings |
-| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_TRANSACTION_STMT | cdb9707dbd061211f6b2e580 | savepoint settings |
+| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_SELECT_STMT | 1ae30f65b161516689dc9b07 | select *,character_length(用語) from 計算機用語 |
+| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_SELECT_STMT | 1d38c100426f015fbf060d09 | select * from 計算機用語 where 用語 ~* 'コンピュータ[デグ]' |
+| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_SELECT_STMT | 22af652eb3a84169f1363ad7 | select *,position('デ' in 用語) from 計算機用語 |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_DROP_STMT | 278ddd66feb40996ffba503e | drop table 計算機用語 |
+| PARTIAL | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_INSERT_STMT | 2852eccba6ac4adf3cb81068 | insert into 計算機用語 values('コンピュータグラフィックス','分B10中') |
+| PARTIAL | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_INSERT_STMT | 687a915c1b971b946a48da92 | insert into 計算機用語 values('コンピュータディスプレイ','機A01上') |
+| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_SELECT_STMT | 8f446acafba8601f238956f3 | select * from 計算機用語 where 分類コード like '_Z%' |
+| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_SELECT_STMT | 99aa9b1fedd8e79b004e38dc | select * from 計算機用語 where 分類コード ~* '人z01下' |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_INDEX_STMT | ae845886aca7b8f1176c7801 | create index 計算機用語index2 on 計算機用語 using hash (分類コード) |
+| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_SELECT_STMT | af6390317ba0d7d8854d07a7 | select *,substring(用語 from 10 for 4) from 計算機用語 |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_CREATE_STMT | b61f8504e316d3b54e162ab7 | create table 計算機用語 (用語 text, 分類コード varchar, 備考1Aだよ char(16)) |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_INDEX_STMT | b7c15dc007ada6fa77dd4d6e | create index 計算機用語index1 on 計算機用語 using btree (用語) |
+| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_SELECT_STMT | ce7da3e2130168aef6c19eb9 | select *,octet_length(用語) from 計算機用語 |
+| ERROR | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_VACUUM_STMT | d000619583de4f04de5994cc | vacuum 計算機用語 |
+| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_SELECT_STMT | d8a215ade168c188f2a65818 | select * from 計算機用語 |
+| PARTIAL | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_INSERT_STMT | e2d63e3201f2cf3bef49b5f6 | insert into 計算機用語 values('コンピュータプログラマー','人Z01下') |
+| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_SELECT_STMT | ef06fdedf511011e4a3f3d66 | select * from 計算機用語 where 用語 ~ 'コンピュータ[デグ]' |
+| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_SELECT_STMT | f3456f7f77637b07a7bb3fe4 | select * from 計算機用語 where 分類コード like '_Z01_' |
+| TRAILING_INPUT | DEEP_SUPPORTED | PG_QUERY__NODE__NODE_SELECT_STMT | fa7c7d692b7dd19ceddcaaec | select * from 計算機用語 where 分類コード = '人Z01下' |
 
 ## Regressed Baseline Transitions
 
 | Previous | Current | Oracle Node | ID | SQL |
 | --- | --- | --- | --- | --- |
-| - | - | - | - | - |
+| DEEP_SUPPORTED | ERROR | PG_QUERY__NODE__NODE_VARIABLE_SET_STMT | 28405a5b75ac01fabec5cf3b | SET LOCAL TIME ZONE 'Australia/Sydney' |
+| DEEP_SUPPORTED | ERROR | PG_QUERY__NODE__NODE_VARIABLE_SET_STMT | d0c6c1770b30efe94cdf88ff | SET LOCAL TIME ZONE -8 |
+| DEEP_SUPPORTED | ERROR | PG_QUERY__NODE__NODE_VARIABLE_SET_STMT | ef6e0e1253c4a671d4228c3e | SET LOCAL TIME ZONE 'Europe/Paris' |
 
 ## Structural Feature Witness Links
 
