@@ -24,6 +24,8 @@ public:
     // The classifier normally consumes SELECT. Pass the consumed keyword for
     // TABLE/VALUES/'(', or TK_EOF to start at an unconsumed query operand.
     AstNode* parse(TokenType first = TokenType::TK_SELECT) {
+        ParseDepthGuard<D> depth(tok_);
+        if (!depth) return nullptr;
         const bool require_operands = require_complete_operands_ ||
             first == TokenType::TK_VALUES || first == TokenType::TK_TABLE;
         AstNode* result = parse_compound_expr(0, first);

@@ -43,7 +43,7 @@ public:
             }
         }
 
-        // SELECT options: DISTINCT, ALL, SQL_CALC_FOUND_ROWS
+        // SELECT options precede the select item list.
         AstNode* opts = parse_select_options();
         if (opts) root->add_child(opts);
 
@@ -189,6 +189,18 @@ private:
                     }
                 }
                 opts->add_child(make_node(arena_, NodeType::NODE_IDENTIFIER, ExpressionParser<D>::canonical_keyword(t)));
+            } else if (D == Dialect::MySQL &&
+                       (ExpressionParser<D>::keyword(t, "HIGH_PRIORITY") ||
+                        ExpressionParser<D>::keyword(t, "STRAIGHT_JOIN") ||
+                        ExpressionParser<D>::keyword(t, "SQL_SMALL_RESULT") ||
+                        ExpressionParser<D>::keyword(t, "SQL_BIG_RESULT") ||
+                        ExpressionParser<D>::keyword(t, "SQL_BUFFER_RESULT") ||
+                        ExpressionParser<D>::keyword(t, "SQL_CACHE") ||
+                        ExpressionParser<D>::keyword(t, "SQL_NO_CACHE") ||
+                        ExpressionParser<D>::keyword(t, "DISTINCTROW"))) {
+                if (!opts) opts = make_node(arena_, NodeType::NODE_SELECT_OPTIONS);
+                tok_.skip();
+                opts->add_child(make_node(arena_, NodeType::NODE_IDENTIFIER, t.source));
             } else if (t.type == TokenType::TK_SQL_CALC_FOUND_ROWS) {
                 if (!opts) opts = make_node(arena_, NodeType::NODE_SELECT_OPTIONS);
                 tok_.skip();
@@ -244,8 +256,11 @@ private:
         AstNode* item = make_node(arena_, NodeType::NODE_SELECT_ITEM);
         if (!item) return nullptr;
 
+        const char* expression_start = tok_.peek().source.ptr;
         AstNode* expr = expr_parser_.parse();
         if (!expr) return nullptr;
+        // Original expression spelling; like other source refs, input must outlive the AST.
+        item->set_source({expression_start, static_cast<uint32_t>(tok_.consumed_token_end() - expression_start)});
 
         // Check for * EXCEPT(...) or * REPLACE(...)
         bool is_star = (expr->type == NodeType::NODE_ASTERISK);

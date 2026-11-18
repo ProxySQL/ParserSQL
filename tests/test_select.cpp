@@ -460,3 +460,226 @@ TEST_F(PgSQLSelectTest, ForUpdate) {
     auto r = parser.parse("SELECT * FROM users FOR UPDATE", 30);
     EXPECT_EQ(r.status, ParseResult::OK);
 }
+
+TEST_F(MySQLSelectTest, MySqlModifiersAreExplicitOptionsWithOriginalSpelling) {
+    for (const std::string option : {"high_priority", "SQL_NO_CACHE", "SQL_CACHE", "SQL_SMALL_RESULT", "SQL_BIG_RESULT", "SQL_BUFFER_RESULT", "STRAIGHT_JOIN", "DISTINCTROW"}) {
+        const std::string sql = "SELECT " + option + " a FROM t";
+        auto r = parser.parse(sql.data(), sql.size());
+        ASSERT_EQ(r.status, ParseResult::OK) << sql;
+        ASSERT_TRUE(r.full_input) << sql;
+        ASSERT_NE(r.ast, nullptr);
+        const auto* opts = find_child(r.ast, NodeType::NODE_SELECT_OPTIONS);
+        ASSERT_NE(opts, nullptr) << sql;
+        ASSERT_NE(opts->first_child, nullptr);
+        EXPECT_EQ(std::string(opts->first_child->value().ptr, opts->first_child->value().len), option);
+        const auto* items = find_child(r.ast, NodeType::NODE_SELECT_ITEM_LIST);
+        ASSERT_NE(items, nullptr);
+        ASSERT_NE(items->first_child, nullptr);
+        EXPECT_EQ(find_child(items->first_child, NodeType::NODE_ALIAS), nullptr) << sql;
+    }
+}
+
+TEST_F(MySQLSelectTest, QuotedMySqlModifierNamesRemainColumns) {
+    for (const std::string option : {"HIGH_PRIORITY", "SQL_NO_CACHE", "SQL_CACHE", "SQL_SMALL_RESULT", "SQL_BIG_RESULT", "SQL_BUFFER_RESULT", "STRAIGHT_JOIN", "DISTINCTROW"}) {
+        const std::string sql = "SELECT `" + option + "` FROM t";
+        auto r = parser.parse(sql.data(), sql.size());
+        ASSERT_EQ(r.status, ParseResult::OK) << sql;
+        ASSERT_TRUE(r.full_input) << sql;
+        ASSERT_NE(r.ast, nullptr);
+        EXPECT_EQ(find_child(r.ast, NodeType::NODE_SELECT_OPTIONS), nullptr) << sql;
+        const auto* items = find_child(r.ast, NodeType::NODE_SELECT_ITEM_LIST);
+        ASSERT_NE(items, nullptr);
+        ASSERT_NE(items->first_child, nullptr);
+        ASSERT_NE(items->first_child->first_child, nullptr);
+        EXPECT_EQ(std::string(items->first_child->first_child->value().ptr,
+                              items->first_child->first_child->value().len), option);
+    }
+}
+
+TEST_F(MySQLSelectTest, UnsupportedMySqlTypedLiteralsAndBinaryExpressionsAreNotComplete) {
+    for (const std::string expr : {"DATE '2020-01-01'", "TIME '12:34:56'", "TIMESTAMP '2020-01-01 12:34:56'", "N'hello'", "BINARY 'hello'", "BINARY col", "BINARY(col)", "BINARY CURRENT_DATE", "BINARY @x"}) {
+        for (const std::string sql : {"SELECT " + expr, "SELECT 1 FROM t WHERE a = " + expr}) {
+            auto r = parser.parse(sql.data(), sql.size());
+            EXPECT_EQ(r.stmt_type, StmtType::SELECT) << sql;
+            EXPECT_FALSE(r.ok() && r.full_input) << sql;
+        }
+    }
+}
+
+TEST_F(MySQLSelectTest, TypedLiteralRefusalPreservesValidColumnsFunctionsAndAliases) {
+    for (const std::string sql : {"SELECT `DATE` 'label' FROM t", "SELECT `TIME` 'label' FROM t", "SELECT `TIMESTAMP` 'label' FROM t", "SELECT `BINARY` 'label' FROM t", "SELECT `N` 'label' FROM t", "SELECT N 'label' FROM t", "SELECT date_col AS 'date' FROM t", "SELECT DATE AS 'date' FROM t", "SELECT DATE('2020-01-01'), TIME('12:34:56'), TIMESTAMP('2020-01-01')", "SELECT date_col, time_col, timestamp_col, binary_col FROM t"}) {
+        auto r = parser.parse(sql.data(), sql.size());
+        EXPECT_EQ(r.status, ParseResult::OK) << sql;
+        EXPECT_TRUE(r.full_input) << sql;
+    }
+}
+
+TEST_F(MySQLSelectTest, SelectItemExpressionSource) {
+    const char* sql = "SELECT /*lead*/ 1, (1 + 2) AS `x`, COUNT( * ) c, t.col /*end*/ FROM t";
+    auto r = parser.parse(sql, strlen(sql));
+    ASSERT_TRUE(r.ok());
+    ASSERT_TRUE(r.has_comments);
+    auto* items = find_child(r.ast, NodeType::NODE_SELECT_ITEM_LIST);
+    ASSERT_NE(items, nullptr);
+    const char* expected[] = {"1", "(1 + 2)", "COUNT( * )", "t.col"};
+    auto* item = items->first_child;
+    for (auto value : expected) {
+        ASSERT_NE(item, nullptr);
+        EXPECT_EQ(std::string(item->source().ptr, item->source().len), value);
+        item = item->next_sibling;
+    }
+    EXPECT_EQ(item, nullptr);
+}
+
+TEST_F(MySQLSelectTest, BatchCommentsAndSource) {
+    const char* sql = "SELECT 1; /*lead*/ SELECT (2 + 3) x; SELECT '/*no*/'";
+    auto batch = parser.parse_all(sql, strlen(sql));
+    ASSERT_EQ(batch.statements.size(), 3u);
+    EXPECT_FALSE(batch.statements[0].result.has_comments);
+    EXPECT_TRUE(batch.statements[1].result.has_comments);
+    EXPECT_FALSE(batch.statements[2].result.has_comments);
+    auto* items = find_child(batch.statements[1].result.ast, NodeType::NODE_SELECT_ITEM_LIST);
+    ASSERT_NE(items, nullptr);
+    auto span = items->first_child->source();
+    EXPECT_EQ(std::string(span.ptr, span.len), "(2 + 3)");
+    EXPECT_EQ(span.ptr, strstr(sql, "(2 + 3)"));
+}
+
+TEST_F(MySQLSelectTest, NestedSelectItemSources) {
+    const char* sql = "SELECT (SELECT f( 1 )) AS `nested`, 1 /*inside*/ + 2 /*tail*/";
+    auto r = parser.parse(sql, strlen(sql));
+    ASSERT_TRUE(r.ok());
+    auto* outer = find_child(r.ast, NodeType::NODE_SELECT_ITEM_LIST);
+    ASSERT_NE(outer, nullptr);
+    auto* first = outer->first_child;
+    ASSERT_NE(first, nullptr);
+    EXPECT_EQ(std::string(first->source().ptr, first->source().len), "(SELECT f( 1 ))");
+    auto* second = first->next_sibling;
+    ASSERT_NE(second, nullptr);
+    EXPECT_EQ(std::string(second->source().ptr, second->source().len), "1 /*inside*/ + 2");
+    const AstNode* inner = nullptr;
+    auto search = [&](auto&& self, const AstNode* n) -> void {
+        if (n->type == NodeType::NODE_SELECT_ITEM && n != first && n != second) inner = n;
+        for (auto* c = n->first_child; c; c = c->next_sibling) self(self, c);
+    };
+    search(search, first);
+    ASSERT_NE(inner, nullptr);
+    EXPECT_EQ(std::string(inner->source().ptr, inner->source().len), "f( 1 )");
+}
+
+TEST_F(MySQLSelectTest, CommentsMetadataOnErrorsAndHints) {
+    for (const char* sql : {"SELECT /*+ BKA(t) */ 1", "SELECT 1 /*!50000 + 2 */", "SELECT 1 /* unterminated"}) {
+        auto r = parser.parse(sql, strlen(sql));
+        EXPECT_TRUE(r.has_comments) << sql;
+        auto batch = parser.parse_all(sql, strlen(sql));
+        ASSERT_EQ(batch.statements.size(), 1u);
+        EXPECT_TRUE(batch.statements[0].result.has_comments) << sql;
+    }
+    const char* quoted = "SELECT '/* no */', `-- no`";
+    EXPECT_FALSE(parser.parse(quoted, strlen(quoted)).has_comments);
+}
+
+TEST(PostgreSQLSelectProvenance, CommentsAndQuotedControls) {
+    Parser<Dialect::PostgreSQL> parser;
+    const char* commented = "SELECT 1 /* outer /* inner */ end */";
+    EXPECT_TRUE(parser.parse(commented, strlen(commented)).has_comments);
+    auto batch = parser.parse_all(commented, strlen(commented));
+    ASSERT_EQ(batch.statements.size(), 1u);
+    EXPECT_TRUE(batch.statements[0].result.has_comments);
+    const char* quoted = "SELECT '/* no */', \"-- no\"";
+    EXPECT_FALSE(parser.parse(quoted, strlen(quoted)).has_comments);
+}
+
+TEST(MySQLSelectDepth, BoundsRecursiveExpressionsAndSubqueries) {
+    for (const std::string kind : {"paren", "not", "function", "select"}) {
+        for (int depth : {16, 512}) {
+            std::string sql = "SELECT ";
+            for (int i = 0; i < depth; ++i) {
+                if (kind == "paren") sql += "(";
+                else if (kind == "not") sql += "NOT ";
+                else if (kind == "function") sql += "ABS(";
+                else sql += "(SELECT ";
+            }
+            sql += "1";
+            if (kind != "not") sql.append(depth, ')');
+            Parser<Dialect::MySQL> parser;
+            auto result = parser.parse(sql.data(), sql.size());
+            if (depth == 16) EXPECT_TRUE(result.ok() && result.full_input) << kind;
+            else EXPECT_EQ(result.status, ParseResult::ERROR) << kind;
+            auto next = parser.parse("SELECT 1", 8);
+            EXPECT_TRUE(next.ok() && next.full_input) << kind;
+        }
+    }
+}
+
+TEST(MySQLSelectDepth, ConfigBatchAndFlatLists) {
+    ParserConfig config;
+    config.max_parse_depth = 8;
+    Parser<Dialect::MySQL> parser(config);
+    const std::string nested = "SELECT " + std::string(16, '(') + "1" + std::string(16, ')');
+    auto rejected = parser.parse(nested.data(), nested.size());
+    EXPECT_EQ(rejected.status, ParseResult::ERROR);
+    EXPECT_FALSE(rejected.full_input);
+    EXPECT_EQ(std::string(rejected.error.message.ptr, rejected.error.message.len),
+              "SQL parse depth limit exceeded");
+    const std::string batch_sql = nested + "; SELECT 1";
+    auto batch = parser.parse_all(batch_sql.data(), batch_sql.size());
+    ASSERT_EQ(batch.statements.size(), 2u);
+    EXPECT_EQ(batch.statements[0].result.status, ParseResult::ERROR);
+    EXPECT_FALSE(batch.statements[0].result.full_input);
+    EXPECT_TRUE(batch.statements[1].result.ok());
+    EXPECT_TRUE(batch.statements[1].result.full_input);
+    std::string flat = "SELECT 1";
+    for (int i = 0; i < 200; ++i) flat += ", 1";
+    auto result = parser.parse(flat.data(), flat.size());
+    EXPECT_TRUE(result.ok() && result.full_input);
+    auto control = parser.parse("SELECT ((1 + 2))", 16);
+    EXPECT_TRUE(control.ok() && control.full_input);
+}
+
+TEST(PostgreSQLSelectDepth, BoundsRecursiveExpressionsAndSubqueries) {
+    for (const std::string kind : {"paren", "not", "function", "select"}) {
+        for (int depth : {16, 512}) {
+            std::string sql = "SELECT ";
+            for (int i = 0; i < depth; ++i) {
+                if (kind == "paren") sql += "(";
+                else if (kind == "not") sql += "NOT ";
+                else if (kind == "function") sql += "ABS(";
+                else sql += "(SELECT ";
+            }
+            sql += "1";
+            if (kind != "not") sql.append(depth, ')');
+            Parser<Dialect::PostgreSQL> parser;
+            auto result = parser.parse(sql.data(), sql.size());
+            if (depth == 16) EXPECT_TRUE(result.ok() && result.full_input) << kind;
+            else {
+                EXPECT_EQ(result.status, ParseResult::ERROR) << kind;
+                EXPECT_FALSE(result.full_input) << kind;
+            }
+            auto next = parser.parse("SELECT 1", 8);
+            EXPECT_TRUE(next.ok() && next.full_input) << kind;
+        }
+    }
+}
+
+TEST(MySQLSelectDepth, ConfigurationBoundaries) {
+    const std::string nested = "SELECT " + std::string(256, '(') + "1" + std::string(256, ')');
+    ParserConfig config;
+    config.max_parse_depth = 100000;
+    Parser<Dialect::MySQL> capped(config);
+    auto result = capped.parse(nested.data(), nested.size());
+    EXPECT_EQ(result.status, ParseResult::ERROR);
+    EXPECT_FALSE(result.full_input);
+    config.max_parse_depth = 0;
+    Parser<Dialect::MySQL> zero(config);
+    result = zero.parse("SELECT 1", 8);
+    EXPECT_EQ(result.status, ParseResult::ERROR);
+    EXPECT_FALSE(result.full_input);
+    config.max_parse_depth = 4;
+    Parser<Dialect::MySQL> lower(config);
+    result = lower.parse("SELECT 1", 8);
+    EXPECT_TRUE(result.ok() && result.full_input);
+    result = lower.parse(nested.data(), nested.size());
+    EXPECT_EQ(result.status, ParseResult::ERROR);
+    EXPECT_FALSE(result.full_input);
+}

@@ -13,17 +13,37 @@ public:
     void reset(const char* input, size_t len) {
         start_ = input;
         cursor_ = input;
+        consumed_token_end_ = input;
         end_ = input + len;
         has_peeked_ = false;
         has_error_ = false;
         has_fatal_error_ = false;
         has_user_variables_ = false;
+        has_executable_comments_ = false;
+        has_comments_ = false;
         hint_allowed_ = false;
         after_dot_ = false;
+        parse_depth_ = 0;
+        parse_depth_exceeded_ = false;
         paren_depth_ = 0;
         first_open_paren_ = nullptr;
         error_source_ = {};
     }
+
+    // Shared by expression and query parsers using this tokenizer. Lookahead
+    // copies retain a snapshot; parsing continues on the original tokenizer.
+    void set_max_parse_depth(size_t depth) { max_parse_depth_ = depth < 128 ? depth : 128; }
+    bool enter_parse() {
+        if (parse_depth_ >= max_parse_depth_) {
+            parse_depth_exceeded_ = true;
+            flag_fatal_error_at(peek().source);
+            return false;
+        }
+        ++parse_depth_;
+        return true;
+    }
+    void leave_parse() { --parse_depth_; }
+    bool parse_depth_exceeded() const { return parse_depth_exceeded_; }
 
     // True iff the tokenizer has emitted at least one TK_ERROR token since
     // the last reset(). Lets callers distinguish "couldn't build an AST"
@@ -32,6 +52,12 @@ public:
     bool has_error() const { return has_error_; }
     bool has_fatal_error() const { return has_fatal_error_; }
     bool has_user_variables() const { return has_user_variables_; }
+    bool has_executable_comments() const { return has_executable_comments_; }
+    // Sticky since reset, including optimizer hints and executable comments.
+    bool has_comments() const { return has_comments_; }
+    // End of the last consumed token, or input_begin() before any consumption.
+    // Peeking and consuming EOF do not change this boundary.
+    const char* consumed_token_end() const { return consumed_token_end_; }
     StringRef error_source() const { return error_source_; }
 
     // Hook for parser-level (non-tokenizer) errors -- when the parser
@@ -49,11 +75,16 @@ public:
     }
 
     Token next_token() {
+        Token token;
         if (has_peeked_) {
             has_peeked_ = false;
-            return peeked_;
+            token = peeked_;
+        } else {
+            token = scan_token();
         }
-        return scan_token();
+        if (token.type != TokenType::TK_EOF)
+            consumed_token_end_ = token.source.ptr + token.source.len;
+        return token;
     }
 
     Token peek() {
@@ -64,13 +95,7 @@ public:
         return peeked_;
     }
 
-    void skip() {
-        if (has_peeked_) {
-            has_peeked_ = false;
-        } else {
-            scan_token();
-        }
-    }
+    void skip() { (void)next_token(); }
 
     // Expose start/end of input for remaining-input calculation and for
     // safe lookback (e.g. detecting whether an identifier token was source-
@@ -81,6 +106,7 @@ public:
 private:
     const char* start_ = nullptr;
     const char* cursor_ = nullptr;
+    const char* consumed_token_end_ = nullptr;
     const char* end_ = nullptr;
     Token peeked_;
     bool has_peeked_ = false;
@@ -89,6 +115,11 @@ private:
     bool has_error_ = false;
     bool has_fatal_error_ = false;
     bool has_user_variables_ = false;
+    bool has_executable_comments_ = false;
+    bool has_comments_ = false;
+    bool parse_depth_exceeded_ = false;
+    size_t parse_depth_ = 0;
+    size_t max_parse_depth_ = 128;
     uint32_t paren_depth_ = 0;
     const char* first_open_paren_ = nullptr;
     StringRef error_source_;
@@ -126,6 +157,7 @@ private:
                   (static_cast<unsigned char>(peek_char(2)) <= 0x20 ||
                    static_cast<unsigned char>(peek_char(2)) == 0x7f)));
             if (dash_comment) {
+                has_comments_ = true;
                 hint_allowed_ = false;
                 cursor_ += 2;
                 while (cursor_ < end_ && *cursor_ != '\n') ++cursor_;
@@ -135,6 +167,7 @@ private:
             // # line comment (MySQL only)
             if constexpr (D == Dialect::MySQL) {
                 if (c == '#') {
+                    has_comments_ = true;
                     hint_allowed_ = false;
                     ++cursor_;
                     while (cursor_ < end_ && *cursor_ != '\n') ++cursor_;
@@ -144,6 +177,7 @@ private:
 
             // /* block comment */
             if (c == '/' && peek_char(1) == '*') {
+                has_comments_ = true;
                 if constexpr (D == Dialect::MySQL) {
                     if (hint_allowed_ && peek_char(2) == '+') return;
                 }
@@ -173,6 +207,7 @@ private:
                     const bool executable = cursor_ < end_ &&
                         (*cursor_ == '!' ||
                          (cursor_ + 1 < end_ && cursor_[0] == 'M' && cursor_[1] == '!'));
+                    if (executable) has_executable_comments_ = true;
                     bool has_user_variable_marker = false;
                     bool closed = false;
                     while (cursor_ < end_) {
@@ -236,10 +271,39 @@ private:
                      static_cast<uint32_t>(source_start - start_)};
     }
 
+    // Validate one UTF-8 scalar without reading past the input. High bytes
+    // participate in identifiers; do not split a name into ASCII keyword tokens.
+    size_t utf8_identifier_char_length(const char* p) const {
+        const size_t left = static_cast<size_t>(end_ - p);
+        const auto c = static_cast<unsigned char>(*p);
+        size_t n = c >= 0xc2 && c <= 0xdf ? 2 :
+                   c >= 0xe0 && c <= 0xef ? 3 :
+                   c >= 0xf0 && c <= 0xf4 ? 4 : 0;
+        if (n == 0 || left < n) return 0;
+        for (size_t i = 1; i < n; ++i) {
+            const auto b = static_cast<unsigned char>(p[i]);
+            if (b < 0x80 || b > 0xbf) return 0;
+        }
+        const auto second = static_cast<unsigned char>(p[1]);
+        if ((c == 0xe0 && second < 0xa0) || (c == 0xed && second >= 0xa0) ||
+            (c == 0xf0 && second < 0x90) || (c == 0xf4 && second >= 0x90)) return 0;
+        return n;
+    }
+
     Token scan_identifier_or_keyword() {
         const char* start = cursor_;
         while (cursor_ < end_) {
             char c = *cursor_;
+            if (static_cast<unsigned char>(c) >= 0x80) {
+                const size_t n = utf8_identifier_char_length(cursor_);
+                if (n == 0) {
+                    ++cursor_;
+                    return make_token(TokenType::TK_ERROR, start,
+                                      static_cast<uint32_t>(cursor_ - start));
+                }
+                cursor_ += n;
+                continue;
+            }
             bool is_cont = (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') ||
                            (c >= '0' && c <= '9') || c == '_';
             // PostgreSQL allows `$` as an identifier continuation char (but
@@ -613,7 +677,8 @@ private:
         }
 
         // Identifiers and keywords
-        if ((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || c == '_') {
+        if ((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || c == '_' ||
+            static_cast<unsigned char>(c) >= 0x80) {
             return scan_identifier_or_keyword();
         }
 
@@ -705,6 +770,16 @@ private:
             char c2 = peek_char(1);
 
             if constexpr (D == Dialect::MySQL) {
+                if (c == '<' && c2 == '=' && peek_char(2) == '>') {
+                    const char* start = cursor_;
+                    cursor_ += 3;
+                    return make_token(TokenType::TK_MYSQL_NULL_SAFE_EQUAL, start, 3);
+                }
+                if (c == '&' && c2 == '&') {
+                    const char* start = cursor_;
+                    cursor_ += 2;
+                    return make_token(TokenType::TK_MYSQL_LOGICAL_AND, start, 2);
+                }
                 if (c == '-' && c2 == '>') {
                     const char* start = cursor_;
                     cursor_ += 2;
@@ -759,6 +834,20 @@ private:
             default:  return make_token(TokenType::TK_ERROR, s, 1);
         }
     }
+};
+
+template <Dialect D>
+class ParseDepthGuard {
+public:
+    explicit ParseDepthGuard(Tokenizer<D>& tokenizer)
+        : tokenizer_(tokenizer), entered_(tokenizer.enter_parse()) {}
+    ~ParseDepthGuard() { if (entered_) tokenizer_.leave_parse(); }
+    explicit operator bool() const { return entered_; }
+    ParseDepthGuard(const ParseDepthGuard&) = delete;
+    ParseDepthGuard& operator=(const ParseDepthGuard&) = delete;
+private:
+    Tokenizer<D>& tokenizer_;
+    bool entered_;
 };
 
 } // namespace sql_parser

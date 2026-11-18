@@ -353,3 +353,62 @@ TEST_F(PgSQLTokenizerTest, NoHashComment) {
     tok.reset(sql, strlen(sql));
     EXPECT_EQ(tok.next_token().type, TokenType::TK_PG_OPERATOR);
 }
+
+// ProxySQL #6630: UTF-8 identifiers must be single tokens, including when
+// adjacent ASCII bytes spell a SQL operation.
+template <Dialect D>
+static void check_utf8_identifiers() {
+    for (const char* sql : {"café", "日本語", "éDROP", "starté", "a😀z"}) {
+        Tokenizer<D> lexer;
+        lexer.reset(sql, strlen(sql));
+        Token token = lexer.next_token();
+        EXPECT_EQ(token.type, TokenType::TK_IDENTIFIER) << sql;
+        EXPECT_EQ(std::string(token.text.ptr, token.text.len), sql);
+        EXPECT_EQ(lexer.next_token().type, TokenType::TK_EOF);
+        EXPECT_FALSE(lexer.has_error());
+    }
+    for (const char* sql : {"\x80", "\xc0\xaf", "\xed\xa0\x80", "\xf4\x90\x80\x80", "a\xe2\x82"}) {
+        Tokenizer<D> lexer;
+        lexer.reset(sql, strlen(sql));
+        EXPECT_EQ(lexer.next_token().type, TokenType::TK_ERROR);
+        EXPECT_TRUE(lexer.has_error());
+    }
+}
+TEST_F(MySQLTokenizerTest, Utf8Identifiers) { check_utf8_identifiers<Dialect::MySQL>(); }
+TEST_F(PgSQLTokenizerTest, Utf8Identifiers) { check_utf8_identifiers<Dialect::PostgreSQL>(); }
+
+TEST_F(MySQLTokenizerTest, ExecutableCommentProvenanceAndReset) {
+    for (const std::string sql : {"/*!40101 SELECT 1 */ SELECT 1", "SELECT 1 /*M! + 1 */"}) {
+        tok.reset(sql.data(), sql.size());
+        while (tok.next_token().type != TokenType::TK_EOF) {}
+        EXPECT_TRUE(tok.has_executable_comments()) << sql;
+    }
+    for (const std::string sql : {"SELECT '/*! x */', `/*M! x */`", "SELECT 1 /* ordinary */"}) {
+        tok.reset(sql.data(), sql.size());
+        while (tok.next_token().type != TokenType::TK_EOF) {}
+        EXPECT_FALSE(tok.has_executable_comments()) << sql;
+    }
+    Tokenizer<Dialect::PostgreSQL> pg;
+    const std::string sql = "SELECT 1 /* outer /*! nested */ end */";
+    pg.reset(sql.data(), sql.size());
+    while (pg.next_token().type != TokenType::TK_EOF) {}
+    EXPECT_FALSE(pg.has_executable_comments());
+}
+
+TEST_F(MySQLTokenizerTest, ConsumedEndAndCommentTracking) {
+    const char* sql = "  1 /*c*/ + 2";
+    tok.reset(sql, strlen(sql));
+    EXPECT_EQ(tok.consumed_token_end(), sql);
+    tok.peek();
+    EXPECT_EQ(tok.consumed_token_end(), sql);
+    tok.skip();
+    EXPECT_EQ(tok.consumed_token_end(), sql + 3);
+    tok.peek();
+    EXPECT_EQ(tok.consumed_token_end(), sql + 3);
+    EXPECT_TRUE(tok.has_comments());
+    tok.next_token();
+    EXPECT_EQ(tok.consumed_token_end(), strstr(sql, "+") + 1);
+    tok.reset(sql, strlen(sql));
+    EXPECT_EQ(tok.consumed_token_end(), sql);
+    EXPECT_FALSE(tok.has_comments());
+}

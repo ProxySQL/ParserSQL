@@ -381,3 +381,15 @@ TEST(PgSQLEmitterTest, SelectBasic) {
     std::string out(result.ptr, result.len);
     EXPECT_EQ(out, "SELECT * FROM users WHERE id = 1");
 }
+
+TEST_F(MySQLEmitterTest, PreservesMySqlNullSafeEqualityAndLogicalAnd) {
+    EXPECT_EQ(round_trip("SELECT a <=> b FROM t"), "SELECT a <=> b FROM t");
+    EXPECT_EQ(round_trip("SELECT a && b FROM t"), "SELECT a && b FROM t");
+    EXPECT_EQ(round_trip("SELECT a && b = c FROM t"), "SELECT a && b = c FROM t");
+}
+
+TEST_F(MySQLEmitterTest, PreservesMySqlSelectModifiers) {
+    EXPECT_EQ(round_trip("SELECT high_priority SQL_NO_CACHE a FROM t"),
+              "SELECT high_priority SQL_NO_CACHE a FROM t");
+    EXPECT_EQ(round_trip("SELECT `SQL_NO_CACHE` FROM t"), "SELECT `SQL_NO_CACHE` FROM t");
+}

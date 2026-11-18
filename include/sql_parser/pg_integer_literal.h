@@ -15,7 +15,8 @@ inline bool pg_integer_literal(Tokenizer<Dialect::PostgreSQL>& tok, Token& resul
     look.skip();
     Token suffix = look.peek();
     char next = suffix.source.len ? suffix.source.ptr[0] : '\0';
-    bool word_suffix = (next >= 'a' && next <= 'z') || (next >= 'A' && next <= 'Z') || next == '_';
+    bool word_suffix = (next >= 'a' && next <= 'z') || (next >= 'A' && next <= 'Z') || next == '_' ||
+                       static_cast<unsigned char>(next) >= 0x80;
     bool joined = suffix.source.ptr == first.source.ptr + first.source.len && word_suffix;
     uint32_t length = first.source.len + (joined ? suffix.source.len : 0);
     const char* text = first.source.ptr;
