@@ -261,6 +261,8 @@ public:
 
     // Parse an expression with minimum precedence 0
     AstNode* parse(Precedence min_prec = Precedence::NONE) {
+        ParseDepthGuard<D> depth(tok_);
+        if (!depth) return nullptr;
         // b_expr restrictions apply to this operator chain; parenthesized
         // expressions and function arguments parsed by the atom remain a_expr.
         bool restricted = json_xml_restricted_;

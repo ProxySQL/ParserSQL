@@ -589,3 +589,97 @@ TEST(PostgreSQLSelectProvenance, CommentsAndQuotedControls) {
     const char* quoted = "SELECT '/* no */', \"-- no\"";
     EXPECT_FALSE(parser.parse(quoted, strlen(quoted)).has_comments);
 }
+
+TEST(MySQLSelectDepth, BoundsRecursiveExpressionsAndSubqueries) {
+    for (const std::string kind : {"paren", "not", "function", "select"}) {
+        for (int depth : {16, 512}) {
+            std::string sql = "SELECT ";
+            for (int i = 0; i < depth; ++i) {
+                if (kind == "paren") sql += "(";
+                else if (kind == "not") sql += "NOT ";
+                else if (kind == "function") sql += "ABS(";
+                else sql += "(SELECT ";
+            }
+            sql += "1";
+            if (kind != "not") sql.append(depth, ')');
+            Parser<Dialect::MySQL> parser;
+            auto result = parser.parse(sql.data(), sql.size());
+            if (depth == 16) EXPECT_TRUE(result.ok() && result.full_input) << kind;
+            else EXPECT_EQ(result.status, ParseResult::ERROR) << kind;
+            auto next = parser.parse("SELECT 1", 8);
+            EXPECT_TRUE(next.ok() && next.full_input) << kind;
+        }
+    }
+}
+
+TEST(MySQLSelectDepth, ConfigBatchAndFlatLists) {
+    ParserConfig config;
+    config.max_parse_depth = 8;
+    Parser<Dialect::MySQL> parser(config);
+    const std::string nested = "SELECT " + std::string(16, '(') + "1" + std::string(16, ')');
+    auto rejected = parser.parse(nested.data(), nested.size());
+    EXPECT_EQ(rejected.status, ParseResult::ERROR);
+    EXPECT_FALSE(rejected.full_input);
+    EXPECT_EQ(std::string(rejected.error.message.ptr, rejected.error.message.len),
+              "SQL parse depth limit exceeded");
+    const std::string batch_sql = nested + "; SELECT 1";
+    auto batch = parser.parse_all(batch_sql.data(), batch_sql.size());
+    ASSERT_EQ(batch.statements.size(), 2u);
+    EXPECT_EQ(batch.statements[0].result.status, ParseResult::ERROR);
+    EXPECT_FALSE(batch.statements[0].result.full_input);
+    EXPECT_TRUE(batch.statements[1].result.ok());
+    EXPECT_TRUE(batch.statements[1].result.full_input);
+    std::string flat = "SELECT 1";
+    for (int i = 0; i < 200; ++i) flat += ", 1";
+    auto result = parser.parse(flat.data(), flat.size());
+    EXPECT_TRUE(result.ok() && result.full_input);
+    auto control = parser.parse("SELECT ((1 + 2))", 16);
+    EXPECT_TRUE(control.ok() && control.full_input);
+}
+
+TEST(PostgreSQLSelectDepth, BoundsRecursiveExpressionsAndSubqueries) {
+    for (const std::string kind : {"paren", "not", "function", "select"}) {
+        for (int depth : {16, 512}) {
+            std::string sql = "SELECT ";
+            for (int i = 0; i < depth; ++i) {
+                if (kind == "paren") sql += "(";
+                else if (kind == "not") sql += "NOT ";
+                else if (kind == "function") sql += "ABS(";
+                else sql += "(SELECT ";
+            }
+            sql += "1";
+            if (kind != "not") sql.append(depth, ')');
+            Parser<Dialect::PostgreSQL> parser;
+            auto result = parser.parse(sql.data(), sql.size());
+            if (depth == 16) EXPECT_TRUE(result.ok() && result.full_input) << kind;
+            else {
+                EXPECT_EQ(result.status, ParseResult::ERROR) << kind;
+                EXPECT_FALSE(result.full_input) << kind;
+            }
+            auto next = parser.parse("SELECT 1", 8);
+            EXPECT_TRUE(next.ok() && next.full_input) << kind;
+        }
+    }
+}
+
+TEST(MySQLSelectDepth, ConfigurationBoundaries) {
+    const std::string nested = "SELECT " + std::string(256, '(') + "1" + std::string(256, ')');
+    ParserConfig config;
+    config.max_parse_depth = 100000;
+    Parser<Dialect::MySQL> capped(config);
+    auto result = capped.parse(nested.data(), nested.size());
+    EXPECT_EQ(result.status, ParseResult::ERROR);
+    EXPECT_FALSE(result.full_input);
+    config.max_parse_depth = 0;
+    Parser<Dialect::MySQL> zero(config);
+    result = zero.parse("SELECT 1", 8);
+    EXPECT_EQ(result.status, ParseResult::ERROR);
+    EXPECT_FALSE(result.full_input);
+    config.max_parse_depth = 4;
+    Parser<Dialect::MySQL> lower(config);
+    result = lower.parse("SELECT 1", 8);
+    EXPECT_TRUE(result.ok() && result.full_input);
+    result = lower.parse(nested.data(), nested.size());
+    EXPECT_EQ(result.status, ParseResult::ERROR);
+    EXPECT_FALSE(result.full_input);
+}

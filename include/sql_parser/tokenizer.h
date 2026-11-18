@@ -23,10 +23,27 @@ public:
         has_comments_ = false;
         hint_allowed_ = false;
         after_dot_ = false;
+        parse_depth_ = 0;
+        parse_depth_exceeded_ = false;
         paren_depth_ = 0;
         first_open_paren_ = nullptr;
         error_source_ = {};
     }
+
+    // Shared by expression and query parsers using this tokenizer. Lookahead
+    // copies retain a snapshot; parsing continues on the original tokenizer.
+    void set_max_parse_depth(size_t depth) { max_parse_depth_ = depth < 128 ? depth : 128; }
+    bool enter_parse() {
+        if (parse_depth_ >= max_parse_depth_) {
+            parse_depth_exceeded_ = true;
+            flag_fatal_error_at(peek().source);
+            return false;
+        }
+        ++parse_depth_;
+        return true;
+    }
+    void leave_parse() { --parse_depth_; }
+    bool parse_depth_exceeded() const { return parse_depth_exceeded_; }
 
     // True iff the tokenizer has emitted at least one TK_ERROR token since
     // the last reset(). Lets callers distinguish "couldn't build an AST"
@@ -100,6 +117,9 @@ private:
     bool has_user_variables_ = false;
     bool has_executable_comments_ = false;
     bool has_comments_ = false;
+    bool parse_depth_exceeded_ = false;
+    size_t parse_depth_ = 0;
+    size_t max_parse_depth_ = 128;
     uint32_t paren_depth_ = 0;
     const char* first_open_paren_ = nullptr;
     StringRef error_source_;
@@ -784,6 +804,20 @@ private:
             default:  return make_token(TokenType::TK_ERROR, s, 1);
         }
     }
+};
+
+template <Dialect D>
+class ParseDepthGuard {
+public:
+    explicit ParseDepthGuard(Tokenizer<D>& tokenizer)
+        : tokenizer_(tokenizer), entered_(tokenizer.enter_parse()) {}
+    ~ParseDepthGuard() { if (entered_) tokenizer_.leave_parse(); }
+    explicit operator bool() const { return entered_; }
+    ParseDepthGuard(const ParseDepthGuard&) = delete;
+    ParseDepthGuard& operator=(const ParseDepthGuard&) = delete;
+private:
+    Tokenizer<D>& tokenizer_;
+    bool entered_;
 };
 
 } // namespace sql_parser

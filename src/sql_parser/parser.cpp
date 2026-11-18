@@ -20,7 +20,9 @@ namespace sql_parser {
 template <Dialect D>
 Parser<D>::Parser(const ParserConfig& config)
     : arena_(config.arena_block_size, config.arena_max_size),
-      stmt_cache_(config.stmt_cache_capacity) {}
+      stmt_cache_(config.stmt_cache_capacity) {
+    tokenizer_.set_max_parse_depth(config.max_parse_depth);
+}
 
 template <Dialect D>
 void Parser<D>::reset() {
@@ -989,6 +991,13 @@ Token Parser<D>::read_table_name(StringRef& schema_out) {
 
 template <Dialect D>
 void Parser<D>::scan_to_end(ParseResult& result) {
+    if (tokenizer_.parse_depth_exceeded()) {
+        result.status = ParseResult::ERROR;
+        result.full_input = false;
+        result.remaining = tokenizer_.error_source();
+        result.error.message = {"SQL parse depth limit exceeded", 30};
+        return;
+    }
     Token first = tokenizer_.next_token();
     if (first.type == TokenType::TK_EOF) {
         StringRef error_source = tokenizer_.error_source();

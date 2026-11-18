@@ -15,6 +15,7 @@ struct ParserConfig {
     size_t arena_block_size = 65536;    // 64KB
     size_t arena_max_size = 1048576;    // 1MB
     size_t stmt_cache_capacity = 128;
+    size_t max_parse_depth = 128; // Capped at 128 to bound recursive parser stack use.
 };
 
 template <Dialect D>
