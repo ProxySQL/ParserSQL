@@ -271,10 +271,39 @@ private:
                      static_cast<uint32_t>(source_start - start_)};
     }
 
+    // Validate one UTF-8 scalar without reading past the input. High bytes
+    // participate in identifiers; do not split a name into ASCII keyword tokens.
+    size_t utf8_identifier_char_length(const char* p) const {
+        const size_t left = static_cast<size_t>(end_ - p);
+        const auto c = static_cast<unsigned char>(*p);
+        size_t n = c >= 0xc2 && c <= 0xdf ? 2 :
+                   c >= 0xe0 && c <= 0xef ? 3 :
+                   c >= 0xf0 && c <= 0xf4 ? 4 : 0;
+        if (n == 0 || left < n) return 0;
+        for (size_t i = 1; i < n; ++i) {
+            const auto b = static_cast<unsigned char>(p[i]);
+            if (b < 0x80 || b > 0xbf) return 0;
+        }
+        const auto second = static_cast<unsigned char>(p[1]);
+        if ((c == 0xe0 && second < 0xa0) || (c == 0xed && second >= 0xa0) ||
+            (c == 0xf0 && second < 0x90) || (c == 0xf4 && second >= 0x90)) return 0;
+        return n;
+    }
+
     Token scan_identifier_or_keyword() {
         const char* start = cursor_;
         while (cursor_ < end_) {
             char c = *cursor_;
+            if (static_cast<unsigned char>(c) >= 0x80) {
+                const size_t n = utf8_identifier_char_length(cursor_);
+                if (n == 0) {
+                    ++cursor_;
+                    return make_token(TokenType::TK_ERROR, start,
+                                      static_cast<uint32_t>(cursor_ - start));
+                }
+                cursor_ += n;
+                continue;
+            }
             bool is_cont = (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') ||
                            (c >= '0' && c <= '9') || c == '_';
             // PostgreSQL allows `$` as an identifier continuation char (but
@@ -648,7 +677,8 @@ private:
         }
 
         // Identifiers and keywords
-        if ((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || c == '_') {
+        if ((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || c == '_' ||
+            static_cast<unsigned char>(c) >= 0x80) {
             return scan_identifier_or_keyword();
         }
 
