@@ -25,6 +25,17 @@ public:
         }
     }
 
+    // Room for n more bytes, already counted in the length, for a caller that
+    // writes them itself. Null when the arena is exhausted, as append() then
+    // appends nothing.
+    char* extend(size_t n) {
+        ensure_capacity(n);
+        if (!buf_) return nullptr;
+        char* at = buf_ + len_;
+        len_ += n;
+        return at;
+    }
+
     void append(StringRef ref) {
         if (ref.ptr && ref.len > 0) {
             append(ref.ptr, ref.len);

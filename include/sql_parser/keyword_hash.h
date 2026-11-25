@@ -22,6 +22,17 @@ inline uint32_t hash_keyword(const char* text, uint32_t len) {
     return h;
 }
 
+// hash_keyword() one byte at a time, for a scanner that already walks the
+// text: hash_keyword(text, len) equals folding hash_keyword_step() over the
+// bytes of text starting from HASH_SEED.
+static constexpr uint32_t HASH_SEED = 0x811c9dc5u;
+inline uint32_t hash_keyword_step(uint32_t h, uint8_t c) {
+    if (c >= 'A' && c <= 'Z') c += 32;
+    h ^= c;
+    h *= 0x01000193u;
+    return h;
+}
+
 // Hash table entry
 struct HashEntry {
     const char* text;   // uppercase keyword text (nullptr = empty slot)
@@ -67,10 +78,10 @@ inline void build_table(const KeywordEntry (&keywords)[N], HashEntry (&table)[TA
     }
 }
 
-// Lookup a keyword in a pre-built hash table.
-inline TokenType lookup_in_table(const HashEntry (&table)[TABLE_SIZE],
-                                  const char* text, uint32_t len) {
-    uint32_t idx = hash_keyword(text, len) & TABLE_MASK;
+// Lookup a keyword in a pre-built hash table, given hash_keyword(text, len).
+inline TokenType lookup_in_table_hashed(const HashEntry (&table)[TABLE_SIZE],
+                                         const char* text, uint32_t len, uint32_t hash) {
+    uint32_t idx = hash & TABLE_MASK;
     for (uint32_t probe = 0; probe <= MAX_PROBE; ++probe) {
         const HashEntry& e = table[idx];
         if (e.text == nullptr) return TokenType::TK_IDENTIFIER;
@@ -78,6 +89,21 @@ inline TokenType lookup_in_table(const HashEntry (&table)[TABLE_SIZE],
         idx = (idx + 1) & TABLE_MASK;
     }
     return TokenType::TK_IDENTIFIER;
+}
+
+// Lookup a keyword in a pre-built hash table.
+inline TokenType lookup_in_table(const HashEntry (&table)[TABLE_SIZE],
+                                  const char* text, uint32_t len) {
+    return lookup_in_table_hashed(table, text, len, hash_keyword(text, len));
+}
+
+// Length of the longest keyword of an array: a longer word is not a keyword.
+template <typename KeywordEntry, size_t N>
+constexpr uint32_t max_keyword_length(const KeywordEntry (&keywords)[N]) {
+    uint32_t longest = 0;
+    for (size_t k = 0; k < N; ++k)
+        if (keywords[k].len > longest) longest = keywords[k].len;
+    return longest;
 }
 
 } // namespace keyword_hash

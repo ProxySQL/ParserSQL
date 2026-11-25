@@ -244,36 +244,78 @@ private:
                      static_cast<uint32_t>(source_start - start_)};
     }
 
+    // make_token() for an identifier or keyword: none of the bookkeeping for
+    // errors, parentheses, end of input or user variables applies to a word.
+    Token make_word_token(TokenType type, const char* start, uint32_t len) {
+        if constexpr (D == Dialect::MySQL) {
+            hint_allowed_ = !after_dot_ && (type == TokenType::TK_SELECT || type == TokenType::TK_INSERT ||
+                type == TokenType::TK_UPDATE || type == TokenType::TK_DELETE || type == TokenType::TK_REPLACE);
+            after_dot_ = false;
+        }
+        return Token{type, StringRef{start, len}, StringRef{start, len},
+                     static_cast<uint32_t>(start - start_)};
+    }
+
+    // word_char_fold()[c] is c folded to lower case when c is an ASCII word
+    // character ([A-Za-z0-9_]) and 0 otherwise. One load classifies the byte
+    // and gives what the keyword hash consumes for it.
+    static const uint8_t* word_char_fold() {
+        struct Table {
+            uint8_t fold[256];
+            constexpr Table() : fold() {
+                for (int c = 0; c < 256; ++c) {
+                    if (c >= 'A' && c <= 'Z') fold[c] = static_cast<uint8_t>(c + 32);
+                    else if ((c >= 'a' && c <= 'z') || (c >= '0' && c <= '9') || c == '_')
+                        fold[c] = static_cast<uint8_t>(c);
+                    else fold[c] = 0;
+                }
+            }
+        };
+        static constexpr Table table{};
+        return table.fold;
+    }
+
     Token scan_identifier_or_keyword() {
-        const char* start = cursor_;
-        while (cursor_ < end_) {
-            char c = *cursor_;
-            bool is_cont = (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') ||
-                           (c >= '0' && c <= '9') || c == '_';
+        const char* const start = cursor_;
+        const char* const end = end_;
+        const uint8_t* const fold = word_char_fold();
+        const char* p = start;
+        // The keyword hash is computed while the word is scanned. A word
+        // with a `$` is not a keyword.
+        uint32_t hash = keyword_hash::HASH_SEED;
+        bool keyword_candidate = true;
+        while (p < end) {
+            const auto c = static_cast<unsigned char>(*p);
+            if (const uint8_t folded = fold[c]) {
+                hash = (hash ^ folded) * 0x01000193u;
+                ++p;
+                continue;
+            }
             // PostgreSQL allows `$` as an identifier continuation char (but
             // not as the first char, which is enforced because $ at start
             // is handled by the $$ / $N branches in next_token_impl()).
             // e.g. `SET search_path = schema$1` — `schema$1` is a single
             // identifier, not `schema` followed by the placeholder `$1`.
-            if (!is_cont && D == Dialect::PostgreSQL && c == '$' && cursor_ > start) {
-                is_cont = true;
+            if (D == Dialect::PostgreSQL && c == '$' && p > start) {
+                ++p;
+                keyword_candidate = false;
+                continue;
             }
-            if (is_cont) {
-                ++cursor_;
-            } else {
-                break;
-            }
+            break;
         }
-        uint32_t len = static_cast<uint32_t>(cursor_ - start);
+        cursor_ = p;
+        const uint32_t len = static_cast<uint32_t>(p - start);
 
         // Keyword lookup
-        TokenType kw;
-        if constexpr (D == Dialect::MySQL) {
-            kw = mysql_keywords::lookup(start, len);
-        } else {
-            kw = pgsql_keywords::lookup(start, len);
+        TokenType kw = TokenType::TK_IDENTIFIER;
+        if (keyword_candidate) {
+            if constexpr (D == Dialect::MySQL) {
+                kw = mysql_keywords::lookup_hashed(start, len, hash);
+            } else {
+                kw = pgsql_keywords::lookup_hashed(start, len, hash);
+            }
         }
-        return make_token(kw, start, len);
+        return make_word_token(kw, start, len);
     }
 
     Token scan_number() {
@@ -538,6 +580,22 @@ private:
         }
     }
 
+    // Token type of a one-character PostgreSQL operator.
+    static TokenType pg_single_operator(char c) {
+        switch (c) {
+            case '+': return TokenType::TK_PLUS;
+            case '-': return TokenType::TK_MINUS;
+            case '*': return TokenType::TK_ASTERISK;
+            case '/': return TokenType::TK_SLASH;
+            case '%': return TokenType::TK_PERCENT;
+            case '^': return TokenType::TK_CARET;
+            case '=': return TokenType::TK_EQUAL;
+            case '<': return TokenType::TK_LESS;
+            case '>': return TokenType::TK_GREATER;
+            default: return TokenType::TK_PG_OPERATOR;
+        }
+    }
+
     Token scan_pg_operator() {
         const char* start = cursor_;
         while (cursor_ < end_ && pg_operator_char(*cursor_)) {
@@ -558,18 +616,7 @@ private:
         TokenType type = TokenType::TK_PG_OPERATOR;
         if (len >= 64) type = TokenType::TK_ERROR;
         else if (len == 1) {
-            switch (*start) {
-                case '+': type = TokenType::TK_PLUS; break;
-                case '-': type = TokenType::TK_MINUS; break;
-                case '*': type = TokenType::TK_ASTERISK; break;
-                case '/': type = TokenType::TK_SLASH; break;
-                case '%': type = TokenType::TK_PERCENT; break;
-                case '^': type = TokenType::TK_CARET; break;
-                case '=': type = TokenType::TK_EQUAL; break;
-                case '<': type = TokenType::TK_LESS; break;
-                case '>': type = TokenType::TK_GREATER; break;
-                default: break;
-            }
+            type = pg_single_operator(*start);
         } else if (len == 2) {
             if (start[0] == '<' && start[1] == '=') type = TokenType::TK_LESS_EQUAL;
             else if (start[0] == '>' && start[1] == '=') type = TokenType::TK_GREATER_EQUAL;
@@ -581,13 +628,33 @@ private:
     }
 
     Token scan_token() {
-        skip_whitespace_and_comments();
+        // The usual separator is one space. Beyond it, whitespace is at most
+        // ' ' and a comment starts with '-', '/' or '#': any other byte
+        // begins a token right here.
+        if (cursor_ < end_ && *cursor_ == ' ') ++cursor_;
+        if (cursor_ < end_) {
+            const auto first = static_cast<unsigned char>(*cursor_);
+            if (first <= ' ' || first == '-' || first == '/' || first == '#')
+                skip_whitespace_and_comments();
+        }
 
         if (cursor_ >= end_) {
             return make_token(TokenType::TK_EOF, cursor_, 0);
         }
 
         char c = *cursor_;
+
+        // Punctuation that is a token by itself in both dialects: it starts
+        // no literal, comment, hint or longer operator.
+        switch (c) {
+            case '(': { const char* s = cursor_++; return make_token(TokenType::TK_LPAREN, s, 1); }
+            case ')': { const char* s = cursor_++; return make_token(TokenType::TK_RPAREN, s, 1); }
+            case '[': { const char* s = cursor_++; return make_token(TokenType::TK_LBRACKET, s, 1); }
+            case ']': { const char* s = cursor_++; return make_token(TokenType::TK_RBRACKET, s, 1); }
+            case ',': { const char* s = cursor_++; return make_token(TokenType::TK_COMMA, s, 1); }
+            case ';': { const char* s = cursor_++; return make_token(TokenType::TK_SEMICOLON, s, 1); }
+            default: break;
+        }
 
         if constexpr (D == Dialect::MySQL) {
             if (hint_allowed_ && c == '/' && peek_char(1) == '*' && peek_char(2) == '+') {
@@ -654,7 +721,17 @@ private:
         }
 
         if constexpr (D == Dialect::PostgreSQL) {
-            if (pg_operator_char(c)) return scan_pg_operator();
+            if (pg_operator_char(c)) {
+                // An operator character followed by something else is a
+                // one-character operator: no run to scan, and no comment can
+                // start here (those were skipped above).
+                if (cursor_ + 1 >= end_ || !pg_operator_char(cursor_[1])) {
+                    const char* s = cursor_;
+                    ++cursor_;
+                    return make_token(pg_single_operator(c), s, 1);
+                }
+                return scan_pg_operator();
+            }
         }
 
         // @ and @@

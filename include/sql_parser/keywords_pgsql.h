@@ -162,6 +162,15 @@ inline TokenType lookup(const char* text, uint32_t len) {
     return keyword_hash::lookup_in_table(HASH_TABLE, text, len);
 }
 
+inline constexpr uint32_t MAX_KEYWORD_LENGTH = keyword_hash::max_keyword_length(KEYWORDS);
+
+// lookup() for a caller that computed keyword_hash::hash_keyword(text, len)
+// while scanning the word.
+inline TokenType lookup_hashed(const char* text, uint32_t len, uint32_t hash) {
+    if (len > MAX_KEYWORD_LENGTH) return TokenType::TK_IDENTIFIER;
+    return keyword_hash::lookup_in_table_hashed(HASH_TABLE, text, len, hash);
+}
+
 } // namespace pgsql_keywords
 } // namespace sql_parser
 

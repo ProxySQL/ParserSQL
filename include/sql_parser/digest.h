@@ -120,8 +120,10 @@ private:
 
     // Append token text uppercased to StringBuilder
     static void append_upper(StringBuilder& sb, const char* ptr, uint32_t len) {
+        char* out = sb.extend(len);
+        if (!out) return;
         for (uint32_t i = 0; i < len; ++i) {
-            sb.append_char(to_upper(ptr[i]));
+            out[i] = to_upper(ptr[i]);
         }
     }
 
@@ -157,6 +159,16 @@ private:
 
     // Emit a single token to the string builder, uppercasing keywords, replacing literals with ?
     void emit_token(StringBuilder& sb, const Token& t, TokenType prev) {
+        emit_token_inline(sb, t, prev);
+    }
+
+    // The body of emit_token(), expanded in place where the caller is the
+    // per-token loop of an ordinary statement: there the call and passing the
+    // token through memory cost more than the work itself.
+#if defined(__GNUC__) || defined(__clang__)
+    __attribute__((always_inline))
+#endif
+    inline void emit_token_inline(StringBuilder& sb, const Token& t, TokenType prev) {
         bool quoted_user_after_account = t.type == TokenType::TK_USER_VARIABLE &&
             t.source.len >= 2 &&
             (t.source.ptr[1] == '\'' || t.source.ptr[1] == '"' || t.source.ptr[1] == '`') &&
@@ -343,7 +355,7 @@ private:
             // Check if we've reached the end (can happen after VALUES/IN lookahead)
             if (t.type == TokenType::TK_EOF || t.type == TokenType::TK_SEMICOLON) break;
 
-            emit_token(sb, t, prev);
+            emit_token_inline(sb, t, prev);
             prev = t.type;
             // For literal tokens, record as TK_QUESTION since we emitted ?
             if (is_literal_token(t.type)) prev = TokenType::TK_QUESTION;
