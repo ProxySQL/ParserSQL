@@ -403,3 +403,119 @@ TEST_F(MySQLDigestTest, TokenLevelValuesMultiRowSameHash) {
     auto d2 = digest_token("INSERT INTO t (a) VALUES (1), (2), (3)");
     EXPECT_EQ(d1.hash, d2.hash);
 }
+
+// ========== Token-level digest trace ==========
+
+namespace {
+
+struct TracedDigest {
+    std::string normalized;
+    uint64_t hash;
+    DigestTrace trace;
+};
+
+template <Dialect D>
+TracedDigest traced(const std::string& sql) {
+    Arena arena;
+    Digest<D> digest(arena);
+    TracedDigest out;
+    const DigestResult dr = digest.compute(sql.data(), sql.size(), out.trace);
+    out.normalized.assign(dr.normalized.ptr, dr.normalized.len);
+    out.hash = dr.hash;
+    return out;
+}
+
+std::string literal_source(const std::string& sql, const DigestTrace& trace, uint32_t n) {
+    return sql.substr(trace.literals[n].offset, trace.literals[n].length);
+}
+
+}  // namespace
+
+TEST(DigestTraceTest, ReportsLiteralsInSourceOrder) {
+    const std::string sql = "UPDATE t SET a = a - 1, b = 'x' WHERE id = 4711;";
+    const auto d = traced<Dialect::PostgreSQL>(sql);
+    EXPECT_EQ(d.normalized, "UPDATE t SET a = a - ?, b = ? WHERE id = ?");
+    ASSERT_EQ(d.trace.literal_count, 3u);
+    EXPECT_EQ(d.trace.literals[0].type, TokenType::TK_INTEGER);
+    EXPECT_EQ(literal_source(sql, d.trace, 0), "1");
+    EXPECT_EQ(d.trace.literals[1].type, TokenType::TK_STRING);
+    EXPECT_EQ(literal_source(sql, d.trace, 1), "'x'");  // source spelling, quotes included
+    EXPECT_EQ(d.trace.literals[2].type, TokenType::TK_INTEGER);
+    EXPECT_EQ(literal_source(sql, d.trace, 2), "4711");
+    EXPECT_FALSE(d.trace.collapsed);
+    EXPECT_FALSE(d.trace.delimited_identifier);
+    EXPECT_FALSE(d.trace.comments);
+    EXPECT_FALSE(d.trace.errors);
+}
+
+TEST(DigestTraceTest, SameTextAndHashAsUntracedDigest) {
+    for (const std::string sql : {"SELECT a, b FROM t WHERE id = 5 AND name = 'bob'",
+                                  "INSERT INTO t (a, b) VALUES (1, 'x'), (2, 'y')",
+                                  "SELECT * FROM t WHERE id IN (1, 2, 3)", "BEGIN"}) {
+        Arena arena;
+        Digest<Dialect::MySQL> digest(arena);
+        const DigestResult plain = digest.compute(sql.data(), sql.size());
+        const std::string plain_text(plain.normalized.ptr, plain.normalized.len);
+        const auto d = traced<Dialect::MySQL>(sql);
+        EXPECT_EQ(d.normalized, plain_text) << sql;
+        EXPECT_EQ(d.hash, plain.hash) << sql;
+    }
+}
+
+TEST(DigestTraceTest, ConsumedCoversTheFirstStatementOnly) {
+    const std::string two = "SELECT 1; SELECT 2";
+    const auto d = traced<Dialect::PostgreSQL>(two);
+    EXPECT_EQ(d.normalized, "SELECT ?");
+    EXPECT_EQ(d.trace.consumed, 9u);  // up to and including the ';'
+    EXPECT_EQ(d.trace.literal_count, 1u);
+
+    const std::string open = "SELECT 1";
+    EXPECT_EQ(traced<Dialect::PostgreSQL>(open).trace.consumed, open.size());
+}
+
+TEST(DigestTraceTest, InListIsReportedAsCollapsed) {
+    const auto d = traced<Dialect::PostgreSQL>("SELECT * FROM t WHERE id IN (1, 2, 3)");
+    EXPECT_EQ(d.normalized, "SELECT * FROM t WHERE id IN (?)");
+    EXPECT_TRUE(d.trace.collapsed);
+}
+
+TEST(DigestTraceTest, SingleRowOfPlainLiteralsIsExact) {
+    const std::string sql = "INSERT INTO t (a, b) VALUES (5, 'x')";
+    const auto d = traced<Dialect::PostgreSQL>(sql);
+    EXPECT_EQ(d.normalized, "INSERT INTO t (a, b) VALUES (?, ?)");
+    EXPECT_FALSE(d.trace.collapsed);
+    ASSERT_EQ(d.trace.literal_count, 2u);
+    EXPECT_EQ(literal_source(sql, d.trace, 0), "5");
+    EXPECT_EQ(literal_source(sql, d.trace, 1), "'x'");
+}
+
+TEST(DigestTraceTest, ValuesRowsThatLoseTokensAreCollapsed) {
+    EXPECT_TRUE(traced<Dialect::PostgreSQL>("INSERT INTO t (a) VALUES (1), (2)").trace.collapsed);
+    EXPECT_TRUE(traced<Dialect::PostgreSQL>("INSERT INTO t (a, b) VALUES (1, now())").trace.collapsed);
+    EXPECT_TRUE(traced<Dialect::PostgreSQL>("INSERT INTO t (a) VALUES (-1)").trace.collapsed);
+    EXPECT_TRUE(traced<Dialect::PostgreSQL>("INSERT INTO t (a) VALUES (1 + 2)").trace.collapsed);
+}
+
+TEST(DigestTraceTest, DelimitedIdentifierIsReported) {
+    EXPECT_TRUE(traced<Dialect::PostgreSQL>("SELECT a FROM \"T\" WHERE id = 1").trace.delimited_identifier);
+    EXPECT_TRUE(traced<Dialect::MySQL>("SELECT a FROM `T` WHERE id = 1").trace.delimited_identifier);
+    EXPECT_FALSE(traced<Dialect::PostgreSQL>("SELECT a FROM T WHERE id = 1").trace.delimited_identifier);
+}
+
+TEST(DigestTraceTest, CommentsAndErrorsAreReported) {
+    EXPECT_TRUE(traced<Dialect::PostgreSQL>("SELECT /* c */ a FROM t").trace.comments);
+    EXPECT_TRUE(traced<Dialect::PostgreSQL>("SELECT a FROM t -- c").trace.comments);
+    EXPECT_TRUE(traced<Dialect::MySQL>("SELECT a FROM t # c").trace.comments);
+    EXPECT_FALSE(traced<Dialect::PostgreSQL>("SELECT a - 1 FROM t").trace.comments);
+    EXPECT_TRUE(traced<Dialect::PostgreSQL>("SELECT 'unterminated").trace.errors);
+    EXPECT_FALSE(traced<Dialect::PostgreSQL>("SELECT 'terminated'").trace.errors);
+}
+
+TEST(DigestTraceTest, CountsLiteralsBeyondTheRecordedOnes) {
+    std::string sql = "SELECT 0";
+    for (int i = 1; i < 20; ++i) sql += " + " + std::to_string(i);
+    const auto d = traced<Dialect::PostgreSQL>(sql);
+    EXPECT_EQ(d.trace.literal_count, 20u);
+    EXPECT_EQ(literal_source(sql, d.trace, DigestTrace::max_literals - 1),
+              std::to_string(DigestTrace::max_literals - 1));
+}

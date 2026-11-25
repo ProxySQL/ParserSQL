@@ -16,6 +16,29 @@ struct DigestResult {
     uint64_t hash;         // 64-bit FNV-1a hash
 };
 
+// A literal the token-level digest replaced with '?': its token type and where
+// its source spelling (quotes and prefixes included) sits in the input.
+struct DigestLiteral {
+    TokenType type;
+    uint32_t offset;
+    uint32_t length;
+};
+
+// What the token-level digest replaced, dropped or could not represent. It is
+// for a caller that wants to treat two statements with the same normalized
+// text as the same statement with different literal values: that holds only
+// when none of the flags is set and the non-value literals are compared too.
+struct DigestTrace {
+    static constexpr uint32_t max_literals = 16;
+    DigestLiteral literals[max_literals];
+    uint32_t literal_count = 0;      // all literals seen; only the first max_literals are recorded
+    uint32_t consumed = 0;           // input bytes up to and including the terminating ';', else all
+    bool collapsed = false;          // an IN list or VALUES rows were collapsed (tokens dropped)
+    bool delimited_identifier = false; // a quoted identifier lost its delimiters in the text
+    bool comments = false;           // a comment was skipped
+    bool errors = false;             // the tokenizer returned an error token
+};
+
 // FNV-1a 64-bit hash -- simple, fast, no external dependency
 struct FnvHash {
     static constexpr uint64_t FNV_OFFSET_BASIS = 14695981039346656037ULL;
@@ -58,8 +81,22 @@ public:
         return compute_token_level(sql, len);
     }
 
+    // The same token-level digest, also reporting in 'trace' what the
+    // normalized text no longer shows. One tokenizer pass either way.
+    DigestResult compute(const char* sql, size_t len, DigestTrace& trace) {
+        trace.literal_count = 0;
+        trace.consumed = 0;
+        trace.collapsed = trace.delimited_identifier = trace.comments = trace.errors = false;
+        trace_ = &trace;
+        const DigestResult result = compute_token_level(sql, len);
+        trace_ = nullptr;
+        return result;
+    }
+
 private:
     Arena& arena_;
+    DigestTrace* trace_ = nullptr;
+    const char* input_ = nullptr;
 
     // Helper: check if a token type is a keyword (not an identifier, literal, or operator)
     static bool is_keyword_token(TokenType type) {
@@ -104,6 +141,20 @@ private:
         return true;
     }
 
+    // Report a literal that the normalized text shows as '?'.
+    void trace_literal(const Token& t) {
+        if (!trace_) return;
+        if (trace_->literal_count < DigestTrace::max_literals) {
+            trace_->literals[trace_->literal_count] = DigestLiteral{
+                t.type, static_cast<uint32_t>(t.source.ptr - input_), t.source.len};
+        }
+        ++trace_->literal_count;
+    }
+    // Report that tokens were left out of the normalized text.
+    void trace_collapsed() {
+        if (trace_) trace_->collapsed = true;
+    }
+
     // Emit a single token to the string builder, uppercasing keywords, replacing literals with ?
     void emit_token(StringBuilder& sb, const Token& t, TokenType prev) {
         bool quoted_user_after_account = t.type == TokenType::TK_USER_VARIABLE &&
@@ -116,9 +167,11 @@ private:
 
         if (is_literal_token(t.type)) {
             sb.append_char('?');
+            trace_literal(t);
         } else if (is_keyword_token(t.type)) {
             append_upper(sb, t.text.ptr, t.text.len);
         } else if (t.type == TokenType::TK_IDENTIFIER) {
+            if (trace_ && t.source.len != t.text.len) trace_->delimited_identifier = true;
             sb.append(t.text.ptr, t.text.len);
         } else if (t.type == TokenType::TK_QUESTION) {
             sb.append_char('?');
@@ -152,6 +205,7 @@ private:
     DigestResult compute_token_level(const char* sql, size_t len) {
         Tokenizer<D> tok;
         tok.reset(sql, len);
+        input_ = sql;
         StringBuilder sb(arena_);
         TokenType prev = TokenType::TK_EOF;
 
@@ -172,6 +226,7 @@ private:
                     // Emit " ("
                     emit_token(sb, next, prev);
                     prev = next.type;
+                    trace_collapsed();
                     // Collapse contents to single ?
                     bool emitted_q = false;
                     int depth = 1;
@@ -214,13 +269,16 @@ private:
                     emit_token(sb, next, prev);
                     prev = next.type;
 
-                    // Emit first row contents with ? for each value slot
+                    // Emit first row contents with ? for each value slot. A
+                    // row of plain literals loses nothing; any other token in
+                    // it is left out of the text and reported as collapsed.
                     int depth = 1;
                     while (depth > 0) {
                         Token inner = tok.next_token();
-                        if (inner.type == TokenType::TK_EOF) break;
+                        if (inner.type == TokenType::TK_EOF) { trace_collapsed(); break; }
                         if (inner.type == TokenType::TK_LPAREN) {
                             depth++;
+                            trace_collapsed();
                             continue;
                         }
                         if (inner.type == TokenType::TK_RPAREN) {
@@ -243,8 +301,11 @@ private:
                             if (prev == TokenType::TK_LPAREN || prev == TokenType::TK_COMMA) {
                                 sb.append_char('?');
                                 prev = TokenType::TK_QUESTION;
+                                if (is_literal_token(inner.type)) trace_literal(inner);
+                                continue;
                             }
                         }
+                        trace_collapsed();
                     }
 
                     // Skip additional rows: , (...)
@@ -254,6 +315,7 @@ private:
                             Token peek2 = tok.next_token();
                             if (peek2.type == TokenType::TK_LPAREN) {
                                 // Skip this entire row
+                                trace_collapsed();
                                 skip_paren_contents(tok);
                                 continue;
                             } else {
@@ -289,6 +351,13 @@ private:
             t = tok.next_token();
         }
 
+        if (trace_) {
+            trace_->consumed = t.type == TokenType::TK_SEMICOLON
+                ? static_cast<uint32_t>(t.source.ptr + t.source.len - sql)
+                : static_cast<uint32_t>(len);
+            trace_->comments = tok.has_comments();
+            trace_->errors = tok.has_error();
+        }
         StringRef normalized = sb.finish();
         FnvHash hasher;
         hasher.update(normalized.ptr, normalized.len);

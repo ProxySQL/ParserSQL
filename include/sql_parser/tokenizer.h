@@ -18,6 +18,7 @@ public:
         has_error_ = false;
         has_fatal_error_ = false;
         has_user_variables_ = false;
+        has_comments_ = false;
         hint_allowed_ = false;
         after_dot_ = false;
         paren_depth_ = 0;
@@ -32,6 +33,9 @@ public:
     bool has_error() const { return has_error_; }
     bool has_fatal_error() const { return has_fatal_error_; }
     bool has_user_variables() const { return has_user_variables_; }
+    // True iff a comment was skipped since the last reset(), including MySQL
+    // optimizer hints and executable comments.
+    bool has_comments() const { return has_comments_; }
     StringRef error_source() const { return error_source_; }
 
     // Hook for parser-level (non-tokenizer) errors -- when the parser
@@ -89,6 +93,7 @@ private:
     bool has_error_ = false;
     bool has_fatal_error_ = false;
     bool has_user_variables_ = false;
+    bool has_comments_ = false;
     uint32_t paren_depth_ = 0;
     const char* first_open_paren_ = nullptr;
     StringRef error_source_;
@@ -126,6 +131,7 @@ private:
                   (static_cast<unsigned char>(peek_char(2)) <= 0x20 ||
                    static_cast<unsigned char>(peek_char(2)) == 0x7f)));
             if (dash_comment) {
+                has_comments_ = true;
                 hint_allowed_ = false;
                 cursor_ += 2;
                 while (cursor_ < end_ && *cursor_ != '\n') ++cursor_;
@@ -135,6 +141,7 @@ private:
             // # line comment (MySQL only)
             if constexpr (D == Dialect::MySQL) {
                 if (c == '#') {
+                    has_comments_ = true;
                     hint_allowed_ = false;
                     ++cursor_;
                     while (cursor_ < end_ && *cursor_ != '\n') ++cursor_;
@@ -144,6 +151,7 @@ private:
 
             // /* block comment */
             if (c == '/' && peek_char(1) == '*') {
+                has_comments_ = true;
                 if constexpr (D == Dialect::MySQL) {
                     if (hint_allowed_ && peek_char(2) == '+') return;
                 }
